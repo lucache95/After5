@@ -7,8 +7,9 @@
 // This file re-exports the generated types and adds domain-level aliases
 // that both the web app and the mobile app consume.
 
-// Will exist after first `pnpm db:types` run:
-// export type { Database } from './database';
+// Auto-generated from Supabase schema. Regenerate with: pnpm db:types
+export type { Database, Json } from './database';
+export type { Database as DB } from './database';
 
 // Domain types (hand-written, stable across schema changes)
 export type Occasion = 'date' | 'solo' | 'friends';
