@@ -597,11 +597,13 @@ function ItineraryDetail({ itinerary }: { itinerary: Itinerary }) {
             ))}
           </div>
 
+          {itinerary.id && <ShareButton id={itinerary.id} />}
+
           <a
             href={mapsUrl(itinerary)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 block rounded-pill bg-primary px-5 py-3 text-center text-sm font-medium text-background transition-opacity hover:opacity-85"
+            className="mt-4 block rounded-pill bg-primary px-5 py-3 text-center text-sm font-medium text-background transition-opacity hover:opacity-85"
           >
             Open route in Maps
           </a>
@@ -621,6 +623,37 @@ function mapsUrl(it: Itinerary): string {
   const waypoints = stops.slice(1, -1).join('|');
   const wp = waypoints ? `&waypoints=${waypoints}` : '';
   return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${wp}`;
+}
+
+// ─── Share button ────────────────────────────────────────────────────
+
+function ShareButton({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const onClick = async () => {
+    const url = `${window.location.origin}/plan/i/${id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ url, title: 'Tonight in Kelowna' });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      // user dismissed share sheet, no-op
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-8 block w-full rounded-pill border border-border bg-background px-5 py-3 text-center text-sm font-medium text-text transition-colors hover:border-text/40"
+    >
+      {copied ? 'Link copied' : 'Share this plan'}
+    </button>
+  );
 }
 
 // ─── Error view ──────────────────────────────────────────────────────

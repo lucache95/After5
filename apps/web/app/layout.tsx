@@ -32,11 +32,13 @@ export const metadata: Metadata = {
     siteName: 'After5',
     locale: 'en_CA',
     type: 'website',
+    images: [{ url: '/og.jpg', width: 1920, height: 1080, alt: 'After5 — Kelowna date planner' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'After5',
     description: 'Plan the perfect Kelowna date in 30 seconds.',
+    images: ['/og.jpg'],
   },
 };
 
