@@ -1,0 +1,217 @@
+{
+  "generatedAt": "2026-04-19",
+  "aesthetic": "Refined Minimal",
+  "note": "21st.dev MCP returns componentName/demoName but no canonical slug or URL. Slugs below are derived as kebab-case from the returned componentName; URLs point at 21st.dev search for that name. The implementer should re-search 21st.dev with the listed slug to retrieve the actual snippet, then heavily strip dark-mode defaults, gradients, blur/backdrop effects, and decorative emojis/icons to match the Refined Minimal aesthetic (off-white #FAFAF7, off-black #1A1A1A, single accent #C2552B, Inter only, 8px radius, no shadows beyond subtle, no gradients).",
+  "picks": [
+    {
+      "role": "nav",
+      "source": "21st.dev",
+      "slug": "core-header-navbar",
+      "url": "https://21st.dev/?q=core-header-navbar",
+      "preview": null,
+      "rationale": "SimpleNavbar variant has wordmark-left + right-aligned actions structure that matches the brief; the asymmetric layout maps cleanly to wordmark + single CTA.",
+      "fit": "medium",
+      "notes": "Strip the diagonal grid background, profile avatar, and italic uppercase styling. Replace 'Active Now' / user block with a single pill-shaped CTA in accent color. Keep only border-bottom and Inter typography."
+    },
+    {
+      "role": "nav",
+      "source": "21st.dev",
+      "slug": "mini-navbar",
+      "url": "https://21st.dev/?q=mini-navbar",
+      "preview": null,
+      "rationale": "Provides a clean fixed top bar with logo + CTA pattern; pill-shaped buttons match the brief's standalone-button radius rule.",
+      "fit": "weak",
+      "notes": "Heavily strip: remove dark theme, gradient buttons, backdrop-blur, and animated hover-translate nav links. Only retain the wordmark + right-side pill CTA shell."
+    },
+    {
+      "role": "hero-section",
+      "source": "21st.dev",
+      "slug": "hero-centered-craft",
+      "url": "https://21st.dev/?q=hero+centered+craft",
+      "preview": null,
+      "rationale": "Editorial craft-ds Hero offers a large balanced headline with restrained CTA; the typographic discipline aligns with Refined Minimal.",
+      "fit": "medium",
+      "notes": "Re-anchor left-aligned (not centered), set headline to occupy ~60% width with massive negative space on the right. Drop the demo logo/Camera icon. Single accent CTA only."
+    },
+    {
+      "role": "hero-section",
+      "source": "21st.dev",
+      "slug": "custom-asymmetric-hero",
+      "url": "https://21st.dev/?q=asymmetric+hero+headline",
+      "preview": null,
+      "rationale": "No 21st.dev result is asymmetric off-white with the described 60/40 split; recommend hand-building per brief.",
+      "fit": "weak",
+      "notes": "Build custom: 1200px max-width, h1 in Inter 700 with -0.02em tracking and 1.05 line-height, single pill CTA in #1A1A1A with hover to #C2552B, no image, 96px vertical padding."
+    },
+    {
+      "role": "card-grid",
+      "source": "21st.dev",
+      "slug": "pricing-base",
+      "url": "https://21st.dev/?q=pricing-base",
+      "preview": null,
+      "rationale": "Tailark Pricing Base provides a clean 3-up Card grid with title + structured feature list; the Card primitive maps directly to itinerary cards (title + pills + cost + duration + 3 stops).",
+      "fit": "strong",
+      "notes": "Repurpose Card primitive: replace 'price' slot with vibe pills, replace 'features' list with 3 stops + times. Strip the gradient 'Popular' badge. Use accent only on the active card border, never as background."
+    },
+    {
+      "role": "card-grid",
+      "source": "21st.dev",
+      "slug": "pricing-component",
+      "url": "https://21st.dev/?q=pricing-component",
+      "preview": null,
+      "rationale": "Two-card glassmorphism reference shows clean baseline + emphasized card pattern; useful for active vs inactive itinerary card states.",
+      "fit": "weak",
+      "notes": "Strip ALL: backdrop-blur, glass effects, ring shadows, dark card variant. Brief explicitly forbids glass/blur. Use only the structural concept of 'one card emphasized via accent border'."
+    },
+    {
+      "role": "itinerary-detail",
+      "source": "21st.dev",
+      "slug": "timeline",
+      "url": "https://21st.dev/?q=timeline",
+      "preview": null,
+      "rationale": "Vertical timeline with date/title/description columns matches the time/place/cost/notes structure of an itinerary stop.",
+      "fit": "strong",
+      "notes": "Map 'date' → time slot, 'title' → place name, 'description' → notes. Add a small cost label slot. Use #E5E3DD for the line, #1A1A1A dot (accent dot for current stop). Drop framer-motion entrance animations except 200ms fade-in per brief."
+    },
+    {
+      "role": "itinerary-detail",
+      "source": "21st.dev",
+      "slug": "timeline-02",
+      "url": "https://21st.dev/?q=timeline-02",
+      "preview": null,
+      "rationale": "Card-per-event timeline gives a richer per-stop content area for notes and travel hints.",
+      "fit": "medium",
+      "notes": "Replace cyan accent dot with #C2552B for current stop, neutral for others. Remove hover shadow transition. Drop framer scroll-reveal."
+    },
+    {
+      "role": "input-stepper",
+      "source": "21st.dev",
+      "slug": "multistep-form",
+      "url": "https://21st.dev/?q=multistep-form",
+      "preview": null,
+      "rationale": "Single-question-per-step pattern with auto-focus input, top progress dots, and large continue CTA matches the conversational feel of the 5-question plan flow.",
+      "fit": "strong",
+      "notes": "Strip: blur 'pulse' on active step, gradient progress fill, hover shadow on submit. Use solid accent for the active step indicator. Keep slide-in animation but bound to 200ms ease-out."
+    },
+    {
+      "role": "input-stepper",
+      "source": "21st.dev",
+      "slug": "multi-step-form",
+      "url": "https://21st.dev/?q=multi-step-form",
+      "preview": null,
+      "rationale": "Card-wrapped multi-step with Progress bar + back/next is a denser alternative if multiple inputs per step are needed.",
+      "fit": "medium",
+      "notes": "Drop the close-X icon and tooltip Info icons (no AI/help iconography per brief). Use Progress with #C2552B fill on #E5E3DD track."
+    },
+    {
+      "role": "vibe-picker",
+      "source": "21st.dev",
+      "slug": "multiple-select",
+      "url": "https://21st.dev/?q=multiple-select",
+      "preview": null,
+      "rationale": "Pill-based multi-select with selected/unselected pools is the exact pattern needed for vibe tags like 'romantic', 'chill', 'boujee'.",
+      "fit": "strong",
+      "notes": "Replace gray-200 pill background with surface #F4F2EC; selected state uses #1A1A1A bg with #FAFAF7 text; on hover, switch selected to accent #C2552B. Drop the framer-motion scroll/layout animations or cap to 200ms fade. Remove the X close icon — re-tap deselects."
+    },
+    {
+      "role": "vibe-picker",
+      "source": "21st.dev",
+      "slug": "tag-group",
+      "url": "https://21st.dev/?q=tag-group",
+      "preview": null,
+      "rationale": "react-aria TagGroup with selectionMode='multiple' is accessible and stateful; cleaner foundation if a11y matters more than animation.",
+      "fit": "medium",
+      "notes": "Override the default rounded-full pill colors to use #1A1A1A selected, #F4F2EC unselected, #C2552B hover-on-selected. No icons inside pills."
+    },
+    {
+      "role": "range-slider",
+      "source": "21st.dev",
+      "slug": "slider",
+      "url": "https://21st.dev/?q=slider",
+      "preview": null,
+      "rationale": "Radix-based Slider with optional tooltip is minimal, accessible, and supports a single-handle budget slider with value display above.",
+      "fit": "strong",
+      "notes": "Single value (not range): min=0, max=300. Anchor labels under the track at $0 / $75 / $150 / $300. Track #E5E3DD, range fill #1A1A1A, thumb #FAFAF7 with 2px #1A1A1A border (switches to #C2552B border on hover/drag)."
+    },
+    {
+      "role": "range-slider",
+      "source": "21st.dev",
+      "slug": "field-slider",
+      "url": "https://21st.dev/?q=field+slider",
+      "preview": null,
+      "rationale": "Field+Slider pairing gives a built-in title + description pattern matching 'What's your budget? — anything from a free walk to a $300 night out'.",
+      "fit": "medium",
+      "notes": "Use only the FieldTitle + FieldDescription wrappers around the single-value Slider above; drop FieldGroup variants and tabular price-range presentation."
+    },
+    {
+      "role": "benefit-block",
+      "source": "21st.dev",
+      "slug": "feature-modern",
+      "url": "https://21st.dev/?q=feature-modern",
+      "preview": null,
+      "rationale": "3-column feature block with title + short copy is the literal structure for 'real Kelowna spots / full timeline / three options'.",
+      "fit": "strong",
+      "notes": "Remove the icon (no Coins). Use only headline + paragraph per column. Drop Balancer if it pulls in extra deps. Tighten gap to match 96px section rhythm."
+    },
+    {
+      "role": "benefit-block",
+      "source": "21st.dev",
+      "slug": "content-default",
+      "url": "https://21st.dev/?q=content-default",
+      "preview": null,
+      "rationale": "Editorial 2-up reference with restrained typography; useful structural inspiration if the 3-up reads too dense.",
+      "fit": "weak",
+      "notes": "Strip the demo image, dark gradient frames, blockquote with logo. Keep only the 'large heading + body paragraph' typographic rhythm."
+    },
+    {
+      "role": "email-gate-modal",
+      "source": "21st.dev",
+      "slug": "modal-with-newsletter",
+      "url": "https://21st.dev/?q=modal+newsletter",
+      "preview": null,
+      "rationale": "Radix Dialog with single email input, mail icon prefix, and full-width submit is precisely the 'gentle save your plan' modal pattern.",
+      "fit": "strong",
+      "notes": "Replace indigo with off-black primary + accent hover. Drop the inline mail-icon (no decorative icons). Soften copy: 'Save your plan — drop your email and we'll keep it for you.' Single Subscribe button rebadged 'Save plan'. Use #FAFAF7 modal bg, #E5E3DD border, 8px radius."
+    },
+    {
+      "role": "empty-state",
+      "source": "21st.dev",
+      "slug": "empty",
+      "url": "https://21st.dev/?q=empty",
+      "preview": null,
+      "rationale": "shadcn Empty primitive (Empty/EmptyHeader/EmptyTitle/EmptyDescription/EmptyContent) is the cleanest, most composable empty-state foundation available.",
+      "fit": "strong",
+      "notes": "Use WITHOUT EmptyMedia (no icon per brief). Title 'No saved plans yet', description one calm sentence, single primary CTA 'Plan something'. Keep the dashed border subtle (#E5E3DD) at 1px solid instead of dashed."
+    },
+    {
+      "role": "empty-state",
+      "source": "21st.dev",
+      "slug": "empty-state-beautiful-accessible",
+      "url": "https://21st.dev/?q=empty+state+accessible",
+      "preview": null,
+      "rationale": "Alternate accessible empty-state with role=status and aria-live for screen readers.",
+      "fit": "weak",
+      "notes": "Strip the FileText/Search/AlertTriangle icons and circular muted bg around them. Borrow only the role='status' aria-live='polite' a11y pattern."
+    },
+    {
+      "role": "footer",
+      "source": "21st.dev",
+      "slug": "modern-minimal-footer",
+      "url": "https://21st.dev/?q=modern+minimal+footer",
+      "preview": null,
+      "rationale": "Single-line footer with copyright + small links is exactly the brief's 'minimal, single line' requirement.",
+      "fit": "strong",
+      "notes": "Replace slate-800 dark bg with #FAFAF7, text in #8B8884 (muted). Single Inter family. Drop Poppins font import. Keep the single-row flex layout, drop the divider pipes if too busy — use ' · ' separator instead."
+    }
+  ],
+  "gaps": [
+    {
+      "role": "hero-section",
+      "note": "No 21st.dev component matches the brief's specific asymmetric 60/40 left-aligned hero with massive negative space on the right and zero imagery. Recommend frontend-design build this custom from scratch following the brief's layout grammar (1200px max-width, 96px vertical padding, h1 with -0.02em tracking and 1.05 line-height)."
+    },
+    {
+      "role": "vibe-picker",
+      "note": "21st.dev pill multi-selects bring framer-motion or react-aria deps. If the project wants zero motion library, build a minimal custom toggle-pill from a simple button[aria-pressed] pattern using the accent color for the selected state."
+    }
+  ]
+}

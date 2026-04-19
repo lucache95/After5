@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, user-scalable=no" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#dec0b7",
+                        "primary-fixed": "#ffdbcf",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#494643",
+                        "on-tertiary-fixed": "#1b1c18",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e7e2dc",
+                        "primary": "#a13d14",
+                        "on-primary-container": "#ffffff",
+                        "inverse-primary": "#ffb59b",
+                        "surface-container-low": "#f8f3ed",
+                        "surface-container": "#f2ede8",
+                        "surface": "#fef8f3",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#cac6c1",
+                        "secondary-container": "#e7e2dc",
+                        "on-secondary-container": "#676460",
+                        "on-tertiary-container": "#ffffff",
+                        "on-background": "#1d1b18",
+                        "surface-variant": "#e7e2dc",
+                        "on-secondary-fixed": "#1d1b18",
+                        "on-surface": "#1d1b18",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#c2552b",
+                        "on-primary-fixed-variant": "#822800",
+                        "secondary-fixed": "#e7e2dc",
+                        "surface-container-high": "#ede7e2",
+                        "tertiary-container": "#777671",
+                        "secondary": "#615e5a",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#5e5e59",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#ded9d4",
+                        "on-primary-fixed": "#380d00",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#ffb59b",
+                        "inverse-surface": "#32302d",
+                        "inverse-on-surface": "#f5f0eb",
+                        "tertiary-fixed": "#e4e2dd",
+                        "outline": "#8a726a",
+                        "background": "#fef8f3",
+                        "surface-bright": "#fef8f3",
+                        "surface-tint": "#a23e15",
+                        "on-surface-variant": "#57423b",
+                        "on-tertiary-fixed-variant": "#474743",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#c8c6c1"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px",
+                        "sm": "8px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fef8f3;
+            color: #1d1b18;
+            font-family: 'Inter', sans-serif;
+            max-width: 390px;
+            margin: 0 auto;
+            overflow-x: hidden;
+        }
+        .headline-lg {
+            font-size: 50px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.05;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface">
+<!-- 1. TopAppBar (Shared Component Logic) -->
+<nav class="sticky top-0 z-50 bg-[#fef8f3] dark:bg-stone-950 border-b border-[#dec0b7]/20 flex justify-between items-center w-full px-6 py-4">
+<span class="text-2xl font-black text-[#1d1b18] dark:text-stone-100 tracking-tighter">After5</span>
+<button class="bg-inverse-surface text-inverse-on-surface px-4 py-2 rounded-full text-sm font-bold hover:opacity-80 transition-opacity duration-200">
+            Plan my date
+        </button>
+</nav>
+<!-- 2. Hero Section -->
+<header class="px-6 pt-14 pb-14 flex flex-col gap-8">
+<h1 class="headline-lg text-on-surface">
+            Plan the perfect Kelowna date in 30 seconds.
+        </h1>
+<p class="text-secondary text-lg leading-relaxed font-body">
+            Curated date itineraries built for your vibe, budget, and time — by people who actually live here.
+        </p>
+<div class="flex flex-col gap-4">
+<button class="w-full bg-primary text-on-primary py-5 rounded-full font-bold text-lg hover:bg-primary-container transition-all duration-200">
+                Plan my date — free
+            </button>
+<a class="text-center font-bold text-primary underline underline-offset-4 decoration-primary/30" href="#">
+                See sample plans
+            </a>
+</div>
+</header>
+<!-- 3. Sample Itineraries -->
+<section class="bg-surface-container-low py-14 px-6 flex flex-col gap-8">
+<span class="text-xs font-bold tracking-[0.1em] text-outline opacity-70">SAMPLE ITINERARIES</span>
+<div class="flex flex-col gap-6">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-sm flex flex-col gap-4">
+<h3 class="text-2xl font-bold tracking-tight">The Westside Sunset Classic</h3>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">romantic</span>
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">scenic</span>
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">evening</span>
+</div>
+<div class="flex gap-6 text-sm text-outline border-y border-outline-variant/10 py-3">
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">payments</span> <span>$$</span></div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">schedule</span> <span>4 Hours</span></div>
+</div>
+<ul class="flex flex-col gap-4 mt-2">
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">01</span>
+<p class="text-sm font-medium">Wine tasting at Quails' Gate</p>
+</li>
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">02</span>
+<p class="text-sm font-medium">Sunset walk along Gellatly Bay</p>
+</li>
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">03</span>
+<p class="text-sm font-medium">Dinner at Old Vines Fridge</p>
+</li>
+</ul>
+</div>
+<!-- Card 2 (Accent) -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-sm flex flex-col gap-4">
+<h3 class="text-2xl font-bold tracking-tight text-primary-container">First Date Downtown</h3>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">casual</span>
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">downtown</span>
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">low-key</span>
+</div>
+<div class="flex gap-6 text-sm text-outline border-y border-outline-variant/10 py-3">
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">payments</span> <span>$</span></div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">schedule</span> <span>2.5 Hours</span></div>
+</div>
+<ul class="flex flex-col gap-4 mt-2">
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">01</span>
+<p class="text-sm font-medium">Craft coffee at Pulp Fiction</p>
+</li>
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">02</span>
+<p class="text-sm font-medium">Gallery hop through the Arts District</p>
+</li>
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">03</span>
+<p class="text-sm font-medium">Appetizers at Central Kitchen</p>
+</li>
+</ul>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-sm flex flex-col gap-4">
+<h3 class="text-2xl font-bold tracking-tight">Adventure Date</h3>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">active</span>
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">outdoor</span>
+<span class="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-secondary">afternoon</span>
+</div>
+<div class="flex gap-6 text-sm text-outline border-y border-outline-variant/10 py-3">
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">payments</span> <span>$$</span></div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">schedule</span> <span>5 Hours</span></div>
+</div>
+<ul class="flex flex-col gap-4 mt-2">
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">01</span>
+<p class="text-sm font-medium">Cycle the Myra Canyon Trestles</p>
+</li>
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">02</span>
+<p class="text-sm font-medium">Picnic lunch at the viewpoint</p>
+</li>
+<li class="flex gap-4">
+<span class="font-black text-primary/40 text-lg">03</span>
+<p class="text-sm font-medium">Post-ride drinks at BNA Brewing</p>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- 4. Benefit Blocks -->
+<section class="py-14 px-6 flex flex-col gap-12">
+<div class="flex flex-col gap-4">
+<span class="text-4xl font-black text-primary/10 tracking-tighter">01</span>
+<h2 class="text-3xl font-bold tracking-tight">Expertly curated by locals.</h2>
+<p class="text-secondary leading-relaxed">No generic TripAdvisor lists. Every spot is vetted by Kelowna residents who know where the actual atmosphere is.</p>
+</div>
+<div class="flex flex-col gap-4">
+<span class="text-4xl font-black text-primary/10 tracking-tighter">02</span>
+<h2 class="text-3xl font-bold tracking-tight">Built for your logistics.</h2>
+<p class="text-secondary leading-relaxed">Filter by how much time you have and your realistic budget. We handle the sequence and the mapping.</p>
+</div>
+<div class="flex flex-col gap-4">
+<span class="text-4xl font-black text-primary/10 tracking-tighter">03</span>
+<h2 class="text-3xl font-bold tracking-tight">Stress-free execution.</h2>
+<p class="text-secondary leading-relaxed">Get a single link with all your stops. No more toggling between five apps to find the next reservation.</p>
+</div>
+</section>
+<!-- Visual Divider Imagery -->
+<section class="px-6 pb-14">
+<div class="h-[300px] w-full rounded-sm overflow-hidden grayscale contrast-125">
+<img class="w-full h-full object-cover" data-alt="atmospheric landscape of the Okanagan valley at dusk with rolling hills and soft evening light over a calm lake" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsJIB_apwrkBJ72_K6wZS-IankgYwg4GO4spR5RPnhur3K3eiccF5gKLtsgfgCR742bATFlOWndioWYW-rGAH2d6HNYlrVAVXqYbE72qIC-WG34uY7QYWeVs_AZc5L4UMiO9xuvnVgLhVpfV-K13pgn1Z1mw5A-ZMoYJr4H99KHclB4H64KM0mGsgA9CVhaHL2KwwrtYbFfQBFEnFLOlJb0ND-QINd_LZSX4Cb8LLKVdD6pCqko6EUupTg0i8S1-Jf1jKpaiG--hO_"/>
+</div>
+</section>
+<!-- 5. Footer (Shared Component Logic) -->
+<footer class="bg-[#f8f3ed] dark:bg-stone-900 w-full px-6 py-24 flex flex-col items-start gap-8">
+<div class="flex flex-col gap-4">
+<span class="text-lg font-bold text-[#1d1b18] dark:text-stone-100">After5</span>
+<p class="text-[#1d1b18]/60 dark:text-stone-500 text-sm tracking-wide">
+                Built in Kelowna. Coming to Kamloops, Vernon, Penticton.
+            </p>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex gap-6">
+<a class="text-[#1d1b18]/60 hover:text-[#a13d14] transition-colors text-sm font-medium" href="#">Journal</a>
+<a class="text-[#1d1b18]/60 hover:text-[#a13d14] transition-colors text-sm font-medium" href="#">Curations</a>
+<a class="text-[#1d1b18]/60 hover:text-[#a13d14] transition-colors text-sm font-medium" href="#">Contact</a>
+</div>
+<p class="text-xs text-[#1d1b18]/40 dark:text-stone-600">
+                © 2024 After5. The Digital Archivist of Kelowna.
+            </p>
+</div>
+</footer>
+</body></html>

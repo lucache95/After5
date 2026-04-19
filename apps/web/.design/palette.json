@@ -1,0 +1,10 @@
+{
+  "primary":    { "hex": "#1A1A1A", "role": "primary buttons, headlines, primary action color" },
+  "secondary":  { "hex": "#6B6864", "role": "secondary buttons, secondary text, UI chrome" },
+  "accent":     { "hex": "#C2552B", "role": "single warm accent — pricing emphasis, loved feedback, active itinerary card, hover states" },
+  "background": { "hex": "#FAFAF7", "role": "page background — slightly warm off-white (paper, not snow)" },
+  "surface":    { "hex": "#F4F2EC", "role": "cards, forms, raised surfaces — one notch warmer than background" },
+  "text":       { "hex": "#1A1A1A", "role": "body copy, all primary text" },
+  "muted":      { "hex": "#8B8884", "role": "captions, drive times, timestamps, helper text" },
+  "border":     { "hex": "#E5E3DD", "role": "1px dividers, form borders, card outlines" }
+}

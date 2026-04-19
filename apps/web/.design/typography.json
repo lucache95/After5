@@ -1,0 +1,45 @@
+{
+  "display": {
+    "family": "Inter Display",
+    "source": "Google Fonts (https://fonts.google.com/specimen/Inter)",
+    "weights": [600, 700],
+    "usage": "h1, h2, hero display, itinerary titles",
+    "tracking": "-0.02em",
+    "lineHeight": 1.05
+  },
+  "body": {
+    "family": "Inter",
+    "fallback": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    "source": "Google Fonts (https://fonts.google.com/specimen/Inter)",
+    "weights": [400, 500, 600],
+    "usage": "body copy, h3+, all UI text, button labels",
+    "tracking": "0",
+    "lineHeight": 1.5
+  },
+  "scale": {
+    "base": 16,
+    "ratio": 1.333,
+    "sizes": {
+      "xs":   12,
+      "sm":   14,
+      "base": 16,
+      "lg":   18,
+      "xl":   21,
+      "2xl":  28,
+      "3xl":  38,
+      "4xl":  50,
+      "5xl":  67,
+      "6xl":  89
+    }
+  },
+  "lineHeight": { "tight": 1.05, "snug": 1.2, "normal": 1.5, "relaxed": 1.7 },
+  "rules": [
+    "Single family throughout — Inter (and its display variant). No serifs anywhere.",
+    "Display weights only ever 600 or 700. Body never above 600.",
+    "Hero headlines run at 5xl–6xl on desktop, 3xl–4xl on mobile. Tight tracking (-0.02em).",
+    "Body copy stays at base (16px). Long-form paragraphs use lg (18px) only on dedicated reading pages.",
+    "Drive times, costs, captions: sm (14px) in muted color.",
+    "All-caps used sparingly — eyebrow labels only, with +0.08em tracking.",
+    "Number-tabular variant for prices, durations, distances (font-feature: 'tnum')."
+  ]
+}
