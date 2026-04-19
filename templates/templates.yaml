@@ -1,0 +1,187 @@
+# After5 itinerary templates.
+# Patterns the generation pipeline uses to assemble candidate itineraries.
+# Each template is a sequence of slot definitions with constraints.
+# See PLAN.md Part 4B/4C for how these are consumed.
+
+templates:
+  - id: sunset_wine_dinner
+    name: "Sunset + Wine + Dinner"
+    duration_min: 240
+    suitable_for: [date]
+    vibe: [romantic, boujee]
+    geographic_rule: same_drive_cluster_or_adjacent
+    energy_curve: [medium, low, low]
+    slots:
+      - types: [viewpoint, hike]
+        time_of_day: [sunset]
+        duration_min: 60
+        effort: [low, moderate]
+      - types: [winery, cocktail_bar]
+        time_of_day: [evening]
+        duration_min: 90
+        prefers_pairing_tags: [sunset_spot, needs_wine_legs]
+      - types: [restaurant]
+        time_of_day: [evening]
+        duration_min: 90
+        price_tier: [$$, $$$]
+
+  - id: walk_drink_dessert
+    name: "Walk + Drink + Dessert"
+    duration_min: 150
+    suitable_for: [date]
+    vibe: [chill, cozy, spontaneous]
+    geographic_rule: walking_distance_or_same_cluster
+    energy_curve: [low, low, low]
+    slots:
+      - types: [walk, park, garden]
+        duration_min: 45
+        effort: [low]
+      - types: [cocktail_bar, brewery, wine_bar]
+        duration_min: 60
+      - types: [dessert, ice_cream, bakery]
+        duration_min: 30
+
+  - id: activity_food_view
+    name: "Activity + Food + View"
+    duration_min: 300
+    suitable_for: [date, friends]
+    vibe: [adventurous, spontaneous]
+    geographic_rule: same_drive_cluster_or_adjacent
+    energy_curve: [high, medium, low]
+    slots:
+      - types: [activity, hike]
+        effort: [moderate, high]
+        duration_min: 120
+      - types: [restaurant, brewery]
+        duration_min: 90
+        price_tier: [$, $$]
+      - types: [viewpoint, sunset_spot, beach]
+        time_of_day: [sunset]
+        duration_min: 30
+
+  - id: drinks_dinner_nightcap
+    name: "Drinks + Dinner + Nightcap"
+    duration_min: 210
+    suitable_for: [date]
+    vibe: [boujee, intimate, chill]
+    geographic_rule: walking_distance
+    energy_curve: [low, low, low]
+    slots:
+      - types: [cocktail_bar]
+        duration_min: 60
+        prefers_pairing_tags: [pre_dinner, intimate]
+      - types: [restaurant]
+        time_of_day: [evening]
+        duration_min: 105
+        price_tier: [$$, $$$]
+        reservation_required: true
+      - types: [cocktail_bar, dessert]
+        time_of_day: [late]
+        duration_min: 45
+
+  - id: cozy_indoor_night
+    name: "Cozy Indoor Night"
+    duration_min: 210
+    suitable_for: [date]
+    vibe: [cozy, intimate]
+    geographic_rule: walking_distance_or_same_cluster
+    weather_works_in: [any, indoor_friendly]
+    energy_curve: [low, low, low]
+    slots:
+      - types: [cafe, bakery]
+        duration_min: 45
+        prefers_pairing_tags: [winter_indoor, cozy]
+      - types: [restaurant]
+        duration_min: 105
+        prefers_pairing_tags: [intimate, winter_indoor]
+      - types: [cocktail_bar]
+        duration_min: 60
+
+  - id: weekend_winery_day
+    name: "Weekend Winery Day"
+    duration_min: 360
+    suitable_for: [date, friends]
+    vibe: [romantic, boujee, chill]
+    geographic_rule: same_drive_cluster
+    season: [spring, summer, fall]
+    energy_curve: [low, low, low, low]
+    slots:
+      - types: [cafe, bakery]
+        duration_min: 30
+      - types: [winery]
+        duration_min: 90
+      - types: [winery]
+        duration_min: 90
+      - types: [restaurant, winery]
+        time_of_day: [evening]
+        duration_min: 120
+        price_tier: [$$, $$$]
+
+  - id: spontaneous_save
+    name: "The 'I Forgot To Plan' Save"
+    duration_min: 120
+    suitable_for: [date]
+    vibe: [chill, spontaneous]
+    geographic_rule: walking_distance
+    energy_curve: [low, low]
+    slots:
+      - types: [restaurant]
+        duration_min: 75
+        reservation_required: false
+        prefers_pairing_tags: [no_reservation_needed]
+      - types: [dessert, ice_cream, walk]
+        duration_min: 30
+
+  - id: morning_date
+    name: "Morning Date"
+    duration_min: 180
+    suitable_for: [date]
+    vibe: [chill, cozy]
+    geographic_rule: walking_distance_or_same_cluster
+    energy_curve: [low, medium, low]
+    slots:
+      - types: [cafe, bakery]
+        time_of_day: [morning]
+        duration_min: 45
+      - types: [walk, park, garden, market]
+        duration_min: 75
+      - types: [cafe, bakery]
+        duration_min: 45
+
+  - id: solo_reset
+    name: "Solo Reset"
+    duration_min: 360
+    suitable_for: [solo]
+    vibe: [chill, cozy]
+    geographic_rule: same_drive_cluster
+    energy_curve: [low, medium, low, low, low]
+    slots:
+      - types: [cafe]
+        duration_min: 60
+      - types: [hike, walk]
+        duration_min: 90
+      - types: [restaurant]
+        duration_min: 60
+        price_tier: [$, $$]
+      - types: [garden, park]
+        duration_min: 30
+      - types: [cafe, bakery]
+        duration_min: 30
+
+  - id: friends_active
+    name: "Friends Hangout — Active"
+    duration_min: 300
+    suitable_for: [friends]
+    vibe: [adventurous, lively]
+    geographic_rule: same_drive_cluster
+    energy_curve: [high, medium, low, low]
+    slots:
+      - types: [activity]
+        duration_min: 60
+      - types: [brewery, cocktail_bar]
+        duration_min: 90
+      - types: [walk, park]
+        duration_min: 30
+      - types: [restaurant]
+        duration_min: 90
+        price_tier: [$, $$]
