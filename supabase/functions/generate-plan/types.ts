@@ -16,6 +16,9 @@ export interface PlanInputs {
   max_radius_km: number;
   location: 'out' | 'home';
   effort: Effort;
+  you_pronouns?: 'she/her' | 'he/him' | 'they/them' | '';
+  partner_pronouns?: 'she/her' | 'he/him' | 'they/them' | '';
+  note?: string;
 }
 
 export interface Place {

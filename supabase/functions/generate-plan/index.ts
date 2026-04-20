@@ -41,6 +41,13 @@ const InputSchema = z.object({
   location: z.enum(['out', 'home']).default('out'),
   effort: z.enum(['low', 'moderate', 'high']).default('low'),
   start_at: z.string().datetime().optional(),
+  // Optional context fed to the LLM when writing why_it_works copy.
+  // Pronouns let plans speak naturally ("she'll love the sunset"); empty
+  // string = generic. Note is free-text from the user (anniversary, dietary,
+  // pregnancy, etc.) capped at 280 chars.
+  you_pronouns: z.enum(['she/her', 'he/him', 'they/them', '']).default(''),
+  partner_pronouns: z.enum(['she/her', 'he/him', 'they/them', '']).default(''),
+  note: z.string().max(280).default(''),
 });
 
 // ─── Handler ───────────────────────────────────────────────────────────
@@ -167,6 +174,12 @@ serve(async (req: Request) => {
     // 8. Persist to DB.
     // Generate the slug AFTER insert (we need the row id), via UPDATE.
     // is_public=true so every new plan immediately becomes indexable SEO content.
+    // Tag the season so we can filter /dates by what's in season later.
+    const nowMonth = new Date().getMonth();
+    const season =
+      nowMonth >= 2 && nowMonth <= 4 ? 'spring' :
+      nowMonth >= 5 && nowMonth <= 7 ? 'summer' :
+      nowMonth >= 8 && nowMonth <= 10 ? 'fall' : 'winter';
     const insertRows = written.map((it, idx) => ({
       template_id: it.template_id,
       inputs,
@@ -177,6 +190,7 @@ serve(async (req: Request) => {
       total_cost_pp: it.total_cost_pp,
       total_duration_min: it.total_duration_min,
       is_public: true,
+      season,
       modifier_id: modifierIdsPicked[idx] ?? null,
       generation_log: {
         ...sharedLog,

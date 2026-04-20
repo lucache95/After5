@@ -139,6 +139,14 @@ function buildUserMessage(input: WritingPassInput): string {
   lines.push(`- Budget: ~$${inputs.budget_per_person}/person`);
   lines.push(`- Time: ~${inputs.duration_min} minutes total`);
   lines.push(`- Effort: ${inputs.effort}`);
+  if (inputs.you_pronouns || inputs.partner_pronouns) {
+    const you = inputs.you_pronouns || 'unspecified';
+    const partner = inputs.partner_pronouns || 'unspecified';
+    lines.push(`- You: ${you} · Your date: ${partner} (use these pronouns naturally where it fits — never force it)`);
+  }
+  if (inputs.note && inputs.note.trim().length > 0) {
+    lines.push(`- Special note from the user: "${inputs.note.trim()}" (work this in only if you can do so naturally; otherwise reference it lightly in why_it_works)`);
+  }
   lines.push('');
   lines.push(`Three itineraries to write copy for. Return ONLY a JSON array of length 3.`);
   lines.push('');

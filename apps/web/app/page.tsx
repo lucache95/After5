@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
+import { getSeason, SEASON_LABELS } from '@/lib/season';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -65,6 +66,7 @@ const BENEFITS = [
 ] as const;
 
 export default async function HomePage() {
+  const currentSeason = getSeason();
   return (
     <>
       {/* ─── Nav ── overlays the hero image, no chrome bar ───── */}
@@ -108,9 +110,15 @@ export default async function HomePage() {
 
           <div className="relative mx-auto w-full max-w-content px-6 pb-16 pt-32 md:px-10 md:pb-24 md:pt-40">
             <div className="max-w-[860px]">
-              <p className="mb-7 text-xs font-medium uppercase tracking-[0.22em] text-white/80">
-                Kelowna · BC
-              </p>
+              <div className="mb-7 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-500/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-white shadow-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/90" />
+                  {SEASON_LABELS[currentSeason].name}
+                </span>
+                <span className="text-xs font-medium uppercase tracking-[0.22em] text-white/80">
+                  Kelowna · BC
+                </span>
+              </div>
               <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-white md:text-6xl lg:text-[78px]">
                 Plan the perfect Kelowna date in 30 seconds.
               </h1>
@@ -310,7 +318,16 @@ export default async function HomePage() {
         <footer className="border-t border-border">
           <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
             <p className="text-xs text-muted">
-              Built in Kelowna. Coming to Kamloops, Vernon, Penticton.
+              Built in Kelowna by{' '}
+              <a
+                href="https://lucassenechal.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-border decoration-1 underline-offset-[4px] transition-colors hover:text-text hover:decoration-text"
+              >
+                Lucas Senechal
+              </a>
+              . Coming to Kamloops, Vernon, Penticton.
             </p>
             <div className="flex items-center gap-6 text-xs text-muted">
               <Link
@@ -326,10 +343,10 @@ export default async function HomePage() {
                 Terms
               </Link>
               <a
-                href="mailto:lucas@after5.app"
+                href="mailto:lucas@lucassenechal.com"
                 className="transition-colors hover:text-text"
               >
-                lucas@after5.app
+                lucas@lucassenechal.com
               </a>
             </div>
           </div>

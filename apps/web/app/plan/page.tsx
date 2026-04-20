@@ -70,6 +70,8 @@ async function extractEdgeError(error: unknown): Promise<string> {
 type Occasion = 'date' | 'solo' | 'friends';
 type Effort = 'low' | 'moderate' | 'high';
 
+type Pronouns = 'she/her' | 'he/him' | 'they/them' | '';
+
 interface Inputs {
   occasion: Occasion;
   duration_min: number;
@@ -80,7 +82,19 @@ interface Inputs {
   max_radius_km: number;
   location: 'out' | 'home';
   effort: Effort;
+  // Optional context. Date-only: who's going. All occasions: free-text note
+  // that the LLM uses to tailor the "why this works" copy ("anniversary",
+  // "vegetarian", "with my mom for her birthday"...).
+  you_pronouns: Pronouns;
+  partner_pronouns: Pronouns;
+  note: string;
 }
+
+const PRONOUN_OPTIONS: { id: Pronouns; label: string }[] = [
+  { id: 'she/her',   label: 'She / her' },
+  { id: 'he/him',    label: 'He / him' },
+  { id: 'they/them', label: 'They / them' },
+];
 
 const OCCASIONS: { id: Occasion; label: string; sub: string }[] = [
   { id: 'date',    label: 'Date',    sub: 'Just the two of you'    },
@@ -148,6 +162,9 @@ function PlanFlow() {
     max_radius_km: 30,
     location: 'out',
     effort: 'low',
+    you_pronouns: '',
+    partner_pronouns: '',
+    note: '',
   });
   const [results, setResults] = useState<Itinerary[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
@@ -376,6 +393,66 @@ function InputsView(props: {
                 />
               ))}
             </div>
+
+            {/* Pronoun pickers — Date only. Both fully optional; we use them
+                to color the "why this works" copy ("she'll love the sunset"
+                vs "they'll appreciate the brewery"). Skip = generic copy. */}
+            {inputs.occasion === 'date' && (
+              <div className="mt-10 space-y-6 rounded-card border border-border bg-surface p-6 md:p-7">
+                <p className="text-sm leading-relaxed text-secondary">
+                  <span className="text-text">Optional:</span> tells us how to write the plan
+                  ("she'll love the sunset" vs "he'll appreciate the brewery"). Skip and we'll keep it neutral.
+                </p>
+
+                <div>
+                  <p className="mb-2.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">You</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {PRONOUN_OPTIONS.map((p) => {
+                      const on = inputs.you_pronouns === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setInputs((s) => ({ ...s, you_pronouns: on ? '' : p.id }))}
+                          className={cn(
+                            'rounded-pill border px-4 py-2 text-sm transition-colors',
+                            on
+                              ? 'border-text bg-text text-background'
+                              : 'border-border text-secondary hover:border-text/40 hover:text-text',
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">Your date</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {PRONOUN_OPTIONS.map((p) => {
+                      const on = inputs.partner_pronouns === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setInputs((s) => ({ ...s, partner_pronouns: on ? '' : p.id }))}
+                          className={cn(
+                            'rounded-pill border px-4 py-2 text-sm transition-colors',
+                            on
+                              ? 'border-text bg-text text-background'
+                              : 'border-border text-secondary hover:border-text/40 hover:text-text',
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </Step>
         )}
 
@@ -566,6 +643,25 @@ function InputsView(props: {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Free-text context. Fed to the LLM that writes the why-it-works
+                copy so plans can speak to anniversaries, dietary needs, etc. */}
+            <div className="mt-10">
+              <label htmlFor="plan-note" className="mb-2.5 block text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                Anything else? <span className="ml-1 normal-case tracking-normal text-muted/70">(optional)</span>
+              </label>
+              <textarea
+                id="plan-note"
+                value={inputs.note}
+                onChange={(e) => setInputs((s) => ({ ...s, note: e.target.value.slice(0, 280) }))}
+                rows={3}
+                placeholder="e.g. anniversary, vegetarian, allergic to seafood, 7 months pregnant, first time in Kelowna…"
+                className="block w-full resize-none rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
+              />
+              <p className="mt-2 text-right text-xs text-muted [font-variant-numeric:tabular-nums]">
+                {inputs.note.length} / 280
+              </p>
             </div>
           </Step>
         )}
