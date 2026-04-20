@@ -156,17 +156,21 @@ serve(async (req: Request) => {
       // Continue anyway — the user gets their plans even if save failed
     }
 
-    // Build slug per row (needs id) then UPDATE in a single roundtrip.
+    // Build slug per row (needs id) then UPDATE per row. Tried upsert first,
+    // but Supabase upsert sends an INSERT that fails the NOT NULL columns
+    // (template_id, inputs, stops) so the conflict path never fires.
     if (inserted && inserted.length > 0) {
-      const updates = inserted.map((row, idx) => ({
-        id: row.id,
-        slug: slugify(written[idx].title, row.id),
-      }));
-      // upsert with onConflict to set slugs without re-inserting
-      const { error: slugErr } = await supabase
-        .from('itineraries')
-        .upsert(updates, { onConflict: 'id' });
-      if (slugErr) console.error('slug update error', slugErr);
+      await Promise.all(
+        inserted.map((row, idx) =>
+          supabase
+            .from('itineraries')
+            .update({ slug: slugify(written[idx].title, row.id) })
+            .eq('id', row.id)
+            .then(({ error }) => {
+              if (error) console.error('slug update error', row.id, error.message);
+            }),
+        ),
+      );
     }
 
     const modPoolById = new Map((modPool ?? []).map((m: any) => [m.id, m]));
