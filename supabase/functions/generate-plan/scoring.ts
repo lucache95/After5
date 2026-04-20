@@ -119,6 +119,7 @@ export function buildItineraryFromTemplate(
     stops.push({
       place_id: p.id,
       place_name: p.name,
+      place_slug: p.slug,
       place_type: p.type,
       start_time: cursor,
       duration_min: dur,

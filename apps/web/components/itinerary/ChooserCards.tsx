@@ -31,16 +31,15 @@ export function ChooserCards({
             type="button"
             onClick={() => onPick(i)}
             className={cn(
-              'group flex flex-col text-left transition-transform',
-              isActive ? 'translate-y-0' : 'hover:-translate-y-0.5',
+              'group flex flex-col rounded-card border-2 p-3 text-left transition-all',
+              isActive
+                ? 'border-accent bg-surface'
+                : 'border-transparent hover:border-border',
             )}
           >
-            <div
-              className={cn(
-                'relative aspect-[4/3] w-full overflow-hidden rounded-card border-2 bg-surface transition-colors',
-                isActive ? 'border-accent' : 'border-transparent',
-              )}
-            >
+            {/* Image with template chip overlay only — title sits below for
+                guaranteed contrast regardless of photo. */}
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-surface">
               <Image
                 src={cover}
                 alt=""
@@ -48,24 +47,25 @@ export function ChooserCards({
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.02]"
               />
-              <div
-                aria-hidden
-                className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/80 to-transparent"
-              />
-              <div className="absolute left-4 top-4">
+              <div className="absolute left-3 top-3">
                 <span className="rounded-pill bg-white/95 px-2.5 py-1 text-[11px] font-medium tracking-wide text-text backdrop-blur-sm">
                   {it.template_name}
                 </span>
               </div>
-              <div className="absolute bottom-4 left-4 right-4 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
-                <h3 className="font-display text-lg font-semibold leading-tight md:text-xl">
-                  {it.title}
-                </h3>
-                <p className="mt-1.5 text-xs text-white/95 [font-variant-numeric:tabular-nums]">
-                  ${Math.round(it.total_cost_pp)} <span className="text-white/60">·</span>{' '}
-                  {totalHr} hr <span className="text-white/60">·</span> {it.stops.length} stops
-                </p>
-              </div>
+            </div>
+
+            {/* Title + meta below image, on the card surface — always readable. */}
+            <div className="mt-3 px-1">
+              <h3 className="font-display text-lg font-semibold leading-tight text-text md:text-xl">
+                {it.title}
+              </h3>
+              <p className="mt-1.5 text-xs text-muted [font-variant-numeric:tabular-nums]">
+                <span className="text-text">${Math.round(it.total_cost_pp)}</span>
+                <span className="mx-1.5 text-border">·</span>
+                <span>{totalHr} hr</span>
+                <span className="mx-1.5 text-border">·</span>
+                <span>{it.stops.length} stops</span>
+              </p>
             </div>
           </button>
         );

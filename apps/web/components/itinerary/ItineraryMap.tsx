@@ -1,125 +1,87 @@
-'use client';
+// Static Mapbox image of the route — pre-rendered server-side by Mapbox, served
+// as a PNG. No WebGL required (interactive map was failing for users with
+// WebGL disabled / unavailable). For the actual zooming + panning experience
+// users tap "Open route in Maps" which deep-links Google Maps directions.
 
-// Interactive Mapbox map showing all stops with numbered pins and a route line
-// connecting them in order. Light style to match the After5 cream palette.
-//
-// Defensive rendering: the map has three visible states so we never ship a
-// silently-empty box again. If a render still fails, onError surfaces the
-// Mapbox error into the UI so we (or the user) can see what's wrong.
-
-import { useMemo, useState } from 'react';
-import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapbox';
+import Image from 'next/image';
 import type { Stop } from '@/lib/itinerary-types';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const ACCENT = 'C2552B';
+
+// Google polyline encoder for the route line. Compact algorithm, no dependency.
+function encodePolyline(coords: Array<[number, number]>): string {
+  let lastLat = 0;
+  let lastLng = 0;
+  let result = '';
+  for (const [lng, lat] of coords) {
+    const latE5 = Math.round(lat * 1e5);
+    const lngE5 = Math.round(lng * 1e5);
+    result += encodeSigned(latE5 - lastLat) + encodeSigned(lngE5 - lastLng);
+    lastLat = latE5;
+    lastLng = lngE5;
+  }
+  return result;
+}
+function encodeSigned(n: number): string {
+  let v = n < 0 ? ~(n << 1) : n << 1;
+  let out = '';
+  while (v >= 0x20) {
+    out += String.fromCharCode((0x20 | (v & 0x1f)) + 63);
+    v >>= 5;
+  }
+  out += String.fromCharCode(v + 63);
+  return out;
+}
+
+function buildStaticMapUrl(placed: Array<{ lng: number; lat: number }>): string | null {
+  if (!TOKEN || placed.length === 0) return null;
+  const pins = placed
+    .map((s, i) => `pin-s-${i + 1}+${ACCENT}(${s.lng.toFixed(5)},${s.lat.toFixed(5)})`)
+    .join(',');
+  let overlays = pins;
+  if (placed.length >= 2) {
+    const polyline = encodePolyline(placed.map((s) => [s.lng, s.lat]));
+    // Polyline characters need URL encoding when embedded in the path.
+    const encodedPath = `path-3+${ACCENT}-0.85(${encodeURIComponent(polyline)})`;
+    overlays = `${encodedPath},${pins}`;
+  }
+  // auto fits the viewport to overlays. 1200x420@2x = retina-ready 2400x840.
+  return `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${overlays}/auto/1200x420@2x?access_token=${TOKEN}&padding=80,40,40,40`;
+}
 
 export function ItineraryMap({ stops }: { stops: Stop[] }) {
-  const [mapError, setMapError] = useState<string | null>(null);
-
   const placed = stops.filter(
     (s): s is Stop & { lat: number; lng: number } =>
       typeof s.lat === 'number' && typeof s.lng === 'number',
   );
 
-  const routeData = useMemo(() => {
-    if (placed.length < 2) return null;
-    return {
-      type: 'FeatureCollection' as const,
-      features: [
-        {
-          type: 'Feature' as const,
-          properties: {},
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: placed.map((s) => [s.lng, s.lat]),
-          },
-        },
-      ],
-    };
-  }, [placed]);
+  const url = buildStaticMapUrl(placed);
 
-  if (!TOKEN) {
+  if (!url) {
     return (
       <FallbackList
-        title="Map token missing"
-        body="NEXT_PUBLIC_MAPBOX_TOKEN isn't in the client bundle. Rebuild with it set."
-        stops={placed}
-      />
-    );
-  }
-
-  if (placed.length === 0) {
-    return (
-      <FallbackList
-        title="No coordinates yet"
-        body="These stops don't have lat/lng stored, so there's nothing to plot."
+        title={!TOKEN ? 'Map token missing' : 'No coordinates yet'}
+        body={
+          !TOKEN
+            ? "NEXT_PUBLIC_MAPBOX_TOKEN isn't in the client bundle."
+            : "These stops don't have lat/lng stored, so there's nothing to plot."
+        }
         stops={stops}
       />
     );
   }
 
-  if (mapError) {
-    return (
-      <FallbackList
-        title="Map failed to load"
-        body={`Mapbox reported: ${mapError}. The stops below are the route in order.`}
-        stops={placed}
-      />
-    );
-  }
-
-  // Center on the centroid of placed stops and pad bounds.
-  const lngs = placed.map((s) => s.lng);
-  const lats = placed.map((s) => s.lat);
-  const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
-  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-
   return (
-    <div className="overflow-hidden rounded-card border border-border">
-      <Map
-        mapboxAccessToken={TOKEN}
-        initialViewState={{
-          longitude: centerLng,
-          latitude: centerLat,
-          zoom: 11,
-        }}
-        style={{ width: '100%', height: 420 }}
-        mapStyle="mapbox://styles/mapbox/light-v11"
-        attributionControl={false}
-        onError={(e) => {
-          console.error('Mapbox error:', e);
-          const msg = e?.error?.message ?? 'unknown error';
-          setMapError(msg);
-        }}
-      >
-        {routeData && (
-          <Source id="route" type="geojson" data={routeData}>
-            <Layer
-              id="route-line"
-              type="line"
-              paint={{
-                'line-color': '#C2552B',
-                'line-width': 3,
-                'line-opacity': 0.85,
-                'line-dasharray': [1, 0],
-              }}
-              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            />
-          </Source>
-        )}
-
-        {placed.map((s, i) => (
-          <Marker key={s.place_id} longitude={s.lng} latitude={s.lat} anchor="bottom">
-            <div className="group cursor-pointer">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent font-display text-sm font-semibold text-white shadow-[0_4px_14px_rgba(0,0,0,0.25)] ring-2 ring-white transition-transform group-hover:scale-110">
-                {i + 1}
-              </div>
-            </div>
-          </Marker>
-        ))}
-
-        <NavigationControl position="top-right" showCompass={false} />
-      </Map>
+    <div className="overflow-hidden rounded-card border border-border bg-surface">
+      <Image
+        src={url}
+        alt={`Map of ${placed.length} stops in the route`}
+        width={1200}
+        height={420}
+        unoptimized
+        className="h-auto w-full"
+      />
     </div>
   );
 }

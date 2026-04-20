@@ -5,6 +5,7 @@
 export interface Stop {
   place_id: string;
   place_name: string;
+  place_slug?: string;
   place_type?: string;
   start_time: string;
   duration_min: number;

@@ -113,19 +113,13 @@ export default async function DatesIndexPage() {
                     sizes="(max-width: 768px) 100vw, 33vw"
                     className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.03]"
                   />
-                  <div
-                    aria-hidden
-                    className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/75 to-transparent"
-                  />
-                  <div className="absolute bottom-4 left-5 right-5 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
-                    <h2 className="font-display text-lg font-semibold leading-tight md:text-xl">
-                      {it.title}
-                    </h2>
-                    {it.hook && (
-                      <p className="mt-1 line-clamp-1 text-xs text-white/95">{it.hook}</p>
-                    )}
-                  </div>
                 </div>
+                <h2 className="mt-4 font-display text-lg font-semibold leading-tight text-text md:text-xl">
+                  {it.title}
+                </h2>
+                {it.hook && (
+                  <p className="mt-1 line-clamp-2 text-sm text-secondary">{it.hook}</p>
+                )}
                 <p className="mt-3 text-sm text-muted [font-variant-numeric:tabular-nums]">
                   <span className="text-text">${Math.round(it.total_cost_pp ?? 0)}</span>
                   <span className="mx-1.5 text-border">·</span>

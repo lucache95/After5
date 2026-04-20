@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { MapPin, Lightbulb, ExternalLink, Info } from 'lucide-react';
 import { imageForStop } from '@/lib/place-image';
 import { to12h } from '@/lib/format';
@@ -44,6 +45,8 @@ export function StopCard({
         </div>
 
         <article className="overflow-hidden rounded-card border border-border bg-background">
+          {/* Image — only the time pill overlays. Title moved BELOW so it
+              never fights the photo for contrast. */}
           <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface">
             <Image
               src={img}
@@ -52,11 +55,7 @@ export function StopCard({
               sizes="(max-width: 768px) 100vw, 760px"
               className="object-cover"
             />
-            <div
-              aria-hidden
-              className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/95 via-black/75 to-transparent"
-            />
-            <div className="absolute left-5 top-5 flex items-center gap-2">
+            <div className="absolute left-4 top-4 flex items-center gap-2">
               <span className="rounded-pill bg-white/95 px-3 py-1 text-xs font-medium text-text backdrop-blur-sm md:hidden">
                 #{index + 1}
               </span>
@@ -64,23 +63,34 @@ export function StopCard({
                 {to12h(stop.start_time)}
               </span>
             </div>
-            <div className="absolute bottom-4 left-5 right-5 text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]">
-              <h3 className="font-display text-xl font-semibold leading-tight md:text-2xl">
-                {stop.place_name}
-              </h3>
-              {(stop.neighborhood || stop.place_type) && (
-                <p className="mt-1 text-xs text-white/90">
-                  {[stop.neighborhood, stop.place_type?.replace(/_/g, ' ')]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-              )}
-            </div>
           </div>
 
           <div className="px-6 py-6 md:px-7 md:py-7">
+            {/* Title at the forefront — clean text on background, always readable. */}
+            {stop.place_slug ? (
+              <Link
+                href={`/places/${stop.place_slug}`}
+                className="group/title block transition-colors"
+              >
+                <h3 className="font-display text-xl font-semibold leading-tight text-text md:text-2xl group-hover/title:text-accent">
+                  {stop.place_name}
+                </h3>
+              </Link>
+            ) : (
+              <h3 className="font-display text-xl font-semibold leading-tight text-text md:text-2xl">
+                {stop.place_name}
+              </h3>
+            )}
+            {(stop.neighborhood || stop.place_type) && (
+              <p className="mt-1.5 text-xs uppercase tracking-[0.12em] text-muted">
+                {[stop.neighborhood, stop.place_type?.replace(/_/g, ' ')]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+            )}
+
             {stop.what_to_do && (
-              <p className="text-base text-secondary md:text-lg">{stop.what_to_do}</p>
+              <p className="mt-5 text-base text-secondary md:text-lg">{stop.what_to_do}</p>
             )}
 
             {stop.local_insight && (
@@ -110,15 +120,25 @@ export function StopCard({
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href={moreInfoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-background px-4 py-2 text-sm text-text transition-colors hover:border-text/40"
-              >
-                <Info className="h-3.5 w-3.5" strokeWidth={2} />
-                More info
-              </a>
+              {stop.place_slug ? (
+                <Link
+                  href={`/places/${stop.place_slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-background px-4 py-2 text-sm text-text transition-colors hover:border-text/40"
+                >
+                  <Info className="h-3.5 w-3.5" strokeWidth={2} />
+                  About this spot
+                </Link>
+              ) : (
+                <a
+                  href={moreInfoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-background px-4 py-2 text-sm text-text transition-colors hover:border-text/40"
+                >
+                  <Info className="h-3.5 w-3.5" strokeWidth={2} />
+                  More info
+                </a>
+              )}
               <a
                 href={directionsUrl}
                 target="_blank"

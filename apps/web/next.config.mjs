@@ -14,6 +14,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh4.googleusercontent.com' },
       { protocol: 'https', hostname: 'lh5.googleusercontent.com' },
       { protocol: 'https', hostname: 'lh6.googleusercontent.com' },
+      // Mapbox Static Images API — used for the route map (no WebGL needed).
+      { protocol: 'https', hostname: 'api.mapbox.com' },
     ],
   },
 };
