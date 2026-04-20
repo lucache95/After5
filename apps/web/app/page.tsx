@@ -280,10 +280,30 @@ export default function HomePage() {
 
         {/* ─── Footer ───────────────────────────────────────────── */}
         <footer className="border-t border-border">
-          <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-16">
-            <p className="text-center text-xs text-muted">
+          <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
+            <p className="text-xs text-muted">
               Built in Kelowna. Coming to Kamloops, Vernon, Penticton.
             </p>
+            <div className="flex items-center gap-6 text-xs text-muted">
+              <Link
+                href="/privacy"
+                className="transition-colors hover:text-text"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="transition-colors hover:text-text"
+              >
+                Terms
+              </Link>
+              <a
+                href="mailto:lucas@after5.app"
+                className="transition-colors hover:text-text"
+              >
+                lucas@after5.app
+              </a>
+            </div>
           </div>
         </footer>
       </main>

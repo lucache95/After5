@@ -4,12 +4,13 @@
 // 5 questions → call generate-plan Edge Function → 3 itinerary cards → detail.
 // Single client component for now; split into smaller files when adding tests.
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, ArrowLeft, Check, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
+import { track } from '@/app/PostHogProvider';
 
 const ALLOWED_VIBES = new Set(['romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous', 'free']);
 function vibeFromUrl(raw: string | null): string[] {
@@ -134,6 +135,17 @@ function PlanFlow() {
   const [errorMsg, setErrorMsg] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
 
+  // Analytics: fire plan_started once when the flow first mounts
+  useEffect(() => {
+    track.planStarted();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Analytics: fire plan_step_advanced when step changes
+  useEffect(() => {
+    if (phase === 'inputs') track.planStepAdvanced(step);
+  }, [step, phase]);
+
   const canAdvance = (): boolean => {
     if (step === 3) return inputs.vibe.length >= 1;
     return true;
@@ -160,6 +172,13 @@ function PlanFlow() {
       setResults(data.itineraries);
       setActiveIdx(0);
       setPhase('results');
+      data.itineraries.forEach((it) =>
+        track.planGenerated({
+          template_id: it.template_id,
+          vibe: inputs.vibe,
+          budget: inputs.budget_per_person,
+        })
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Something went wrong.';
       setErrorMsg(msg);
@@ -668,6 +687,7 @@ function ShareButton({ id }: { id: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1800);
       }
+      track.planShared(id);
     } catch {
       // user dismissed share sheet, no-op
     }
