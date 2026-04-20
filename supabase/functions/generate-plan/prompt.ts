@@ -83,8 +83,16 @@ export async function writeItineraries(
     throw new Error('LLM returned no text content');
   }
 
-  const written = parseLLMResponse(textBlock.text);
-  // Diagnostic: log whether stops carry what_to_do so we can catch LLM regressions.
+  // If the LLM returns prose instead of JSON (rare but happens — Claude
+  // occasionally explains why it can't comply), fall back to placeholder
+  // copy so the user gets a usable plan instead of a 500.
+  let written: LLMItineraryWriting[];
+  try {
+    written = parseLLMResponse(textBlock.text);
+  } catch (err) {
+    console.error('LLM returned non-JSON, using fallback titles. Snippet:', textBlock.text.slice(0, 120));
+    written = [];
+  }
   const whatToDoCounts = written.map(
     (w) => w.stops?.filter((s) => s.what_to_do && s.what_to_do.length > 0).length ?? 0,
   );

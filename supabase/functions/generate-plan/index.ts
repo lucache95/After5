@@ -81,11 +81,18 @@ serve(async (req: Request) => {
       return jsonResponse({ error: 'no_template_match', message: 'No template matches those inputs.' }, 422);
     }
 
-    // 5. Build one itinerary per template (greedy slot fill)
+    // 5. Build one itinerary per template, tracking which place_ids have been
+    //    used across the batch so each subsequent itinerary picks distinct
+    //    spots (cross-plan diversity). Stochastic top-K inside scoring also
+    //    means re-running the same inputs produces different plans.
     const itineraries: Itinerary[] = [];
+    const usedAcrossBatch = new Set<string>();
     for (const t of topTemplates) {
-      const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at);
-      if (it) itineraries.push(it);
+      const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at, usedAcrossBatch);
+      if (it) {
+        itineraries.push(it);
+        for (const stop of it.stops) usedAcrossBatch.add(stop.place_id);
+      }
     }
     if (itineraries.length === 0) {
       return jsonResponse({ error: 'no_valid_itineraries', message: 'Could not assemble valid itineraries from the candidate pool.' }, 422);
@@ -96,8 +103,11 @@ serve(async (req: Request) => {
       const remaining = allTemplates.filter((t) => !topTemplates.some((tt) => tt.id === t.id));
       for (const t of remaining) {
         if (itineraries.length >= 3) break;
-        const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at);
-        if (it) itineraries.push(it);
+        const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at, usedAcrossBatch);
+        if (it) {
+          itineraries.push(it);
+          for (const stop of it.stops) usedAcrossBatch.add(stop.place_id);
+        }
       }
     }
 

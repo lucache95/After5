@@ -38,6 +38,8 @@ export interface Place {
   photo_url: string | null;
   lat: number | null;
   lng: number | null;
+  opens: string | null;
+  closes: string | null;
   quality_score: number;
   feedback_score: number;
   local_insight: string | null;
