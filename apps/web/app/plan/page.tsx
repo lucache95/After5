@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn';
 import { track } from '@/app/PostHogProvider';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { ChooserCards } from '@/components/itinerary/ChooserCards';
+import { RadiusMap } from '@/components/RadiusMap';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 const ALLOWED_VIBES = new Set(['romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous', 'free']);
@@ -73,6 +74,7 @@ interface Inputs {
   must_includes: string[];
   drive_tolerance_min: number;
   max_radius_km: number;
+  location: 'out' | 'home';
   effort: Effort;
 }
 
@@ -140,6 +142,7 @@ function PlanFlow() {
     must_includes: [],
     drive_tolerance_min: 20,
     max_radius_km: 30,
+    location: 'out',
     effort: 'low',
   });
   const [results, setResults] = useState<Itinerary[]>([]);
@@ -409,36 +412,61 @@ function InputsView(props: {
               </div>
             </div>
 
-            {/* Radius — how far from downtown Kelowna they'll go. Defaults to
-                30km (covers all of Kelowna proper + West Kelowna + Lake Country).
-                Higher unlocks Big White, Vernon, Penticton spots. */}
+            {/* Where — out and about (real venues) or at-home night
+                (cooking, fondue, fort etc). At-home plans skip the radius
+                question entirely. */}
             <div className="mt-10">
-              <p className="mb-4 text-sm font-medium text-text">How far from Kelowna?</p>
-              <div className="rounded-card border border-border bg-surface p-7 md:p-9">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-display text-3xl font-bold text-text [font-variant-numeric:tabular-nums]">
-                    {inputs.max_radius_km} km
-                  </span>
-                  <span className="text-sm text-muted">{radiusBlurb(inputs.max_radius_km)}</span>
-                </div>
-                <input
-                  type="range"
-                  min={5}
-                  max={100}
-                  step={5}
-                  value={inputs.max_radius_km}
-                  onChange={(e) => setInputs((s) => ({ ...s, max_radius_km: Number(e.target.value) }))}
-                  className="mt-8 w-full accent-accent"
+              <p className="mb-4 text-sm font-medium text-text">Where?</p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Choice
+                  selected={inputs.location === 'out'}
+                  onClick={() => setInputs((s) => ({ ...s, location: 'out' }))}
+                  label="Out and about"
+                  sub="Real venues, real places"
                 />
-                <div className="mt-3 flex justify-between text-xs text-muted [font-variant-numeric:tabular-nums]">
-                  <span>5 km</span>
-                  <span>25</span>
-                  <span>50</span>
-                  <span>75</span>
-                  <span>100 km</span>
-                </div>
+                <Choice
+                  selected={inputs.location === 'home'}
+                  onClick={() => setInputs((s) => ({ ...s, location: 'home' }))}
+                  label="At home tonight"
+                  sub="Cooking, movies, board games"
+                />
               </div>
             </div>
+
+            {/* Radius — only relevant for out-and-about plans. Map shows the
+                circle visually; slider drives the value. Map updates live. */}
+            {inputs.location === 'out' && (
+              <div className="mt-10">
+                <p className="mb-4 text-sm font-medium text-text">How far from Kelowna?</p>
+                <div className="overflow-hidden rounded-card border border-border bg-surface">
+                  <RadiusMap radiusKm={inputs.max_radius_km} />
+                  <div className="px-7 py-7 md:px-9 md:py-8">
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-display text-3xl font-bold text-text [font-variant-numeric:tabular-nums]">
+                        {inputs.max_radius_km} km
+                      </span>
+                      <span className="text-sm text-muted">{radiusBlurb(inputs.max_radius_km)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      step={5}
+                      value={inputs.max_radius_km}
+                      onChange={(e) => setInputs((s) => ({ ...s, max_radius_km: Number(e.target.value) }))}
+                      className="mt-6 w-full accent-accent"
+                    />
+                    <div className="mt-3 flex justify-between text-xs text-muted [font-variant-numeric:tabular-nums]">
+                      <span>5 km</span>
+                      <span>25</span>
+                      <span>50</span>
+                      <span>75</span>
+                      <span>100 km</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </Step>
         )}
 

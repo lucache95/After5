@@ -41,13 +41,15 @@ export async function filterPlaces(
   const tiers = allowedTiers(inputs.budget_per_person);
   const season = currentSeason();
 
+  const wantsHome = inputs.location === 'home';
   const query = supabase
     .from('places')
     .select(
-      'id,name,slug,address,neighborhood,drive_cluster,type,vibe_tags,pairing_tags,effort,time_of_day,weather_dependent,seasonality,typical_duration_min,price_tier,typical_per_person,reservation_required,reservation_url,photo_url,lat,lng,opens,closes,quality_score,feedback_score,local_insight,notes,is_active'
+      'id,name,slug,address,neighborhood,drive_cluster,type,vibe_tags,pairing_tags,effort,time_of_day,weather_dependent,seasonality,typical_duration_min,price_tier,typical_per_person,reservation_required,reservation_url,photo_url,lat,lng,opens,closes,quality_score,feedback_score,local_insight,notes,is_active,at_home'
     )
     .eq('is_active', true)
     .eq('approval_status', 'live')
+    .eq('at_home', wantsHome)
     .in('price_tier', tiers)
     .or(`seasonality.cs.{year_round},seasonality.cs.{${season}}`);
 

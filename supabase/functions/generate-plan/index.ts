@@ -36,6 +36,9 @@ const InputSchema = z.object({
   // Kelowna proper + West Kelowna + Lake Country. 100 catches Vernon, Big
   // White, Penticton.
   max_radius_km: z.number().int().min(5).max(150).default(30),
+  // Out-and-about plans pull from the real catalog. At-home plans pull from
+  // the virtual at-home activity pool only (cooking, fondue, fort, etc).
+  location: z.enum(['out', 'home']).default('out'),
   effort: z.enum(['low', 'moderate', 'high']).default('low'),
   start_at: z.string().datetime().optional(),
 });

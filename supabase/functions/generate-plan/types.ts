@@ -14,6 +14,7 @@ export interface PlanInputs {
   must_includes: string[];
   drive_tolerance_min: number;
   max_radius_km: number;
+  location: 'out' | 'home';
   effort: Effort;
 }
 
@@ -46,6 +47,7 @@ export interface Place {
   local_insight: string | null;
   notes: string | null;
   is_active?: boolean;
+  at_home?: boolean;
 }
 
 export interface TemplateSlot {
