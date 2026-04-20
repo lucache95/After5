@@ -30,3 +30,4 @@ coverage/
 
 # Turborepo
 .turbo/
+.vercel
