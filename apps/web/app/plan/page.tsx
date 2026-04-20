@@ -489,8 +489,30 @@ function Choice(props: { selected: boolean; onClick: () => void; label: string; 
 }
 
 // ─── Loading view ────────────────────────────────────────────────────
+// Stepped status feed: each step ticks at calibrated timing matching the ~10s
+// Edge Function call. The final step never auto-completes — it stays "active"
+// until the parent flips phase from 'loading' to 'results', so a slow API
+// never leaves the user staring at a fully-complete-but-still-spinning UI.
+
+const LOAD_STEPS = [
+  { label: 'Reading 50 Kelowna spots',         doneAt: 1500 },
+  { label: 'Matching your vibe',                doneAt: 3500 },
+  { label: 'Grouping by neighborhood',          doneAt: 6000 },
+  { label: 'Writing your night',                doneAt: Infinity }, // hold until results land
+] as const;
 
 function LoadingView() {
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const id = setInterval(() => setNow(Date.now() - start), 120);
+    return () => clearInterval(id);
+  }, []);
+
+  // Determine the index of the currently-active step (first step not yet done)
+  const activeIdx = LOAD_STEPS.findIndex((s) => now < s.doneAt);
+
   return (
     <div className="mx-auto flex max-w-content flex-col items-start px-6 py-32 md:px-10 md:py-44">
       <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
@@ -499,14 +521,57 @@ function LoadingView() {
       <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
         Building three plans for you.
       </h1>
-      <p className="mt-6 max-w-prose text-base text-secondary">
-        Filtering 50 Kelowna spots → grouping by area → checking timing → writing your night.
-        Takes about ten seconds.
-      </p>
 
-      <div className="mt-12 grid w-full max-w-3xl grid-cols-1 gap-5 md:grid-cols-3">
+      {/* Stepped status feed */}
+      <ol className="mt-10 w-full max-w-xl space-y-4">
+        {LOAD_STEPS.map((step, i) => {
+          const isDone = now >= step.doneAt;
+          const isActive = i === activeIdx;
+          const isPending = !isDone && !isActive;
+          return (
+            <li
+              key={step.label}
+              className={cn(
+                'flex items-center gap-4 text-base transition-opacity duration-300',
+                isPending && 'opacity-40',
+              )}
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+                {isDone ? (
+                  <Check className="h-5 w-5 text-accent" strokeWidth={2.5} />
+                ) : isActive ? (
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
+                  </span>
+                ) : (
+                  <span className="h-2 w-2 rounded-full border border-border" />
+                )}
+              </span>
+              <span
+                className={cn(
+                  'transition-colors',
+                  isDone && 'text-secondary',
+                  isActive && 'text-text font-medium',
+                  isPending && 'text-muted',
+                )}
+              >
+                {step.label}
+                {isActive && <span className="ml-1 inline-block animate-pulse">…</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      {/* Skeleton cards beneath, so the eye has something to land on */}
+      <div className="mt-14 grid w-full max-w-3xl grid-cols-1 gap-5 md:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-card border border-border bg-surface p-7">
+          <div
+            key={i}
+            className="rounded-card border border-border bg-surface p-7 animate-pulse"
+            style={{ animationDelay: `${i * 200}ms` }}
+          >
             <div className="h-3 w-16 rounded bg-border" />
             <div className="mt-5 h-6 w-44 rounded bg-border" />
             <div className="mt-7 space-y-3 border-t border-border pt-5">

@@ -21,6 +21,8 @@ const SAMPLE_PLANS = [
     vibe: ['romantic', 'boujee'],
     cost: '$140',
     time: '4 hr',
+    img: '/sample/westside-sunset.jpg',
+    imgAlt: 'Sunset over Westside vineyard with picnic table and Okanagan Lake',
     stops: [
       { time: '5:30', name: 'Mission Hill' },
       { time: '7:00', name: "Quails' Gate" },
@@ -32,6 +34,8 @@ const SAMPLE_PLANS = [
     vibe: ['chill', 'intimate'],
     cost: '$85',
     time: '3 hr',
+    img: '/sample/first-date-downtown.jpg',
+    imgAlt: 'Candlelit downtown bistro table with two glasses of wine',
     stops: [
       { time: '6:30', name: "Skinny Duke's" },
       { time: '7:45', name: 'Salted Brick' },
@@ -43,6 +47,8 @@ const SAMPLE_PLANS = [
     vibe: ['adventurous', 'spontaneous'],
     cost: '$50',
     time: '3.5 hr',
+    img: '/sample/adventure-date.jpg',
+    imgAlt: 'Hiking boots and water bottle on Knox Mountain overlooking Kelowna',
     stops: [
       { time: '5:00', name: 'Knox Mountain' },
       { time: '6:45', name: 'BNA Brewing' },
@@ -60,18 +66,18 @@ const BENEFITS = [
 export default function HomePage() {
   return (
     <>
-      {/* ─── Nav ───────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-[2px]">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-5 md:px-10">
+      {/* ─── Nav ── overlays the hero image, no chrome bar ───── */}
+      <header className="absolute inset-x-0 top-0 z-50">
+        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-text"
+            className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
           >
             After5
           </Link>
           <Link
             href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-primary px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85 md:px-7 md:py-3.5"
+            className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
           >
             Plan my date — free
           </Link>
@@ -79,41 +85,8 @@ export default function HomePage() {
       </header>
 
       <main>
-        {/* ─── Text hero (asymmetric) ─────────────────────────── */}
-        <section>
-          <div className="mx-auto max-w-content px-6 pb-16 pt-20 md:px-10 md:pb-24 md:pt-28">
-            <div className="max-w-[860px]">
-              <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                Kelowna · BC
-              </p>
-              <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl lg:text-6xl">
-                Plan the perfect Kelowna date in 30 seconds.
-              </h1>
-              <p className="mt-8 max-w-[600px] text-lg text-secondary">
-                Curated date itineraries built for your vibe, budget, and time —
-                by people who actually live here.
-              </p>
-              <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-                <Link
-                  href="/plan"
-                  className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85"
-                >
-                  Plan my date — free
-                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
-                </Link>
-                <a
-                  href="#vibes"
-                  className="text-base text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
-                >
-                  Browse by vibe
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Full-bleed hero image ──────────────────────────── */}
-        <section className="relative h-[70vh] min-h-[480px] w-full overflow-hidden bg-surface md:h-[85vh]">
+        {/* ─── Image-led hero (text overlay, editorial cover style) ─── */}
+        <section className="relative isolate flex min-h-[88vh] w-full items-end overflow-hidden bg-surface md:min-h-[92vh]">
           <Image
             src="/vibes/vibe-hero.jpg"
             alt="Okanagan Lake at sunset"
@@ -122,6 +95,45 @@ export default function HomePage() {
             sizes="100vw"
             className="object-cover"
           />
+          {/* Readability scrim — strong at bottom-left where the type sits, fading up */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent"
+          />
+
+          <div className="relative mx-auto w-full max-w-content px-6 pb-16 pt-32 md:px-10 md:pb-24 md:pt-40">
+            <div className="max-w-[860px]">
+              <p className="mb-7 text-xs font-medium uppercase tracking-[0.22em] text-white/80">
+                Kelowna · BC
+              </p>
+              <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-white md:text-6xl lg:text-[78px]">
+                Plan the perfect Kelowna date in 30 seconds.
+              </h1>
+              <p className="mt-7 max-w-[560px] text-lg text-white/85 md:text-xl">
+                Curated itineraries built for your vibe, budget, and time —
+                by people who actually live here.
+              </p>
+              <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+                <Link
+                  href="/plan"
+                  className="inline-flex items-center gap-2 rounded-pill bg-white px-7 py-3.5 text-base font-medium text-text transition-transform hover:-translate-y-0.5"
+                >
+                  Plan my date — free
+                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                </Link>
+                <a
+                  href="#vibes"
+                  className="text-base text-white/90 underline decoration-white/40 decoration-1 underline-offset-[6px] transition-colors hover:text-white hover:decoration-white"
+                >
+                  Browse by vibe
+                </a>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* ─── Vibe gallery (Pinterest-style) ────────────────── */}
@@ -191,49 +203,62 @@ export default function HomePage() {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
               {SAMPLE_PLANS.map((p, i) => {
                 const highlight = i === 1;
                 return (
                   <article
                     key={p.title}
-                    className={`group flex flex-col rounded-card border bg-surface p-7 transition-colors md:p-8 ${
-                      highlight ? 'border-accent' : 'border-border hover:border-text/30'
-                    }`}
+                    className="group flex flex-col"
                   >
-                    <div className="mb-6 flex flex-wrap gap-2">
-                      {p.vibe.map((v) => (
-                        <span
-                          key={v}
-                          className="rounded-pill border border-border px-3 py-1 text-xs text-secondary"
-                        >
-                          {v}
+                    {/* Image hero — does the emotional lifting */}
+                    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-surface">
+                      <Image
+                        src={p.img}
+                        alt={p.imgAlt}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
+                      />
+                      {/* Subtle bottom gradient so the chip stays legible on bright shots */}
+                      <div
+                        aria-hidden
+                        className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/30 to-transparent"
+                      />
+                      <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
+                        {p.vibe.map((v) => (
+                          <span
+                            key={v}
+                            className="rounded-pill bg-white/95 px-2.5 py-1 text-[11px] font-medium tracking-wide text-text backdrop-blur-sm"
+                          >
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="absolute bottom-4 left-4 right-4 flex items-baseline justify-between text-white [font-variant-numeric:tabular-nums]">
+                        <span className={`text-sm font-medium ${highlight ? 'text-white' : 'text-white'}`}>
+                          {p.cost}
                         </span>
-                      ))}
+                        <span className="text-xs text-white/85">{p.time}</span>
+                      </div>
                     </div>
 
-                    <h3 className="font-display text-2xl font-semibold leading-tight text-text">
-                      {p.title}
-                    </h3>
-
-                    <p className="mt-4 text-sm text-muted [font-variant-numeric:tabular-nums]">
-                      <span className={`font-medium ${highlight ? 'text-accent' : 'text-text'}`}>
-                        {p.cost}
-                      </span>
-                      <span className="mx-1.5 text-border">·</span>
-                      {p.time}
-                    </p>
-
-                    <ul className="mt-6 space-y-2.5 border-t border-border pt-6">
-                      {p.stops.map((s) => (
-                        <li key={s.name} className="flex items-baseline gap-4 text-sm">
-                          <span className="w-12 shrink-0 text-muted [font-variant-numeric:tabular-nums]">
-                            {s.time}
-                          </span>
-                          <span className="text-text">{s.name}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    {/* Title + timeline below the image */}
+                    <div className="mt-5">
+                      <h3 className="font-display text-xl font-semibold leading-tight text-text md:text-2xl">
+                        {p.title}
+                      </h3>
+                      <ul className="mt-4 space-y-2 text-sm">
+                        {p.stops.map((s) => (
+                          <li key={s.name} className="flex items-baseline gap-4">
+                            <span className="w-12 shrink-0 text-muted [font-variant-numeric:tabular-nums]">
+                              {s.time}
+                            </span>
+                            <span className="text-secondary">{s.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </article>
                 );
               })}
