@@ -1,14 +1,17 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { OtherDates } from '@/components/itinerary/OtherDates';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
-// Legacy UUID-based public URL. The canonical route is now /dates/[slug] for
-// SEO. We 308 redirect when a slug is present; bare UUID is kept renderable
-// only as a safety net for old shared links pre-slug backfill.
+// Legacy UUID-based public URL. The canonical route is /dates/[slug] for SEO.
+// We render the same content here (so old shared links keep working) but
+// declare the /dates/[slug] URL as canonical via <link rel=canonical>. Google
+// consolidates PageRank on the slug URL. The visible "Share" button also
+// prefers the slug URL so new links carry the canonical directly.
 
 export const revalidate = 3600;
 export const dynamic = 'force-dynamic';
@@ -26,31 +29,34 @@ interface ItineraryRow {
   is_public: boolean;
 }
 
+async function loadById(id: string): Promise<ItineraryRow | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from('itineraries').select('*').eq('id', id).maybeSingle();
+  return (data ?? null) as ItineraryRow | null;
+}
+
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await props.params;
+  const row = await loadById(id);
+  if (!row?.slug) return {};
+  return { alternates: { canonical: `https://after5.app/dates/${row.slug}` } };
+}
+
 export default async function PublicItineraryPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('itineraries')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error || !data) notFound();
-
-  const row = data as unknown as ItineraryRow;
-  // Redirect to canonical SEO URL — preserves backlinks while consolidating
-  // PageRank to /dates/[slug].
-  if (row.slug) {
-    redirect(`/dates/${row.slug}`);
-  }
+  const row = await loadById(id);
+  if (!row) notFound();
   const stops = (Array.isArray(row.stops) ? row.stops : []) as Stop[];
 
   // Derive vibe set from stop neighborhoods/types as a quiet fallback for older
   // rows that don't have a vibe column. The Edge Function output now carries it.
   const itinerary: Itinerary = {
     id: row.id,
+    slug: row.slug ?? undefined,
     template_id: row.template_id ?? '',
     template_name: '',
     title: row.title ?? 'A plan for tonight',
