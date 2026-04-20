@@ -7,11 +7,13 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, ArrowLeft, Check, MapPin } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
 import { track } from '@/app/PostHogProvider';
-import { to12h, TIMEZONE_LABEL } from '@/lib/format';
+import { ItineraryView } from '@/components/itinerary/ItineraryView';
+import { ChooserCards } from '@/components/itinerary/ChooserCards';
+import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 const ALLOWED_VIBES = new Set(['romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous', 'free']);
 function vibeFromUrl(raw: string | null): string[] {
@@ -42,29 +44,6 @@ interface Inputs {
   must_includes: string[];
   drive_tolerance_min: number;
   effort: Effort;
-}
-
-interface Stop {
-  place_id: string;
-  place_name: string;
-  start_time: string;
-  duration_min: number;
-  estimated_cost_pp: number;
-  what_to_do?: string;
-  drive_to_next_min?: number;
-}
-
-interface Itinerary {
-  id?: string;
-  template_id: string;
-  template_name: string;
-  title: string;
-  hook: string;
-  why_it_works: string;
-  stops: Stop[];
-  total_cost_pp: number;
-  total_duration_min: number;
-  vibe: string[];
 }
 
 const OCCASIONS: { id: Occasion; label: string; sub: string }[] = [
@@ -599,179 +578,27 @@ function ResultsView(props: {
   const active = itineraries[activeIdx];
 
   return (
-    <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-16">
-      <div className="mb-8 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
-          Three plans, your call
-        </p>
-        <button
-          type="button"
-          onClick={onRedo}
-          className="text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
-        >
-          Try a different one
-        </button>
-      </div>
-
-      {/* Card row */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
-        {itineraries.map((it, i) => (
+    <>
+      {/* Image-first chooser strip */}
+      <div className="mx-auto max-w-content px-6 pb-10 pt-12 md:px-10 md:pb-12 md:pt-16">
+        <div className="mb-8 flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+            Three plans, your call
+          </p>
           <button
-            key={it.id ?? i}
             type="button"
-            onClick={() => setActiveIdx(i)}
-            className={cn(
-              'group flex flex-col items-start rounded-card border bg-surface p-7 text-left transition-colors',
-              i === activeIdx ? 'border-accent' : 'border-border hover:border-text/30'
-            )}
+            onClick={onRedo}
+            className="text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
           >
-            <p className="mb-4 text-xs text-muted">{it.template_name}</p>
-            <h3 className="font-display text-2xl font-semibold leading-tight text-text">{it.title}</h3>
-            <p className="mt-3 text-base text-secondary">{it.hook}</p>
-            <p className="mt-6 text-sm [font-variant-numeric:tabular-nums]">
-              <span className={cn('font-medium', i === activeIdx ? 'text-accent' : 'text-text')}>
-                ${Math.round(it.total_cost_pp)}
-              </span>
-              <span className="mx-1.5 text-border">·</span>
-              <span className="text-muted">{Math.round(it.total_duration_min / 60 * 10) / 10} hr</span>
-            </p>
+            Try a different one
           </button>
-        ))}
-      </div>
-
-      {/* Active itinerary detail */}
-      {active && <ItineraryDetail itinerary={active} />}
-    </div>
-  );
-}
-
-function ItineraryDetail({ itinerary }: { itinerary: Itinerary }) {
-  return (
-    <article className="mt-16 border-t border-border pt-12">
-      <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-        {itinerary.template_name}
-      </p>
-      <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-        {itinerary.title}
-      </h2>
-      <p className="mt-6 max-w-prose text-lg text-secondary">{itinerary.why_it_works}</p>
-
-      <div className="mt-12 grid grid-cols-1 gap-12 md:grid-cols-[1fr_300px]">
-        {/* Timeline */}
-        <div>
-          <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-            Timeline · {TIMEZONE_LABEL}
-          </p>
-          <ol className="space-y-10">
-          {itinerary.stops.map((s, i) => (
-            <li key={s.place_id} className="grid grid-cols-[72px_1fr] gap-6">
-              <div className="text-sm text-muted [font-variant-numeric:tabular-nums]">
-                {to12h(s.start_time)}
-              </div>
-              <div>
-                <div className="flex items-baseline gap-3">
-                  <h3 className="font-display text-xl font-semibold text-text">{s.place_name}</h3>
-                  <span className="text-sm text-muted [font-variant-numeric:tabular-nums]">
-                    {s.duration_min} min
-                  </span>
-                </div>
-                {s.what_to_do && (
-                  <p className="mt-3 max-w-prose text-base text-secondary">{s.what_to_do}</p>
-                )}
-                <div className="mt-4 flex items-center gap-4 text-sm text-muted">
-                  <span className="[font-variant-numeric:tabular-nums]">
-                    {s.estimated_cost_pp > 0 ? `$${Math.round(s.estimated_cost_pp)} pp` : 'Free'}
-                  </span>
-                  {i < itinerary.stops.length - 1 && s.drive_to_next_min !== undefined && s.drive_to_next_min > 0 && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" strokeWidth={2} />
-                      <span className="[font-variant-numeric:tabular-nums]">
-                        {s.drive_to_next_min} min to next
-                      </span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            </li>
-          ))}
-          </ol>
         </div>
-
-        {/* Side panel */}
-        <aside className="rounded-card border border-border bg-surface p-7 md:sticky md:top-28 md:self-start">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Total</p>
-          <p className="mt-3 font-display text-3xl font-bold text-text [font-variant-numeric:tabular-nums]">
-            ${Math.round(itinerary.total_cost_pp)} <span className="text-base font-normal text-muted">/ pp</span>
-          </p>
-          <p className="mt-1 text-sm text-muted [font-variant-numeric:tabular-nums]">
-            {Math.round(itinerary.total_duration_min / 60 * 10) / 10} hr · {itinerary.stops.length} stops
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-2">
-            {itinerary.vibe.map((v) => (
-              <span key={v} className="rounded-pill border border-border px-3 py-1 text-xs text-secondary">
-                {v}
-              </span>
-            ))}
-          </div>
-
-          {itinerary.id && <ShareButton id={itinerary.id} />}
-
-          <a
-            href={mapsUrl(itinerary)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 block rounded-pill bg-primary px-5 py-3 text-center text-sm font-medium text-background transition-opacity hover:opacity-85"
-          >
-            Open route in Maps
-          </a>
-        </aside>
+        <ChooserCards itineraries={itineraries} activeIdx={activeIdx} onPick={setActiveIdx} />
       </div>
-    </article>
-  );
-}
 
-function mapsUrl(it: Itinerary): string {
-  // Google Maps directions deep link; uses place names as waypoints.
-  const stops = it.stops.map((s) => encodeURIComponent(`${s.place_name}, Kelowna BC`));
-  if (stops.length === 0) return 'https://maps.google.com';
-  if (stops.length === 1) return `https://www.google.com/maps/search/?api=1&query=${stops[0]}`;
-  const origin = stops[0];
-  const destination = stops[stops.length - 1];
-  const waypoints = stops.slice(1, -1).join('|');
-  const wp = waypoints ? `&waypoints=${waypoints}` : '';
-  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${wp}`;
-}
-
-// ─── Share button ────────────────────────────────────────────────────
-
-function ShareButton({ id }: { id: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const onClick = async () => {
-    const url = `${window.location.origin}/plan/i/${id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ url, title: 'Tonight in Kelowna' });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      }
-      track.planShared(id);
-    } catch {
-      // user dismissed share sheet, no-op
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-8 block w-full rounded-pill border border-border bg-background px-5 py-3 text-center text-sm font-medium text-text transition-colors hover:border-text/40"
-    >
-      {copied ? 'Link copied' : 'Share this plan'}
-    </button>
+      {/* Full rich detail view of the active pick */}
+      {active && <ItineraryView itinerary={active} />}
+    </>
   );
 }
 

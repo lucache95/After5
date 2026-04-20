@@ -119,10 +119,18 @@ export function buildItineraryFromTemplate(
     stops.push({
       place_id: p.id,
       place_name: p.name,
+      place_type: p.type,
       start_time: cursor,
       duration_min: dur,
       estimated_cost_pp: cost,
       drive_to_next_min: driveToNext,
+      photo_url: p.photo_url,
+      address: p.address,
+      neighborhood: p.neighborhood,
+      lat: p.lat,
+      lng: p.lng,
+      local_insight: p.local_insight,
+      reservation_url: p.reservation_url,
     });
 
     totalCost += cost;

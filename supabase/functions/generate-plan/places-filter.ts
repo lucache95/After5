@@ -43,7 +43,7 @@ export async function filterPlaces(
   const query = supabase
     .from('places')
     .select(
-      'id,name,slug,address,neighborhood,drive_cluster,type,vibe_tags,pairing_tags,effort,time_of_day,weather_dependent,seasonality,typical_duration_min,price_tier,typical_per_person,reservation_required,quality_score,feedback_score,local_insight,notes'
+      'id,name,slug,address,neighborhood,drive_cluster,type,vibe_tags,pairing_tags,effort,time_of_day,weather_dependent,seasonality,typical_duration_min,price_tier,typical_per_person,reservation_required,reservation_url,photo_url,lat,lng,quality_score,feedback_score,local_insight,notes,is_active'
     )
     .eq('is_active', true)
     .in('price_tier', tiers)

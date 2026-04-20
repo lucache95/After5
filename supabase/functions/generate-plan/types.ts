@@ -34,10 +34,15 @@ export interface Place {
   price_tier: string;
   typical_per_person: number | null;
   reservation_required: boolean;
+  reservation_url: string | null;
+  photo_url: string | null;
+  lat: number | null;
+  lng: number | null;
   quality_score: number;
   feedback_score: number;
   local_insight: string | null;
   notes: string | null;
+  is_active?: boolean;
 }
 
 export interface TemplateSlot {
@@ -64,11 +69,21 @@ export interface Template {
 export interface ItineraryStop {
   place_id: string;
   place_name: string;
+  place_type: string;
   start_time: string;
   duration_min: number;
   estimated_cost_pp: number;
   what_to_do?: string;
   drive_to_next_min?: number;
+  // Inlined from places so the frontend doesn't need a second round-trip.
+  // Real per-place photos override the type-based fallback in the UI.
+  photo_url?: string | null;
+  address?: string | null;
+  neighborhood?: string;
+  lat?: number | null;
+  lng?: number | null;
+  local_insight?: string | null;
+  reservation_url?: string | null;
 }
 
 export interface Itinerary {
