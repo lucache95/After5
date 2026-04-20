@@ -1,9 +1,9 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { coverImageFor } from '@/lib/place-image';
+import { DatesFilter, type DateRow } from '@/components/DatesFilter';
 
 // Human-browseable index of every public date plan. Complements sitemap.xml:
 // one is for crawlers, this is for humans who want to shop around.
@@ -48,14 +48,15 @@ export default async function DatesIndexPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('itineraries')
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
+    // pull `inputs` so the filter can read vibe + location off the original gen
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs')
     .eq('is_public', true)
     .not('title', 'is', null)
     .not('slug', 'is', null)
     .order('generated_at', { ascending: false })
-    .limit(60);
+    .limit(120);
 
-  const items = (data ?? []) as Row[];
+  const items = (data ?? []) as DateRow[];
 
   return (
     <main className="min-h-screen">
@@ -91,52 +92,9 @@ export default async function DatesIndexPage() {
       </section>
 
       <section className="mx-auto max-w-content px-6 pb-24 md:px-10 md:pb-32">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
-          {items.map((it) => {
-            const stops = (Array.isArray(it.stops) ? it.stops : []) as StopLite[];
-            const cover = coverImageFor(stops);
-            const totalHr =
-              it.total_duration_min !== null
-                ? Math.round((it.total_duration_min / 60) * 10) / 10
-                : 0;
-            return (
-              <Link
-                key={it.id}
-                href={`/dates/${it.slug}`}
-                className="group flex flex-col"
-              >
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-surface">
-                  <Image
-                    src={cover}
-                    alt=""
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.03]"
-                  />
-                </div>
-                <h2 className="mt-4 font-display text-lg font-semibold leading-tight text-text md:text-xl">
-                  {it.title}
-                </h2>
-                {it.hook && (
-                  <p className="mt-1 line-clamp-2 text-sm text-secondary">{it.hook}</p>
-                )}
-                <p className="mt-3 text-sm text-muted [font-variant-numeric:tabular-nums]">
-                  <span className="text-text">${Math.round(it.total_cost_pp ?? 0)}</span>
-                  <span className="mx-1.5 text-border">·</span>
-                  <span>{totalHr} hr</span>
-                  <span className="mx-1.5 text-border">·</span>
-                  <span>{stops.length} stops</span>
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-
-        {items.length === 0 && (
-          <p className="py-20 text-center text-base text-muted">
-            No plans yet. Be the first — <Link href="/plan" className="underline">plan a date</Link>.
-          </p>
-        )}
+        <Suspense fallback={null}>
+          <DatesFilter items={items} />
+        </Suspense>
 
         <div className="mt-16 flex justify-center">
           <Link
