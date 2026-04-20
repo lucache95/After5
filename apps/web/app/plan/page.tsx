@@ -103,7 +103,7 @@ const MUST_INCLUDES = [
 
 // ─── Page ────────────────────────────────────────────────────────────
 
-type Phase = 'inputs' | 'loading' | 'results' | 'error';
+type Phase = 'inputs' | 'loading' | 'gate' | 'results' | 'error';
 
 const TOTAL_STEPS = 5;
 
@@ -176,7 +176,9 @@ function PlanFlow() {
       if (!data?.itineraries?.length) throw new Error('No itineraries returned');
       setResults(data.itineraries);
       setActiveIdx(0);
-      setPhase('results');
+      // Email gate sits between generation and reveal — captures the lead while
+      // the user is at peak excitement to see what we made for them.
+      setPhase('gate');
       data.itineraries.forEach((it) =>
         track.planGenerated({
           template_id: it.template_id,
@@ -222,6 +224,12 @@ function PlanFlow() {
       )}
 
       {phase === 'loading' && <LoadingView />}
+      {phase === 'gate' && (
+        <EmailGate
+          itineraryId={results[0]?.id}
+          onContinue={() => setPhase('results')}
+        />
+      )}
 
       {phase === 'results' && (
         <ResultsView
@@ -500,7 +508,7 @@ function Choice(props: { selected: boolean; onClick: () => void; label: string; 
 // never leaves the user staring at a fully-complete-but-still-spinning UI.
 
 const LOAD_STEPS = [
-  { label: 'Reading 50 Kelowna spots',          doneAt: 1500 },
+  { label: 'Reading every Kelowna spot we know',doneAt: 1500 },
   { label: 'Matching your vibe',                 doneAt: 3500 },
   { label: 'Grouping by neighborhood',           doneAt: 6000 },
   { label: 'Choosing the hook',                  doneAt: 9000 },
@@ -588,6 +596,117 @@ function LoadingView() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Email gate ──────────────────────────────────────────────────────
+// Sits between generation and reveal. Captures email + location confirmation
+// at peak excitement. "Maybe later" lets users skip — adds friction but
+// doesn't block, so we don't lose the conversion entirely.
+
+function EmailGate({
+  itineraryId,
+  onContinue,
+}: {
+  itineraryId: string | undefined;
+  onContinue: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [inKelowna, setInKelowna] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valid) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          location: inKelowna ? 'kelowna' : 'other',
+          source: 'plan_gate',
+          itinerary_id: itineraryId,
+        }),
+      });
+      onContinue();
+    } catch (err) {
+      // Network failure — don't block the user, just continue.
+      console.error('subscribe failed', err);
+      onContinue();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto flex max-w-content flex-col items-start px-6 py-24 md:px-10 md:py-32">
+      <div className="w-full max-w-xl">
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+          Your dates are ready
+        </p>
+        <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
+          One quick thing before you see them.
+        </h1>
+        <p className="mt-5 text-base text-secondary md:text-lg">
+          We're testing how After5 works for real Kelowna couples. Drop your
+          email and we'll send you new date plans + the occasional local
+          insider tip. Unsubscribe whenever.
+        </p>
+
+        <form onSubmit={onSubmit} className="mt-10 space-y-4">
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="block w-full rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
+            required
+          />
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface px-5 py-4 transition-colors has-[:checked]:border-accent">
+            <input
+              type="checkbox"
+              checked={inKelowna}
+              onChange={(e) => setInKelowna(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-accent"
+            />
+            <span className="text-sm text-secondary">
+              <span className="text-text">I'm in or near Kelowna.</span>{' '}
+              These plans are Kelowna-specific. If you're elsewhere we'll let
+              you know when we expand to your city.
+            </span>
+          </label>
+
+          {error && (
+            <p className="text-sm text-accent">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={!valid || submitting}
+            className="inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
+          >
+            {submitting ? 'One sec…' : 'Show my dates →'}
+          </button>
+
+          <button
+            type="button"
+            onClick={onContinue}
+            className="ml-4 text-sm text-muted underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-secondary"
+          >
+            Maybe later
+          </button>
+        </form>
       </div>
     </div>
   );
