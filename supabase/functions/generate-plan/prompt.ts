@@ -84,6 +84,11 @@ export async function writeItineraries(
   }
 
   const written = parseLLMResponse(textBlock.text);
+  // Diagnostic: log whether stops carry what_to_do so we can catch LLM regressions.
+  const whatToDoCounts = written.map(
+    (w) => w.stops?.filter((s) => s.what_to_do && s.what_to_do.length > 0).length ?? 0,
+  );
+  console.log('LLM writing pass: what_to_do per itinerary:', whatToDoCounts.join(','));
 
   // Merge writing back into the itineraries (places are fixed; LLM only added copy)
   return input.itineraries.map((it) => {
@@ -103,9 +108,14 @@ export async function writeItineraries(
       title: w.title,
       hook: w.hook,
       why_it_works: w.why_it_works,
-      stops: it.stops.map((s) => {
-        const ws = w.stops.find((x) => x.place_id === s.place_id);
-        return { ...s, what_to_do: ws?.what_to_do };
+      // Match by ARRAY INDEX, not place_id. The LLM sometimes drops/mutates
+      // UUIDs or returns a different number of stops than we sent; zipping by
+      // order is robust and we know the LLM writes in the order we gave.
+      stops: it.stops.map((s, i) => {
+        const byIndex = w.stops[i];
+        const byId = w.stops.find((x) => x.place_id === s.place_id);
+        const what = byIndex?.what_to_do || byId?.what_to_do || '';
+        return { ...s, what_to_do: what };
       }),
     };
   });
