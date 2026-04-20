@@ -88,6 +88,21 @@ serve(async (req: Request) => {
       return jsonResponse({ error: 'no_template_match', message: 'No template matches those inputs.' }, 422);
     }
 
+    // Audit log scaffold — populated as we go, attached to each itinerary
+    // on insert. Lets us answer "why did this plan look like that?" without
+    // re-running the function.
+    const sharedLog = {
+      inputs,
+      candidate_pool_size: candidates.length,
+      templates_considered: allTemplates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        slot_types: t.slots.map((s) => s.types[0]),
+        satisfies_must_includes: true, // these survived the filter, by definition
+      })),
+      templates_selected: topTemplates.map((t) => t.id),
+    };
+
     // 5. Build one itinerary per template, tracking which place_ids have been
     //    used across the batch so each subsequent itinerary picks distinct
     //    spots (cross-plan diversity). Stochastic top-K inside scoring also
@@ -163,6 +178,18 @@ serve(async (req: Request) => {
       total_duration_min: it.total_duration_min,
       is_public: true,
       modifier_id: modifierIdsPicked[idx] ?? null,
+      generation_log: {
+        ...sharedLog,
+        this_itinerary: {
+          template_id: it.template_id,
+          template_name: it.template_name,
+          chosen_place_ids: it.stops.map((s) => s.place_id),
+          chosen_place_names: it.stops.map((s) => s.place_name),
+          modifier_id: modifierIdsPicked[idx] ?? null,
+          total_cost_pp: it.total_cost_pp,
+          total_duration_min: it.total_duration_min,
+        },
+      },
     }));
     const { data: inserted, error: insertError } = await supabase
       .from('itineraries')

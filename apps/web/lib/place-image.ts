@@ -41,11 +41,23 @@ export function imageForStop(opts: {
 // with a real Google photo; only falls back to a type-based mood shot if none
 // of the stops has one. Avoids two plans showing the same generic forest/hike
 // image just because their first stops happen to share a type.
-export function coverImageFor(stops: Array<{
-  photo_url?: string | null;
-  place_type?: string | null;
-}>): string {
-  const withPhoto = stops.find((s) => s.photo_url);
+//
+// When rendering the "dates featuring this place" grid on /places/[slug], pass
+// `excludePlaceId` so the cover doesn't repeat the place we're already on.
+export function coverImageFor(
+  stops: Array<{
+    place_id?: string;
+    photo_url?: string | null;
+    place_type?: string | null;
+  }>,
+  opts: { excludePlaceId?: string } = {},
+): string {
+  const pool = opts.excludePlaceId
+    ? stops.filter((s) => s.place_id !== opts.excludePlaceId)
+    : stops;
+  const withPhoto = pool.find((s) => s.photo_url);
   if (withPhoto) return withPhoto.photo_url!;
-  return imageForStop(stops[0] ?? {});
+  // No photo on the non-excluded stops? Try the type fallback of the first
+  // non-excluded stop; if all stops were the excluded one, fall back to first.
+  return imageForStop(pool[0] ?? stops[0] ?? {});
 }

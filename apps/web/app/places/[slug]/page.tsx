@@ -521,7 +521,10 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
             <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
               {dates.map((it) => {
                 const stops = (Array.isArray(it.stops) ? it.stops : []) as StopLite[];
-                const cover2 = coverImageFor(stops);
+                // Exclude the current place so each card shows a DIFFERENT
+                // photo (the next stop in the plan, not just the same lake/bar
+                // we're already looking at).
+                const cover2 = coverImageFor(stops, { excludePlaceId: p.id });
                 const totalHr = it.total_duration_min !== null
                   ? Math.round((it.total_duration_min / 60) * 10) / 10
                   : 0;

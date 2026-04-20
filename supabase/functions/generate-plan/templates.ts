@@ -3,6 +3,38 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import type { PlanInputs, Template } from './types.ts';
 
+// Mirror of MUST_INCLUDE_TYPE_MAP in places-filter.ts. Used here to filter
+// out templates whose slots can't satisfy a must_include — fixes the bug
+// where picking "drinks" + a 2-slot activity template returned a plan with
+// zero drink stops because the candidate POOL had drinks but the slots
+// didn't accept them.
+const MUST_INCLUDE_TYPES: Record<string, string[]> = {
+  food:        ['restaurant', 'cafe'],
+  drinks:      ['cocktail_bar', 'brewery', 'winery'],
+  walk:        ['walk', 'park', 'garden'],
+  view:        ['viewpoint', 'sunset_spot', 'beach'],
+  activity:    ['activity', 'hike'],
+  dessert:     ['dessert', 'ice_cream', 'bakery'],
+  hidden_gem:  [],
+  lake:        ['beach', 'walk'],
+  outdoors:    ['hike', 'walk', 'park', 'garden', 'beach', 'viewpoint', 'sunset_spot', 'activity'],
+  indoors:     ['restaurant', 'cafe', 'cocktail_bar', 'brewery', 'dessert', 'gallery', 'bakery'],
+};
+
+// Returns true if every must_include can be satisfied by at least one slot
+// in the template (the slot's `types` overlaps with the must_include's
+// allowed types).
+export function templateSatisfiesMustIncludes(t: Template, must_includes: string[]): boolean {
+  for (const must of must_includes) {
+    if (must === 'hidden_gem') continue; // pairing-tag, not slot-type
+    const allowed = MUST_INCLUDE_TYPES[must] ?? [];
+    if (allowed.length === 0) continue;
+    const ok = t.slots.some((slot) => slot.types.some((type) => allowed.includes(type)));
+    if (!ok) return false;
+  }
+  return true;
+}
+
 export async function loadTemplates(
   supabase: SupabaseClient,
   occasion: string
@@ -42,7 +74,10 @@ export function selectTopTemplates(
   inputs: PlanInputs,
   n = 3
 ): Template[] {
-  const scored = templates
+  const eligible = templates.filter((t) =>
+    templateSatisfiesMustIncludes(t, inputs.must_includes ?? []),
+  );
+  const scored = eligible
     .map((t) => ({ t, score: scoreTemplate(t, inputs) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score);
