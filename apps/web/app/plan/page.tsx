@@ -641,12 +641,15 @@ function Choice(props: { selected: boolean; onClick: () => void; label: string; 
 // never leaves the user staring at a fully-complete-but-still-spinning UI.
 
 const LOAD_STEPS = [
-  { label: 'Reading every Kelowna spot we know',doneAt: 1500 },
-  { label: 'Matching your vibe',                 doneAt: 3500 },
-  { label: 'Grouping by neighborhood',           doneAt: 6000 },
-  { label: 'Choosing the hook',                  doneAt: 9000 },
-  { label: 'Writing why it works',               doneAt: 13000 },
-  { label: 'Adding the small details',           doneAt: Infinity }, // hold until results land
+  { label: 'Pulling 200+ vetted Kelowna spots',           doneAt: 1500 },
+  { label: 'Checking what\u2019s actually open tonight',   doneAt: 3000 },
+  { label: 'Filtering for your vibe and budget',           doneAt: 4500 },
+  { label: 'Calculating drive time between every pair',    doneAt: 6500 },
+  { label: 'Sequencing so nothing closes mid-date',        doneAt: 8500 },
+  { label: 'Surfacing the hidden gems most people miss',   doneAt: 10500 },
+  { label: 'Pairing food, drinks and a wow moment',        doneAt: 12500 },
+  { label: 'Writing why each plan works for you tonight',  doneAt: 15000 },
+  { label: 'Adding the small details that turn it into a story', doneAt: Infinity }, // hold until results land
 ] as const;
 
 function LoadingView() {

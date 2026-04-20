@@ -19,22 +19,7 @@ export interface InputsLike {
 export function hintsForStep(step: number, i: InputsLike): Hint[] {
   const hints: Hint[] = [];
 
-  if (step === 1) {
-    if (i.occasion === 'solo') {
-      hints.push({
-        tone: 'info',
-        text: 'Solo plans have fewer templates than dates. A 2-3 hour duration works best.',
-      });
-    }
-  }
-
   if (step === 2) {
-    if (i.duration_min <= 120) {
-      hints.push({
-        tone: 'info',
-        text: '2 hours is short — expect 2 stops instead of 3.',
-      });
-    }
     if (i.duration_min >= 600) {
       hints.push({
         tone: 'info',
