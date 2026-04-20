@@ -272,7 +272,9 @@ function PlanFlow() {
       {phase === 'gate' && (
         <EmailGate
           itineraryId={results[0]?.id}
+          itineraryIds={results.map((r) => r.id).filter((id): id is string => Boolean(id))}
           onContinue={() => setPhase('results')}
+          onBack={() => { setPhase('inputs'); }}
         />
       )}
 
@@ -769,29 +771,36 @@ function LoadingView() {
 }
 
 // ─── Email gate ──────────────────────────────────────────────────────
-// Sits between generation and reveal. Captures email + location confirmation
-// at peak excitement. "Maybe later" lets users skip — adds friction but
-// doesn't block, so we don't lose the conversion entirely.
+// 3-step wizard between generation and reveal: email → city → first name.
+// Each step is its own screen for focus. "Skip" advances without saving the
+// current field. Back-to-inputs link is always visible so users who want to
+// regenerate with different inputs aren't trapped.
 
 function EmailGate({
   itineraryId,
+  itineraryIds,
   onContinue,
+  onBack,
 }: {
   itineraryId: string | undefined;
+  itineraryIds: string[];
   onContinue: () => void;
+  onBack: () => void;
 }) {
+  type Sub = 1 | 2 | 3;
+  const [substep, setSubstep] = useState<Sub>(1);
   const [email, setEmail] = useState('');
   const [inKelowna, setInKelowna] = useState(true);
+  const [city, setCity] = useState('');
+  const [firstName, setFirstName] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
 
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!valid) return;
-    setSubmitting(true);
-    setError('');
+  // Saves whatever we have so far. Called at each advance so partial submits
+  // still get captured even if the user bails on a later step.
+  async function persist(extra: Record<string, unknown> = {}) {
+    if (!emailValid) return;
     try {
       await fetch('/api/subscribe', {
         method: 'POST',
@@ -799,81 +808,216 @@ function EmailGate({
         body: JSON.stringify({
           email,
           location: inKelowna ? 'kelowna' : 'other',
+          city: city || null,
+          first_name: firstName || null,
           source: 'plan_gate',
           itinerary_id: itineraryId,
+          itinerary_ids: itineraryIds,
+          ...extra,
         }),
       });
-      onContinue();
     } catch (err) {
-      // Network failure — don't block the user, just continue.
       console.error('subscribe failed', err);
-      onContinue();
-    } finally {
-      setSubmitting(false);
     }
+  }
+
+  async function advance(nextSub: Sub | 'done') {
+    setSubmitting(true);
+    await persist();
+    setSubmitting(false);
+    if (nextSub === 'done') onContinue();
+    else setSubstep(nextSub);
   }
 
   return (
     <div className="mx-auto flex max-w-content flex-col items-start px-6 py-24 md:px-10 md:py-32">
       <div className="w-full max-w-xl">
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-8 inline-flex items-center gap-1.5 text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
+        >
+          ← Change my selections and regenerate
+        </button>
+
+        {/* Substep dots */}
+        <div className="mb-8 flex items-center gap-2">
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              className={cn(
+                'h-1.5 w-8 rounded-pill transition-colors',
+                n === substep
+                  ? 'bg-accent'
+                  : n < substep
+                  ? 'bg-emerald-500'
+                  : 'bg-border',
+              )}
+            />
+          ))}
+        </div>
+
         <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-accent">
           Your dates are ready
         </p>
-        <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-          One quick thing before you see them.
-        </h1>
-        <p className="mt-5 text-base text-secondary md:text-lg">
-          We're testing how After5 works for real Kelowna couples. Drop your
-          email and we'll send you new date plans + the occasional local
-          insider tip. Unsubscribe whenever.
-        </p>
 
-        <form onSubmit={onSubmit} className="mt-10 space-y-4">
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="block w-full rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
-            required
-          />
+        {substep === 1 && (
+          <>
+            <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
+              One quick thing before you see them.
+            </h1>
+            <p className="mt-5 text-base text-secondary md:text-lg">
+              We're testing how After5 works for real Kelowna couples. Drop your
+              email and we'll send you new date plans + the occasional local
+              insider tip. Unsubscribe whenever.
+            </p>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface px-5 py-4 transition-colors has-[:checked]:border-accent">
-            <input
-              type="checkbox"
-              checked={inKelowna}
-              onChange={(e) => setInKelowna(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-accent"
-            />
-            <span className="text-sm text-secondary">
-              <span className="text-text">I'm in or near Kelowna.</span>{' '}
-              These plans are Kelowna-specific. If you're elsewhere we'll let
-              you know when we expand to your city.
-            </span>
-          </label>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (emailValid) advance(2);
+              }}
+              className="mt-10 space-y-4"
+            >
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="block w-full rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
+                required
+                autoFocus
+              />
 
-          {error && (
-            <p className="text-sm text-accent">{error}</p>
-          )}
+              <label className="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface px-5 py-4 transition-colors has-[:checked]:border-accent">
+                <input
+                  type="checkbox"
+                  checked={inKelowna}
+                  onChange={(e) => setInKelowna(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-accent"
+                />
+                <span className="text-sm text-secondary">
+                  <span className="text-text">I'm in or near Kelowna.</span>{' '}
+                  These plans are Kelowna-specific. If you're elsewhere we'll let
+                  you know when we expand to your city.
+                </span>
+              </label>
 
-          <button
-            type="submit"
-            disabled={!valid || submitting}
-            className="inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
-          >
-            {submitting ? 'One sec…' : 'Show my dates →'}
-          </button>
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  type="submit"
+                  disabled={!emailValid || submitting}
+                  className="inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
+                >
+                  {submitting ? 'One sec…' : 'Continue →'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="text-sm text-muted underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-secondary"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </form>
+          </>
+        )}
 
-          <button
-            type="button"
-            onClick={onContinue}
-            className="ml-4 text-sm text-muted underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-secondary"
-          >
-            Maybe later
-          </button>
-        </form>
+        {substep === 2 && (
+          <>
+            <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
+              Where are you based?
+            </h1>
+            <p className="mt-5 text-base text-secondary md:text-lg">
+              {inKelowna
+                ? 'Which Kelowna neighborhood — or just "Kelowna" works. Helps us tune plans to your side of town.'
+                : 'Where do you live? When we expand to your city, you\'ll be the first to know.'}
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                advance(3);
+              }}
+              className="mt-10 space-y-4"
+            >
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder={inKelowna ? 'e.g. Glenmore, Lower Mission, Rutland…' : 'e.g. Vernon, Penticton, Vancouver…'}
+                className="block w-full rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
+                autoFocus
+              />
+
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
+                >
+                  {submitting ? 'One sec…' : 'Continue →'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => advance(3)}
+                  className="text-sm text-muted underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-secondary"
+                >
+                  Skip
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+
+        {substep === 3 && (
+          <>
+            <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
+              Last one — what should we call you?
+            </h1>
+            <p className="mt-5 text-base text-secondary md:text-lg">
+              First name is fine. We use it in the email subject line — feels less
+              like spam and more like a friend with a tip.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                advance('done');
+              }}
+              className="mt-10 space-y-4"
+            >
+              <input
+                type="text"
+                autoComplete="given-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Sarah"
+                className="block w-full rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
+                autoFocus
+              />
+
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
+                >
+                  {submitting ? 'One sec…' : 'Show my dates →'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => advance('done')}
+                  className="text-sm text-muted underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-secondary"
+                >
+                  Skip
+                </button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
