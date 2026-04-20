@@ -28,13 +28,20 @@ interface ItineraryRow {
   stops: unknown;
   is_public: boolean;
   generated_at: string | null;
+  modifier_id: string | null;
+  modifier?: {
+    id: string;
+    label: string;
+    body: string;
+    difficulty: 'tame' | 'spicy' | 'chaos';
+  } | null;
 }
 
 async function loadBySlug(slug: string): Promise<ItineraryRow | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('itineraries')
-    .select('*')
+    .select('*, modifier:modifiers(id, label, body, difficulty)')
     .eq('slug', slug)
     .eq('is_public', true)
     .maybeSingle();
@@ -99,6 +106,7 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
   const itinerary: Itinerary = {
     id: row.id,
     slug: row.slug ?? undefined,
+    modifier: row.modifier ?? null,
     template_id: row.template_id ?? '',
     template_name: '',
     title: row.title ?? 'A plan for tonight',

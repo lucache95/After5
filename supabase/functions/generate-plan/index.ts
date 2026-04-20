@@ -111,7 +111,20 @@ serve(async (req: Request) => {
       }
     }
 
-    // 6. LLM writing pass
+    // 6. Pick a Wow-Factor modifier per itinerary. Different modifier per
+    //    plan so the 3 returned itineraries each have their own twist.
+    const { data: modPool } = await supabase
+      .from('modifiers')
+      .select('id, label, body, difficulty, vibe_affinity, occasion_affinity')
+      .eq('is_active', true)
+      .contains('occasion_affinity', [inputs.occasion]);
+    const modifierIdsPicked: (string | null)[] = pickModifiersForBatch(
+      modPool ?? [],
+      inputs.vibe,
+      itineraries.length,
+    );
+
+    // 7. LLM writing pass
     const placesById = new Map<string, Place>(candidates.map((p) => [p.id, p]));
     const written = await writeItineraries(
       Deno.env.get('ANTHROPIC_API_KEY')!,
@@ -119,10 +132,10 @@ serve(async (req: Request) => {
       { inputs, itineraries, placesById }
     );
 
-    // 7. Persist to DB.
+    // 8. Persist to DB.
     // Generate the slug AFTER insert (we need the row id), via UPDATE.
     // is_public=true so every new plan immediately becomes indexable SEO content.
-    const insertRows = written.map((it) => ({
+    const insertRows = written.map((it, idx) => ({
       template_id: it.template_id,
       inputs,
       stops: it.stops,
@@ -132,6 +145,7 @@ serve(async (req: Request) => {
       total_cost_pp: it.total_cost_pp,
       total_duration_min: it.total_duration_min,
       is_public: true,
+      modifier_id: modifierIdsPicked[idx] ?? null,
     }));
     const { data: inserted, error: insertError } = await supabase
       .from('itineraries')
@@ -155,11 +169,19 @@ serve(async (req: Request) => {
       if (slugErr) console.error('slug update error', slugErr);
     }
 
-    const withIds = written.map((it, idx) => ({
-      ...it,
-      id: inserted?.[idx]?.id,
-      slug: inserted?.[idx]?.id ? slugify(it.title, inserted[idx].id) : undefined,
-    }));
+    const modPoolById = new Map((modPool ?? []).map((m: any) => [m.id, m]));
+    const withIds = written.map((it, idx) => {
+      const mid = modifierIdsPicked[idx];
+      const m = mid ? modPoolById.get(mid) : null;
+      return {
+        ...it,
+        id: inserted?.[idx]?.id,
+        slug: inserted?.[idx]?.id ? slugify(it.title, inserted[idx].id) : undefined,
+        modifier: m
+          ? { id: m.id, label: m.label, body: m.body, difficulty: m.difficulty }
+          : null,
+      };
+    });
 
     return jsonResponse({
       itineraries: withIds,
@@ -177,6 +199,39 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'content-type': 'application/json' },
   });
+}
+
+// Pick N distinct modifiers for the batch, weighted by vibe overlap so each
+// plan tends to get a Wow-Factor that matches its mood. Random tie-break, so
+// repeat generations vary. If the pool is exhausted, falls back to nulls.
+function pickModifiersForBatch(
+  pool: Array<{ id: string; vibe_affinity: string[] }>,
+  userVibe: string[],
+  count: number,
+): (string | null)[] {
+  const remaining = [...pool];
+  const picked: (string | null)[] = [];
+  for (let i = 0; i < count; i++) {
+    if (remaining.length === 0) {
+      picked.push(null);
+      continue;
+    }
+    // Score by vibe overlap; weighted random across top half.
+    const scored = remaining
+      .map((m) => ({
+        id: m.id,
+        score:
+          (m.vibe_affinity ?? []).filter((v) => userVibe.includes(v)).length * 3 +
+          Math.random(),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const topK = scored.slice(0, Math.max(1, Math.floor(scored.length / 2)));
+    const choice = topK[Math.floor(Math.random() * topK.length)];
+    picked.push(choice.id);
+    const idx = remaining.findIndex((m) => m.id === choice.id);
+    if (idx >= 0) remaining.splice(idx, 1);
+  }
+  return picked;
 }
 
 // Mirrors apps/web/lib/slug.ts so the canonical SEO URL we ship to the client

@@ -27,11 +27,16 @@ interface ItineraryRow {
   total_duration_min: number | null;
   stops: unknown;
   is_public: boolean;
+  modifier?: { id: string; label: string; body: string; difficulty: 'tame'|'spicy'|'chaos' } | null;
 }
 
 async function loadById(id: string): Promise<ItineraryRow | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from('itineraries').select('*').eq('id', id).maybeSingle();
+  const { data } = await supabase
+    .from('itineraries')
+    .select('*, modifier:modifiers(id, label, body, difficulty)')
+    .eq('id', id)
+    .maybeSingle();
   return (data ?? null) as ItineraryRow | null;
 }
 
@@ -57,6 +62,7 @@ export default async function PublicItineraryPage(props: {
   const itinerary: Itinerary = {
     id: row.id,
     slug: row.slug ?? undefined,
+    modifier: row.modifier ?? null,
     template_id: row.template_id ?? '',
     template_name: '',
     title: row.title ?? 'A plan for tonight',

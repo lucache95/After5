@@ -22,9 +22,17 @@ export interface Stop {
   reservation_required?: boolean;
 }
 
+export interface Modifier {
+  id: string;
+  label: string;
+  body: string;
+  difficulty: 'tame' | 'spicy' | 'chaos';
+}
+
 export interface Itinerary {
   id?: string;
   slug?: string;
+  modifier?: Modifier | null;
   template_id: string;
   template_name: string;
   title: string;

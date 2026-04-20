@@ -6,6 +6,7 @@ import { ItineraryHero } from './ItineraryHero';
 import { ItineraryMap } from './ItineraryMap';
 import { StopCard } from './StopCard';
 import { ItineraryActions } from './ItineraryActions';
+import { ModifierCard } from './ModifierCard';
 import { TIMEZONE_LABEL } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
 
@@ -22,6 +23,14 @@ export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
               <p className="max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
                 {itinerary.why_it_works}
               </p>
+            )}
+
+            {/* Wow-Factor — sits between the story and the route so it sets
+                the tone before the user starts scanning stops. */}
+            {itinerary.modifier && (
+              <div className="mt-12">
+                <ModifierCard modifier={itinerary.modifier} />
+              </div>
             )}
 
             {/* Map */}
