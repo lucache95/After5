@@ -4,7 +4,7 @@
 // 5 questions → call generate-plan Edge Function → 3 itinerary cards → detail.
 // Single client component for now; split into smaller files when adding tests.
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
@@ -14,6 +14,8 @@ import { track } from '@/app/PostHogProvider';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { ChooserCards } from '@/components/itinerary/ChooserCards';
 import { RadiusMap } from '@/components/RadiusMap';
+import { hintsForStep } from '@/lib/plan-hints';
+import { preflight, type TemplateLite } from '@/lib/preflight';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 const ALLOWED_VIBES = new Set(['romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous', 'free']);
@@ -150,6 +152,20 @@ function PlanFlow() {
   const [results, setResults] = useState<Itinerary[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
+  const [templates, setTemplates] = useState<TemplateLite[]>([]);
+
+  // Pull active templates once on mount so we can preflight the user's
+  // selections client-side and never ship them to the loader for nothing.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('templates')
+      .select('id, name, duration_min, suitable_for, vibe, slots')
+      .eq('is_active', true)
+      .then(({ data }) => {
+        if (data) setTemplates(data as TemplateLite[]);
+      });
+  }, []);
 
   // Analytics: fire plan_started once when the flow first mounts
   useEffect(() => {
@@ -162,8 +178,18 @@ function PlanFlow() {
     if (phase === 'inputs') track.planStepAdvanced(step);
   }, [step, phase]);
 
+  // Preflight against the loaded templates. If we KNOW the combo will fail,
+  // surface a blocker on the relevant step + disable the next/generate button.
+  const verdict = useMemo(
+    () => preflight(inputs, templates, hintsForStep(step, inputs)),
+    [inputs, templates, step],
+  );
+  const stepHints = hintsForStep(step, inputs);
+  const stepBlocker = verdict.blocker?.step === step ? verdict.blocker : null;
+
   const canAdvance = (): boolean => {
     if (step === 3) return inputs.vibe.length >= 1;
+    if (step === TOTAL_STEPS && verdict.blocker) return false;
     return true;
   };
 
@@ -237,6 +263,8 @@ function PlanFlow() {
           onNext={next}
           onBack={back}
           canAdvance={canAdvance()}
+          stepHints={stepHints}
+          stepBlocker={stepBlocker}
         />
       )}
 
@@ -277,8 +305,10 @@ function InputsView(props: {
   onNext: () => void;
   onBack: () => void;
   canAdvance: boolean;
+  stepHints: import('@/lib/plan-hints').Hint[];
+  stepBlocker: { step: number; message: string } | null;
 }) {
-  const { step, inputs, setInputs, onNext, onBack, canAdvance } = props;
+  const { step, inputs, setInputs, onNext, onBack, canAdvance, stepHints, stepBlocker } = props;
 
   return (
     <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-20">
@@ -507,8 +537,38 @@ function InputsView(props: {
           </Step>
         )}
 
+        {/* Inline hints + hard blocker for the current step. Hints are soft
+            warnings; a blocker disables forward navigation so we never let
+            the user submit an unbuildable combo. */}
+        {(stepHints.length > 0 || stepBlocker) && (
+          <div className="mt-10 space-y-3">
+            {stepHints.map((h, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex gap-3 rounded-card border px-5 py-4 text-sm leading-relaxed',
+                  h.tone === 'warn'
+                    ? 'border-accent/40 bg-accent-soft/50 text-text'
+                    : 'border-border bg-surface text-secondary',
+                )}
+              >
+                <span aria-hidden className={h.tone === 'warn' ? 'text-accent' : 'text-muted'}>
+                  {h.tone === 'warn' ? '!' : 'i'}
+                </span>
+                <p>{h.text}</p>
+              </div>
+            ))}
+            {stepBlocker && (
+              <div className="flex gap-3 rounded-card border-2 border-accent bg-accent-soft px-5 py-4 text-sm leading-relaxed text-text">
+                <span aria-hidden className="font-bold text-accent">×</span>
+                <p>{stepBlocker.message}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Nav */}
-        <div className="mt-16 flex items-center justify-between">
+        <div className="mt-12 flex items-center justify-between">
           <button
             type="button"
             onClick={onBack}
