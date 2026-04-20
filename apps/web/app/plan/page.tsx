@@ -31,6 +31,25 @@ function startStepFromUrl(raw: string | null): number {
   return raw && ALLOWED_VIBES.has(raw) ? 4 : 1;
 }
 
+// Supabase's FunctionsHttpError swallows the body; dig it out so the user
+// sees "Not enough places match those filters" instead of "non-2xx status".
+async function extractEdgeError(error: unknown): Promise<string> {
+  try {
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = await ctx.clone().json();
+      if (typeof body?.message === 'string' && body.message.length > 0) {
+        return body.message;
+      }
+      if (typeof body?.error === 'string') return body.error;
+    }
+  } catch {
+    // fall through
+  }
+  if (error instanceof Error) return error.message;
+  return 'Something went wrong.';
+}
+
 // ─── Types & options ─────────────────────────────────────────────────
 
 type Occasion = 'date' | 'solo' | 'friends';
@@ -147,7 +166,13 @@ function PlanFlow() {
         'generate-plan',
         { body: inputs }
       );
-      if (error) throw error;
+      if (error) {
+        // Supabase wraps HTTP !2xx as FunctionsHttpError; the real message
+        // lives in error.context (a Response). Extract it so the user sees
+        // "Not enough places match those filters" instead of a stack trace.
+        const friendly = await extractEdgeError(error);
+        throw new Error(friendly);
+      }
       if (!data?.itineraries?.length) throw new Error('No itineraries returned');
       setResults(data.itineraries);
       setActiveIdx(0);
