@@ -55,9 +55,32 @@ export async function filterPlaces(
   if (error) throw new Error(`places query failed: ${error.message}`);
   if (!data) return [];
 
+  // Radius filter — done client-side because Postgres earth_distance / postgis
+  // isn't enabled and we don't want to make this query rely on it. With ~170
+  // places the in-memory haversine pass is trivial.
+  const maxKm = inputs.max_radius_km ?? 30;
+  const filtered = (data as Place[]).filter((p) => {
+    if (typeof p.lat !== 'number' || typeof p.lng !== 'number') return true;
+    return haversineKm(p.lat, p.lng, KELOWNA_LAT, KELOWNA_LNG) <= maxKm;
+  });
+
   // Post-filter: must-include type satisfaction is checked at template-fill time,
   // not at this stage — we just need a broad candidate pool.
-  return data as Place[];
+  return filtered;
+}
+
+const KELOWNA_LAT = 49.888;
+const KELOWNA_LNG = -119.496;
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // Returns true if the candidate pool covers every must_include the user asked for.

@@ -32,6 +32,10 @@ const InputSchema = z.object({
   vibe: z.array(z.string()).min(1).max(3),
   must_includes: z.array(z.string()).max(12).default([]),
   drive_tolerance_min: z.number().int().min(0).max(120).default(20),
+  // Max distance from Kelowna centroid (49.888, -119.496). 30 covers
+  // Kelowna proper + West Kelowna + Lake Country. 100 catches Vernon, Big
+  // White, Penticton.
+  max_radius_km: z.number().int().min(5).max(150).default(30),
   effort: z.enum(['low', 'moderate', 'high']).default('low'),
   start_at: z.string().datetime().optional(),
 });
@@ -85,10 +89,20 @@ serve(async (req: Request) => {
     //    used across the batch so each subsequent itinerary picks distinct
     //    spots (cross-plan diversity). Stochastic top-K inside scoring also
     //    means re-running the same inputs produces different plans.
+    // Retry up to 3 times per template since stochastic top-5 can roll a
+    // budget-busting combo. Almost always succeeds within 1-2 tries.
+    function buildWithRetry(t: typeof topTemplates[number]): Itinerary | null {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at, usedAcrossBatch);
+        if (it) return it;
+      }
+      return null;
+    }
+
     const itineraries: Itinerary[] = [];
     const usedAcrossBatch = new Set<string>();
     for (const t of topTemplates) {
-      const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at, usedAcrossBatch);
+      const it = buildWithRetry(t);
       if (it) {
         itineraries.push(it);
         for (const stop of it.stops) usedAcrossBatch.add(stop.place_id);
@@ -103,7 +117,7 @@ serve(async (req: Request) => {
       const remaining = allTemplates.filter((t) => !topTemplates.some((tt) => tt.id === t.id));
       for (const t of remaining) {
         if (itineraries.length >= 3) break;
-        const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at, usedAcrossBatch);
+        const it = buildWithRetry(t);
         if (it) {
           itineraries.push(it);
           for (const stop of it.stops) usedAcrossBatch.add(stop.place_id);

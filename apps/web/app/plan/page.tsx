@@ -31,6 +31,16 @@ function startStepFromUrl(raw: string | null): number {
   return raw && ALLOWED_VIBES.has(raw) ? 4 : 1;
 }
 
+// One-line label that gives the radius slider a sense of place.
+function radiusBlurb(km: number): string {
+  if (km <= 10) return 'Walking distance from downtown';
+  if (km <= 25) return 'Kelowna proper';
+  if (km <= 40) return 'Includes West Kelowna + Mission';
+  if (km <= 60) return 'Adds Lake Country + Peachland';
+  if (km <= 80) return 'Reaches Vernon + Big White';
+  return 'Wide net — full Okanagan';
+}
+
 // Supabase's FunctionsHttpError swallows the body; dig it out so the user
 // sees "Not enough places match those filters" instead of "non-2xx status".
 async function extractEdgeError(error: unknown): Promise<string> {
@@ -62,6 +72,7 @@ interface Inputs {
   vibe: string[];
   must_includes: string[];
   drive_tolerance_min: number;
+  max_radius_km: number;
   effort: Effort;
 }
 
@@ -128,6 +139,7 @@ function PlanFlow() {
     vibe: vibeFromUrl(vibeParam),
     must_includes: [],
     drive_tolerance_min: 20,
+    max_radius_km: 30,
     effort: 'low',
   });
   const [results, setResults] = useState<Itinerary[]>([]);
@@ -394,6 +406,37 @@ function InputsView(props: {
                     sub={e.sub}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Radius — how far from downtown Kelowna they'll go. Defaults to
+                30km (covers all of Kelowna proper + West Kelowna + Lake Country).
+                Higher unlocks Big White, Vernon, Penticton spots. */}
+            <div className="mt-10">
+              <p className="mb-4 text-sm font-medium text-text">How far from Kelowna?</p>
+              <div className="rounded-card border border-border bg-surface p-7 md:p-9">
+                <div className="flex items-baseline justify-between">
+                  <span className="font-display text-3xl font-bold text-text [font-variant-numeric:tabular-nums]">
+                    {inputs.max_radius_km} km
+                  </span>
+                  <span className="text-sm text-muted">{radiusBlurb(inputs.max_radius_km)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={5}
+                  max={100}
+                  step={5}
+                  value={inputs.max_radius_km}
+                  onChange={(e) => setInputs((s) => ({ ...s, max_radius_km: Number(e.target.value) }))}
+                  className="mt-8 w-full accent-accent"
+                />
+                <div className="mt-3 flex justify-between text-xs text-muted [font-variant-numeric:tabular-nums]">
+                  <span>5 km</span>
+                  <span>25</span>
+                  <span>50</span>
+                  <span>75</span>
+                  <span>100 km</span>
+                </div>
               </div>
             </div>
           </Step>

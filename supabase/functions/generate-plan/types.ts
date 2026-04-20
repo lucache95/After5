@@ -13,6 +13,7 @@ export interface PlanInputs {
   vibe: string[];
   must_includes: string[];
   drive_tolerance_min: number;
+  max_radius_km: number;
   effort: Effort;
 }
 
