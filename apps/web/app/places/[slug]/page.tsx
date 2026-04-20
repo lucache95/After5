@@ -63,6 +63,7 @@ interface PlaceRow {
   local_insight: string | null;
   llm_summary: string | null;
   notes: string | null;
+  at_home: boolean;
 }
 
 interface ItineraryRow {
@@ -194,7 +195,7 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
   const directionsUrl = p.lat && p.lng
     ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', Kelowna BC')}`;
-  const openNow = isOpenNow(p.opens, p.closes);
+  const openNow = p.at_home ? null : isOpenNow(p.opens, p.closes);
   const summary = p.llm_summary ?? p.notes ?? null;
 
   const ld = {
@@ -352,8 +353,8 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
               </div>
             )}
 
-            {/* Hours table */}
-            {p.hours_week && p.hours_week.length > 0 && (
+            {/* Hours table — irrelevant for at-home things (always "open"). */}
+            {!p.at_home && p.hours_week && p.hours_week.length > 0 && (
               <div className="mt-10">
                 <p className="mb-4 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted">
                   <Clock className="h-3.5 w-3.5" strokeWidth={2} />
@@ -424,61 +425,83 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
             )}
           </div>
 
-          {/* Side rail */}
+          {/* Side rail — different for at-home vs out-of-the-house. At-home
+              has no address/maps/phone; just a "plan a date" CTA. */}
           <aside className="md:sticky md:top-8 md:self-start">
             <div className="space-y-3 rounded-card border border-border bg-surface p-6 md:p-7">
-              {p.address && (
-                <p className="mb-1 text-sm leading-relaxed text-secondary">
-                  {p.address}
-                </p>
+              {p.at_home ? (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                    At-home idea
+                  </p>
+                  <p className="text-sm leading-relaxed text-secondary">
+                    No reservations, no driving. Everything you need is at your
+                    place — or a quick stop on the way home.
+                  </p>
+                  <Link
+                    href="/plan"
+                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-primary px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                  >
+                    <Sparkles className="h-4 w-4" strokeWidth={2} />
+                    Plan a date with this idea
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {p.address && (
+                    <p className="mb-1 text-sm leading-relaxed text-secondary">
+                      {p.address}
+                    </p>
+                  )}
+                  <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-primary px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                  >
+                    <MapPin className="h-4 w-4" strokeWidth={2} />
+                    Open in Maps
+                  </a>
+                  {p.website && (
+                    <a
+                      href={p.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+                    >
+                      <Globe className="h-4 w-4" strokeWidth={2} />
+                      Visit website
+                    </a>
+                  )}
+                  {p.phone && (
+                    <a
+                      href={`tel:${p.phone.replace(/[^+\d]/g, '')}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+                    >
+                      <Phone className="h-4 w-4" strokeWidth={2} />
+                      {p.phone}
+                    </a>
+                  )}
+                  {p.reservation_required && (
+                    <a
+                      href={p.reservation_url ?? p.website ?? directionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-full items-center justify-center gap-2 rounded-pill bg-text px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                    >
+                      Book — required
+                      <ExternalLink className="h-4 w-4" strokeWidth={2} />
+                    </a>
+                  )}
+                  <Link
+                    href="/plan"
+                    className="flex w-full items-center justify-center gap-2 rounded-pill border border-accent/40 bg-accent-soft/60 px-5 py-3 text-sm font-medium text-text transition-colors hover:bg-accent-soft"
+                  >
+                    <Sparkles className="h-4 w-4 text-accent" strokeWidth={2} />
+                    Plan a date with this spot
+                  </Link>
+                </>
               )}
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-pill bg-primary px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
-              >
-                <MapPin className="h-4 w-4" strokeWidth={2} />
-                Open in Maps
-              </a>
-              {p.website && (
-                <a
-                  href={p.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
-                >
-                  <Globe className="h-4 w-4" strokeWidth={2} />
-                  Visit website
-                </a>
-              )}
-              {p.phone && (
-                <a
-                  href={`tel:${p.phone.replace(/[^+\d]/g, '')}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
-                >
-                  <Phone className="h-4 w-4" strokeWidth={2} />
-                  {p.phone}
-                </a>
-              )}
-              {p.reservation_required && (
-                <a
-                  href={p.reservation_url ?? p.website ?? directionsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-pill bg-text px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
-                >
-                  Book — required
-                  <ExternalLink className="h-4 w-4" strokeWidth={2} />
-                </a>
-              )}
-              <Link
-                href="/plan"
-                className="flex w-full items-center justify-center gap-2 rounded-pill border border-accent/40 bg-accent-soft/60 px-5 py-3 text-sm font-medium text-text transition-colors hover:bg-accent-soft"
-              >
-                <Sparkles className="h-4 w-4 text-accent" strokeWidth={2} />
-                Plan a date with this spot
-              </Link>
             </div>
           </aside>
         </div>

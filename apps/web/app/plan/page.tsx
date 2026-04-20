@@ -33,12 +33,14 @@ function startStepFromUrl(raw: string | null): number {
 }
 
 // One-line label that gives the radius slider a sense of place.
+// 5km is roughly Knox Mountain to Pandosy — actual walking is more like 1-2km.
 function radiusBlurb(km: number): string {
-  if (km <= 10) return 'Walking distance from downtown';
-  if (km <= 25) return 'Kelowna proper';
-  if (km <= 40) return 'Includes West Kelowna + Mission';
-  if (km <= 60) return 'Adds Lake Country + Peachland';
-  if (km <= 80) return 'Reaches Vernon + Big White';
+  if (km <= 5)  return 'Downtown + just outside the core';
+  if (km <= 15) return 'Central Kelowna';
+  if (km <= 25) return 'Most of Kelowna proper';
+  if (km <= 40) return 'Includes West Kelowna + Lake Country';
+  if (km <= 60) return 'Adds Peachland + Big White';
+  if (km <= 80) return 'Reaches Vernon';
   return 'Wide net — full Okanagan';
 }
 
