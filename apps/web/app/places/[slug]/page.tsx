@@ -2,17 +2,34 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ArrowRight, MapPin, Info, Lightbulb, ExternalLink } from 'lucide-react';
+import {
+  ArrowRight,
+  MapPin,
+  Lightbulb,
+  ExternalLink,
+  Star,
+  Clock,
+  Phone,
+  Globe,
+  Sparkles,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { imageForStop } from '@/lib/place-image';
-import { coverImageFor } from '@/lib/place-image';
+import { imageForStop, coverImageFor } from '@/lib/place-image';
 
-// SEO-canonical page for a single Kelowna spot. Cross-links to the dates
-// that include it, so a long-tail "skinny duke's kelowna" search lands here
-// and discovers our curated date plans organically.
+// Rich SEO-canonical page for a single Kelowna spot. Backed by enriched
+// Google Places data (rating, reviews, photos, hours, phone, website) plus
+// our curated layer (vibe_tags, pairing_tags, local_insight). Cross-links
+// to date plans that include this place.
 
 export const revalidate = 3600;
 const SITE = 'https://after5.app';
+
+interface Review {
+  author: string;
+  rating: number | null;
+  text: string;
+  relative_time: string | null;
+}
 
 interface PlaceRow {
   id: string;
@@ -31,10 +48,20 @@ interface PlaceRow {
   reservation_required: boolean;
   reservation_url: string | null;
   photo_url: string | null;
+  photos: string[];
   google_place_id: string | null;
   lat: number | null;
   lng: number | null;
+  opens: string | null;
+  closes: string | null;
+  hours_week: string[] | null;
+  rating: number | null;
+  review_count: number | null;
+  reviews: Review[];
+  phone: string | null;
+  website: string | null;
   local_insight: string | null;
+  llm_summary: string | null;
   notes: string | null;
 }
 
@@ -54,6 +81,28 @@ interface StopLite {
   photo_url?: string | null;
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  restaurant: 'Restaurant',
+  cafe: 'Cafe',
+  winery: 'Winery',
+  brewery: 'Brewery',
+  cocktail_bar: 'Cocktail Bar',
+  bakery: 'Bakery',
+  dessert: 'Dessert',
+  ice_cream: 'Ice Cream',
+  hike: 'Hike',
+  walk: 'Walk',
+  park: 'Park',
+  garden: 'Garden',
+  beach: 'Beach',
+  viewpoint: 'Viewpoint',
+  sunset_spot: 'Sunset Spot',
+  gallery: 'Gallery',
+  market: 'Market',
+  shop: 'Shop',
+  activity: 'Activity',
+};
+
 async function loadPlace(slug: string): Promise<PlaceRow | null> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -61,13 +110,12 @@ async function loadPlace(slug: string): Promise<PlaceRow | null> {
     .select('*')
     .eq('slug', slug)
     .eq('is_active', true)
+    .eq('approval_status', 'live')
     .maybeSingle();
   return (data ?? null) as PlaceRow | null;
 }
 
 async function loadDatesFeaturing(placeId: string): Promise<ItineraryRow[]> {
-  // Fetch a wider set then filter client-side because Postgres JSONB array
-  // contains is awkward; with ~hundreds of plans the client-side filter is fine.
   const supabase = await createClient();
   const { data } = await supabase
     .from('itineraries')
@@ -75,7 +123,7 @@ async function loadDatesFeaturing(placeId: string): Promise<ItineraryRow[]> {
     .eq('is_public', true)
     .not('slug', 'is', null)
     .order('generated_at', { ascending: false })
-    .limit(100);
+    .limit(120);
   const all = (data ?? []) as ItineraryRow[];
   return all
     .filter((it) => {
@@ -94,20 +142,46 @@ export async function generateMetadata(props: {
 
   const cover = imageForStop({ photo_url: p.photo_url, place_type: p.type });
   const ogImage = cover.startsWith('http') ? cover : `${SITE}${cover}`;
+  const desc = (
+    p.llm_summary ??
+    p.local_insight ??
+    p.notes ??
+    `${p.name} is a ${p.neighborhood} ${p.type.replace(/_/g, ' ')} in Kelowna.`
+  ).slice(0, 160);
 
   return {
-    title: `${p.name} — ${p.neighborhood} ${p.type.replace(/_/g, ' ')} | After5`,
-    description: `${p.name} is a ${p.neighborhood} ${p.type.replace(/_/g, ' ')} in Kelowna. ${p.local_insight ?? p.notes ?? ''} Featured in After5 date plans.`.slice(0, 160),
+    title: `${p.name} — ${TYPE_LABEL[p.type] ?? 'Spot'} in ${p.neighborhood} Kelowna | After5`,
+    description: desc,
     alternates: { canonical: `${SITE}/places/${p.slug}` },
     openGraph: {
-      title: `${p.name} · After5`,
-      description: p.local_insight ?? p.notes ?? `${p.neighborhood} ${p.type.replace(/_/g, ' ')} in Kelowna`,
+      title: p.name,
+      description: desc,
       url: `${SITE}/places/${p.slug}`,
       siteName: 'After5',
       images: [{ url: ogImage, width: 1200, height: 900, alt: p.name }],
       type: 'website',
     },
   };
+}
+
+function formatTime(t: string | null): string | null {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function isOpenNow(opens: string | null, closes: string | null): boolean | null {
+  if (!opens || !closes) return null;
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const [oh, om] = opens.split(':').map(Number);
+  const [ch, cm] = closes.split(':').map(Number);
+  const o = oh * 60 + om;
+  const c = ch * 60 + cm;
+  if (c > o) return cur >= o && cur < c;
+  return cur >= o || cur < c;
 }
 
 export default async function PlacePage(props: { params: Promise<{ slug: string }> }) {
@@ -120,20 +194,37 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
   const directionsUrl = p.lat && p.lng
     ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', Kelowna BC')}`;
-  const moreInfoUrl = `https://www.google.com/search?q=${encodeURIComponent(p.name + ' Kelowna')}`;
+  const openNow = isOpenNow(p.opens, p.closes);
+  const summary = p.llm_summary ?? p.notes ?? null;
 
-  // schema.org Place — gives Google address, geo, image, etc.
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'Place',
     name: p.name,
-    description: p.local_insight ?? p.notes ?? undefined,
+    description: summary ?? undefined,
     image: cover.startsWith('http') ? cover : `${SITE}${cover}`,
     url: `${SITE}/places/${p.slug}`,
-    address: { '@type': 'PostalAddress', addressLocality: p.neighborhood, addressRegion: 'BC', addressCountry: 'CA' },
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: p.address ?? undefined,
+      addressLocality: p.neighborhood,
+      addressRegion: 'BC',
+      addressCountry: 'CA',
+    },
     ...(p.lat && p.lng
       ? { geo: { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng } }
       : {}),
+    ...(p.rating
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: p.rating,
+            reviewCount: p.review_count ?? 0,
+          },
+        }
+      : {}),
+    ...(p.phone ? { telephone: p.phone } : {}),
+    ...(p.website ? { sameAs: [p.website] } : {}),
   };
 
   return (
@@ -164,23 +255,32 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
         <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
         <div className="relative mx-auto flex h-full min-h-[60vh] w-full max-w-content flex-col justify-end px-6 pb-12 pt-32 md:min-h-[70vh] md:px-10 md:pb-16 md:pt-40">
           <p className="mb-4 text-xs font-medium uppercase tracking-[0.22em] text-white/85">
-            {p.neighborhood} · Kelowna
+            {p.neighborhood.replace(/_/g, ' ')} · Kelowna
           </p>
           <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-[-0.025em] text-white md:text-6xl">
             {p.name}
           </h1>
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-base text-white/90">
-            <span className="capitalize">{p.type.replace(/_/g, ' ')}</span>
+            <span>{TYPE_LABEL[p.type] ?? p.type.replace(/_/g, ' ')}</span>
             <span aria-hidden className="text-white/50">·</span>
             <span>{p.price_tier}</span>
-            {p.typical_per_person !== null && p.typical_per_person > 0 && (
+            {p.rating && (
               <>
                 <span aria-hidden className="text-white/50">·</span>
-                <span>~${Math.round(p.typical_per_person)} pp</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Star className="h-4 w-4 fill-white text-white" strokeWidth={0} />
+                  {p.rating} <span className="text-white/70">({p.review_count?.toLocaleString() ?? 0})</span>
+                </span>
               </>
             )}
-            <span aria-hidden className="text-white/50">·</span>
-            <span>{p.typical_duration_min} min visit</span>
+            {openNow !== null && (
+              <>
+                <span aria-hidden className="text-white/50">·</span>
+                <span className={openNow ? 'text-emerald-300' : 'text-rose-300'}>
+                  {openNow ? 'Open now' : 'Closed now'}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -188,8 +288,16 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
       <div className="mx-auto max-w-content px-6 py-16 md:px-10 md:py-20">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-[1fr_320px] md:gap-16">
           <div>
+            {/* Story */}
+            {summary && (
+              <p className="max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
+                {summary}
+              </p>
+            )}
+
+            {/* Local insight */}
             {p.local_insight && (
-              <div className="flex gap-4 rounded-card border border-accent/30 bg-accent-soft/60 p-5 md:p-6">
+              <div className="mt-10 flex gap-4 rounded-card border border-accent/30 bg-accent-soft/60 p-5 md:p-6">
                 <Lightbulb className="mt-1 h-5 w-5 shrink-0 text-accent" strokeWidth={2} />
                 <div>
                   <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
@@ -202,19 +310,26 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
               </div>
             )}
 
-            {p.notes && (
-              <div className="mt-10">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Notes</p>
-                <p className="mt-3 max-w-prose text-base leading-relaxed text-secondary">
-                  {p.notes}
-                </p>
-              </div>
-            )}
+            {/* What to know — vibe + duration + effort + energy */}
+            <div className="mt-12 grid grid-cols-2 gap-6 border-y border-border py-8 md:grid-cols-4">
+              <Stat label="Visit time" value={`${p.typical_duration_min} min`} />
+              <Stat
+                label="Per person"
+                value={
+                  p.typical_per_person && p.typical_per_person > 0
+                    ? `~$${Math.round(p.typical_per_person)}`
+                    : 'Free'
+                }
+              />
+              <Stat label="Effort" value={p.effort} />
+              <Stat label="Energy" value={p.energy} />
+            </div>
 
-            {p.vibe_tags.length > 0 && (
+            {/* Vibe + pairing chips */}
+            {(p.vibe_tags.length > 0 || p.pairing_tags.length > 0) && (
               <div className="mt-10">
                 <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                  Vibe
+                  The vibe
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {p.vibe_tags.map((v) => (
@@ -225,6 +340,85 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                       {v}
                     </span>
                   ))}
+                  {p.pairing_tags.map((v) => (
+                    <span
+                      key={v}
+                      className="rounded-pill border border-accent/30 bg-accent-soft/40 px-3 py-1 text-sm text-text"
+                    >
+                      {v.replace(/_/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hours table */}
+            {p.hours_week && p.hours_week.length > 0 && (
+              <div className="mt-10">
+                <p className="mb-4 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                  Hours
+                </p>
+                <ul className="space-y-2 text-sm text-secondary">
+                  {p.hours_week.map((line, i) => (
+                    <li key={i} className="grid grid-cols-[120px_1fr] gap-3">
+                      <span className="text-text">{line.split(':')[0]}</span>
+                      <span className="text-secondary [font-variant-numeric:tabular-nums]">
+                        {line.split(':').slice(1).join(':').trim()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Reviews */}
+            {p.reviews && p.reviews.length > 0 && (
+              <div className="mt-12">
+                <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  What people say · via Google
+                </p>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  {p.reviews.slice(0, 4).map((r, i) => (
+                    <div key={i} className="rounded-card border border-border bg-background p-5">
+                      <div className="flex items-baseline justify-between">
+                        <p className="text-sm font-medium text-text">{r.author}</p>
+                        <p className="text-xs text-muted">{r.relative_time}</p>
+                      </div>
+                      {r.rating !== null && (
+                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted">
+                          <Star className="h-3 w-3 fill-accent text-accent" strokeWidth={0} />
+                          <span className="[font-variant-numeric:tabular-nums]">{r.rating}</span>
+                        </p>
+                      )}
+                      <p className="mt-3 line-clamp-6 text-sm leading-relaxed text-secondary">
+                        {r.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Photo gallery */}
+            {p.photos && p.photos.length > 0 && (
+              <div className="mt-12">
+                <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  More photos · via Google
+                </p>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+                  {p.photos.slice(0, 6).map((url, i) => (
+                    <div key={i} className="relative aspect-square overflow-hidden rounded-card bg-surface">
+                      <Image
+                        src={url}
+                        alt=""
+                        fill
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -233,6 +427,11 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
           {/* Side rail */}
           <aside className="md:sticky md:top-8 md:self-start">
             <div className="space-y-3 rounded-card border border-border bg-surface p-6 md:p-7">
+              {p.address && (
+                <p className="mb-1 text-sm leading-relaxed text-secondary">
+                  {p.address}
+                </p>
+              )}
               <a
                 href={directionsUrl}
                 target="_blank"
@@ -242,18 +441,29 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                 <MapPin className="h-4 w-4" strokeWidth={2} />
                 Open in Maps
               </a>
-              <a
-                href={moreInfoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
-              >
-                <Info className="h-4 w-4" strokeWidth={2} />
-                Hours / reviews
-              </a>
+              {p.website && (
+                <a
+                  href={p.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+                >
+                  <Globe className="h-4 w-4" strokeWidth={2} />
+                  Visit website
+                </a>
+              )}
+              {p.phone && (
+                <a
+                  href={`tel:${p.phone.replace(/[^+\d]/g, '')}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+                >
+                  <Phone className="h-4 w-4" strokeWidth={2} />
+                  {p.phone}
+                </a>
+              )}
               {p.reservation_required && (
                 <a
-                  href={p.reservation_url ?? moreInfoUrl}
+                  href={p.reservation_url ?? p.website ?? directionsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex w-full items-center justify-center gap-2 rounded-pill bg-text px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
@@ -262,6 +472,13 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                   <ExternalLink className="h-4 w-4" strokeWidth={2} />
                 </a>
               )}
+              <Link
+                href="/plan"
+                className="flex w-full items-center justify-center gap-2 rounded-pill border border-accent/40 bg-accent-soft/60 px-5 py-3 text-sm font-medium text-text transition-colors hover:bg-accent-soft"
+              >
+                <Sparkles className="h-4 w-4 text-accent" strokeWidth={2} />
+                Plan a date with this spot
+              </Link>
             </div>
           </aside>
         </div>
@@ -295,14 +512,11 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                         sizes="(max-width: 768px) 100vw, 33vw"
                         className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.03]"
                       />
-                      <div aria-hidden className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/75 to-transparent" />
-                      <div className="absolute bottom-4 left-5 right-5 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
-                        <h3 className="font-display text-lg font-semibold leading-tight md:text-xl">
-                          {it.title}
-                        </h3>
-                        {it.hook && <p className="mt-1 line-clamp-1 text-xs text-white/95">{it.hook}</p>}
-                      </div>
                     </div>
+                    <h3 className="mt-4 font-display text-lg font-semibold leading-tight text-text md:text-xl">
+                      {it.title}
+                    </h3>
+                    {it.hook && <p className="mt-1 line-clamp-2 text-sm text-secondary">{it.hook}</p>}
                     <p className="mt-3 text-sm text-muted [font-variant-numeric:tabular-nums]">
                       <span className="text-text">${Math.round(it.total_cost_pp ?? 0)}</span>
                       <span className="mx-1.5 text-border">·</span>
@@ -341,5 +555,16 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
         </div>
       </footer>
     </main>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">{label}</p>
+      <p className="mt-1.5 font-display text-lg font-semibold capitalize text-text md:text-xl">
+        {value}
+      </p>
+    </div>
   );
 }

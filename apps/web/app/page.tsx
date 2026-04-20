@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
+import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -63,7 +64,7 @@ const BENEFITS = [
   { n: '03', head: 'Three options every time',  body: 'Pick the night that fits the energy. Skip the others.' },
 ] as const;
 
-export default function HomePage() {
+export default async function HomePage() {
   return (
     <>
       {/* ─── Nav ── overlays the hero image, no chrome bar ───── */}
@@ -264,6 +265,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ─── Explore real dates (server-fetched from /dates catalog) ─ */}
+        <ExploreDatesStrip />
 
         {/* ─── Benefits ─────────────────────────────────────────── */}
         <section className="border-t border-border">
