@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { to12h, TIMEZONE_LABEL } from '@/lib/format';
 
 // Public itinerary detail page.
 // Anyone with the UUID can read; SEO-indexed pages come in Phase 5
@@ -84,11 +85,15 @@ export default async function PublicItineraryPage(props: {
 
         <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-[1fr_300px]">
           {/* Timeline */}
-          <ol className="space-y-10">
+          <div>
+            <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Timeline · {TIMEZONE_LABEL}
+            </p>
+            <ol className="space-y-10">
             {stops.map((s, i) => (
-              <li key={s.place_id} className="grid grid-cols-[64px_1fr] gap-6">
+              <li key={s.place_id} className="grid grid-cols-[72px_1fr] gap-6">
                 <div className="text-sm text-muted [font-variant-numeric:tabular-nums]">
-                  {s.start_time}
+                  {to12h(s.start_time)}
                 </div>
                 <div>
                   <div className="flex items-baseline gap-3">
@@ -122,7 +127,8 @@ export default async function PublicItineraryPage(props: {
                 </div>
               </li>
             ))}
-          </ol>
+            </ol>
+          </div>
 
           {/* Side panel */}
           <aside className="rounded-card border border-border bg-surface p-7 md:sticky md:top-28 md:self-start">

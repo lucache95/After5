@@ -11,6 +11,7 @@ import { ArrowRight, ArrowLeft, Check, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
 import { track } from '@/app/PostHogProvider';
+import { to12h, TIMEZONE_LABEL } from '@/lib/format';
 
 const ALLOWED_VIBES = new Set(['romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous', 'free']);
 function vibeFromUrl(raw: string | null): string[] {
@@ -657,11 +658,15 @@ function ItineraryDetail({ itinerary }: { itinerary: Itinerary }) {
 
       <div className="mt-12 grid grid-cols-1 gap-12 md:grid-cols-[1fr_300px]">
         {/* Timeline */}
-        <ol className="space-y-10">
+        <div>
+          <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+            Timeline · {TIMEZONE_LABEL}
+          </p>
+          <ol className="space-y-10">
           {itinerary.stops.map((s, i) => (
-            <li key={s.place_id} className="grid grid-cols-[64px_1fr] gap-6">
+            <li key={s.place_id} className="grid grid-cols-[72px_1fr] gap-6">
               <div className="text-sm text-muted [font-variant-numeric:tabular-nums]">
-                {s.start_time}
+                {to12h(s.start_time)}
               </div>
               <div>
                 <div className="flex items-baseline gap-3">
@@ -689,7 +694,8 @@ function ItineraryDetail({ itinerary }: { itinerary: Itinerary }) {
               </div>
             </li>
           ))}
-        </ol>
+          </ol>
+        </div>
 
         {/* Side panel */}
         <aside className="rounded-card border border-border bg-surface p-7 md:sticky md:top-28 md:self-start">
