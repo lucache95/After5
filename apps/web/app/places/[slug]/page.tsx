@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { imageForStop, coverImageFor } from '@/lib/place-image';
+import { PhotoLightbox } from '@/components/PhotoLightbox';
 
 // Rich SEO-canonical page for a single Kelowna spot. Backed by enriched
 // Google Places data (rating, reviews, photos, hours, phone, website) plus
@@ -387,10 +388,19 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                         <p className="text-xs text-muted">{r.relative_time}</p>
                       </div>
                       {r.rating !== null && (
-                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted">
-                          <Star className="h-3 w-3 fill-accent text-accent" strokeWidth={0} />
-                          <span className="[font-variant-numeric:tabular-nums]">{r.rating}</span>
-                        </p>
+                        <div className="mt-1 inline-flex items-center gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
+                          {Array.from({ length: 5 }).map((_, n) => (
+                            <Star
+                              key={n}
+                              className={
+                                n < Math.round(r.rating!)
+                                  ? 'h-3.5 w-3.5 fill-accent text-accent'
+                                  : 'h-3.5 w-3.5 fill-border text-border'
+                              }
+                              strokeWidth={0}
+                            />
+                          ))}
+                        </div>
                       )}
                       <p className="mt-3 line-clamp-6 text-sm leading-relaxed text-secondary">
                         {r.text}
@@ -407,20 +417,7 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                 <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
                   More photos · via Google
                 </p>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                  {p.photos.slice(0, 6).map((url, i) => (
-                    <div key={i} className="relative aspect-square overflow-hidden rounded-card bg-surface">
-                      <Image
-                        src={url}
-                        alt=""
-                        fill
-                        sizes="(max-width: 768px) 50vw, 33vw"
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  ))}
-                </div>
+                <PhotoLightbox photos={p.photos.slice(0, 6)} />
               </div>
             )}
           </div>

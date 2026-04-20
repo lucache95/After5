@@ -312,17 +312,48 @@ function InputsView(props: {
 
   return (
     <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-20">
-      {/* Progress dots */}
-      <div className="mb-12 flex gap-2">
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <div
-            key={i}
-            className={cn(
-              'h-1 flex-1 rounded-pill transition-colors',
-              i + 1 <= step ? 'bg-text' : 'bg-border'
-            )}
-          />
-        ))}
+      {/* Progress stepper — numbered circles, emerald = locked in, accent = active */}
+      <div className="mb-12 flex items-center">
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
+          const n = i + 1;
+          const isDone = n < step;
+          const isActive = n === step;
+          return (
+            <div key={i} className="flex flex-1 items-center last:flex-none">
+              <div
+                className={cn(
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-all duration-300 [font-variant-numeric:tabular-nums]',
+                  isDone && 'bg-emerald-500 text-white shadow-sm',
+                  isActive && 'bg-text text-background ring-4 ring-text/10 scale-110',
+                  !isDone && !isActive && 'bg-background border border-border text-muted',
+                )}
+              >
+                {isDone ? (
+                  <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden>
+                    <path
+                      d="M2.5 6.5l2.5 2.5 4.5-5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  </svg>
+                ) : (
+                  n
+                )}
+              </div>
+              {n < TOTAL_STEPS && (
+                <div
+                  className={cn(
+                    'mx-2 h-[2px] flex-1 rounded-full transition-colors duration-300',
+                    isDone ? 'bg-emerald-500' : 'bg-border',
+                  )}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="max-w-2xl">
@@ -863,14 +894,22 @@ function ResultsView(props: {
     <>
       {/* Image-first chooser strip */}
       <div className="mx-auto max-w-content px-6 pb-10 pt-12 md:px-10 md:pb-12 md:pt-16">
-        <div className="mb-8 flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
-            Three plans, your call
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-6">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Three plans, your call
+            </p>
+            <h2 className="mt-2 font-display text-2xl font-semibold leading-tight tracking-[-0.01em] text-text md:text-[28px]">
+              Built three plans just for you.
+            </h2>
+            <p className="mt-1.5 text-sm text-secondary">
+              We checked every Kelowna spot we know, sequenced them so nothing closes mid-date, and picked the three that fit you best.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onRedo}
-            className="text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
+            className="shrink-0 text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
           >
             Try a different one
           </button>

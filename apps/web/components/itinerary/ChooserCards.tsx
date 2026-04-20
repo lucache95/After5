@@ -52,6 +52,18 @@ export function ChooserCards({
                   {it.template_name}
                 </span>
               </div>
+              {/* Top-right: "Our pick" on strongest plan, otherwise green "New" */}
+              <div className="absolute right-3 top-3">
+                {i === 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-pill bg-amber-400/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-950 backdrop-blur-sm shadow-sm">
+                    <span aria-hidden>★</span> Our pick
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-500/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white backdrop-blur-sm shadow-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/90" /> Just generated
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Title + meta below image, on the card surface — always readable. */}
