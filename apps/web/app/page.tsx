@@ -220,10 +220,11 @@ export default function HomePage() {
                         sizes="(max-width: 768px) 100vw, 33vw"
                         className="object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
                       />
-                      {/* Subtle bottom gradient so the chip stays legible on bright shots */}
+                      {/* Stronger scrim so white text is guaranteed legible
+                          regardless of how bright the underlying photo is. */}
                       <div
                         aria-hidden
-                        className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/30 to-transparent"
+                        className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/60 to-transparent"
                       />
                       <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
                         {p.vibe.map((v) => (
@@ -235,11 +236,9 @@ export default function HomePage() {
                           </span>
                         ))}
                       </div>
-                      <div className="absolute bottom-4 left-4 right-4 flex items-baseline justify-between text-white [font-variant-numeric:tabular-nums]">
-                        <span className={`text-sm font-medium ${highlight ? 'text-white' : 'text-white'}`}>
-                          {p.cost}
-                        </span>
-                        <span className="text-xs text-white/85">{p.time}</span>
+                      <div className="absolute bottom-4 left-4 right-4 flex items-baseline justify-between text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)] [font-variant-numeric:tabular-nums]">
+                        <span className="text-sm font-medium">{p.cost}</span>
+                        <span className="text-xs text-white/95">{p.time}</span>
                       </div>
                     </div>
 

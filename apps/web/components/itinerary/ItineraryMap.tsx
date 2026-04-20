@@ -2,16 +2,20 @@
 
 // Interactive Mapbox map showing all stops with numbered pins and a route line
 // connecting them in order. Light style to match the After5 cream palette.
-// Renders nothing if a token isn't configured (so the page still works for devs).
+//
+// Defensive rendering: the map has three visible states so we never ship a
+// silently-empty box again. If a render still fails, onError surfaces the
+// Mapbox error into the UI so we (or the user) can see what's wrong.
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapbox';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import type { Stop } from '@/lib/itinerary-types';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 export function ItineraryMap({ stops }: { stops: Stop[] }) {
+  const [mapError, setMapError] = useState<string | null>(null);
+
   const placed = stops.filter(
     (s): s is Stop & { lat: number; lng: number } =>
       typeof s.lat === 'number' && typeof s.lng === 'number',
@@ -36,14 +40,32 @@ export function ItineraryMap({ stops }: { stops: Stop[] }) {
 
   if (!TOKEN) {
     return (
-      <div className="flex h-[360px] w-full items-center justify-center rounded-card bg-surface text-sm text-muted">
-        Map unavailable — set NEXT_PUBLIC_MAPBOX_TOKEN.
-      </div>
+      <FallbackList
+        title="Map token missing"
+        body="NEXT_PUBLIC_MAPBOX_TOKEN isn't in the client bundle. Rebuild with it set."
+        stops={placed}
+      />
     );
   }
 
   if (placed.length === 0) {
-    return null;
+    return (
+      <FallbackList
+        title="No coordinates yet"
+        body="These stops don't have lat/lng stored, so there's nothing to plot."
+        stops={stops}
+      />
+    );
+  }
+
+  if (mapError) {
+    return (
+      <FallbackList
+        title="Map failed to load"
+        body={`Mapbox reported: ${mapError}. The stops below are the route in order.`}
+        stops={placed}
+      />
+    );
   }
 
   // Center on the centroid of placed stops and pad bounds.
@@ -64,6 +86,11 @@ export function ItineraryMap({ stops }: { stops: Stop[] }) {
         style={{ width: '100%', height: 420 }}
         mapStyle="mapbox://styles/mapbox/light-v11"
         attributionControl={false}
+        onError={(e) => {
+          console.error('Mapbox error:', e);
+          const msg = e?.error?.message ?? 'unknown error';
+          setMapError(msg);
+        }}
       >
         {routeData && (
           <Source id="route" type="geojson" data={routeData}>
@@ -93,6 +120,38 @@ export function ItineraryMap({ stops }: { stops: Stop[] }) {
 
         <NavigationControl position="top-right" showCompass={false} />
       </Map>
+    </div>
+  );
+}
+
+function FallbackList({
+  title,
+  body,
+  stops,
+}: {
+  title: string;
+  body: string;
+  stops: Stop[];
+}) {
+  return (
+    <div className="rounded-card border border-border bg-surface p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{title}</p>
+      <p className="mt-2 text-sm text-secondary">{body}</p>
+      {stops.length > 0 && (
+        <ol className="mt-5 space-y-2 text-sm text-text">
+          {stops.map((s, i) => (
+            <li key={s.place_id} className="flex items-baseline gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
+                {i + 1}
+              </span>
+              <span className="font-medium">{s.place_name}</span>
+              {s.neighborhood && (
+                <span className="text-muted">· {s.neighborhood}</span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

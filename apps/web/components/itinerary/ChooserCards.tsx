@@ -6,7 +6,7 @@
 
 import Image from 'next/image';
 import { cn } from '@/lib/cn';
-import { imageForStop } from '@/lib/place-image';
+import { coverImageFor } from '@/lib/place-image';
 import type { Itinerary } from '@/lib/itinerary-types';
 
 export function ChooserCards({
@@ -21,12 +21,7 @@ export function ChooserCards({
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
       {itineraries.map((it, i) => {
-        const cover = it.stops[0]
-          ? imageForStop({
-              photo_url: it.stops[0].photo_url,
-              place_type: it.stops[0].place_type,
-            })
-          : '/places/place-walk.jpg';
+        const cover = coverImageFor(it.stops);
         const isActive = i === activeIdx;
         const totalHr = Math.round((it.total_duration_min / 60) * 10) / 10;
 
@@ -55,20 +50,20 @@ export function ChooserCards({
               />
               <div
                 aria-hidden
-                className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent"
+                className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/80 to-transparent"
               />
               <div className="absolute left-4 top-4">
                 <span className="rounded-pill bg-white/95 px-2.5 py-1 text-[11px] font-medium tracking-wide text-text backdrop-blur-sm">
                   {it.template_name}
                 </span>
               </div>
-              <div className="absolute bottom-4 left-4 right-4 text-white">
+              <div className="absolute bottom-4 left-4 right-4 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
                 <h3 className="font-display text-lg font-semibold leading-tight md:text-xl">
                   {it.title}
                 </h3>
-                <p className="mt-1.5 text-xs text-white/85 [font-variant-numeric:tabular-nums]">
-                  ${Math.round(it.total_cost_pp)} <span className="text-white/55">·</span>{' '}
-                  {totalHr} hr <span className="text-white/55">·</span> {it.stops.length} stops
+                <p className="mt-1.5 text-xs text-white/95 [font-variant-numeric:tabular-nums]">
+                  ${Math.round(it.total_cost_pp)} <span className="text-white/60">·</span>{' '}
+                  {totalHr} hr <span className="text-white/60">·</span> {it.stops.length} stops
                 </p>
               </div>
             </div>

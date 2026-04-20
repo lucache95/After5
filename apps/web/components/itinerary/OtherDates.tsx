@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { imageForStop } from '@/lib/place-image';
+import { coverImageFor } from '@/lib/place-image';
 
 // "View other dates" strip at the bottom of /plan/i/[id]. Server-rendered so
 // it's SEO-friendly and costs one DB roundtrip per page view (cached by
@@ -62,10 +62,7 @@ export async function OtherDates({ excludeId }: { excludeId: string }) {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
           {items.map((it) => {
             const stops = (Array.isArray(it.stops) ? it.stops : []) as StopLite[];
-            const first = stops[0];
-            const cover = first
-              ? imageForStop({ photo_url: first.photo_url, place_type: first.place_type })
-              : '/places/place-walk.jpg';
+            const cover = coverImageFor(stops);
             const totalHr =
               it.total_duration_min !== null
                 ? Math.round((it.total_duration_min / 60) * 10) / 10
@@ -86,7 +83,7 @@ export async function OtherDates({ excludeId }: { excludeId: string }) {
                   />
                   <div
                     aria-hidden
-                    className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/30 to-transparent"
+                    className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/75 to-transparent"
                   />
                   <div className="absolute bottom-4 left-5 right-5 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.5)]">
                     <h3 className="font-display text-lg font-semibold leading-tight md:text-xl">

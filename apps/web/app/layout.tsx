@@ -3,6 +3,10 @@ import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import { PostHogProvider } from './PostHogProvider';
 import './globals.css';
+// Global import so Mapbox GL's canvas + controls are always styled — when we
+// imported this inside the dynamic client component the CSS wasn't reliably
+// applying in production.
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 const inter = Inter({
   subsets: ['latin'],

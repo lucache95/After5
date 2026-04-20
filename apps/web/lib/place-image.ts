@@ -36,3 +36,16 @@ export function imageForStop(opts: {
   }
   return FALLBACK;
 }
+
+// Pick the most distinctive image for an itinerary cover card. Prefers a stop
+// with a real Google photo; only falls back to a type-based mood shot if none
+// of the stops has one. Avoids two plans showing the same generic forest/hike
+// image just because their first stops happen to share a type.
+export function coverImageFor(stops: Array<{
+  photo_url?: string | null;
+  place_type?: string | null;
+}>): string {
+  const withPhoto = stops.find((s) => s.photo_url);
+  if (withPhoto) return withPhoto.photo_url!;
+  return imageForStop(stops[0] ?? {});
+}

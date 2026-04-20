@@ -54,7 +54,7 @@ export function StopCard({
             />
             <div
               aria-hidden
-              className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/45 to-transparent"
+              className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/95 via-black/75 to-transparent"
             />
             <div className="absolute left-5 top-5 flex items-center gap-2">
               <span className="rounded-pill bg-white/95 px-3 py-1 text-xs font-medium text-text backdrop-blur-sm md:hidden">
