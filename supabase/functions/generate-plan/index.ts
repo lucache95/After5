@@ -30,7 +30,7 @@ const InputSchema = z.object({
   duration_min: z.number().int().min(60).max(720).default(180),
   budget_per_person: z.number().nonnegative().max(1000).default(50),
   vibe: z.array(z.string()).min(1).max(3),
-  must_includes: z.array(z.string()).max(8).default([]),
+  must_includes: z.array(z.string()).max(12).default([]),
   drive_tolerance_min: z.number().int().min(0).max(120).default(20),
   effort: z.enum(['low', 'moderate', 'high']).default('low'),
   start_at: z.string().datetime().optional(),

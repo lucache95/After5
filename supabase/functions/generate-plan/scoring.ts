@@ -147,13 +147,10 @@ export function buildItineraryFromTemplate(
   if (totalCost > budgetCeiling) return null;
 
   // Sanity check vibe match — at least 50% of stops should match user vibe
-  // At least one stop must match the requested vibe — used to be 50% but that
-  // was too strict for narrow vibes like "adventurous" where only 7 places
-  // qualify. Scoring already rewards vibe matches, so one is enough as a floor.
-  const stopVibeMatches = picked.filter((p) =>
-    p.vibe_tags.some((v) => inputs.vibe.includes(v))
-  ).length;
-  if (stopVibeMatches < 1) return null;
+  // No vibe-floor check anymore. Treat vibe as a PREFERENCE that biases
+  // scoring (already does — +1.5 per overlap), not a hard requirement that
+  // can fail the entire plan. Better to ship a slightly off-vibe plan than
+  // ship nothing.
 
   return {
     template_id: template.id,
