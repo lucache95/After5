@@ -2,9 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@after5/api-client', '@after5/types', '@after5/validators'],
-  experimental: {
-    typedRoutes: true,
-  },
+  // typedRoutes was rejecting template-literal hrefs to dynamic /dates/[slug]
+  // pages. Off for now — TypeScript still catches static URL typos at the
+  // component-level via Link's href prop in non-experimental mode.
   images: {
     remotePatterns: [
       // Google Places Photos API endpoint — issues a 302 to the actual image.

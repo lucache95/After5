@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -6,15 +6,16 @@ import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { OtherDates } from '@/components/itinerary/OtherDates';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
-// Public itinerary detail page.
-// Anyone with the UUID can read; SEO-indexed pages come in Phase 5
-// (gated by 3+ "loved" feedback in is_public flag).
+// Legacy UUID-based public URL. The canonical route is now /dates/[slug] for
+// SEO. We 308 redirect when a slug is present; bare UUID is kept renderable
+// only as a safety net for old shared links pre-slug backfill.
 
 export const revalidate = 3600;
 export const dynamic = 'force-dynamic';
 
 interface ItineraryRow {
   id: string;
+  slug: string | null;
   template_id: string | null;
   title: string | null;
   hook: string | null;
@@ -39,6 +40,11 @@ export default async function PublicItineraryPage(props: {
   if (error || !data) notFound();
 
   const row = data as unknown as ItineraryRow;
+  // Redirect to canonical SEO URL — preserves backlinks while consolidating
+  // PageRank to /dates/[slug].
+  if (row.slug) {
+    redirect(`/dates/${row.slug}`);
+  }
   const stops = (Array.isArray(row.stops) ? row.stops : []) as Stop[];
 
   // Derive vibe set from stop neighborhoods/types as a quiet fallback for older

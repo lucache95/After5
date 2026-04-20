@@ -13,9 +13,15 @@ export function ItineraryActions({ itinerary }: { itinerary: Itinerary }) {
   const [copied, setCopied] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
 
+  // Prefer the SEO-canonical slug URL when available so shared links carry
+  // PageRank to the indexed page rather than the legacy UUID redirect.
   const shareUrl =
-    typeof window !== 'undefined' && itinerary.id
-      ? `${window.location.origin}/plan/i/${itinerary.id}`
+    typeof window !== 'undefined'
+      ? itinerary.slug
+        ? `${window.location.origin}/dates/${itinerary.slug}`
+        : itinerary.id
+          ? `${window.location.origin}/plan/i/${itinerary.id}`
+          : ''
       : '';
 
   async function onShare() {

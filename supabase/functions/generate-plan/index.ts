@@ -109,7 +109,9 @@ serve(async (req: Request) => {
       { inputs, itineraries, placesById }
     );
 
-    // 7. Persist to DB
+    // 7. Persist to DB.
+    // Generate the slug AFTER insert (we need the row id), via UPDATE.
+    // is_public=true so every new plan immediately becomes indexable SEO content.
     const insertRows = written.map((it) => ({
       template_id: it.template_id,
       inputs,
@@ -119,6 +121,7 @@ serve(async (req: Request) => {
       why_it_works: it.why_it_works,
       total_cost_pp: it.total_cost_pp,
       total_duration_min: it.total_duration_min,
+      is_public: true,
     }));
     const { data: inserted, error: insertError } = await supabase
       .from('itineraries')
@@ -129,9 +132,23 @@ serve(async (req: Request) => {
       // Continue anyway — the user gets their plans even if save failed
     }
 
+    // Build slug per row (needs id) then UPDATE in a single roundtrip.
+    if (inserted && inserted.length > 0) {
+      const updates = inserted.map((row, idx) => ({
+        id: row.id,
+        slug: slugify(written[idx].title, row.id),
+      }));
+      // upsert with onConflict to set slugs without re-inserting
+      const { error: slugErr } = await supabase
+        .from('itineraries')
+        .upsert(updates, { onConflict: 'id' });
+      if (slugErr) console.error('slug update error', slugErr);
+    }
+
     const withIds = written.map((it, idx) => ({
       ...it,
       id: inserted?.[idx]?.id,
+      slug: inserted?.[idx]?.id ? slugify(it.title, inserted[idx].id) : undefined,
     }));
 
     return jsonResponse({
@@ -150,4 +167,18 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'content-type': 'application/json' },
   });
+}
+
+// Mirrors apps/web/lib/slug.ts so the canonical SEO URL we ship to the client
+// matches what /dates/[slug] expects. Keep these in sync.
+function slugify(title: string, id: string): string {
+  const base = title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  const tail = id.replace(/-/g, '').slice(0, 6);
+  return base ? `${base}-${tail}` : tail;
 }

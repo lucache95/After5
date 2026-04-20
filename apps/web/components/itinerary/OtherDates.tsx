@@ -10,6 +10,7 @@ import { imageForStop } from '@/lib/place-image';
 
 interface OtherItineraryRow {
   id: string;
+  slug: string | null;
   title: string | null;
   hook: string | null;
   total_cost_pp: number | null;
@@ -27,9 +28,11 @@ export async function OtherDates({ excludeId }: { excludeId: string }) {
   const supabase = await createClient();
   const { data } = await supabase
     .from('itineraries')
-    .select('id, title, hook, total_cost_pp, total_duration_min, stops')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
     .neq('id', excludeId)
+    .eq('is_public', true)
     .not('title', 'is', null)
+    .not('slug', 'is', null)
     .order('generated_at', { ascending: false })
     .limit(6);
 
@@ -70,7 +73,7 @@ export async function OtherDates({ excludeId }: { excludeId: string }) {
             return (
               <Link
                 key={it.id}
-                href={`/plan/i/${it.id}`}
+                href={`/dates/${it.slug}`}
                 className="group flex flex-col"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-background">

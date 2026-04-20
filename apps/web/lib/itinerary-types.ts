@@ -23,6 +23,7 @@ export interface Stop {
 
 export interface Itinerary {
   id?: string;
+  slug?: string;
   template_id: string;
   template_name: string;
   title: string;
