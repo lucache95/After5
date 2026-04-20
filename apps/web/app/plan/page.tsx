@@ -4,11 +4,28 @@
 // 5 questions → call generate-plan Edge Function → 3 itinerary cards → detail.
 // Single client component for now; split into smaller files when adding tests.
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, ArrowLeft, Check, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
+
+const ALLOWED_VIBES = new Set(['romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous', 'free']);
+function vibeFromUrl(raw: string | null): string[] {
+  if (!raw) return [];
+  // 'free' isn't a vibe in our DB (it's a budget filter) — translate to chill
+  if (raw === 'free') return ['chill'];
+  return ALLOWED_VIBES.has(raw) ? [raw] : [];
+}
+function budgetFromUrl(raw: string | null): number {
+  if (raw === 'free') return 0;
+  return 50;
+}
+function startStepFromUrl(raw: string | null): number {
+  // If user came in with a vibe pre-filled, jump past the first 2 steps
+  return raw && ALLOWED_VIBES.has(raw) ? 4 : 1;
+}
 
 // ─── Types & options ─────────────────────────────────────────────────
 
@@ -91,13 +108,24 @@ type Phase = 'inputs' | 'loading' | 'results' | 'error';
 const TOTAL_STEPS = 5;
 
 export default function PlanPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlanFlow />
+    </Suspense>
+  );
+}
+
+function PlanFlow() {
+  const searchParams = useSearchParams();
+  const vibeParam = searchParams.get('vibe');
+
   const [phase, setPhase] = useState<Phase>('inputs');
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => startStepFromUrl(vibeParam));
   const [inputs, setInputs] = useState<Inputs>({
     occasion: 'date',
     duration_min: 180,
-    budget_per_person: 50,
-    vibe: [],
+    budget_per_person: budgetFromUrl(vibeParam),
+    vibe: vibeFromUrl(vibeParam),
     must_includes: [],
     drive_tolerance_min: 20,
     effort: 'low',
