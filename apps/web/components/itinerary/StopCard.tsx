@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { MapPin, Lightbulb, ExternalLink } from 'lucide-react';
+import { MapPin, Lightbulb, ExternalLink, Info } from 'lucide-react';
 import { imageForStop } from '@/lib/place-image';
 import { to12h } from '@/lib/format';
 import type { Stop } from '@/lib/itinerary-types';
@@ -20,6 +20,10 @@ export function StopCard({
   const directionsUrl = stop.lat && stop.lng
     ? `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.place_name + ', Kelowna BC')}`;
+  // Google search gives users hours, reviews, website, menus — everything
+  // they'd want to check before committing to a stop. Until we curate per-place
+  // website columns this is the fastest path to "see all the info."
+  const moreInfoUrl = `https://www.google.com/search?q=${encodeURIComponent(stop.place_name + ' Kelowna')}`;
 
   return (
     <li className="relative">
@@ -50,7 +54,7 @@ export function StopCard({
             />
             <div
               aria-hidden
-              className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 to-transparent"
+              className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/45 to-transparent"
             />
             <div className="absolute left-5 top-5 flex items-center gap-2">
               <span className="rounded-pill bg-white/95 px-3 py-1 text-xs font-medium text-text backdrop-blur-sm md:hidden">
@@ -60,12 +64,12 @@ export function StopCard({
                 {to12h(stop.start_time)}
               </span>
             </div>
-            <div className="absolute bottom-4 left-5 right-5 text-white">
+            <div className="absolute bottom-4 left-5 right-5 text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]">
               <h3 className="font-display text-xl font-semibold leading-tight md:text-2xl">
                 {stop.place_name}
               </h3>
               {(stop.neighborhood || stop.place_type) && (
-                <p className="mt-1 text-xs text-white/85">
+                <p className="mt-1 text-xs text-white/90">
                   {[stop.neighborhood, stop.place_type?.replace(/_/g, ' ')]
                     .filter(Boolean)
                     .join(' · ')}
@@ -107,6 +111,15 @@ export function StopCard({
 
             <div className="mt-6 flex flex-wrap gap-3">
               <a
+                href={moreInfoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-background px-4 py-2 text-sm text-text transition-colors hover:border-text/40"
+              >
+                <Info className="h-3.5 w-3.5" strokeWidth={2} />
+                More info
+              </a>
+              <a
                 href={directionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -115,14 +128,14 @@ export function StopCard({
                 <MapPin className="h-3.5 w-3.5" strokeWidth={2} />
                 Directions
               </a>
-              {stop.reservation_url && (
+              {stop.reservation_required && (
                 <a
-                  href={stop.reservation_url}
+                  href={stop.reservation_url ?? moreInfoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-pill bg-text px-4 py-2 text-sm text-background transition-opacity hover:opacity-85"
                 >
-                  Reserve
+                  Book — required
                   <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />
                 </a>
               )}

@@ -15,7 +15,7 @@ Hard rules:
 - No emoji in any field.
 - Titles: 8 words max, no colons unless meaningful, no clickbait.
 - "Why it works": 3 sentences max. Reference the specific sequence (what a → b → c does emotionally), not generic benefits.
-- Per-stop "what_to_do": one specific, sensory suggestion grounded in the place itself ("share the squash carpaccio", "park at the lower lot and walk up", "ask for the bartender's choice"). One short sentence. Never "enjoy" or "savor".
+- Per-stop "what_to_do": MANDATORY for every stop — never empty. 2 to 3 short sentences that tell the reader what to actually do here: what to order or try, where to sit or look, a specific sensory detail, and how this stop connects to the next. Ground it in the place name — "At Sandrine, share the canelé and a flat white — the counter seats by the window catch the morning light. Finish quick so you can walk the lake path before the tourists arrive." No "enjoy", no "savor", no "experience".
 
 Brand tone calibration:
 - This is for couples in Kelowna. Most are mid-20s to late-30s. They want to feel like someone with taste planned this — not like an algorithm did.
@@ -30,10 +30,12 @@ Output schema (one object per itinerary, in an array of length 3):
     "hook": "string (one short line, 12 words max)",
     "why_it_works": "string (3 sentences max)",
     "stops": [
-      { "place_id": "<unchanged>", "what_to_do": "string (one sentence)" }
+      { "place_id": "<unchanged UUID>", "what_to_do": "2-3 sentence prose, mandatory, never empty" }
     ]
   }
-]`;
+]
+
+Critical: preserve place_id values exactly as given (they are UUIDs). Every stop in every itinerary must have a what_to_do string.`;
 
 interface WritingPassInput {
   inputs: PlanInputs;
@@ -60,7 +62,9 @@ export async function writeItineraries(
 
   const response = await client.messages.create({
     model,
-    max_tokens: 2048,
+    // Richer 2-3 sentence per-stop prose means larger output — 4k leaves head-
+    // room so the JSON never truncates mid-stop.
+    max_tokens: 4096,
     temperature: 0.7,
     system: [
       {

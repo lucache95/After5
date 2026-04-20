@@ -57,6 +57,11 @@ export function ItineraryActions({ itinerary }: { itinerary: Itinerary }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF generation failed', err);
+      alert(
+        'Sorry — the PDF failed to generate. Screenshot the page for now and we\'ll fix this shortly.',
+      );
     } finally {
       setPdfLoading(false);
     }

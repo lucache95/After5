@@ -500,10 +500,12 @@ function Choice(props: { selected: boolean; onClick: () => void; label: string; 
 // never leaves the user staring at a fully-complete-but-still-spinning UI.
 
 const LOAD_STEPS = [
-  { label: 'Reading 50 Kelowna spots',         doneAt: 1500 },
-  { label: 'Matching your vibe',                doneAt: 3500 },
-  { label: 'Grouping by neighborhood',          doneAt: 6000 },
-  { label: 'Writing your night',                doneAt: Infinity }, // hold until results land
+  { label: 'Reading 50 Kelowna spots',          doneAt: 1500 },
+  { label: 'Matching your vibe',                 doneAt: 3500 },
+  { label: 'Grouping by neighborhood',           doneAt: 6000 },
+  { label: 'Choosing the hook',                  doneAt: 9000 },
+  { label: 'Writing why it works',               doneAt: 13000 },
+  { label: 'Adding the small details',           doneAt: Infinity }, // hold until results land
 ] as const;
 
 function LoadingView() {

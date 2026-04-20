@@ -18,6 +18,7 @@ export interface Stop {
   lng?: number | null;
   local_insight?: string | null;
   reservation_url?: string | null;
+  reservation_required?: boolean;
 }
 
 export interface Itinerary {

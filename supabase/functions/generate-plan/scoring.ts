@@ -131,20 +131,28 @@ export function buildItineraryFromTemplate(
       lng: p.lng,
       local_insight: p.local_insight,
       reservation_url: p.reservation_url,
+      reservation_required: p.reservation_required,
     });
 
     totalCost += cost;
     cursor = addMinutes(cursor, dur + (driveToNext ?? 0));
   }
 
-  // Sanity check budget — if over by >30%, return null and let caller pick another template
-  if (totalCost > inputs.budget_per_person * 1.3) return null;
+  // Sanity check budget — if over by >30%, return null. For very tight budgets
+  // (e.g. "free" → 0) we still allow up to $50/pp floor so mostly-free nights
+  // with one paid stop (a $$ dinner, a cocktail bar) can fill. People who pick
+  // "Free" want cheap, not literally zero — otherwise we fail to plan anything.
+  const budgetCeiling = Math.max(inputs.budget_per_person * 1.3, 50);
+  if (totalCost > budgetCeiling) return null;
 
   // Sanity check vibe match — at least 50% of stops should match user vibe
+  // At least one stop must match the requested vibe — used to be 50% but that
+  // was too strict for narrow vibes like "adventurous" where only 7 places
+  // qualify. Scoring already rewards vibe matches, so one is enough as a floor.
   const stopVibeMatches = picked.filter((p) =>
     p.vibe_tags.some((v) => inputs.vibe.includes(v))
   ).length;
-  if (stopVibeMatches < Math.ceil(picked.length * 0.5)) return null;
+  if (stopVibeMatches < 1) return null;
 
   return {
     template_id: template.id,

@@ -5,8 +5,9 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0
 import type { PlanInputs, Place } from './types.ts';
 
 // Map a numeric per-person budget to allowed price tiers.
+// Always allow $ AND $$ unless the user explicitly wants the premium pool —
+// strict "$ only" at low budgets left no room to fill multi-slot templates.
 function allowedTiers(budget: number): string[] {
-  if (budget <= 30) return ['$'];
   if (budget <= 80) return ['$', '$$'];
   return ['$', '$$', '$$$'];
 }

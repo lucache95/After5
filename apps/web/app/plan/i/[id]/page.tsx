@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
+import { OtherDates } from '@/components/itinerary/OtherDates';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 // Public itinerary detail page.
@@ -77,6 +78,8 @@ export default async function PublicItineraryPage(props: {
       </header>
 
       <ItineraryView itinerary={itinerary} />
+
+      <OtherDates excludeId={row.id} />
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">

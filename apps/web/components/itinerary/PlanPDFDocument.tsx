@@ -3,26 +3,15 @@
 // react-pdf document for After5 itineraries. Lazy-loaded by ItineraryActions
 // so the ~600kb library only ships when the user clicks Download PDF.
 
-import { Document, Page, Text, View, Image, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
 import { imageForStop } from '@/lib/place-image';
 import { to12h } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
 
-// Register a brand-aligned font from Google so the PDF doesn't render in Helvetica.
-// Fraunces is a serif that matches the editorial brief; Inter for body.
-Font.register({
-  family: 'Fraunces',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/fraunces/v37/6NUh8FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk.ttf', fontWeight: 700 },
-  ],
-});
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/inter/v19/UcCO3FwrK3iLTeHuS_nVMrMxCp50ojIw2boKoduKmMEVuLyfMZg.ttf', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/inter/v19/UcCO3FwrK3iLTeHuS_nVMrMxCp50ojIw2boKoduKmMEVuI6fMZg.ttf', fontWeight: 600 },
-  ],
-});
+// Using react-pdf's built-in Helvetica (Helvetica-Bold). Tried Google-hosted
+// custom fonts via Font.register() but gstatic.com blocks the fetch in some
+// browser contexts and the whole PDF generation silently errored. Built-in
+// fonts always work. Custom typography can come back via bundled font files.
 
 const palette = {
   bg: '#FAFAF7',
@@ -38,7 +27,7 @@ const palette = {
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Inter',
+    fontFamily: 'Helvetica',
     fontSize: 10,
     color: palette.text,
     backgroundColor: palette.bg,
@@ -56,7 +45,7 @@ const styles = StyleSheet.create({
     borderBottomColor: palette.border,
     marginBottom: 22,
   },
-  brand: { fontFamily: 'Fraunces', fontWeight: 700, fontSize: 16, color: palette.text },
+  brand: { fontFamily: 'Helvetica-Bold', fontSize: 16, color: palette.text },
   brandRight: { fontSize: 9, color: palette.muted, letterSpacing: 1.2, textTransform: 'uppercase' },
 
   hero: {
@@ -68,7 +57,7 @@ const styles = StyleSheet.create({
   },
 
   template: { fontSize: 9, color: palette.muted, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 },
-  title: { fontFamily: 'Fraunces', fontWeight: 700, fontSize: 26, lineHeight: 1.1, marginBottom: 10 },
+  title: { fontFamily: 'Helvetica-Bold', fontSize: 26, lineHeight: 1.1, marginBottom: 10 },
   hook: { fontSize: 12, color: palette.secondary, lineHeight: 1.4, marginBottom: 18 },
 
   statsRow: {
@@ -83,7 +72,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   statLabel: { fontSize: 8, color: palette.muted, letterSpacing: 1.5, textTransform: 'uppercase' },
-  statValue: { fontFamily: 'Fraunces', fontWeight: 700, fontSize: 18, marginTop: 3 },
+  statValue: { fontFamily: 'Helvetica-Bold', fontSize: 18, marginTop: 3 },
 
   why: { fontSize: 11, lineHeight: 1.55, color: palette.secondary, marginBottom: 22 },
 
@@ -109,7 +98,7 @@ const styles = StyleSheet.create({
   stopBody: { flex: 1, gap: 4 },
   stopHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   stopTime: { fontSize: 9, color: palette.muted, letterSpacing: 0.6 },
-  stopName: { fontFamily: 'Fraunces', fontWeight: 700, fontSize: 14, color: palette.text },
+  stopName: { fontFamily: 'Helvetica-Bold', fontSize: 14, color: palette.text },
   stopMeta: { fontSize: 9, color: palette.muted, marginTop: 2 },
   stopWhat: { fontSize: 10, color: palette.secondary, lineHeight: 1.45, marginTop: 6 },
   stopInsight: {
