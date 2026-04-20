@@ -417,7 +417,10 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
                 <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
                   More photos · via Google
                 </p>
-                <PhotoLightbox photos={p.photos.slice(0, 6)} />
+                <PhotoLightbox
+                  photos={p.photos}
+                  pinterestQuery={`${p.name} kelowna`}
+                />
               </div>
             )}
           </div>

@@ -45,8 +45,16 @@ async function enrichOne(place) {
     text: r.text?.text ?? r.originalText?.text ?? '',
     relative_time: r.relativePublishTimeDescription ?? null,
   }));
-  // Skip the first photo since it's already photo_url.
-  const photos = (d.photos ?? []).slice(1, 6).map((p) => buildPhotoUrl(p.name, 1200));
+  // Skip the first photo since it's already photo_url. Dedupe by photo `name`
+  // — Google sometimes returns the same physical photo under multiple refs.
+  const seenNames = new Set();
+  const photos = [];
+  for (const p of (d.photos ?? []).slice(1)) {
+    if (!p.name || seenNames.has(p.name)) continue;
+    seenNames.add(p.name);
+    photos.push(buildPhotoUrl(p.name, 1200));
+    if (photos.length >= 6) break;
+  }
   const updates = {
     phone: d.nationalPhoneNumber ?? d.internationalPhoneNumber ?? null,
     website: d.websiteUri ?? null,
