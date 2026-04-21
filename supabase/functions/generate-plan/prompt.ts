@@ -159,7 +159,16 @@ function buildUserMessage(input: WritingPassInput): string {
     lines.push(`- Timing: Planning ahead for ${inputs.future_date}. Reservation language is fine.`);
   }
   if (inputs.note && inputs.note.trim().length > 0) {
-    lines.push(`- Special note from the user: "${inputs.note.trim()}" (work this in only if you can do so naturally; otherwise reference it lightly in why_it_works)`);
+    const note = inputs.note.trim();
+    lines.push(`- Special note from the user: "${note}"`);
+    lines.push(`  CRITICAL: This is the single most important context you have for personalization.`);
+    lines.push(`  You MUST weave this note into at least ONE of the three itineraries' why_it_works`);
+    lines.push(`  in a specific way — name the relationship/occasion/constraint they mentioned.`);
+    lines.push(`  e.g. note "date with my wife" → "you and your wife" or "with your wife" appears naturally.`);
+    lines.push(`  e.g. note "anniversary" → reference the occasion specifically, not generically.`);
+    lines.push(`  e.g. note "vegetarian" → call out a specific veg-friendly stop in the why_it_works.`);
+    lines.push(`  Don't be sappy or forced; do be specific. Skipping the note entirely is the worst sin.`);
+    lines.push(`  Optionally hint at it in titles or hooks IF it fits naturally — never shoehorned.`);
   }
   lines.push('');
   lines.push(`Three itineraries to write copy for. Return ONLY a JSON array of length 3.`);

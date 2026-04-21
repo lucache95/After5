@@ -12,12 +12,19 @@ export function StopCard({
   stop,
   index,
   isLast,
+  fromHref,
 }: {
   stop: Stop;
   index: number;
   isLast: boolean;
+  /** When set, place links carry ?from=<href> so the place page shows a
+   *  back-link to the originating plan. */
+  fromHref?: string;
 }) {
   const img = imageForStop({ photo_url: stop.photo_url, place_type: stop.place_type });
+  const placeHref = stop.place_slug
+    ? `/places/${stop.place_slug}${fromHref ? `?from=${encodeURIComponent(fromHref)}` : ''}`
+    : '';
   // Always query by name (with city qualifier) so the map opens with the
   // venue card — hours, reviews, photos. Bare coords just drop a pin and
   // skip all of that. Lat/lng goes into the URL as a tiebreaker for
@@ -72,7 +79,7 @@ export function StopCard({
             {/* Title at the forefront — clean text on background, always readable. */}
             {stop.place_slug ? (
               <Link
-                href={`/places/${stop.place_slug}`}
+                href={placeHref}
                 className="group/title block transition-colors"
               >
                 <h3 className="font-display text-xl font-semibold leading-tight text-text md:text-2xl group-hover/title:text-accent">
@@ -125,7 +132,7 @@ export function StopCard({
             <div className="mt-6 flex flex-wrap gap-3">
               {stop.place_slug ? (
                 <Link
-                  href={`/places/${stop.place_slug}`}
+                  href={placeHref}
                   className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-background px-4 py-2 text-sm text-text transition-colors hover:border-text/40"
                 >
                   <Info className="h-3.5 w-3.5" strokeWidth={2} />

@@ -186,10 +186,17 @@ function isOpenNow(opens: string | null, closes: string | null): boolean | null 
   return cur >= o || cur < c;
 }
 
-export default async function PlacePage(props: { params: Promise<{ slug: string }> }) {
+export default async function PlacePage(props: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { slug } = await props.params;
+  const { from } = await props.searchParams;
   const p = await loadPlace(slug);
   if (!p) notFound();
+
+  // Sanitize the back-link: must be a path on our own domain.
+  const safeBackHref = from && from.startsWith('/') && !from.startsWith('//') ? from : null;
 
   const dates = await loadDatesFeaturing(p.id);
   const cover = imageForStop({ photo_url: p.photo_url, place_type: p.type });
@@ -235,12 +242,22 @@ export default async function PlacePage(props: { params: Promise<{ slug: string 
 
       <header className="absolute inset-x-0 top-0 z-50">
         <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
-          <Link
-            href="/"
-            className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
-          >
-            After5
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link
+              href="/"
+              className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
+            >
+              After5
+            </Link>
+            {safeBackHref && (
+              <Link
+                href={safeBackHref}
+                className="hidden items-center gap-1.5 rounded-pill bg-white/15 px-3.5 py-1.5 text-xs font-medium text-white backdrop-blur-md transition-colors hover:bg-white/25 sm:inline-flex"
+              >
+                ← Back to your plan
+              </Link>
+            )}
+          </div>
           <Link
             href="/plan"
             className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"

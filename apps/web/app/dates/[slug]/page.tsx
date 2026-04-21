@@ -195,7 +195,7 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
         </nav>
       </header>
 
-      <ItineraryView itinerary={itinerary} stats={stats} />
+      <ItineraryView itinerary={itinerary} stats={stats} fromHref={`/dates/${slug}`} />
 
       <div className="mx-auto max-w-content px-6 pb-16 md:px-10">
         <FeedbackPulse

@@ -22,9 +22,13 @@ import type { ItineraryStats } from '@/lib/itinerary-stats';
 export function ItineraryView({
   itinerary,
   stats,
+  fromHref,
 }: {
   itinerary: Itinerary;
   stats?: ItineraryStats;
+  /** Path of the page rendering this view (e.g. /dates/abc-123) — passed
+   *  through to StopCard so /places/* links carry a back-link query param. */
+  fromHref?: string;
 }) {
   const totalHr = Math.round((itinerary.total_duration_min / 60) * 10) / 10;
 
@@ -148,6 +152,7 @@ export function ItineraryView({
                     stop={s}
                     index={i}
                     isLast={i === itinerary.stops.length - 1}
+                    fromHref={fromHref}
                   />
                 ))}
               </ol>

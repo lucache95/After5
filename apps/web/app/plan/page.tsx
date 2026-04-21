@@ -879,8 +879,10 @@ function InputsView(props: {
                   sub="Real venues, real places"
                 />
                 <Choice
-                  selected={inputs.location === 'home'}
-                  onClick={() => setInputs((s) => ({ ...s, location: 'home' }))}
+                  selected={false}
+                  disabled
+                  badge="Coming soon"
+                  onClick={() => { /* disabled */ }}
                   label="At home tonight"
                   sub="Cooking, movies, board games"
                 />
@@ -1082,22 +1084,46 @@ function Step(props: { eyebrow: string; title: string; sub: string; children: Re
   );
 }
 
-function Choice(props: { selected: boolean; onClick: () => void; label: string; sub: string }) {
+function Choice(props: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+  sub: string;
+  disabled?: boolean;
+  badge?: string;
+}) {
   return (
     <button
       type="button"
-      onClick={props.onClick}
+      onClick={props.disabled ? undefined : props.onClick}
+      disabled={props.disabled}
       className={cn(
-        'group flex flex-col items-start rounded-card border p-5 text-left transition-colors',
-        props.selected
-          ? 'border-text bg-text text-background'
-          : 'border-border bg-surface text-text hover:border-text/40'
+        'group relative flex flex-col items-start rounded-card border p-5 text-left transition-colors',
+        props.disabled
+          ? 'cursor-not-allowed border-dashed border-border bg-surface/50 text-muted'
+          : props.selected
+            ? 'border-text bg-text text-background'
+            : 'border-border bg-surface text-text hover:border-text/40',
       )}
     >
-      <span className="text-base font-medium">{props.label}</span>
-      <span className={cn('mt-1 text-sm', props.selected ? 'text-background/70' : 'text-secondary')}>
+      <span className={cn('text-base font-medium', props.disabled && 'opacity-60')}>{props.label}</span>
+      <span
+        className={cn(
+          'mt-1 text-sm',
+          props.disabled
+            ? 'text-muted/80'
+            : props.selected
+              ? 'text-background/70'
+              : 'text-secondary',
+        )}
+      >
         {props.sub}
       </span>
+      {props.badge && (
+        <span className="absolute right-3 top-3 rounded-pill bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 ring-1 ring-amber-200">
+          {props.badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -1505,12 +1531,20 @@ function ResultsView(props: {
 
   // Detect a few common note themes so we can call them out specifically
   // without showing the user's raw text on the page (privacy-respecting).
+  // Order matters — relationship words come first because they're the most
+  // emotionally specific signal we can reflect back.
   const noteLower = (note ?? '').toLowerCase();
   let noteHook: string | null = null;
-  if (/anniversary|annivers/.test(noteLower)) noteHook = 'with your anniversary in mind';
-  else if (/birthday/.test(noteLower)) noteHook = 'with the birthday in mind';
-  else if (/vegetarian|vegan|gluten/.test(noteLower)) noteHook = 'with your dietary note in mind';
-  else if (/pregnan/.test(noteLower)) noteHook = 'with the pregnancy in mind';
+  if (/\bwife\b/.test(noteLower))                                noteHook = 'for you and your wife';
+  else if (/\bhusband\b/.test(noteLower))                        noteHook = 'for you and your husband';
+  else if (/\bgirlfriend\b|\bgf\b/.test(noteLower))              noteHook = 'for you and your girlfriend';
+  else if (/\bboyfriend\b|\bbf\b/.test(noteLower))               noteHook = 'for you and your boyfriend';
+  else if (/\bpartner\b/.test(noteLower))                        noteHook = 'for you and your partner';
+  else if (/\bfianc[eé]e?\b/.test(noteLower))                    noteHook = 'for you and your fiancé';
+  else if (/anniversary|annivers/.test(noteLower))               noteHook = 'with your anniversary in mind';
+  else if (/birthday|bday|b-day/.test(noteLower))                noteHook = 'with the birthday in mind';
+  else if (/vegetarian|vegan|gluten|allerg/.test(noteLower))     noteHook = 'with your dietary note in mind';
+  else if (/pregnan/.test(noteLower))                            noteHook = 'with the pregnancy in mind';
   else if (/first time|new to/.test(noteLower)) noteHook = 'as a first-time intro to Kelowna';
   else if (note && note.trim().length > 12) noteHook = 'with your note in mind';
 
