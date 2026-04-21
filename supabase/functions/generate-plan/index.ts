@@ -116,15 +116,16 @@ serve(async (req: Request) => {
       templates_selected: topTemplates.map((t) => t.id),
     };
 
-    // Derive an effective start_at from when/future_date so the existing
-    // hours-aware scoring filters places that won't actually be open. Tonight
-    // = now. Future = 6pm on the chosen date (typical date start time).
+    // Slot-start time for hours filtering. The downstream scoring expects a
+    // plain "HH:MM" string, not an ISO datetime. For now both tonight and
+    // future use 18:00 (typical date start) — date-of-week-aware filtering
+    // is a Day 3 follow-up.
     const effectiveStartAt = (() => {
-      if (inputs.start_at) return inputs.start_at;
-      if (inputs.when === 'future' && inputs.future_date) {
-        return `${inputs.future_date}T18:00:00`;
+      if (inputs.start_at) {
+        const m = inputs.start_at.match(/T(\d{2}:\d{2})/);
+        return m ? m[1] : '18:00';
       }
-      return new Date().toISOString();
+      return '18:00';
     })();
 
     // 5. Build one itinerary per template, tracking which place_ids have been

@@ -11,6 +11,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { coverImageFor } from '@/lib/place-image';
 import { cn } from '@/lib/cn';
+import { relativeTime } from '@/lib/relative-time';
 
 export interface DateRow {
   id: string;
@@ -21,6 +22,7 @@ export interface DateRow {
   total_duration_min: number | null;
   stops: unknown;
   inputs?: { vibe?: string[]; location?: 'out' | 'home' } | null;
+  generated_at?: string | null;
 }
 
 const VIBE_OPTIONS = [
@@ -187,6 +189,11 @@ export function DatesFilter({ items }: { items: DateRow[] }) {
                   <span className="mx-1.5 text-border">·</span>
                   <span>{stops.length} stops</span>
                 </p>
+                {it.generated_at && (
+                  <p className="mt-1 text-xs text-muted">
+                    Built {relativeTime(it.generated_at)}
+                  </p>
+                )}
               </Link>
             );
           })}

@@ -49,7 +49,7 @@ export default async function DatesIndexPage() {
   const { data } = await supabase
     .from('itineraries')
     // pull `inputs` so the filter can read vibe + location off the original gen
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs, generated_at')
     .eq('is_public', true)
     .not('title', 'is', null)
     .not('slug', 'is', null)

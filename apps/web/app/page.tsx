@@ -75,12 +75,12 @@ export default async function HomePage() {
       <header className="absolute inset-x-0 top-0 z-50">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 via-black/20 to-transparent md:h-40"
+          className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/85 via-black/45 to-transparent md:h-56"
         />
         <nav className="relative mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)]"
+            className="font-display text-xl font-semibold tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6),0_2px_16px_rgba(0,0,0,0.55)]"
           >
             After5
           </Link>
