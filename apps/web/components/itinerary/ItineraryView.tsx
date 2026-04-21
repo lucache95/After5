@@ -14,6 +14,7 @@ import { ItineraryActions } from './ItineraryActions';
 import { ModifierCard } from './ModifierCard';
 import { AnchorNav } from './AnchorNav';
 import { CuratorCard } from './CuratorCard';
+import { SavePlanButton } from './SavePlanButton';
 import { TIMEZONE_LABEL } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
 import type { ItineraryStats } from '@/lib/itinerary-stats';
@@ -172,7 +173,15 @@ export function ItineraryView({
                 Final price depends on what you order. We use mid-range estimates.
               </div>
 
-              <div className="mt-6 border-t border-border pt-5">
+              {/* Save toggle — first action so it sits highest. Auth-aware:
+                  unauthed clicks bounce through /login and auto-save on return. */}
+              {itinerary.id && (
+                <div className="mt-5">
+                  <SavePlanButton itineraryId={itinerary.id} />
+                </div>
+              )}
+
+              <div className="mt-3 border-t border-border pt-5">
                 <ItineraryActions itinerary={itinerary} />
               </div>
 

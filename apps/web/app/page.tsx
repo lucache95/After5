@@ -5,6 +5,7 @@ import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
 import { getSeason, SEASON_LABELS } from '@/lib/season';
 import { PLAN_THEMES } from '@/lib/themes';
 import { RecentBuildsToast } from '@/components/RecentBuildsToast';
+import { UserMenu } from '@/components/UserMenu';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -87,12 +88,9 @@ export default async function HomePage() {
             After5
           </Link>
           <div className="flex items-center gap-5">
-            <Link
-              href="/login"
-              className="hidden text-sm font-medium text-white/90 transition-colors hover:text-white sm:inline [text-shadow:0_1px_2px_rgba(0,0,0,0.55)]"
-            >
-              Sign in
-            </Link>
+            <div className="hidden sm:block">
+              <UserMenu variant="on-dark" />
+            </div>
             <Link
               href="/plan"
               className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text shadow-[0_4px_16px_rgba(0,0,0,0.18)] transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"

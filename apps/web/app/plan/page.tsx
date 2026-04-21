@@ -423,9 +423,28 @@ function PlanFlow() {
       if (!data?.itineraries?.length) throw new Error('No itineraries returned');
       setResults(data.itineraries);
       setActiveIdx(0);
-      // Email gate sits between generation and reveal — captures the lead while
-      // the user is at peak excitement to see what we made for them.
-      setPhase('gate');
+
+      // Email gate is for anonymous users — captures lead at peak excitement.
+      // Logged-in users have already given us email/name/city, so we skip
+      // straight to the results reveal.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Mirror profile to localStorage so the personalized header reads
+        // ("Built three plans for you, Sarah.") on first paint.
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, city')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (typeof window !== 'undefined' && profile) {
+          if (profile.first_name) localStorage.setItem('after5_first_name', profile.first_name);
+          if (profile.city) localStorage.setItem('after5_city', profile.city);
+        }
+        setPhase('results');
+      } else {
+        setPhase('gate');
+      }
+
       data.itineraries.forEach((it) =>
         track.planGenerated({
           template_id: it.template_id,

@@ -552,6 +552,38 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_plans: {
+        Row: {
+          id: string
+          itinerary_id: string
+          note: string | null
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          itinerary_id: string
+          note?: string | null
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          itinerary_id?: string
+          note?: string | null
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_plans_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscribers: {
         Row: {
           city: string | null
