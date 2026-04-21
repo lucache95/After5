@@ -111,12 +111,34 @@ const PRONOUN_OPTIONS: { id: Pronouns; label: string }[] = [
   { id: 'they/them', label: 'They / them' },
 ];
 
-const INTENT_OPTIONS: { id: Inputs['intent']; label: string; sub: string }[] = [
-  { id: 'impress',            label: 'Impress',           sub: 'You want this to land' },
-  { id: 'chill',              label: 'Chill out',         sub: 'Low-key, no pressure' },
-  { id: 'reconnect',          label: 'Reconnect',         sub: 'Real conversation, no distractions' },
-  { id: 'try_something_new',  label: 'Try something new', sub: 'Spots you haven\u2019t been to' },
-];
+// Intent options are occasion-aware. Same underlying IDs (so the LLM tone
+// hints stay stable) but the labels and subs reframe to fit the context —
+// "Reconnect" with whom, on a solo day? "Impress" your friends? Awkward.
+type IntentOption = { id: Inputs['intent']; label: string; sub: string };
+function intentOptionsFor(occasion: Occasion): IntentOption[] {
+  if (occasion === 'solo') {
+    return [
+      { id: 'impress',           label: 'Treat yourself',     sub: 'Splurge, no guilt' },
+      { id: 'chill',             label: 'Recharge',           sub: 'Quiet, slow, restorative' },
+      { id: 'reconnect',         label: 'Get out of your head', sub: 'Move, breathe, reset' },
+      { id: 'try_something_new', label: 'Try something new',  sub: 'Spots you haven\u2019t been to' },
+    ];
+  }
+  if (occasion === 'friends') {
+    return [
+      { id: 'impress',           label: 'Big night out',      sub: 'Memorable, talk-about-it later' },
+      { id: 'chill',             label: 'Easy hangout',       sub: 'Low-key, just be together' },
+      { id: 'reconnect',         label: 'Catch up properly',  sub: 'Real conversation, no rush' },
+      { id: 'try_something_new', label: 'Try something new together', sub: 'Spots none of you have been to' },
+    ];
+  }
+  return [
+    { id: 'impress',           label: 'Impress',            sub: 'You want this to land' },
+    { id: 'chill',             label: 'Chill out',          sub: 'Low-key, no pressure' },
+    { id: 'reconnect',         label: 'Reconnect',          sub: 'Real conversation, no distractions' },
+    { id: 'try_something_new', label: 'Try something new',  sub: 'Spots you haven\u2019t been to' },
+  ];
+}
 
 // Themes: preset bundles that fill multiple inputs at once. Each theme is a
 // narrative ("Rom-com night", "Slow Sunday") rather than a vibe. Picking a
@@ -317,17 +339,20 @@ function PlanFlow() {
     [inputs, templates, step],
   );
   const stepHints = hintsForStep(step, inputs);
-  // Show the blocker on EITHER its native step OR earlier steps the user
-  // hasn't reached yet (so they can't sneak past on the way there).
-  const stepBlocker = verdict.blocker && verdict.blocker.step >= step
+  // Only surface a blocker once the user has actually reached the step
+  // that owns the conflicting input. Showing a "vibe + duration doesn't
+  // fit" blocker on Step 1 (when vibe is still the default empty value)
+  // is noise — the user hasn't picked vibe yet.
+  const stepBlocker = verdict.blocker && verdict.blocker.step <= step
     ? verdict.blocker
     : null;
 
   const canAdvance = (): boolean => {
     if (step === 3) return inputs.vibe.length >= 1;
-    // Hard block forward navigation when ANY preflight blocker is active.
-    // The user must fix it before they can move on or generate.
-    if (verdict.blocker) return false;
+    // Hard block forward navigation only for blockers tied to a step the
+    // user has already reached or is on. Future-step blockers will surface
+    // naturally when they arrive at that step.
+    if (verdict.blocker && verdict.blocker.step <= step) return false;
     return true;
   };
 
@@ -677,7 +702,7 @@ function InputsView(props: {
                 Different from the vibe — this is the emotional outcome, not the aesthetic.
               </p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {INTENT_OPTIONS.map((it) => (
+                {intentOptionsFor(inputs.occasion).map((it) => (
                   <Choice
                     key={it.id}
                     selected={inputs.intent === it.id}
