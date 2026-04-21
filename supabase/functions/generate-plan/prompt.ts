@@ -168,11 +168,22 @@ function buildUserMessage(input: WritingPassInput): string {
   for (const it of itineraries) {
     lines.push(`---`);
     lines.push(`Template: ${it.template_id} (${it.template_name})`);
+    // Feels-cheap signal: total under budget AND at least one stop is free.
+    // Tells the LLM to lean into the "punches above its price" angle.
+    const hasFree = it.stops.some((s) => s.estimated_cost_pp === 0);
+    const wellUnderBudget = it.total_cost_pp < inputs.budget_per_person * 0.6;
+    const feelsCheap = hasFree && wellUnderBudget;
+    if (feelsCheap) {
+      lines.push(`Cost note: feels generous — total ($${it.total_cost_pp.toFixed(0)}) is well under their $${inputs.budget_per_person}/pp budget AND at least one stop is free. Call this out lightly in why_it_works.`);
+    }
     lines.push(`Stops:`);
     for (const stop of it.stops) {
       const place = placesById.get(stop.place_id);
       if (!place) continue;
-      lines.push(`  - ${stop.start_time} · ${place.name} (${place.type})`);
+      const valTag = place.perceived_value === 'exceeds_price'
+        ? ' [punches above its price]'
+        : '';
+      lines.push(`  - ${stop.start_time} · ${place.name} (${place.type})${valTag}`);
       lines.push(`      neighborhood: ${place.neighborhood}, vibe: ${place.vibe_tags.join(', ')}`);
       lines.push(`      ${stop.duration_min} min · $${stop.estimated_cost_pp.toFixed(0)}/pp`);
       if (place.local_insight) lines.push(`      local insight: ${place.local_insight}`);

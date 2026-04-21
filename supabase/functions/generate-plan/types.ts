@@ -54,6 +54,12 @@ export interface Place {
   notes: string | null;
   is_active?: boolean;
   at_home?: boolean;
+  // 'low' | 'medium' | 'high' — how annoying to actually execute (parking,
+  // wait times, reservations). Tonight plans bias hard toward 'low'.
+  friction_score?: 'low' | 'medium' | 'high';
+  // 'exceeds_price' | 'matches' | 'overpriced' — does this feel like more
+  // value than what it costs? Tight budgets bias toward 'exceeds_price'.
+  perceived_value?: 'exceeds_price' | 'matches' | 'overpriced';
 }
 
 export interface TemplateSlot {

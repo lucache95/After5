@@ -105,6 +105,27 @@ function scorePlace(
   // Penalty for breaking cluster
   if (!clusterCompatible(alreadyPicked, p)) score -= 5;
 
+  // Tonight bias: low-friction places are easier to pull off on short
+  // notice (no reservations, easy parking, quick in/out). Strong nudge.
+  if (inputs.when === 'tonight') {
+    if (p.friction_score === 'low') score += 4;
+    else if (p.friction_score === 'high') score -= 6;
+  }
+
+  // Tight budget bias: when budget < $50/pp, prefer places that punch above
+  // their price tag. Quietly tilts toward the "free dates that feel expensive"
+  // angle without breaking the ranking when budget is generous.
+  if (inputs.budget_per_person < 50) {
+    if (p.perceived_value === 'exceeds_price') score += 3;
+    else if (p.perceived_value === 'overpriced') score -= 4;
+  }
+
+  // Intent bias: try_something_new prefers under-used places (lower
+  // feedback_score = less popular = more likely "discovery").
+  if (inputs.intent === 'try_something_new' && p.feedback_score < 3) {
+    score += 2;
+  }
+
   return score;
 }
 
