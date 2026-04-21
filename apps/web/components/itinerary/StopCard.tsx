@@ -18,9 +18,12 @@ export function StopCard({
   isLast: boolean;
 }) {
   const img = imageForStop({ photo_url: stop.photo_url, place_type: stop.place_type });
-  const directionsUrl = stop.lat && stop.lng
-    ? `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.place_name + ', Kelowna BC')}`;
+  // Always query by name (with city qualifier) so the map opens with the
+  // venue card — hours, reviews, photos. Bare coords just drop a pin and
+  // skip all of that. Lat/lng goes into the URL as a tiebreaker for
+  // ambiguous names (mostly redundant since "X, Kelowna BC" is specific).
+  const nameQuery = encodeURIComponent(`${stop.place_name}, Kelowna BC`);
+  const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameQuery}`;
   // Google search gives users hours, reviews, website, menus — everything
   // they'd want to check before committing to a stop. Until we curate per-place
   // website columns this is the fastest path to "see all the info."
