@@ -309,11 +309,17 @@ function PlanFlow() {
     [inputs, templates, step],
   );
   const stepHints = hintsForStep(step, inputs);
-  const stepBlocker = verdict.blocker?.step === step ? verdict.blocker : null;
+  // Show the blocker on EITHER its native step OR earlier steps the user
+  // hasn't reached yet (so they can't sneak past on the way there).
+  const stepBlocker = verdict.blocker && verdict.blocker.step >= step
+    ? verdict.blocker
+    : null;
 
   const canAdvance = (): boolean => {
     if (step === 3) return inputs.vibe.length >= 1;
-    if (step === TOTAL_STEPS && verdict.blocker) return false;
+    // Hard block forward navigation when ANY preflight blocker is active.
+    // The user must fix it before they can move on or generate.
+    if (verdict.blocker) return false;
     return true;
   };
 
