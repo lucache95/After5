@@ -14,6 +14,7 @@ import { track } from '@/app/PostHogProvider';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { ChooserCards } from '@/components/itinerary/ChooserCards';
 import { RadiusMap } from '@/components/RadiusMap';
+import { HintCard } from '@/components/HintCard';
 import { hintsForStep } from '@/lib/plan-hints';
 import { preflight, type TemplateLite } from '@/lib/preflight';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -144,6 +145,16 @@ const EFFORTS: { id: Effort; label: string; sub: string }[] = [
 
 const MUST_INCLUDES = [
   'food', 'drinks', 'walk', 'view', 'activity', 'dessert', 'hidden_gem', 'lake', 'outdoors', 'indoors',
+];
+
+// Grouped for Step 5 UI. Items in the same "exclusive" group fight for the
+// same template slot — we only let users pick one per exclusive group at the
+// UI level so they don't over-constrain. Non-exclusive groups can stack freely.
+const MUST_INCLUDE_GROUPS: { name: string; items: string[]; exclusive: boolean; hint?: string }[] = [
+  { name: 'Food & drink',  items: ['food', 'drinks', 'dessert'],          exclusive: false },
+  { name: 'Outdoors',      items: ['walk', 'view', 'lake', 'outdoors'],   exclusive: true,  hint: 'Pick one — they all need the outdoor slot.' },
+  { name: 'Indoors',       items: ['indoors'],                            exclusive: false },
+  { name: 'Other',         items: ['activity', 'hidden_gem'],             exclusive: false },
 ];
 
 // ─── Page ────────────────────────────────────────────────────────────
@@ -692,31 +703,55 @@ function InputsView(props: {
             title="What should it include?"
             sub="Optional. Pick anything that matters. Skip if you trust us."
           >
-            <div className="flex flex-wrap gap-3">
-              {MUST_INCLUDES.map((m) => {
-                const on = inputs.must_includes.includes(m);
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setInputs((s) => ({
-                      ...s,
-                      must_includes: on
-                        ? s.must_includes.filter((x) => x !== m)
-                        : [...s.must_includes, m],
-                    }))}
-                    className={cn(
-                      'inline-flex items-center gap-2 rounded-pill border px-4 py-2 text-sm transition-colors',
-                      on
-                        ? 'border-text bg-text text-background'
-                        : 'border-border text-secondary hover:border-text/40 hover:text-text'
+            <div className="space-y-7">
+              {MUST_INCLUDE_GROUPS.map((group) => (
+                <div key={group.name}>
+                  <p className="mb-2.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                    {group.name}
+                    {group.hint && (
+                      <span className="ml-2 normal-case tracking-normal text-muted/70">{group.hint}</span>
                     )}
-                  >
-                    {on && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}
-                    {m.replace('_', ' ')}
-                  </button>
-                );
-              })}
+                  </p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {group.items.map((m) => {
+                      const on = inputs.must_includes.includes(m);
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setInputs((s) => {
+                            // Exclusive group: turning one on clears the others in the same group.
+                            if (group.exclusive && !on) {
+                              return {
+                                ...s,
+                                must_includes: [
+                                  ...s.must_includes.filter((x) => !group.items.includes(x)),
+                                  m,
+                                ],
+                              };
+                            }
+                            return {
+                              ...s,
+                              must_includes: on
+                                ? s.must_includes.filter((x) => x !== m)
+                                : [...s.must_includes, m],
+                            };
+                          })}
+                          className={cn(
+                            'inline-flex items-center gap-2 rounded-pill border px-4 py-2 text-sm transition-colors',
+                            on
+                              ? 'border-text bg-text text-background'
+                              : 'border-border text-secondary hover:border-text/40 hover:text-text',
+                          )}
+                        >
+                          {on && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}
+                          {m.replace('_', ' ')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Free-text context. Fed to the LLM that writes the why-it-works
@@ -741,25 +776,13 @@ function InputsView(props: {
         )}
 
         {/* Inline hints + hard blocker for the current step. Hints are soft
-            warnings; a blocker disables forward navigation so we never let
-            the user submit an unbuildable combo. */}
+            warnings with optional "I don't understand" expanders; a blocker
+            disables forward navigation so we never let the user submit an
+            unbuildable combo. */}
         {(stepHints.length > 0 || stepBlocker) && (
           <div className="mt-10 space-y-3">
             {stepHints.map((h, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex gap-3 rounded-card border px-5 py-4 text-sm leading-relaxed',
-                  h.tone === 'warn'
-                    ? 'border-accent/40 bg-accent-soft/50 text-text'
-                    : 'border-border bg-surface text-secondary',
-                )}
-              >
-                <span aria-hidden className={h.tone === 'warn' ? 'text-accent' : 'text-muted'}>
-                  {h.tone === 'warn' ? '!' : 'i'}
-                </span>
-                <p>{h.text}</p>
-              </div>
+              <HintCard key={i} hint={h} />
             ))}
             {stepBlocker && (
               <div className="flex gap-3 rounded-card border-2 border-accent bg-accent-soft px-5 py-4 text-sm leading-relaxed text-text">

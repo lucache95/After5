@@ -94,12 +94,17 @@ export function preflight(inputs: InputsLike, templates: TemplateLite[], staticH
         hints: staticHints,
       };
     }
-    // Combination problem — too many must_includes for any single template.
+    // Combination problem — must-haves are individually fine but no single
+    // template can satisfy all of them together. Most common cause: two
+    // outdoor types (walk + view + lake) competing for one outdoor slot.
+    const realMustHaves = (inputs.must_includes ?? []).filter((m) => m !== 'hidden_gem');
     return {
       matching_templates: 0,
       blocker: {
         step: 5,
-        message: `${inputs.must_includes.length} must-haves at once is more than any template covers. Try keeping it to 2-3.`,
+        message: realMustHaves.length >= 4
+          ? `${realMustHaves.length} must-haves at once is more than any template covers. Try keeping it to 2-3.`
+          : `Your must-haves (${realMustHaves.join(' + ')}) can\u2019t fit in any single template. Try removing one or pairing differently.`,
       },
       hints: staticHints,
     };
