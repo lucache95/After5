@@ -16,6 +16,7 @@ import { ChooserCards } from '@/components/itinerary/ChooserCards';
 import { RadiusMap } from '@/components/RadiusMap';
 import { HintCard } from '@/components/HintCard';
 import { FeedbackPulse } from '@/components/itinerary/FeedbackPulse';
+import { ShareForVoteButton } from '@/components/itinerary/ShareForVoteButton';
 import { hintsForStep } from '@/lib/plan-hints';
 import { preflight, type TemplateLite } from '@/lib/preflight';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -1377,13 +1378,18 @@ function ResultsView(props: {
               We checked every Kelowna spot we know, sequenced them so nothing closes mid-date, and picked the three that fit you best.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onRedo}
-            className="shrink-0 text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
-          >
-            Try a different one
-          </button>
+          <div className="flex shrink-0 flex-col items-end gap-3">
+            <ShareForVoteButton
+              itineraryIds={itineraries.map((it) => it.id).filter((id): id is string => Boolean(id))}
+            />
+            <button
+              type="button"
+              onClick={onRedo}
+              className="text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
+            >
+              Try a different one
+            </button>
+          </div>
         </div>
         <ChooserCards itineraries={itineraries} activeIdx={activeIdx} onPick={setActiveIdx} />
       </div>
