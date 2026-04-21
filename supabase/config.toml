@@ -4,6 +4,11 @@
 # working directory name when running `supabase init`.
 project_id = "After5"
 
+# Anonymous users hit /plan without auth, so the function must accept the
+# anon publishable key without requiring a user JWT.
+[functions.generate-plan]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.
