@@ -51,9 +51,12 @@ const InputSchema = z.object({
   // When = "tonight" → hard hours filter + low-friction bias.
   // "future" + future_date (yyyy-mm-dd) = wider scope, reservations OK.
   when: z.enum(['tonight', 'future']).default('tonight'),
-  future_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  future_date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal('')]).optional().default(''),
   // Emotional goal — distinct from vibe. LLM tone hint; future scoring lever.
   intent: z.enum(['impress', 'chill', 'reconnect', 'try_something_new', '']).default(''),
+  // Time-of-day frame. 'morning' = 10am slot start, 'evening' = 6pm,
+  // 'all_day' = 10am with longer duration.
+  time_of_day: z.enum(['morning', 'evening', 'all_day']).default('evening'),
 });
 
 // ─── Handler ───────────────────────────────────────────────────────────
@@ -117,14 +120,16 @@ serve(async (req: Request) => {
     };
 
     // Slot-start time for hours filtering. The downstream scoring expects a
-    // plain "HH:MM" string, not an ISO datetime. For now both tonight and
-    // future use 18:00 (typical date start) — date-of-week-aware filtering
-    // is a Day 3 follow-up.
+    // plain "HH:MM" string. Driven by time_of_day:
+    //   morning / all_day → 10:00
+    //   evening → 18:00
+    // Explicit start_at overrides everything (legacy / API users).
     const effectiveStartAt = (() => {
       if (inputs.start_at) {
         const m = inputs.start_at.match(/T(\d{2}:\d{2})/);
         return m ? m[1] : '18:00';
       }
+      if (inputs.time_of_day === 'morning' || inputs.time_of_day === 'all_day') return '10:00';
       return '18:00';
     })();
 

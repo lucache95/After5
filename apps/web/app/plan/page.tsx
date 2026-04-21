@@ -97,6 +97,10 @@ interface Inputs {
   // Emotional goal — distinct from vibe (vibe = aesthetic, intent = why).
   // Empty = generic. Used as an LLM tone hint; scoring impact comes later.
   intent: 'impress' | 'chill' | 'reconnect' | 'try_something_new' | '';
+  // Time-of-day frame for the plan. Drives slot-start time + which places
+  // are open + LLM tone. 'all_day' implies a long duration; 'morning' /
+  // 'evening' are the typical patterns.
+  time_of_day: 'morning' | 'evening' | 'all_day';
 }
 
 const PRONOUN_OPTIONS: { id: Pronouns; label: string }[] = [
@@ -237,6 +241,7 @@ function PlanFlow() {
     when: 'tonight',
     future_date: '',
     intent: '',
+    time_of_day: 'evening',
   });
   const [results, setResults] = useState<Itinerary[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
@@ -499,33 +504,6 @@ function InputsView(props: {
             title="Who's this for?"
             sub="Pick the occasion. We tune the plan for two, alone, or a group."
           >
-            {/* Themes — the fast path. Each one bundles vibe + duration +
-                budget + effort + intent. Click → jump to step 5 with
-                everything pre-filled, just confirm or tweak must-haves. */}
-            <div className="mb-10 rounded-card border border-border bg-surface p-5 md:p-6">
-              <p className="mb-1.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                Or start from a theme
-              </p>
-              <p className="mb-4 text-sm text-secondary">
-                Pick the kind of night and we'll handle the rest.
-              </p>
-              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-                {THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => onApplyTheme(t)}
-                    className="group flex flex-col items-start gap-1 rounded-card border border-border bg-background px-4 py-3 text-left transition-colors hover:border-text/40"
-                  >
-                    <span className="text-sm font-medium text-text group-hover:text-text">
-                      {t.label}
-                    </span>
-                    <span className="text-xs leading-snug text-muted">{t.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {OCCASIONS.map((o) => (
                 <Choice
@@ -671,19 +649,52 @@ function InputsView(props: {
         {step === 2 && (
           <Step
             eyebrow="Step 2"
-            title="How long?"
-            sub="We'll pace the plan to fit. Drive time is included."
+            title="When in the day?"
+            sub="Pick the frame, then how long. We'll match places open at that time."
           >
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {DURATIONS.map((d) => (
+            {/* Time-of-day frame — drives slot start time + place hours filter */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {([
+                { id: 'morning' as const,  label: 'Morning',  sub: 'Brunch energy, ~10am start' },
+                { id: 'evening' as const,  label: 'Evening',  sub: 'After-work, ~6pm start' },
+                { id: 'all_day' as const,  label: 'All day',  sub: 'Big day, morning to night' },
+              ]).map((t) => (
                 <Choice
-                  key={d.min}
-                  selected={inputs.duration_min === d.min}
-                  onClick={() => setInputs((s) => ({ ...s, duration_min: d.min }))}
-                  label={d.label}
-                  sub={d.sub}
+                  key={t.id}
+                  selected={inputs.time_of_day === t.id}
+                  onClick={() => setInputs((s) => {
+                    // All-day implies a long duration; bump up if currently set short.
+                    const dur = t.id === 'all_day' && s.duration_min < 360 ? 360 : s.duration_min;
+                    return { ...s, time_of_day: t.id, duration_min: dur };
+                  })}
+                  label={t.label}
+                  sub={t.sub}
                 />
               ))}
+            </div>
+
+            {/* Duration — filtered to match the time-of-day frame */}
+            <div className="mt-10">
+              <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                How long?
+              </p>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {DURATIONS
+                  .filter((d) => {
+                    if (inputs.time_of_day === 'all_day') return d.min >= 240;
+                    if (inputs.time_of_day === 'morning' || inputs.time_of_day === 'evening') return d.min <= 360;
+                    return true;
+                  })
+                  .map((d) => (
+                    <Choice
+                      key={d.min}
+                      selected={inputs.duration_min === d.min}
+                      onClick={() => setInputs((s) => ({ ...s, duration_min: d.min }))}
+                      label={d.label}
+                      sub={d.sub}
+                    />
+                  ))}
+              </div>
             </div>
           </Step>
         )}
