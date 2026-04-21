@@ -45,13 +45,36 @@ async function enrichOne(place) {
     text: r.text?.text ?? r.originalText?.text ?? '',
     relative_time: r.relativePublishTimeDescription ?? null,
   }));
-  // Skip the first photo since it's already photo_url. Dedupe by photo `name`
-  // — Google sometimes returns the same physical photo under multiple refs.
+  // Dedupe pipeline:
+  //   1. Skip the first photo (already photo_url).
+  //   2. Dedupe by photo `name` (cheap; catches exact dup uploads).
+  //   3. Fetch a small thumbnail of each surviving candidate, hash the
+  //      bytes — Google sometimes returns the SAME image under different
+  //      `name` values (different photo IDs, identical bytes). Hash dedup
+  //      catches those. Verified case: Naked Café had two storefront
+  //      photos with different names but identical SHA-256.
   const seenNames = new Set();
+  const seenHashes = new Set();
   const photos = [];
   for (const p of (d.photos ?? []).slice(1)) {
     if (!p.name || seenNames.has(p.name)) continue;
     seenNames.add(p.name);
+    // Hash a 400px thumbnail (faster than full-res) to dedup by content.
+    try {
+      const thumb = await fetch(buildPhotoUrl(p.name, 400));
+      if (!thumb.ok) continue;
+      const bytes = new Uint8Array(await thumb.arrayBuffer());
+      const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
+      const hash = Array.from(new Uint8Array(hashBuf))
+        .slice(0, 12)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      if (seenHashes.has(hash)) continue;
+      seenHashes.add(hash);
+    } catch (e) {
+      // Network error mid-fetch — keep the candidate rather than drop silently.
+      console.warn(`  ! hash check failed for ${p.name.slice(-12)}: ${e.message}`);
+    }
     photos.push(buildPhotoUrl(p.name, 1200));
     if (photos.length >= 6) break;
   }

@@ -497,7 +497,7 @@ function InputsView(props: {
           <Step
             eyebrow="Step 1"
             title="Who's this for?"
-            sub="Pick the occasion. Date is the most polished today; solo and friends are getting better every week."
+            sub="Pick the occasion. We tune the plan for two, alone, or a group."
           >
             {/* Themes — the fast path. Each one bundles vibe + duration +
                 budget + effort + intent. Click → jump to step 5 with
