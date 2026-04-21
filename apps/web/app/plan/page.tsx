@@ -302,6 +302,14 @@ function PlanFlow() {
     if (phase === 'inputs') track.planStepAdvanced(step);
   }, [step, phase]);
 
+  // Scroll to top whenever the step or phase changes. Without this, mobile
+  // users land mid-scroll on the next step (especially when a long step like
+  // Step 4 with the radius map sets a deep scroll position).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step, phase]);
+
   // Preflight against the loaded templates. If we KNOW the combo will fail,
   // surface a blocker on the relevant step + disable the next/generate button.
   const verdict = useMemo(
@@ -878,6 +886,10 @@ function InputsView(props: {
             title="What should it include?"
             sub="Optional. Pick anything that matters. Skip if you trust us."
           >
+            <p className="-mt-2 mb-6 text-sm text-secondary">
+              Pick up to <span className="text-text">3</span> — more than that and no single plan can cover it all.
+            </p>
+
             <div className="space-y-7">
               {MUST_INCLUDE_GROUPS.map((group) => (
                 <div key={group.name}>
@@ -890,10 +902,19 @@ function InputsView(props: {
                   <div className="flex flex-wrap gap-2.5">
                     {group.items.map((m) => {
                       const on = inputs.must_includes.includes(m);
+                      // Hard cap at 3 real must-haves. hidden_gem doesn't
+                      // constrain templates so it doesn't count toward the cap.
+                      // For exclusive groups, turning one on REPLACES siblings
+                      // so the cap math nets to zero — those are always allowed.
+                      const realCount = inputs.must_includes.filter((x) => x !== 'hidden_gem').length;
+                      const counts = m !== 'hidden_gem';
+                      const isReplaceInGroup = group.exclusive && group.items.some((x) => inputs.must_includes.includes(x));
+                      const atCap = !on && counts && realCount >= 3 && !isReplaceInGroup;
                       return (
                         <button
                           key={m}
                           type="button"
+                          disabled={atCap}
                           onClick={() => setInputs((s) => {
                             // Exclusive group: turning one on clears the others in the same group.
                             if (group.exclusive && !on) {
@@ -916,6 +937,8 @@ function InputsView(props: {
                             'inline-flex items-center gap-2 rounded-pill border px-4 py-2 text-sm transition-colors',
                             on
                               ? 'border-text bg-text text-background'
+                              : atCap
+                              ? 'border-border bg-surface text-muted/60 cursor-not-allowed opacity-50'
                               : 'border-border text-secondary hover:border-text/40 hover:text-text',
                           )}
                         >
