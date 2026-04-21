@@ -7,7 +7,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
 import { track } from '@/app/PostHogProvider';
@@ -239,6 +239,36 @@ function PlanFlow() {
     return true;
   };
 
+  // Surprise me: keep the user's occasion + when, randomize everything else,
+  // submit immediately. The vibe/duration/budget/effort/must_includes are
+  // all picked from sensible defaults so the plan is wild but not chaotic.
+  const surpriseMe = () => {
+    const VIBE_PALETTE = ['romantic', 'chill', 'adventurous', 'cozy', 'spontaneous'];
+    const DURATION_POOL = [120, 180, 240];
+    const BUDGET_POOL = [25, 50, 75, 100];
+    const MUST_POOL: string[][] = [[], ['food'], ['drinks'], ['food', 'drinks'], ['walk', 'food'], ['view']];
+    const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+    // 1-2 vibes for variety without over-constraining
+    const vCount = Math.random() < 0.5 ? 1 : 2;
+    const vibePool = [...VIBE_PALETTE];
+    const vibe: string[] = [];
+    for (let i = 0; i < vCount; i++) {
+      const idx = Math.floor(Math.random() * vibePool.length);
+      vibe.push(vibePool.splice(idx, 1)[0]);
+    }
+    const surprise: Inputs = {
+      ...inputs,
+      vibe,
+      duration_min: pick(DURATION_POOL),
+      budget_per_person: pick(BUDGET_POOL),
+      must_includes: pick(MUST_POOL),
+      effort: pick(['low', 'moderate']) as Effort,
+      location: 'out',
+      max_radius_km: pick([15, 30, 50]),
+    };
+    generate(surprise);
+  };
+
   const next = () => {
     if (!canAdvance()) return;
     if (step < TOTAL_STEPS) setStep(step + 1);
@@ -246,14 +276,16 @@ function PlanFlow() {
   };
   const back = () => { if (step > 1) setStep(step - 1); };
 
-  const generate = async () => {
+  const generate = async (override?: Inputs) => {
     setPhase('loading');
     setErrorMsg('');
+    const body = override ?? inputs;
+    if (override) setInputs(override);
     try {
       const supabase = createClient();
       const { data, error } = await supabase.functions.invoke<{ itineraries: Itinerary[] }>(
         'generate-plan',
-        { body: inputs }
+        { body }
       );
       if (error) {
         // Supabase wraps HTTP !2xx as FunctionsHttpError; the real message
@@ -271,8 +303,8 @@ function PlanFlow() {
       data.itineraries.forEach((it) =>
         track.planGenerated({
           template_id: it.template_id,
-          vibe: inputs.vibe,
-          budget: inputs.budget_per_person,
+          vibe: body.vibe,
+          budget: body.budget_per_person,
         })
       );
     } catch (e) {
@@ -311,6 +343,7 @@ function PlanFlow() {
           canAdvance={canAdvance()}
           stepHints={stepHints}
           stepBlocker={stepBlocker}
+          onSurpriseMe={surpriseMe}
         />
       )}
 
@@ -355,8 +388,9 @@ function InputsView(props: {
   canAdvance: boolean;
   stepHints: import('@/lib/plan-hints').Hint[];
   stepBlocker: { step: number; message: string } | null;
+  onSurpriseMe: () => void;
 }) {
-  const { step, inputs, setInputs, onNext, onBack, canAdvance, stepHints, stepBlocker } = props;
+  const { step, inputs, setInputs, onNext, onBack, canAdvance, stepHints, stepBlocker, onSurpriseMe } = props;
 
   return (
     <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-20">
@@ -422,6 +456,17 @@ function InputsView(props: {
                 />
               ))}
             </div>
+
+            {/* Surprise me — skip steps 2-5 and just go. We pick everything
+                else with deliberately wide stochasticity for variety. */}
+            <button
+              type="button"
+              onClick={onSurpriseMe}
+              className="mt-6 inline-flex items-center gap-2 text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
+            >
+              <Sparkles className="h-4 w-4" strokeWidth={2} />
+              Or surprise me — pick everything else for me
+            </button>
 
             {/* Pronoun pickers — Date only. Both fully optional; we use them
                 to color the "why this works" copy ("she'll love the sunset"
