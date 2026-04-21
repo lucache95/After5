@@ -69,18 +69,24 @@ export default async function HomePage() {
   const currentSeason = getSeason();
   return (
     <>
-      {/* ─── Nav ── overlays the hero image, no chrome bar ───── */}
+      {/* ─── Nav ── overlays the hero image, no chrome bar ─────
+           Top-down scrim sits behind the nav so the logo + button are
+           always legible regardless of how bright the hero photo is. */}
       <header className="absolute inset-x-0 top-0 z-50">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 via-black/20 to-transparent md:h-40"
+        />
+        <nav className="relative mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
+            className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)]"
           >
             After5
           </Link>
           <Link
             href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
+            className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text shadow-[0_4px_16px_rgba(0,0,0,0.18)] transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
           >
             Plan my date — free
           </Link>
