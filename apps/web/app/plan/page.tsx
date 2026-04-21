@@ -167,12 +167,35 @@ const OCCASIONS: { id: Occasion; label: string; sub: string }[] = [
 ];
 
 const DURATIONS = [
-  { min: 120, label: '2 hr',       sub: 'Quick'        },
-  { min: 180, label: '3 hr',       sub: 'Standard'     },
-  { min: 240, label: '4 hr',       sub: 'Long evening' },
-  { min: 360, label: 'Half day',   sub: '6 hr'         },
-  { min: 600, label: 'Full day',   sub: '10 hr'        },
+  { min: 120, label: '2 hr'     },
+  { min: 180, label: '3 hr'     },
+  { min: 240, label: '4 hr'     },
+  { min: 360, label: 'Half day' },
+  { min: 600, label: 'Full day' },
 ];
+
+// Sub-labels are time-of-day aware so "4 hr" doesn't say "Long evening"
+// when Morning is selected.
+function durationSubFor(min: number, tod: 'morning' | 'evening' | 'all_day'): string {
+  if (tod === 'morning') {
+    if (min === 120) return 'Brunch';
+    if (min === 180) return 'Slow morning';
+    if (min === 240) return 'Long brunch';
+    if (min === 360) return 'Morning + lunch';
+  }
+  if (tod === 'evening') {
+    if (min === 120) return 'Quick';
+    if (min === 180) return 'Standard';
+    if (min === 240) return 'Long evening';
+    if (min === 360) return '6 hr';
+  }
+  if (tod === 'all_day') {
+    if (min === 240) return '4 hr';
+    if (min === 360) return '6 hr';
+    if (min === 600) return '10 hr';
+  }
+  return `${min} min`;
+}
 
 const VIBES = [
   'romantic', 'chill', 'adventurous', 'boujee', 'cozy', 'spontaneous',
@@ -697,7 +720,7 @@ function InputsView(props: {
                       selected={inputs.duration_min === d.min}
                       onClick={() => setInputs((s) => ({ ...s, duration_min: d.min }))}
                       label={d.label}
-                      sub={d.sub}
+                      sub={durationSubFor(d.min, inputs.time_of_day)}
                     />
                   ))}
               </div>
