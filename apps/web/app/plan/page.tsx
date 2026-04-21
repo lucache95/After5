@@ -1083,14 +1083,10 @@ function EmailGate({
                 >
                   {submitting ? 'One sec…' : 'Continue →'}
                 </button>
-                <button
-                  type="button"
-                  onClick={onContinue}
-                  className="text-sm text-muted underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-secondary"
-                >
-                  Maybe later
-                </button>
               </div>
+              <p className="pt-1 text-xs text-muted">
+                Email is required to view your plans. Steps after this are optional.
+              </p>
             </form>
           </>
         )}
