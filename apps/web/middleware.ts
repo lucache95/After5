@@ -16,6 +16,19 @@ interface CookieToSet {
 // or route-level guards (e.g. /admin/*, /account) handle redirects.
 
 export async function middleware(request: NextRequest) {
+  // Auth code rescue: if Supabase falls back to Site URL and lands the
+  // OAuth/magic-link `?code=` on a page that doesn't know how to exchange
+  // it, forward to /auth/callback so we still capture the session. Only
+  // triggers on pages that aren't already the callback handler.
+  const code = request.nextUrl.searchParams.get('code');
+  if (code && !request.nextUrl.pathname.startsWith('/auth/callback')) {
+    const callbackUrl = new URL('/auth/callback', request.url);
+    callbackUrl.searchParams.set('code', code);
+    const next = request.nextUrl.searchParams.get('next');
+    if (next) callbackUrl.searchParams.set('next', next);
+    return NextResponse.redirect(callbackUrl);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

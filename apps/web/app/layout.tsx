@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import { PostHogProvider } from './PostHogProvider';
+import { EarlyAccessBanner } from '@/components/EarlyAccessBanner';
 import './globals.css';
 
 const inter = Inter({
@@ -49,7 +50,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${interDisplay.variable}`}>
       <body>
         <Suspense fallback={null}>
-          <PostHogProvider>{children}</PostHogProvider>
+          <EarlyAccessBanner />
+          {/* Relative wrapper scopes absolute-positioned headers (e.g. the
+              homepage hero nav) to start *below* the promo banner instead
+              of behind it at the top of the viewport. */}
+          <div className="relative">
+            <PostHogProvider>{children}</PostHogProvider>
+          </div>
         </Suspense>
       </body>
     </html>
