@@ -19,6 +19,9 @@ export interface PlanInputs {
   you_pronouns?: 'she/her' | 'he/him' | 'they/them' | '';
   partner_pronouns?: 'she/her' | 'he/him' | 'they/them' | '';
   note?: string;
+  when?: 'tonight' | 'future';
+  future_date?: string;
+  intent?: 'impress' | 'chill' | 'reconnect' | 'try_something_new' | '';
 }
 
 export interface Place {

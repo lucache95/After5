@@ -144,6 +144,20 @@ function buildUserMessage(input: WritingPassInput): string {
     const partner = inputs.partner_pronouns || 'unspecified';
     lines.push(`- You: ${you} · Your date: ${partner} (use these pronouns naturally where it fits — never force it)`);
   }
+  if (inputs.intent) {
+    const intentHint: Record<string, string> = {
+      impress: 'They want this to land — write copy that conveys this is a special, well-considered evening. Lean into wow moments without being showy.',
+      chill: 'They want low-key, no pressure. Copy should feel relaxed, easygoing, no breathless excitement.',
+      reconnect: 'They want real conversation, no distractions. Emphasize quiet moments and the chance to actually talk — call out anything phone-free or sequenced for connection.',
+      try_something_new: 'They want spots they haven\'t tried. Lean into the discovery angle — call out what makes each stop a fresh take.',
+    };
+    lines.push(`- Goal: ${inputs.intent} → ${intentHint[inputs.intent] ?? ''}`);
+  }
+  if (inputs.when === 'tonight') {
+    lines.push(`- Timing: Tonight. Copy can use immediate language ("tonight", "right now"). No reservation language.`);
+  } else if (inputs.when === 'future' && inputs.future_date) {
+    lines.push(`- Timing: Planning ahead for ${inputs.future_date}. Reservation language is fine.`);
+  }
   if (inputs.note && inputs.note.trim().length > 0) {
     lines.push(`- Special note from the user: "${inputs.note.trim()}" (work this in only if you can do so naturally; otherwise reference it lightly in why_it_works)`);
   }

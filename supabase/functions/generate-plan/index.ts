@@ -48,6 +48,12 @@ const InputSchema = z.object({
   you_pronouns: z.enum(['she/her', 'he/him', 'they/them', '']).default(''),
   partner_pronouns: z.enum(['she/her', 'he/him', 'they/them', '']).default(''),
   note: z.string().max(280).default(''),
+  // When = "tonight" → hard hours filter + low-friction bias.
+  // "future" + future_date (yyyy-mm-dd) = wider scope, reservations OK.
+  when: z.enum(['tonight', 'future']).default('tonight'),
+  future_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // Emotional goal — distinct from vibe. LLM tone hint; future scoring lever.
+  intent: z.enum(['impress', 'chill', 'reconnect', 'try_something_new', '']).default(''),
 });
 
 // ─── Handler ───────────────────────────────────────────────────────────
@@ -110,6 +116,17 @@ serve(async (req: Request) => {
       templates_selected: topTemplates.map((t) => t.id),
     };
 
+    // Derive an effective start_at from when/future_date so the existing
+    // hours-aware scoring filters places that won't actually be open. Tonight
+    // = now. Future = 6pm on the chosen date (typical date start time).
+    const effectiveStartAt = (() => {
+      if (inputs.start_at) return inputs.start_at;
+      if (inputs.when === 'future' && inputs.future_date) {
+        return `${inputs.future_date}T18:00:00`;
+      }
+      return new Date().toISOString();
+    })();
+
     // 5. Build one itinerary per template, tracking which place_ids have been
     //    used across the batch so each subsequent itinerary picks distinct
     //    spots (cross-plan diversity). Stochastic top-K inside scoring also
@@ -118,7 +135,7 @@ serve(async (req: Request) => {
     // budget-busting combo. Almost always succeeds within 1-2 tries.
     function buildWithRetry(t: typeof topTemplates[number]): Itinerary | null {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const it = buildItineraryFromTemplate(t, candidates, inputs, inputs.start_at, usedAcrossBatch);
+        const it = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch);
         if (it) return it;
       }
       return null;
@@ -191,6 +208,9 @@ serve(async (req: Request) => {
       total_duration_min: it.total_duration_min,
       is_public: true,
       season,
+      when_planned: inputs.when,
+      planned_for_date: inputs.when === 'future' ? (inputs.future_date ?? null) : null,
+      intent: inputs.intent || null,
       modifier_id: modifierIdsPicked[idx] ?? null,
       generation_log: {
         ...sharedLog,

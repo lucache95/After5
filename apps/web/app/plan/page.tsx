@@ -88,12 +88,26 @@ interface Inputs {
   you_pronouns: Pronouns;
   partner_pronouns: Pronouns;
   note: string;
+  // When the date is happening. "tonight" = hard hours filter + low-friction
+  // bias. "future" = wider scope, reservations OK. future_date is ISO yyyy-mm-dd.
+  when: 'tonight' | 'future';
+  future_date: string;
+  // Emotional goal — distinct from vibe (vibe = aesthetic, intent = why).
+  // Empty = generic. Used as an LLM tone hint; scoring impact comes later.
+  intent: 'impress' | 'chill' | 'reconnect' | 'try_something_new' | '';
 }
 
 const PRONOUN_OPTIONS: { id: Pronouns; label: string }[] = [
   { id: 'she/her',   label: 'She / her' },
   { id: 'he/him',    label: 'He / him' },
   { id: 'they/them', label: 'They / them' },
+];
+
+const INTENT_OPTIONS: { id: Inputs['intent']; label: string; sub: string }[] = [
+  { id: 'impress',            label: 'Impress',           sub: 'You want this to land' },
+  { id: 'chill',              label: 'Chill out',         sub: 'Low-key, no pressure' },
+  { id: 'reconnect',          label: 'Reconnect',         sub: 'Real conversation, no distractions' },
+  { id: 'try_something_new',  label: 'Try something new', sub: 'Spots you haven\u2019t been to' },
 ];
 
 const OCCASIONS: { id: Occasion; label: string; sub: string }[] = [
@@ -165,6 +179,9 @@ function PlanFlow() {
     you_pronouns: '',
     partner_pronouns: '',
     note: '',
+    when: 'tonight',
+    future_date: '',
+    intent: '',
   });
   const [results, setResults] = useState<Itinerary[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
@@ -453,6 +470,63 @@ function InputsView(props: {
                 </div>
               </div>
             )}
+
+            {/* When — affects scoring downstream. Tonight = hard hours filter
+                + low-friction bias. Future = wider scope, reservations OK. */}
+            <div className="mt-12">
+              <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                When?
+              </p>
+              <div className="grid grid-cols-2 gap-3 max-w-md">
+                <Choice
+                  selected={inputs.when === 'tonight'}
+                  onClick={() => setInputs((s) => ({ ...s, when: 'tonight', future_date: '' }))}
+                  label="Tonight"
+                  sub="Open now, low effort"
+                />
+                <Choice
+                  selected={inputs.when === 'future'}
+                  onClick={() => setInputs((s) => ({
+                    ...s,
+                    when: 'future',
+                    future_date: s.future_date || new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+                  }))}
+                  label="A future date"
+                  sub="Pick a day"
+                />
+              </div>
+              {inputs.when === 'future' && (
+                <input
+                  type="date"
+                  value={inputs.future_date}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setInputs((s) => ({ ...s, future_date: e.target.value }))}
+                  className="mt-4 block rounded-card border border-border bg-background px-5 py-3 text-base text-text outline-none transition-colors focus:border-accent"
+                />
+              )}
+            </div>
+
+            {/* Intent — emotional goal, distinct from vibe (vibe = aesthetic).
+                Optional. Used as LLM tone hint and (later) for template bias. */}
+            <div className="mt-12">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                What’s the goal? <span className="ml-1 normal-case tracking-normal text-muted/70">(optional)</span>
+              </p>
+              <p className="mb-4 text-sm text-secondary">
+                Different from the vibe — this is the emotional outcome, not the aesthetic.
+              </p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {INTENT_OPTIONS.map((it) => (
+                  <Choice
+                    key={it.id}
+                    selected={inputs.intent === it.id}
+                    onClick={() => setInputs((s) => ({ ...s, intent: s.intent === it.id ? '' : it.id }))}
+                    label={it.label}
+                    sub={it.sub}
+                  />
+                ))}
+              </div>
+            </div>
           </Step>
         )}
 
