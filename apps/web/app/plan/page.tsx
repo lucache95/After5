@@ -7,6 +7,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
@@ -450,6 +451,7 @@ function PlanFlow() {
           activeIdx={activeIdx}
           setActiveIdx={setActiveIdx}
           onRedo={() => { setPhase('inputs'); setStep(1); }}
+          note={inputs.note}
         />
       )}
 
@@ -1161,6 +1163,12 @@ function EmailGate({
   // still get captured even if the user bails on a later step.
   async function persist(extra: Record<string, unknown> = {}) {
     if (!emailValid) return;
+    // Stash first_name + city in localStorage so the results page can
+    // personalize the header copy ("Built three plans for you, Sarah.")
+    if (typeof window !== 'undefined') {
+      if (firstName) localStorage.setItem('after5_first_name', firstName);
+      if (city) localStorage.setItem('after5_city', city);
+    }
     try {
       await fetch('/api/subscribe', {
         method: 'POST',
@@ -1189,8 +1197,17 @@ function EmailGate({
     else setSubstep(nextSub);
   }
 
+  // Rotate the side image per substep so it doesn't feel static through the
+  // 3-step gate. All shots are verified Okanagan.
+  const SIDE_IMAGES: Record<Sub, { src: string; alt: string }> = {
+    1: { src: '/pins/couple-trail.jpg',     alt: 'Couple walking a trail above Okanagan Lake' },
+    2: { src: '/pins/couple-lake-kiss.jpg', alt: 'Couple in Okanagan Lake' },
+    3: { src: '/pins/couple-wakeboard.jpg', alt: 'Couple wakeboarding at sunset on Okanagan Lake' },
+  };
+  const side = SIDE_IMAGES[substep];
+
   return (
-    <div className="mx-auto flex max-w-content flex-col items-start px-6 py-24 md:px-10 md:py-32">
+    <div className="mx-auto grid max-w-content gap-10 px-6 py-16 md:grid-cols-[1fr_minmax(380px,520px)] md:gap-14 md:px-10 md:py-24 lg:gap-20">
       <div className="w-full max-w-xl">
         <button
           type="button"
@@ -1375,6 +1392,17 @@ function EmailGate({
           </>
         )}
       </div>
+
+      {/* Side imagery — Okanagan couples shots, rotates per substep */}
+      <aside className="relative hidden h-full min-h-[480px] overflow-hidden rounded-card bg-surface md:block">
+        <Image
+          src={side.src}
+          alt={side.alt}
+          fill
+          sizes="(max-width: 768px) 0px, 520px"
+          className="object-cover"
+        />
+      </aside>
     </div>
   );
 }
@@ -1386,9 +1414,45 @@ function ResultsView(props: {
   activeIdx: number;
   setActiveIdx: (i: number) => void;
   onRedo: () => void;
+  note?: string;
 }) {
-  const { itineraries, activeIdx, setActiveIdx, onRedo } = props;
+  const { itineraries, activeIdx, setActiveIdx, onRedo, note } = props;
   const active = itineraries[activeIdx];
+
+  // Hyper-personalized header — pull first_name + city stashed by the gate
+  // and weave them into the copy. Falls back to the generic version when
+  // we don't have the data (user skipped name, or pre-gate render).
+  const [firstName, setFirstName] = useState('');
+  const [city, setCity] = useState('');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setFirstName(localStorage.getItem('after5_first_name') ?? '');
+    setCity(localStorage.getItem('after5_city') ?? '');
+  }, []);
+
+  // Detect a few common note themes so we can call them out specifically
+  // without showing the user's raw text on the page (privacy-respecting).
+  const noteLower = (note ?? '').toLowerCase();
+  let noteHook: string | null = null;
+  if (/anniversary|annivers/.test(noteLower)) noteHook = 'with your anniversary in mind';
+  else if (/birthday/.test(noteLower)) noteHook = 'with the birthday in mind';
+  else if (/vegetarian|vegan|gluten/.test(noteLower)) noteHook = 'with your dietary note in mind';
+  else if (/pregnan/.test(noteLower)) noteHook = 'with the pregnancy in mind';
+  else if (/first time|new to/.test(noteLower)) noteHook = 'as a first-time intro to Kelowna';
+  else if (note && note.trim().length > 12) noteHook = 'with your note in mind';
+
+  const headline = firstName
+    ? `Built three plans for you, ${firstName}.`
+    : 'Built three plans just for you.';
+  const subtitle = (() => {
+    const parts: string[] = [];
+    parts.push('We checked every Kelowna spot we know');
+    if (city) parts.push(`(your ${city} side counts too)`);
+    parts.push('sequenced them so nothing closes mid-date');
+    if (noteHook) parts.push(`and picked the three that fit you best — ${noteHook}.`);
+    else parts.push('and picked the three that fit you best.');
+    return parts.join(', ').replace(', and', ' and');
+  })();
 
   return (
     <>
@@ -1400,10 +1464,10 @@ function ResultsView(props: {
               Three plans, your call
             </p>
             <h2 className="mt-2 font-display text-2xl font-semibold leading-tight tracking-[-0.01em] text-text md:text-[28px]">
-              Built three plans just for you.
+              {headline}
             </h2>
             <p className="mt-1.5 text-sm text-secondary">
-              We checked every Kelowna spot we know, sequenced them so nothing closes mid-date, and picked the three that fit you best.
+              {subtitle}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-3">
