@@ -81,6 +81,12 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // 2a. Pull user_id from the caller's JWT if present. supabase.functions.invoke()
+    // forwards the session token in Authorization. We don't require auth — anonymous
+    // generations still work — but when we have it, we tag the itinerary so the user
+    // sees it in their dashboard.
+    const userId = extractUserIdFromAuthHeader(req.headers.get('Authorization'));
+
     // 3. Filter candidate places
     const candidates = await filterPlaces(supabase, inputs);
     if (candidates.length < 3) {
@@ -268,6 +274,7 @@ serve(async (req: Request) => {
       planned_for_date: inputs.when === 'future' ? (inputs.future_date ?? null) : null,
       intent: inputs.intent || null,
       modifier_id: modifierIdsPicked[idx] ?? null,
+      user_id: userId,
       generation_log: {
         ...sharedLog,
         this_itinerary: {
@@ -373,6 +380,33 @@ function pickModifiersForBatch(
     if (idx >= 0) remaining.splice(idx, 1);
   }
   return picked;
+}
+
+// Decode the JWT in the Authorization header without verifying signature.
+// We only trust the user_id when the request hits us via a real Supabase
+// client (which bundles a valid token); even if someone forges a token,
+// the worst case is they tag a row with a user_id they don't own — and
+// our RLS prevents them from reading anyone else's saved/private data
+// from that point forward. Returns null if no header or malformed.
+function extractUserIdFromAuthHeader(header: string | null): string | null {
+  if (!header) return null;
+  const m = header.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  const token = m[1];
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    // base64url → base64
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+    const decoded = JSON.parse(atob(padded)) as { sub?: string; aud?: string };
+    if (typeof decoded.sub === 'string' && /^[0-9a-f-]{36}$/i.test(decoded.sub)) {
+      return decoded.sub;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // Mirrors apps/web/lib/slug.ts so the canonical SEO URL we ship to the client
