@@ -23,6 +23,8 @@ export default function LoginPage() {
 function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/account';
+  const callbackError = searchParams.get('error');
+  const callbackReason = searchParams.get('reason');
 
   const [email, setEmail] = useState('');
   const [phase, setPhase] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -148,6 +150,16 @@ function LoginForm() {
                 </span>
               )}
             </div>
+
+            {callbackError && (
+              <div className="mt-5 rounded-card border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-[13px] font-semibold text-red-900">Sign-in didn&apos;t go through</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-red-800">
+                  {callbackReason ? `Reason: ${decodeURIComponent(callbackReason)}` : `Error code: ${callbackError}`}.
+                  Try again, or use the email link below.
+                </p>
+              </div>
+            )}
 
             <h1 className="mt-7 font-display text-[40px] font-bold leading-[1.02] tracking-[-0.03em] text-text md:text-[48px]">
               Good to{' '}

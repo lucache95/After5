@@ -7,6 +7,7 @@ import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { FeedbackPulse } from '@/components/itinerary/FeedbackPulse';
 import { OtherDates } from '@/components/itinerary/OtherDates';
 import { imageForStop } from '@/lib/place-image';
+import { loadItineraryStats } from '@/lib/itinerary-stats';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 // Canonical SEO page for a generated date.
@@ -119,6 +120,12 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
     vibe: [],
   };
 
+  // Aggregate review stats — surfaced as Airbnb-style chips near the title.
+  const stats = await loadItineraryStats(
+    row.id,
+    stops.map((s) => ({ place_id: s.place_id, place_name: s.place_name })),
+  );
+
   // schema.org structured data — TouristTrip is the closest fit. Helps Google
   // understand this is a curated experience with a route + itemList of places.
   const ld = {
@@ -188,7 +195,7 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
         </nav>
       </header>
 
-      <ItineraryView itinerary={itinerary} />
+      <ItineraryView itinerary={itinerary} stats={stats} />
 
       <div className="mx-auto max-w-content px-6 pb-16 md:px-10">
         <FeedbackPulse

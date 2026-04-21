@@ -11,15 +11,32 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/account';
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      // Path-only redirect to avoid open-redirect via crafted next param.
-      const safeNext = next.startsWith('/') ? next : '/account';
-      return NextResponse.redirect(`${origin}${safeNext}`);
-    }
+  if (!code) {
+    console.error('[auth/callback] no code in query', Object.fromEntries(searchParams.entries()));
+    return NextResponse.redirect(`${origin}/login?error=no_code`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error('[auth/callback] exchangeCodeForSession failed', {
+      message: error.message,
+      status: error.status,
+      name: error.name,
+    });
+    // Surface the error name/code in the redirect so we can debug
+    // without having to rummage through server logs.
+    const reason = encodeURIComponent(error.message || 'exchange_failed');
+    return NextResponse.redirect(`${origin}/login?error=auth&reason=${reason}`);
+  }
+
+  if (!data?.session) {
+    console.error('[auth/callback] no session returned despite no error');
+    return NextResponse.redirect(`${origin}/login?error=no_session`);
+  }
+
+  // Path-only redirect to avoid open-redirect via crafted next param.
+  const safeNext = next.startsWith('/') ? next : '/account';
+  return NextResponse.redirect(`${origin}${safeNext}`);
 }

@@ -12,10 +12,19 @@ import { ItineraryMap } from './ItineraryMap';
 import { StopCard } from './StopCard';
 import { ItineraryActions } from './ItineraryActions';
 import { ModifierCard } from './ModifierCard';
+import { AnchorNav } from './AnchorNav';
+import { CuratorCard } from './CuratorCard';
 import { TIMEZONE_LABEL } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
+import type { ItineraryStats } from '@/lib/itinerary-stats';
 
-export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
+export function ItineraryView({
+  itinerary,
+  stats,
+}: {
+  itinerary: Itinerary;
+  stats?: ItineraryStats;
+}) {
   const totalHr = Math.round((itinerary.total_duration_min / 60) * 10) / 10;
 
   return (
@@ -62,16 +71,52 @@ export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
             </>
           )}
         </div>
+
+        {/* Aggregate review chips — Airbnb-style social proof. Only render
+            when we actually have signal (≥3 feedbacks). Order: guest favourite
+            badge first if earned, then star score, then would-do %, then top stop. */}
+        {stats && stats.reviewCount >= 3 && (
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {stats.isGuestFavourite && (
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-amber-100 px-3 py-1 text-[11px] font-semibold tracking-wide text-amber-950 ring-1 ring-amber-200">
+                <span aria-hidden>★</span>
+                Guest favourite
+              </span>
+            )}
+            {stats.qualityScore !== null && (
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-surface px-3 py-1 text-[11px] font-semibold tracking-wide text-text ring-1 ring-border [font-variant-numeric:tabular-nums]">
+                <span aria-hidden className="text-amber-600">★</span>
+                {stats.qualityScore.toFixed(1)} · {stats.reviewCount} {stats.reviewCount === 1 ? 'review' : 'reviews'}
+              </span>
+            )}
+            {stats.wouldDoPct !== null && stats.wouldDoPct >= 75 && (
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-900 ring-1 ring-emerald-200 [font-variant-numeric:tabular-nums]">
+                {stats.wouldDoPct}% would do this
+              </span>
+            )}
+            {stats.topStop && (
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-rose-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-rose-900 ring-1 ring-rose-200">
+                Top stop · {stats.topStop}
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
       <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-16">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1fr_360px] md:gap-14">
+        <AnchorNav />
+        <div className="mt-2 grid grid-cols-1 gap-12 md:grid-cols-[1fr_360px] md:gap-14">
           <div>
             {/* Story */}
             {itinerary.why_it_works && (
-              <p className="max-w-prose text-base leading-relaxed text-text md:text-lg">
-                {itinerary.why_it_works}
-              </p>
+              <section id="why" className="scroll-mt-24">
+                <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  Why this works
+                </p>
+                <p className="max-w-prose text-base leading-relaxed text-text md:text-lg">
+                  {itinerary.why_it_works}
+                </p>
+              </section>
             )}
 
             {/* Wow-Factor — sits between the story and the route so it sets
@@ -83,7 +128,7 @@ export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
             )}
 
             {/* Map */}
-            <div className="mt-12">
+            <div id="route" className="mt-12 scroll-mt-24">
               <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted">
                 The route
               </p>
@@ -135,6 +180,10 @@ export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
               <p className="mt-4 text-center text-[11px] text-muted">
                 Free to view · No booking · No fees
               </p>
+            </div>
+
+            <div className="mt-5">
+              <CuratorCard />
             </div>
           </aside>
         </div>
