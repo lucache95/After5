@@ -14,7 +14,7 @@
     "@after5/types": "workspace:*",
     "@after5/validators": "workspace:*",
     "@react-pdf/renderer": "^4.5.1",
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.45.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.460.0",

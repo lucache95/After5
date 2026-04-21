@@ -1,11 +1,11 @@
 // Admin debug view of a single itinerary's generation_log audit trail.
-// Not linked from anywhere — visit /admin/dates/<itinerary_id> directly.
-// No auth (yet); URL is the secret. Add Vercel password protection if you
-// want to gate this in prod.
+// Gated by requireAdmin — only emails on the ADMIN_EMAILS allowlist can view.
+// Visit /admin/dates/<itinerary_id> directly after signing in.
 
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/require-admin';
 
 interface ItineraryAuditRow {
   id: string;
@@ -33,6 +33,8 @@ export const dynamic = 'force-dynamic';
 export default async function AdminDateAuditPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+
+  await requireAdmin(`/admin/dates/${id}`);
 
   const supabase = await createClient();
   const { data } = await supabase
