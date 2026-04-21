@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 // Captures emails from the plan flow gate. Idempotent on (email, source) so
 // repeat submissions don't fail. Returns 200 either way to avoid leaking
@@ -29,12 +29,13 @@ export async function POST(req: Request) {
   const city = body.city ? body.city.trim().slice(0, 80) : null;
   const firstName = body.first_name ? body.first_name.trim().slice(0, 40) : null;
 
-  const supabase = await createClient();
+  // Service-role client — bypasses RLS so the upsert can update existing
+  // rows on the second/third email-gate substep. Validation above covers
+  // the abuse vectors that RLS would otherwise block.
+  const supabase = createAdminClient();
   const userAgent = req.headers.get('user-agent') ?? null;
 
-  // Cast: generated DB types don't yet include `subscribers` or the new
-  // built_by_* itinerary columns. Runtime is fine.
-  const { error } = await (supabase.from('subscribers') as any).upsert(
+  const { error } = await supabase.from('subscribers').upsert(
     {
       email,
       source: body.source ?? 'plan_gate',
@@ -56,10 +57,10 @@ export async function POST(req: Request) {
   // a date 2 hours ago"). Only write fields we actually have.
   const ids = body.itinerary_ids ?? (body.itinerary_id ? [body.itinerary_id] : []);
   if (ids.length > 0 && (firstName || city)) {
-    const patch: Record<string, string> = {};
+    const patch: { built_by_name?: string; built_by_neighborhood?: string } = {};
     if (firstName) patch.built_by_name = firstName;
     if (city) patch.built_by_neighborhood = city;
-    const { error: attrErr } = await (supabase.from('itineraries') as any)
+    const { error: attrErr } = await supabase.from('itineraries')
       .update(patch)
       .in('id', ids);
     if (attrErr) console.error('attribution error', attrErr);

@@ -85,7 +85,9 @@ serve(async (req: Request) => {
     // forwards the session token in Authorization. We don't require auth — anonymous
     // generations still work — but when we have it, we tag the itinerary so the user
     // sees it in their dashboard.
-    const userId = extractUserIdFromAuthHeader(req.headers.get('Authorization'));
+    const authHeader = req.headers.get('Authorization');
+    const userId = extractUserIdFromAuthHeader(authHeader);
+    console.log('[generate-plan] auth header present:', !!authHeader, 'header_prefix:', authHeader?.slice(0, 30) ?? 'none', 'extracted user_id:', userId);
 
     // 3. Filter candidate places
     const candidates = await filterPlaces(supabase, inputs);
