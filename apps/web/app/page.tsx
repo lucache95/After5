@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
 import { getSeason, SEASON_LABELS } from '@/lib/season';
+import { PLAN_THEMES } from '@/lib/themes';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -147,6 +148,38 @@ export default async function HomePage() {
                   Browse by vibe
                 </a>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Quick-start themes ────────────────────────────── */}
+        <section id="themes" className="border-t border-border">
+          <div className="mx-auto max-w-content px-6 py-20 md:px-10 md:py-24">
+            <div className="mb-10 max-w-2xl">
+              <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                Quick start
+              </p>
+              <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
+                Or pick a theme. We'll handle the rest.
+              </h2>
+              <p className="mt-3 text-base text-secondary md:text-lg">
+                Each one bundles vibe, length, budget and energy. One click — confirm the must-haves and you're done.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {PLAN_THEMES.map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/plan?theme=${t.id}`}
+                  className="group flex flex-col gap-2 rounded-card border border-border bg-surface px-5 py-5 transition-colors hover:border-text/40"
+                >
+                  <span className="font-display text-lg font-semibold leading-tight text-text">
+                    {t.label}
+                  </span>
+                  <span className="text-sm leading-snug text-secondary">{t.desc}</span>
+                </Link>
+              ))}
             </div>
           </div>
         </section>

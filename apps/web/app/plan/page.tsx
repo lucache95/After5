@@ -223,9 +223,13 @@ export default function PlanPage() {
 function PlanFlow() {
   const searchParams = useSearchParams();
   const vibeParam = searchParams.get('vibe');
+  const themeParam = searchParams.get('theme');
+  // Resolve theme preset once at mount. If themeParam matches a known
+  // theme, the preset overrides the defaults below.
+  const themePreset = themeParam ? THEMES.find((t) => t.id === themeParam)?.preset ?? null : null;
 
   const [phase, setPhase] = useState<Phase>('inputs');
-  const [step, setStep] = useState(() => startStepFromUrl(vibeParam));
+  const [step, setStep] = useState(() => themePreset ? 5 : startStepFromUrl(vibeParam));
   const [inputs, setInputs] = useState<Inputs>({
     occasion: 'date',
     duration_min: 180,
@@ -243,7 +247,8 @@ function PlanFlow() {
     future_date: '',
     intent: '',
     time_of_day: 'evening',
-  });
+    ...(themePreset ?? {}),
+  } as Inputs);
   const [results, setResults] = useState<Itinerary[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
