@@ -112,6 +112,49 @@ const INTENT_OPTIONS: { id: Inputs['intent']; label: string; sub: string }[] = [
   { id: 'try_something_new',  label: 'Try something new', sub: 'Spots you haven\u2019t been to' },
 ];
 
+// Themes: preset bundles that fill multiple inputs at once. Each theme is a
+// narrative ("Rom-com night", "Slow Sunday") rather than a vibe. Picking a
+// theme jumps the user to step 5 with everything pre-filled — they can tweak
+// must-haves or just hit Generate.
+interface Theme {
+  id: string;
+  label: string;
+  desc: string;
+  preset: Partial<Inputs>;
+}
+const THEMES: Theme[] = [
+  {
+    id: 'first_date_safe',
+    label: 'First date, safe play',
+    desc: 'Coffee → walk → small dinner. Easy out, no pressure.',
+    preset: { vibe: ['chill', 'romantic'], duration_min: 180, budget_per_person: 50, effort: 'low', must_includes: ['food'], intent: 'reconnect' },
+  },
+  {
+    id: 'rom_com_night',
+    label: 'Rom-com night',
+    desc: 'Cozy at-home: dinner-in, slow movie, dessert.',
+    preset: { vibe: ['cozy', 'romantic'], duration_min: 180, budget_per_person: 30, effort: 'low', location: 'home', must_includes: [], intent: 'chill' },
+  },
+  {
+    id: 'main_character_day',
+    label: 'Main character day',
+    desc: 'Big day: hike, view, sunset wine, late dinner.',
+    preset: { vibe: ['adventurous', 'boujee'], duration_min: 360, budget_per_person: 100, effort: 'moderate', must_includes: ['view', 'food'], intent: 'impress' },
+  },
+  {
+    id: 'slow_sunday',
+    label: 'Slow Sunday',
+    desc: 'Brunch, lakeside walk, long lazy afternoon.',
+    preset: { vibe: ['chill', 'cozy'], duration_min: 240, budget_per_person: 50, effort: 'low', must_includes: ['food'], intent: 'reconnect' },
+  },
+  {
+    id: 'no_phones',
+    label: 'No phones',
+    desc: 'Activity-first, conversation-led, screens-down.',
+    preset: { vibe: ['intimate', 'spontaneous'], duration_min: 180, budget_per_person: 60, effort: 'moderate', must_includes: ['activity'], intent: 'reconnect' },
+  },
+];
+
 const OCCASIONS: { id: Occasion; label: string; sub: string }[] = [
   { id: 'date',    label: 'Date',    sub: 'Just the two of you'    },
   { id: 'solo',    label: 'Solo',    sub: 'A day for yourself'     },
@@ -239,6 +282,15 @@ function PlanFlow() {
     return true;
   };
 
+  // Apply a theme preset, jump to step 5 (must-haves) so user can tweak.
+  // The preset already covers vibe/duration/budget/effort/intent so the
+  // intermediate steps are skipped — we just need the user to confirm or
+  // adjust must-haves before generating.
+  const applyTheme = (theme: Theme) => {
+    setInputs((s) => ({ ...s, ...theme.preset } as Inputs));
+    setStep(5);
+  };
+
   // Surprise me: keep the user's occasion + when, randomize everything else,
   // submit immediately. The vibe/duration/budget/effort/must_includes are
   // all picked from sensible defaults so the plan is wild but not chaotic.
@@ -344,6 +396,7 @@ function PlanFlow() {
           stepHints={stepHints}
           stepBlocker={stepBlocker}
           onSurpriseMe={surpriseMe}
+          onApplyTheme={applyTheme}
         />
       )}
 
@@ -389,8 +442,9 @@ function InputsView(props: {
   stepHints: import('@/lib/plan-hints').Hint[];
   stepBlocker: { step: number; message: string } | null;
   onSurpriseMe: () => void;
+  onApplyTheme: (theme: Theme) => void;
 }) {
-  const { step, inputs, setInputs, onNext, onBack, canAdvance, stepHints, stepBlocker, onSurpriseMe } = props;
+  const { step, inputs, setInputs, onNext, onBack, canAdvance, stepHints, stepBlocker, onSurpriseMe, onApplyTheme } = props;
 
   return (
     <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-20">
@@ -445,6 +499,33 @@ function InputsView(props: {
             title="Who's this for?"
             sub="Pick the occasion. Date is the most polished today; solo and friends are getting better every week."
           >
+            {/* Themes — the fast path. Each one bundles vibe + duration +
+                budget + effort + intent. Click → jump to step 5 with
+                everything pre-filled, just confirm or tweak must-haves. */}
+            <div className="mb-10 rounded-card border border-border bg-surface p-5 md:p-6">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                Or start from a theme
+              </p>
+              <p className="mb-4 text-sm text-secondary">
+                Pick the kind of night and we'll handle the rest.
+              </p>
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onApplyTheme(t)}
+                    className="group flex flex-col items-start gap-1 rounded-card border border-border bg-background px-4 py-3 text-left transition-colors hover:border-text/40"
+                  >
+                    <span className="text-sm font-medium text-text group-hover:text-text">
+                      {t.label}
+                    </span>
+                    <span className="text-xs leading-snug text-muted">{t.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {OCCASIONS.map((o) => (
                 <Choice
