@@ -140,10 +140,16 @@ serve(async (req: Request) => {
     // Retry up to 3 times per template since stochastic top-5 can roll a
     // budget-busting combo. Almost always succeeds within 1-2 tries.
     function buildWithRetry(t: typeof topTemplates[number]): Itinerary | null {
+      // First 3 attempts: strict (with hours filter). If they all fail —
+      // usually because the time-of-day filter is too tight (cocktail bars
+      // at 10am, cafes at 9pm, etc.) — try once more without the hours
+      // filter so the user always gets *something* rather than a 422.
       for (let attempt = 0; attempt < 3; attempt++) {
         const it = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch);
         if (it) return it;
       }
+      const relaxed = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch, { skipHoursFilter: true });
+      if (relaxed) return relaxed;
       return null;
     }
 

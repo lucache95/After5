@@ -78,7 +78,10 @@ export function hintsForStep(step: number, i: InputsLike): Hint[] {
 
   if (step === 5) {
     const m = i.must_includes;
-    if (m.length >= 5) {
+    // hidden_gem doesn't constrain templates (it's a tone hint, not a slot
+    // requirement), so it doesn't count toward the "too many" warning.
+    const constraining = m.filter((x) => x !== 'hidden_gem');
+    if (constraining.length >= 5) {
       hints.push({
         tone: 'warn',
         text: 'Lots of must-haves narrow the plan hard. Try keeping it to 2-3.',

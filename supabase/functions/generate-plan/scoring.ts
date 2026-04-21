@@ -27,6 +27,8 @@ interface ScoredPlace {
 // Late-night closes (e.g. 01:00) are handled by allowing wraparound.
 function isOpenAt(p: Place, slotStart: string): boolean {
   if (!p.opens || !p.closes) return true;
+  // Empty slotStart = relaxed mode (skip hours filtering).
+  if (!slotStart) return true;
   const start = toMinutes(slotStart);
   const open = toMinutes(p.opens);
   const close = toMinutes(p.closes);
@@ -177,6 +179,7 @@ export function buildItineraryFromTemplate(
   inputs: PlanInputs,
   startTime?: string,
   usedAcrossBatch: Set<string> = new Set(),
+  opts: { skipHoursFilter?: boolean } = {},
 ): Itinerary | null {
   const eligibleByType = candidates.filter((p) => p.is_active !== false);
   const picked: Place[] = [];
@@ -191,7 +194,9 @@ export function buildItineraryFromTemplate(
 
   for (let i = 0; i < template.slots.length; i++) {
     const slot = template.slots[i];
-    const slotStart = slotStarts[i];
+    // skipHoursFilter is set on the relaxed-mode retry — passes a sentinel
+    // empty start that placeMatchesSlot's isOpenAt treats as "open".
+    const slotStart = opts.skipHoursFilter ? '' : slotStarts[i];
     const matching = eligibleByType
       .filter((p) => placeMatchesSlot(p, slot, slotStart))
       .map(
