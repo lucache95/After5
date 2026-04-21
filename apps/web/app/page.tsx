@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
 import { getSeason, SEASON_LABELS } from '@/lib/season';
 import { PLAN_THEMES } from '@/lib/themes';
+import { RecentBuildsToast } from '@/components/RecentBuildsToast';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -391,6 +392,8 @@ export default async function HomePage() {
           </div>
         </footer>
       </main>
+
+      <RecentBuildsToast />
     </>
   );
 }
