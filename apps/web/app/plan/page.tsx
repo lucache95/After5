@@ -15,6 +15,7 @@ import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { ChooserCards } from '@/components/itinerary/ChooserCards';
 import { RadiusMap } from '@/components/RadiusMap';
 import { HintCard } from '@/components/HintCard';
+import { FeedbackPulse } from '@/components/itinerary/FeedbackPulse';
 import { hintsForStep } from '@/lib/plan-hints';
 import { preflight, type TemplateLite } from '@/lib/preflight';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -1252,6 +1253,18 @@ function ResultsView(props: {
 
       {/* Full rich detail view of the active pick */}
       {active && <ItineraryView itinerary={active} />}
+
+      {/* Three-question feedback pulse below the active plan. Only renders
+          when we have an itinerary id (skipped if persistence failed). */}
+      {active?.id && (
+        <div className="mx-auto max-w-content px-6 pb-20 md:px-10">
+          <FeedbackPulse
+            itineraryId={active.id}
+            stops={active.stops.map((s) => ({ place_id: s.place_id, place_name: s.place_name }))}
+            source="plan_results"
+          />
+        </div>
+      )}
     </>
   );
 }

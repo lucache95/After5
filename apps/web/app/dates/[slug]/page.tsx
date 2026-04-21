@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
+import { FeedbackPulse } from '@/components/itinerary/FeedbackPulse';
 import { OtherDates } from '@/components/itinerary/OtherDates';
 import { imageForStop } from '@/lib/place-image';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -188,6 +189,14 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
       </header>
 
       <ItineraryView itinerary={itinerary} />
+
+      <div className="mx-auto max-w-content px-6 pb-16 md:px-10">
+        <FeedbackPulse
+          itineraryId={row.id}
+          stops={itinerary.stops.map((s) => ({ place_id: s.place_id, place_name: s.place_name }))}
+          source="public_date"
+        />
+      </div>
 
       <OtherDates excludeId={row.id} />
 
