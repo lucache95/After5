@@ -198,7 +198,51 @@ serve(async (req: Request) => {
       nowMonth >= 2 && nowMonth <= 4 ? 'spring' :
       nowMonth >= 5 && nowMonth <= 7 ? 'summer' :
       nowMonth >= 8 && nowMonth <= 10 ? 'fall' : 'winter';
-    const insertRows = written.map((it, idx) => ({
+    // Quality score per itinerary — composite signal we collect now and
+    // (later) bias scoring with. Range 0-1. Components:
+    //   cost_realism    — 1 - abs(total_cost - budget) / budget, clamped
+    //   type_diversity  — distinct types / total stops
+    //   has_wow         — bonus if a viewpoint/sunset/winery is in the plan
+    //   feels_cheap     — bonus if total < 60% of budget AND a free stop
+    function computeQualityScore(it: Itinerary): { score: number; parts: Record<string, number> } {
+      const stops = it.stops;
+      const numStops = Math.max(1, stops.length);
+      // cost_realism — perfect at exactly the budget; penalty for over OR under
+      const costGap = Math.abs(it.total_cost_pp - inputs.budget_per_person);
+      const costRealism = Math.max(0, 1 - costGap / Math.max(20, inputs.budget_per_person));
+      // type_diversity — distinct place types / total stops
+      const typesPicked = new Set(stops.map((s) => {
+        const p = candidates.find((c) => c.id === s.place_id);
+        return p?.type ?? 'unknown';
+      }));
+      const typeDiversity = typesPicked.size / numStops;
+      // wow factor — at least one anchor "memorable" type
+      const WOW_TYPES = ['viewpoint', 'sunset_spot', 'winery', 'hike', 'beach'];
+      const hasWow = stops.some((s) => {
+        const p = candidates.find((c) => c.id === s.place_id);
+        return p && WOW_TYPES.includes(p.type);
+      }) ? 1 : 0;
+      // feels_cheap signal
+      const wellUnder = it.total_cost_pp < inputs.budget_per_person * 0.6;
+      const hasFree = stops.some((s) => s.estimated_cost_pp === 0);
+      const feelsCheap = (wellUnder && hasFree) ? 1 : 0;
+      // Weighted composite — cost realism + type diversity weighted equally,
+      // wow + feels-cheap as smaller bonuses.
+      const score = costRealism * 0.4 + typeDiversity * 0.35 + hasWow * 0.15 + feelsCheap * 0.1;
+      return {
+        score: Math.round(score * 100) / 100,
+        parts: {
+          cost_realism: Math.round(costRealism * 100) / 100,
+          type_diversity: Math.round(typeDiversity * 100) / 100,
+          has_wow: hasWow,
+          feels_cheap: feelsCheap,
+        },
+      };
+    }
+
+    const insertRows = written.map((it, idx) => {
+      const quality = computeQualityScore(it);
+      return {
       template_id: it.template_id,
       inputs,
       stops: it.stops,
@@ -223,9 +267,12 @@ serve(async (req: Request) => {
           modifier_id: modifierIdsPicked[idx] ?? null,
           total_cost_pp: it.total_cost_pp,
           total_duration_min: it.total_duration_min,
+          quality_score: quality.score,
+          quality_parts: quality.parts,
         },
       },
-    }));
+      };
+    });
     const { data: inserted, error: insertError } = await supabase
       .from('itineraries')
       .insert(insertRows)
