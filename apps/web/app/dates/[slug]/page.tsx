@@ -170,17 +170,17 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
-      <header className="absolute inset-x-0 top-0 z-50">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
+        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
+            className="font-display text-xl font-semibold tracking-tight text-text"
           >
             After5
           </Link>
           <Link
             href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
+            className="inline-flex items-center gap-2 rounded-pill bg-text px-5 py-2.5 text-sm font-medium text-background transition-transform hover:-translate-y-0.5 md:px-6"
           >
             Plan your own — free
             <ArrowRight className="h-4 w-4" strokeWidth={2.25} />

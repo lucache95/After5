@@ -1,8 +1,13 @@
-// Full itinerary detail view: hero + story + map + rich stop cards + actions.
-// Shared between the in-flow /plan results page and the public /plan/i/[id] page
+// Full itinerary detail view: gallery hero + title + story + map + stops + sticky aside.
+// Shared between the in-flow /plan results page and the public /dates/[slug] page
 // so they stay visually identical and any change ripples to both.
+//
+// Airbnb-style structure:
+//   1. Photo grid hero at top (1 big + up to 4 tiles)
+//   2. Title + meta + action chips below the gallery
+//   3. Two-column body: content (story / map / timeline) + sticky right rail
 
-import { ItineraryHero } from './ItineraryHero';
+import { ItineraryGalleryHero } from './ItineraryGalleryHero';
 import { ItineraryMap } from './ItineraryMap';
 import { StopCard } from './StopCard';
 import { ItineraryActions } from './ItineraryActions';
@@ -11,16 +16,60 @@ import { TIMEZONE_LABEL } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
 
 export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
+  const totalHr = Math.round((itinerary.total_duration_min / 60) * 10) / 10;
+
   return (
     <article>
-      <ItineraryHero itinerary={itinerary} />
+      <ItineraryGalleryHero stops={itinerary.stops} />
 
-      <div className="mx-auto max-w-content px-6 py-16 md:px-10 md:py-20">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1fr_320px] md:gap-16">
+      {/* Title + meta block — sits between the gallery and the two-column body.
+          Mirrors Airbnb's "Entire chalet · 6 guests · 2 bedrooms" treatment. */}
+      <header className="mx-auto max-w-content px-6 pt-8 md:px-10 md:pt-10">
+        {itinerary.template_name && (
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
+            {itinerary.template_name} · Kelowna
+          </p>
+        )}
+        <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl lg:text-[56px]">
+          {itinerary.title}
+        </h1>
+        {itinerary.hook && (
+          <p className="mt-5 max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
+            {itinerary.hook}
+          </p>
+        )}
+
+        {/* Compact meta row — cost · duration · stops · vibes */}
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary [font-variant-numeric:tabular-nums]">
+          <span className="font-medium text-text">${Math.round(itinerary.total_cost_pp)}</span>
+          <span className="text-border">·</span>
+          <span>{totalHr} hr</span>
+          <span className="text-border">·</span>
+          <span>{itinerary.stops.length} stops</span>
+          {itinerary.vibe.length > 0 && (
+            <>
+              <span className="text-border">·</span>
+              <div className="inline-flex flex-wrap items-center gap-1.5">
+                {itinerary.vibe.slice(0, 3).map((v) => (
+                  <span
+                    key={v}
+                    className="rounded-pill bg-surface px-2.5 py-0.5 text-[11px] font-medium text-secondary"
+                  >
+                    {v}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-16">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1fr_360px] md:gap-14">
           <div>
             {/* Story */}
             {itinerary.why_it_works && (
-              <p className="max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
+              <p className="max-w-prose text-base leading-relaxed text-text md:text-lg">
                 {itinerary.why_it_works}
               </p>
             )}
@@ -41,8 +90,8 @@ export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
               <ItineraryMap stops={itinerary.stops} />
             </div>
 
-            {/* Timeline */}
-            <div className="mt-16">
+            {/* Timeline — id anchors the gallery's "All N stops" CTA */}
+            <div id="timeline" className="mt-16 scroll-mt-24">
               <p className="mb-6 text-xs font-medium uppercase tracking-[0.18em] text-muted">
                 Timeline · {TIMEZONE_LABEL}
               </p>
@@ -59,20 +108,33 @@ export function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
             </div>
           </div>
 
-          {/* Side rail */}
-          <aside className="md:sticky md:top-8 md:self-start">
-            <div className="rounded-card border border-border bg-surface p-6 md:p-7">
-              <div className="mb-6 flex flex-wrap gap-2">
-                {itinerary.vibe.map((v) => (
-                  <span
-                    key={v}
-                    className="rounded-pill border border-border bg-background px-3 py-1 text-xs text-secondary"
-                  >
-                    {v}
-                  </span>
-                ))}
+          {/* Sticky right rail — Airbnb's reserve card analog. Floats while
+              the user scrolls so the primary actions never disappear. */}
+          <aside className="md:sticky md:top-6 md:self-start">
+            <div className="rounded-[16px] border border-border bg-background p-6 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.12)] md:p-7">
+              {/* Headline mirrors the price-first treatment of Airbnb's card */}
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="font-display text-2xl font-bold leading-none text-text [font-variant-numeric:tabular-nums]">
+                  ${Math.round(itinerary.total_cost_pp)}
+                  <span className="ml-1.5 text-sm font-normal text-secondary">/ pp</span>
+                </p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
+                  {totalHr} hr
+                </p>
               </div>
-              <ItineraryActions itinerary={itinerary} />
+
+              <div className="mt-2 text-xs text-secondary">
+                Final price depends on what you order. We use mid-range estimates.
+              </div>
+
+              <div className="mt-6 border-t border-border pt-5">
+                <ItineraryActions itinerary={itinerary} />
+              </div>
+
+              {/* Reassurance line — Airbnb's "you won't be charged yet" analog */}
+              <p className="mt-4 text-center text-[11px] text-muted">
+                Free to view · No booking · No fees
+              </p>
             </div>
           </aside>
         </div>
