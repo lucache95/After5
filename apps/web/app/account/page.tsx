@@ -95,7 +95,8 @@ export default async function AccountPage() {
       .limit(4),
     admin
       .from('subscribers')
-      .select('*', { count: 'exact', head: true }),
+      .select('*', { count: 'exact', head: true })
+      .neq('source', 'seed_demo'),
   ]);
 
   const profile = profileRes.data;

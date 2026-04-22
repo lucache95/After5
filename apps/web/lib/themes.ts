@@ -31,8 +31,8 @@ export const PLAN_THEMES: PlanTheme[] = [
   {
     id: 'rom_com_night',
     label: 'Rom-com night',
-    desc: 'Cozy at-home: dinner-in, slow movie, dessert.',
-    preset: { occasion: 'date', vibe: ['cozy', 'romantic'], duration_min: 180, budget_per_person: 30, effort: 'low', location: 'home', must_includes: [], intent: 'chill' },
+    desc: 'Wine bar → cozy dinner → dessert walk. Slow and warm.',
+    preset: { occasion: 'date', vibe: ['cozy', 'romantic'], duration_min: 180, budget_per_person: 60, effort: 'low', location: 'out', must_includes: ['food'], intent: 'chill' },
   },
   {
     id: 'main_character_day',
