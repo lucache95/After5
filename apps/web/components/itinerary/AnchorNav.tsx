@@ -75,7 +75,7 @@ export function AnchorNav() {
       <div ref={sentinelRef} aria-hidden className="h-0" />
       <div
         className={cn(
-          'sticky top-0 z-40 -mx-6 mt-6 transition-all duration-200 md:-mx-10',
+          'sticky top-0 z-40 -mx-6 transition-all duration-200 md:-mx-10 md:mt-2',
           pinned
             ? 'border-b border-border bg-background/90 backdrop-blur-md'
             : 'border-b border-transparent',

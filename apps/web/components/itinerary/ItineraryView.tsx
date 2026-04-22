@@ -128,9 +128,9 @@ export function ItineraryView({
         )}
       </header>
 
-      <div className="mx-auto max-w-content px-6 py-12 md:px-10 md:py-16">
+      <div className="mx-auto max-w-content px-6 pt-4 pb-12 md:px-10 md:pt-8 md:pb-16">
         <AnchorNav />
-        <div className="mt-2 grid grid-cols-1 gap-12 md:grid-cols-[1fr_360px] md:gap-14">
+        <div className="mt-4 grid grid-cols-1 gap-12 md:mt-2 md:grid-cols-[1fr_360px] md:gap-14">
           <div>
             {/* Story */}
             {itinerary.why_it_works && (
