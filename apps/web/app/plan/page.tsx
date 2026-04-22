@@ -1146,6 +1146,32 @@ const LOAD_STEPS = [
   { label: 'Adding the small details that turn it into a story', doneAt: Infinity }, // hold until results land
 ] as const;
 
+// Cycled through the polaroid stack. More images than steps so the
+// stack always shows different scenes as it rotates. Real Okanagan shots.
+const LOAD_IMAGES = [
+  '/pins/couple-trail.jpg',
+  '/pins/couple-lake-kiss.jpg',
+  '/pins/couple-wakeboard.jpg',
+  '/pins/couple-field.jpg',
+  '/vibes/vibe-romantic.jpg',
+  '/vibes/vibe-cozy.jpg',
+  '/vibes/vibe-boujee.jpg',
+  '/vibes/vibe-adventurous.jpg',
+  '/vibes/vibe-chill.jpg',
+] as const;
+
+const LOAD_LABELS_KELOWNA = [
+  'KELOWNA · 26',
+  'LAKESIDE',
+  'OKANAGAN',
+  'WEST KELOWNA',
+  'PANDOSY',
+  'GLENMORE',
+  'MISSION',
+  'KNOX HILL',
+  'DOWNTOWN',
+] as const;
+
 function LoadingView() {
   const [now, setNow] = useState(0);
 
@@ -1156,77 +1182,192 @@ function LoadingView() {
   }, []);
 
   // Determine the index of the currently-active step (first step not yet done)
-  const activeIdx = LOAD_STEPS.findIndex((s) => now < s.doneAt);
+  const rawIdx = LOAD_STEPS.findIndex((s) => now < s.doneAt);
+  const activeIdx = rawIdx === -1 ? LOAD_STEPS.length - 1 : rawIdx;
+  const total = LOAD_STEPS.length;
 
   return (
-    <div className="mx-auto flex max-w-content flex-col items-start px-6 py-32 md:px-10 md:py-44">
-      <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-        Pulling it together
-      </p>
-      <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-        Building three plans for you.
-      </h1>
-
-      {/* Stepped status feed */}
-      <ol className="mt-10 w-full max-w-xl space-y-4">
-        {LOAD_STEPS.map((step, i) => {
-          const isDone = now >= step.doneAt;
-          const isActive = i === activeIdx;
-          const isPending = !isDone && !isActive;
-          return (
-            <li
-              key={step.label}
-              className={cn(
-                'flex items-center gap-4 text-base transition-opacity duration-300',
-                isPending && 'opacity-40',
-              )}
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center">
-                {isDone ? (
-                  <Check className="h-5 w-5 text-accent" strokeWidth={2.5} />
-                ) : isActive ? (
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
-                  </span>
-                ) : (
-                  <span className="h-2 w-2 rounded-full border border-border" />
-                )}
-              </span>
-              <span
-                className={cn(
-                  'transition-colors',
-                  isDone && 'text-secondary',
-                  isActive && 'text-text font-medium',
-                  isPending && 'text-muted',
-                )}
-              >
-                {step.label}
-                {isActive && <span className="ml-1 inline-block animate-pulse">…</span>}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
-      {/* Skeleton cards beneath, so the eye has something to land on */}
-      <div className="mt-14 grid w-full max-w-3xl grid-cols-1 gap-5 md:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="rounded-card border border-border bg-surface p-7 animate-pulse"
-            style={{ animationDelay: `${i * 200}ms` }}
-          >
-            <div className="h-3 w-16 rounded bg-border" />
-            <div className="mt-5 h-6 w-44 rounded bg-border" />
-            <div className="mt-7 space-y-3 border-t border-border pt-5">
-              <div className="h-3 w-3/4 rounded bg-border" />
-              <div className="h-3 w-2/3 rounded bg-border" />
-              <div className="h-3 w-3/5 rounded bg-border" />
-            </div>
-          </div>
-        ))}
+    <div className="relative mx-auto flex min-h-[calc(100vh-80px)] max-w-content flex-col items-center justify-center overflow-hidden px-6 py-16 md:px-10 md:py-24">
+      {/* Ambient warm gradient — same family as /login + /account so the
+          loading screen feels continuous with the brand. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-0 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-amber-200/40 via-orange-200/20 to-transparent blur-3xl" />
+        <div className="absolute -right-32 bottom-0 h-[420px] w-[420px] rounded-full bg-gradient-to-tl from-rose-200/40 via-amber-100/20 to-transparent blur-3xl" />
       </div>
+
+      <div className="relative z-10 flex w-full max-w-3xl flex-col items-center text-center">
+        <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
+          Pulling it together
+        </p>
+        <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.025em] text-text md:text-[44px]">
+          Building three{' '}
+          <span className="italic font-semibold text-accent">plans</span>
+          {' '}for you.
+        </h1>
+        <p className="mt-4 max-w-md text-sm text-secondary md:text-base">
+          We&apos;re shuffling through every Kelowna spot we know to find the night that fits.
+        </p>
+
+        {/* Polaroid stack — the centerpiece. Multiple polaroids fanned
+            slightly behind each other; the front one carries the current
+            "thinking step" text and re-keys on activeIdx so it animates
+            in fresh each rotation. */}
+        <PolaroidStack activeIdx={activeIdx} />
+
+        {/* Progress dots — one per step. Subtle, gives a sense of how
+            far along we are without re-introducing a long checklist. */}
+        <div className="mt-10 flex items-center gap-1.5">
+          {LOAD_STEPS.map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-300',
+                i < activeIdx ? 'w-1.5 bg-accent' : i === activeIdx ? 'w-6 bg-accent' : 'w-1.5 bg-border',
+              )}
+            />
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-muted [font-variant-numeric:tabular-nums]">
+          Step {Math.min(activeIdx + 1, total)} of {total}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PolaroidStack({ activeIdx }: { activeIdx: number }) {
+  const total = LOAD_STEPS.length;
+
+  // Render the active polaroid + the next two as a fanned stack behind.
+  // Each "slot" position (front / mid / back) gets its own transform.
+  // Re-keying the front on activeIdx triggers the entrance animation.
+  function imgFor(stepIdx: number): string {
+    return LOAD_IMAGES[stepIdx % LOAD_IMAGES.length];
+  }
+  function labelFor(stepIdx: number): string {
+    return LOAD_LABELS_KELOWNA[stepIdx % LOAD_LABELS_KELOWNA.length];
+  }
+
+  return (
+    <div className="relative mt-12 flex h-[360px] w-full items-center justify-center md:h-[400px]">
+      {/* Two background polaroids fanned out — give the stack depth. */}
+      {activeIdx + 2 < total && (
+        <PolaroidLayer
+          src={imgFor(activeIdx + 2)}
+          label={labelFor(activeIdx + 2)}
+          step={LOAD_STEPS[activeIdx + 2]?.label ?? ''}
+          z={1}
+          rotate={-8}
+          translateX={-30}
+          translateY={20}
+          scale={0.9}
+          opacity={0.55}
+        />
+      )}
+      {activeIdx + 1 < total && (
+        <PolaroidLayer
+          src={imgFor(activeIdx + 1)}
+          label={labelFor(activeIdx + 1)}
+          step={LOAD_STEPS[activeIdx + 1]?.label ?? ''}
+          z={2}
+          rotate={5}
+          translateX={20}
+          translateY={10}
+          scale={0.95}
+          opacity={0.78}
+        />
+      )}
+      {/* Active polaroid — front, full opacity, re-keys on each step so the
+          enter animation plays. */}
+      <PolaroidLayer
+        key={`active-${activeIdx}`}
+        src={imgFor(activeIdx)}
+        label={labelFor(activeIdx)}
+        step={LOAD_STEPS[activeIdx]?.label ?? ''}
+        z={3}
+        rotate={-2}
+        translateX={0}
+        translateY={0}
+        scale={1}
+        opacity={1}
+        active
+      />
+    </div>
+  );
+}
+
+function PolaroidLayer({
+  src,
+  label,
+  step,
+  z,
+  rotate,
+  translateX,
+  translateY,
+  scale,
+  opacity,
+  active = false,
+}: {
+  src: string;
+  label: string;
+  step: string;
+  z: number;
+  rotate: number;
+  translateX: number;
+  translateY: number;
+  scale: number;
+  opacity: number;
+  active?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'absolute transition-all duration-500 ease-out',
+        active && 'animate-[polaroidIn_.6s_cubic-bezier(0.2,0.8,0.2,1)_both]',
+      )}
+      style={{
+        zIndex: z,
+        transform: `translate(${translateX}px, ${translateY}px) rotate(${rotate}deg) scale(${scale})`,
+        opacity,
+      }}
+    >
+      <div className="relative w-[260px] rounded-[3px] bg-white px-3 pb-12 pt-3 shadow-[0_24px_56px_-16px_rgba(80,40,20,0.32)] ring-1 ring-black/5 md:w-[300px]">
+        {/* Photo */}
+        <div className="relative h-[260px] w-full overflow-hidden bg-surface md:h-[300px]">
+          <Image
+            src={src}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 260px, 300px"
+            className="object-cover"
+          />
+          {/* Subtle bottom gradient so the step-text overlay is always legible. */}
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/65 via-black/15 to-transparent"
+          />
+          {/* The active "thinking step" — overlaid on the photo. */}
+          {active && (
+            <p className="absolute inset-x-3 bottom-3 text-left text-[15px] font-medium leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+              {step}
+              <span className="ml-1 inline-block animate-pulse">…</span>
+            </p>
+          )}
+        </div>
+        {/* Polaroid bottom label */}
+        <p className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-display text-[11px] font-medium tracking-[0.14em] text-text/70">
+          {label}
+        </p>
+      </div>
+
+      {/* Keyframes — defined once globally so re-keying the active layer
+          replays them. */}
+      <style jsx global>{`
+        @keyframes polaroidIn {
+          0%   { opacity: 0; transform: translate(0, -24px) rotate(-8deg) scale(0.92); }
+          100% { opacity: 1; transform: translate(0, 0) rotate(-2deg) scale(1); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
 import { ProfileForm } from './ProfileForm';
@@ -67,6 +68,11 @@ export default async function AccountPage() {
     redirect('/login?next=/account');
   }
 
+  // Subscribers count needs the admin client — RLS on subscribers only
+  // permits INSERT for anon/authed users, so a user-context SELECT
+  // returns 0 (which made "Your spot" misalign with the banner).
+  const admin = createAdminClient();
+
   // Parallel data fetch — profile, saved plans, picks, total signups.
   const [profileRes, savedRes, picksRes, countRes] = await Promise.all([
     supabase
@@ -87,7 +93,7 @@ export default async function AccountPage() {
       .not('slug', 'is', null)
       .order('generated_at', { ascending: false })
       .limit(4),
-    supabase
+    admin
       .from('subscribers')
       .select('*', { count: 'exact', head: true }),
   ]);
