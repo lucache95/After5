@@ -6,6 +6,8 @@ import { getSeason, SEASON_LABELS } from '@/lib/season';
 import { PLAN_THEMES } from '@/lib/themes';
 import { RecentBuildsToast } from '@/components/RecentBuildsToast';
 import { UserMenu } from '@/components/UserMenu';
+import { Polaroid } from '@/components/Polaroid';
+import { HonestTestimonials } from '@/components/HonestTestimonials';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -134,7 +136,9 @@ export default async function HomePage() {
                 </span>
               </div>
               <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-white md:text-6xl lg:text-[78px]">
-                Plan the perfect Kelowna date in 30 seconds.
+                Plan the{' '}
+                <span className="italic font-semibold text-amber-200/95">perfect</span>
+                {' '}Kelowna date in 30 seconds.
               </h1>
               <p className="mt-7 max-w-[560px] text-lg text-white/85 md:text-xl">
                 Curated itineraries built for your vibe, budget, and time —
@@ -167,7 +171,8 @@ export default async function HomePage() {
                 Quick start
               </p>
               <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-                Or pick a theme. We'll handle the rest.
+                Or pick a theme.{' '}
+                <span className="italic font-semibold text-accent">We&apos;ll handle the rest.</span>
               </h2>
               <p className="mt-3 text-base text-secondary md:text-lg">
                 Each one bundles vibe, length, budget and energy. One click — confirm the must-haves and you're done.
@@ -200,7 +205,8 @@ export default async function HomePage() {
                   Start with a feeling
                 </p>
                 <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-                  Pick the vibe. We pick the night.
+                  Pick the vibe.{' '}
+                  <span className="italic font-semibold text-accent">We pick the night.</span>
                 </h2>
               </div>
               <Link
@@ -254,7 +260,9 @@ export default async function HomePage() {
                 Three plans, every time
               </p>
               <h2 className="font-display text-2xl font-bold leading-tight tracking-[-0.01em] text-text md:text-3xl">
-                A locals-only sample of what you'd get.
+                A{' '}
+                <span className="italic font-semibold text-accent">locals-only</span>
+                {' '}sample of what you&apos;d get.
               </h2>
             </div>
 
@@ -340,21 +348,68 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* ─── Honest testimonials (placeholders until real ones land) ─ */}
+        <HonestTestimonials />
+
         {/* ─── CTA band ─────────────────────────────────────────── */}
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-content px-6 py-28 md:px-10 md:py-36">
-            <div className="mx-auto max-w-3xl text-center">
-              <h2 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-4xl">
-                Want one for tonight?
-              </h2>
-              <div className="mt-10 flex justify-center">
-                <Link
-                  href="/plan"
-                  className="inline-flex items-center gap-2 rounded-pill bg-primary px-8 py-4 text-base font-medium text-background transition-opacity hover:opacity-85"
-                >
-                  Plan my date — free
-                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
-                </Link>
+        <section className="relative border-t border-border overflow-hidden">
+          {/* Ambient warm gradient — matches /login + /account so the brand
+              language feels continuous from homepage to auth to dashboard. */}
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute -left-32 top-12 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-amber-200/40 via-orange-200/20 to-transparent blur-3xl" />
+            <div className="absolute -right-32 bottom-0 h-[420px] w-[420px] rounded-full bg-gradient-to-tl from-rose-200/45 via-amber-100/25 to-transparent blur-3xl" />
+          </div>
+
+          <div className="relative mx-auto max-w-content px-6 py-28 md:px-10 md:py-36">
+            <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-[1.4fr_1fr] md:gap-16">
+              <div>
+                <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
+                  One last thing
+                </p>
+                <h2 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-text md:text-[56px]">
+                  Want one for{' '}
+                  <span className="italic font-semibold text-accent">tonight?</span>
+                </h2>
+                <p className="mt-5 max-w-prose text-base leading-relaxed text-secondary md:text-lg">
+                  30 seconds, three plans, free. No card, no sign-up to view.
+                </p>
+                <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <Link
+                    href="/plan"
+                    className="inline-flex items-center gap-2 rounded-pill bg-text px-7 py-3.5 text-base font-medium text-background transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.4)]"
+                  >
+                    Plan my date — free
+                    <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                  </Link>
+                  <Link
+                    href="/about"
+                    className="text-sm font-medium text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
+                  >
+                    Why we built this
+                  </Link>
+                </div>
+              </div>
+
+              {/* Stacked polaroid accent — same family as the dashboard hero. */}
+              <div className="relative hidden min-h-[300px] md:block">
+                <div className="absolute right-16 top-0">
+                  <Polaroid
+                    src="/pins/couple-trail.jpg"
+                    alt="Okanagan trail"
+                    label="WEST KELOWNA · 26"
+                    size="lg"
+                    rotation={-7}
+                  />
+                </div>
+                <div className="absolute right-0 top-40">
+                  <Polaroid
+                    src="/pins/couple-lake-kiss.jpg"
+                    alt="Lake Okanagan"
+                    label="LAKESIDE"
+                    size="md"
+                    rotation={9}
+                  />
+                </div>
               </div>
             </div>
           </div>

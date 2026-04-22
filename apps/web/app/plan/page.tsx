@@ -590,7 +590,7 @@ function InputsView(props: {
         {step === 1 && (
           <Step
             eyebrow="Step 1"
-            title="Who's this for?"
+            title={<>Who&apos;s <span className="italic font-semibold text-accent">this</span> for?</>}
             sub="Pick the occasion. We tune the plan for two, alone, or a group."
           >
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -738,7 +738,7 @@ function InputsView(props: {
         {step === 2 && (
           <Step
             eyebrow="Step 2"
-            title="When in the day?"
+            title={<>When in the <span className="italic font-semibold text-accent">day?</span></>}
             sub="Pick the frame, then how long. We'll match places open at that time."
           >
             {/* Time-of-day frame — drives slot start time + place hours filter */}
@@ -791,7 +791,7 @@ function InputsView(props: {
         {step === 3 && (
           <Step
             eyebrow="Step 3"
-            title="What's the vibe?"
+            title={<>What&apos;s the <span className="italic font-semibold text-accent">vibe?</span></>}
             sub="Pick one or two. The more specific you are, the sharper the plan."
           >
             <div className="flex flex-wrap gap-3">
@@ -826,7 +826,7 @@ function InputsView(props: {
         {step === 4 && (
           <Step
             eyebrow="Step 4"
-            title="Per-person budget?"
+            title={<>Per-person <span className="italic font-semibold text-accent">budget?</span></>}
             sub="Slide for what you'd happily spend each. We respect it."
           >
             <div className="rounded-card border border-border bg-surface p-7 md:p-9">
@@ -929,7 +929,7 @@ function InputsView(props: {
         {step === 5 && (
           <Step
             eyebrow="Step 5"
-            title="What should it include?"
+            title={<>What should it <span className="italic font-semibold text-accent">include?</span></>}
             sub="Optional. Pick anything that matters. Skip if you trust us."
           >
             <p className="-mt-2 mb-6 text-sm text-secondary">
@@ -1071,14 +1071,14 @@ function InputsView(props: {
   );
 }
 
-function Step(props: { eyebrow: string; title: string; sub: string; children: React.ReactNode }) {
+function Step(props: { eyebrow: string; title: React.ReactNode; sub: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">{props.eyebrow}</p>
-      <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
+      <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">{props.eyebrow}</p>
+      <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.025em] text-text md:text-[44px]">
         {props.title}
       </h1>
-      <p className="mt-4 max-w-prose text-base text-secondary">{props.sub}</p>
+      <p className="mt-5 max-w-prose text-base text-secondary md:text-lg">{props.sub}</p>
       <div className="mt-10">{props.children}</div>
     </div>
   );
