@@ -45,6 +45,10 @@ const TRANSITION_MS = 320;
 
 type Phase = 'enter' | 'visible' | 'exit';
 
+function lower(s: string): string {
+  return (s ?? '').toLowerCase().trim();
+}
+
 export function RecentBuildsToast() {
   const [events, setEvents] = useState<ProofEvent[]>([]);
   const [idx, setIdx] = useState(0);
@@ -97,6 +101,26 @@ export function RecentBuildsToast() {
       const merged: ProofEvent[] = [...builds, ...claims]
         .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
         .slice(0, 12);
+
+      // Avoid showing the same person back-to-back (e.g. "Stephen built X"
+      // immediately followed by "Stephen claimed a spot"). Walk the list and
+      // swap each consecutive same-name pair with the next available
+      // different-named event further down. Preserves recency-first order
+      // when no swap is needed.
+      for (let i = 1; i < merged.length; i++) {
+        if (lower(merged[i].name) !== lower(merged[i - 1].name)) continue;
+        for (let j = i + 1; j < merged.length; j++) {
+          if (
+            lower(merged[j].name) !== lower(merged[i - 1].name) &&
+            (i + 1 >= merged.length || lower(merged[j].name) !== lower(merged[i + 1]?.name ?? ''))
+          ) {
+            const tmp = merged[i];
+            merged[i] = merged[j];
+            merged[j] = tmp;
+            break;
+          }
+        }
+      }
 
       if (merged.length > 0) {
         setEvents(merged);
