@@ -26,12 +26,12 @@ export const metadata: Metadata = {
   },
   description:
     'Curated date itineraries built for your vibe, budget, and time — by people who actually live in Kelowna.',
-  metadataBase: new URL('https://after5.app'),
+  metadataBase: new URL('https://tryafter5.app'),
   openGraph: {
     title: 'After5 — Plan the perfect Kelowna date in 30 seconds',
     description:
       'Curated date itineraries built for your vibe, budget, and time — by people who actually live in Kelowna.',
-    url: 'https://after5.app',
+    url: 'https://tryafter5.app',
     siteName: 'After5',
     locale: 'en_CA',
     type: 'website',

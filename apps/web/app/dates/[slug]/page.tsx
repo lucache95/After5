@@ -17,7 +17,7 @@ import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 export const revalidate = 3600;
 
-const SITE_URL = 'https://after5.app';
+const SITE_URL = 'https://tryafter5.app';
 
 interface ItineraryRow {
   id: string;

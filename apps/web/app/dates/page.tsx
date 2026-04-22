@@ -10,7 +10,7 @@ import { DatesFilter, type DateRow } from '@/components/DatesFilter';
 
 export const revalidate = 3600;
 
-const SITE_URL = 'https://after5.app';
+const SITE_URL = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
   title: 'Every Kelowna date plan we\'ve built | After5',

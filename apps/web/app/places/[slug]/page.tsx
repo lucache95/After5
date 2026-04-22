@@ -23,7 +23,7 @@ import { PhotoLightbox } from '@/components/PhotoLightbox';
 // to date plans that include this place.
 
 export const revalidate = 3600;
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 interface Review {
   author: string;

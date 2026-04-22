@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AggregatorView, type DateCardData } from '@/components/AggregatorView';
 
 export const revalidate = 3600;
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 interface ModifierRow {
   id: string;

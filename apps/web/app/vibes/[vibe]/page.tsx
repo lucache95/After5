@@ -5,7 +5,7 @@ import { AggregatorView, type PlaceCardData, type DateCardData } from '@/compone
 import { findVibe, VIBES } from '@/lib/taxonomy';
 
 export const revalidate = 3600;
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 export async function generateStaticParams() {
   return VIBES.map((v) => ({ vibe: v.slug }));

@@ -9,7 +9,7 @@ import { imageForStop } from '@/lib/place-image';
 // crawlers index every spot; humans can scan before planning.
 
 export const revalidate = 3600;
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
   title: 'Every Kelowna spot we plan with | After5',

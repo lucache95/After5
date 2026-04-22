@@ -5,7 +5,7 @@ import { AggregatorView, type PlaceCardData, type DateCardData } from '@/compone
 import { findNeighborhood, neighborhoodFromSlug, NEIGHBORHOODS } from '@/lib/taxonomy';
 
 export const revalidate = 3600;
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 export async function generateStaticParams() {
   return NEIGHBORHOODS.map((n) => ({ slug: n.slug }));

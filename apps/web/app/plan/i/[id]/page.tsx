@@ -47,7 +47,7 @@ export async function generateMetadata(props: {
   const { id } = await props.params;
   const row = await loadById(id);
   if (!row?.slug) return {};
-  return { alternates: { canonical: `https://after5.app/dates/${row.slug}` } };
+  return { alternates: { canonical: `https://tryafter5.app/dates/${row.slug}` } };
 }
 
 export default async function PublicItineraryPage(props: {

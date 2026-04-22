@@ -6,7 +6,7 @@ import { VIBES, NEIGHBORHOODS, PLACE_TYPES } from '@/lib/taxonomy';
 // Refreshes hourly via the route's default revalidation. Submit at
 // https://search.google.com/search-console for crawl bootstrapping.
 
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 export const revalidate = 3600;
 

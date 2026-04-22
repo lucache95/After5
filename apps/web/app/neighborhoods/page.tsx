@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
 import { NEIGHBORHOODS } from '@/lib/taxonomy';
 
-const SITE = 'https://after5.app';
+const SITE = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
   title: 'Kelowna neighborhoods — places + dates by area | After5',
