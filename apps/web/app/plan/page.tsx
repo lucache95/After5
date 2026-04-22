@@ -835,6 +835,9 @@ function InputsView(props: {
                 </span>
                 <span className="text-sm text-muted">per person</span>
               </div>
+              <p className="mt-1 text-sm text-secondary [font-variant-numeric:tabular-nums]">
+                ≈ <span className="font-medium text-text">${inputs.budget_per_person * 2}</span> total for two
+              </p>
               <input
                 type="range"
                 min={0}
