@@ -622,8 +622,7 @@ function InputsView(props: {
             {inputs.occasion === 'date' && (
               <div className="mt-10 space-y-6 rounded-card border border-border bg-surface p-6 md:p-7">
                 <p className="text-sm leading-relaxed text-secondary">
-                  <span className="text-text">Optional:</span> tells us how to write the plan
-                  ("she'll love the sunset" vs "he'll appreciate the brewery"). Skip and we'll keep it neutral.
+                  <span className="text-text">Optional.</span>
                 </p>
 
                 <div>
