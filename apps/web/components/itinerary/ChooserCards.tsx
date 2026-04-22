@@ -37,8 +37,8 @@ export function ChooserCards({
                 : 'border-transparent hover:border-border',
             )}
           >
-            {/* Image with template chip overlay only — title sits below for
-                guaranteed contrast regardless of photo. */}
+            {/* Image carries only the right-stack badges. Template name moves
+                below as an eyebrow so long names can never collide. */}
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-surface">
               <Image
                 src={cover}
@@ -47,14 +47,6 @@ export function ChooserCards({
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.02]"
               />
-              <div className="absolute left-3 top-3">
-                <span className="rounded-pill bg-white/95 px-2.5 py-1 text-[11px] font-medium tracking-wide text-text backdrop-blur-sm">
-                  {it.template_name}
-                </span>
-              </div>
-              {/* Top-right badges — every plan gets the green
-                  "Custom built for you" mark; plan #1 additionally gets
-                  the gold "Our pick" badge stacked above it. */}
               <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
                 {i === 0 && (
                   <span className="inline-flex items-center gap-1 rounded-pill bg-amber-400/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-950 backdrop-blur-sm shadow-sm">
@@ -67,9 +59,12 @@ export function ChooserCards({
               </div>
             </div>
 
-            {/* Title + meta below image, on the card surface — always readable. */}
+            {/* Title block — template eyebrow + title + meta. */}
             <div className="mt-3 px-1">
-              <h3 className="font-display text-lg font-semibold leading-tight text-text md:text-xl">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {it.template_name}
+              </p>
+              <h3 className="mt-1 font-display text-lg font-semibold leading-tight text-text md:text-xl">
                 {it.title}
               </h3>
               <p className="mt-1.5 text-xs text-muted [font-variant-numeric:tabular-nums]">

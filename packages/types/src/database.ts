@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -159,6 +157,50 @@ export type Database = {
           },
         ]
       }
+      itinerary_reviews: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: string
+          issue_tags: string[]
+          itinerary_id: string
+          notes: string | null
+          reviewer_id: string
+          reviewer_type: string
+          verdict: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          issue_tags?: string[]
+          itinerary_id: string
+          notes?: string | null
+          reviewer_id: string
+          reviewer_type: string
+          verdict: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          issue_tags?: string[]
+          itinerary_id?: string
+          notes?: string | null
+          reviewer_id?: string
+          reviewer_type?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itinerary_reviews_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modifiers: {
         Row: {
           body: string
@@ -231,6 +273,53 @@ export type Database = {
           },
         ]
       }
+      place_reviews: {
+        Row: {
+          action: string
+          after_data: Json | null
+          before_data: Json | null
+          confidence: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          place_id: string
+          reviewer_id: string
+          reviewer_type: string
+        }
+        Insert: {
+          action: string
+          after_data?: Json | null
+          before_data?: Json | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          place_id: string
+          reviewer_id: string
+          reviewer_type: string
+        }
+        Update: {
+          action?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          place_id?: string
+          reviewer_id?: string
+          reviewer_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "place_reviews_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       place_vibe_images: {
         Row: {
           ai_reason: string | null
@@ -280,20 +369,33 @@ export type Database = {
           address: string | null
           approval_status: Database["public"]["Enums"]["place_approval_status"]
           at_home: boolean
+          booking_lead_time_days: number | null
+          booking_method: string | null
+          booking_phone: string | null
+          booking_url: string | null
+          category_group: string | null
           closed_days: number[]
           closes: string | null
           created_at: string
           cuisine: string[]
+          daytime_photo_url: string | null
           discovered_at: string | null
           drive_cluster: string
           effort: Database["public"]["Enums"]["effort_level"]
           energy: Database["public"]["Enums"]["energy_level"]
+          evening_friendly: boolean | null
+          evening_photo_url: string | null
           feedback_score: number
           friction_score: string | null
           google_place_id: string | null
           hours_week: Json | null
           id: string
           is_active: boolean
+          is_published: boolean
+          last_ai_review_at: string | null
+          last_ai_review_confidence: number | null
+          last_human_review_at: string | null
+          last_human_review_by: string | null
           lat: number | null
           llm_summary: string | null
           lng: number | null
@@ -305,6 +407,9 @@ export type Database = {
           pairing_tags: string[]
           perceived_value: string | null
           phone: string | null
+          photo_quality: string | null
+          photo_review_notes: string | null
+          photo_time_of_day: string | null
           photo_url: string | null
           photos: Json | null
           price_tier: Database["public"]["Enums"]["price_tier"]
@@ -335,20 +440,33 @@ export type Database = {
           address?: string | null
           approval_status?: Database["public"]["Enums"]["place_approval_status"]
           at_home?: boolean
+          booking_lead_time_days?: number | null
+          booking_method?: string | null
+          booking_phone?: string | null
+          booking_url?: string | null
+          category_group?: string | null
           closed_days?: number[]
           closes?: string | null
           created_at?: string
           cuisine?: string[]
+          daytime_photo_url?: string | null
           discovered_at?: string | null
           drive_cluster: string
           effort?: Database["public"]["Enums"]["effort_level"]
           energy?: Database["public"]["Enums"]["energy_level"]
+          evening_friendly?: boolean | null
+          evening_photo_url?: string | null
           feedback_score?: number
           friction_score?: string | null
           google_place_id?: string | null
           hours_week?: Json | null
           id?: string
           is_active?: boolean
+          is_published?: boolean
+          last_ai_review_at?: string | null
+          last_ai_review_confidence?: number | null
+          last_human_review_at?: string | null
+          last_human_review_by?: string | null
           lat?: number | null
           llm_summary?: string | null
           lng?: number | null
@@ -360,6 +478,9 @@ export type Database = {
           pairing_tags?: string[]
           perceived_value?: string | null
           phone?: string | null
+          photo_quality?: string | null
+          photo_review_notes?: string | null
+          photo_time_of_day?: string | null
           photo_url?: string | null
           photos?: Json | null
           price_tier?: Database["public"]["Enums"]["price_tier"]
@@ -390,20 +511,33 @@ export type Database = {
           address?: string | null
           approval_status?: Database["public"]["Enums"]["place_approval_status"]
           at_home?: boolean
+          booking_lead_time_days?: number | null
+          booking_method?: string | null
+          booking_phone?: string | null
+          booking_url?: string | null
+          category_group?: string | null
           closed_days?: number[]
           closes?: string | null
           created_at?: string
           cuisine?: string[]
+          daytime_photo_url?: string | null
           discovered_at?: string | null
           drive_cluster?: string
           effort?: Database["public"]["Enums"]["effort_level"]
           energy?: Database["public"]["Enums"]["energy_level"]
+          evening_friendly?: boolean | null
+          evening_photo_url?: string | null
           feedback_score?: number
           friction_score?: string | null
           google_place_id?: string | null
           hours_week?: Json | null
           id?: string
           is_active?: boolean
+          is_published?: boolean
+          last_ai_review_at?: string | null
+          last_ai_review_confidence?: number | null
+          last_human_review_at?: string | null
+          last_human_review_by?: string | null
           lat?: number | null
           llm_summary?: string | null
           lng?: number | null
@@ -415,6 +549,9 @@ export type Database = {
           pairing_tags?: string[]
           perceived_value?: string | null
           phone?: string | null
+          photo_quality?: string | null
+          photo_review_notes?: string | null
+          photo_time_of_day?: string | null
           photo_url?: string | null
           photos?: Json | null
           price_tier?: Database["public"]["Enums"]["price_tier"]
@@ -762,3 +899,155 @@ export type Database = {
     }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      effort_level: ["low", "moderate", "high"],
+      energy_level: ["low", "medium", "high"],
+      modifier_difficulty: ["tame", "spicy", "chaos"],
+      occasion: ["date", "solo", "friends"],
+      place_approval_status: ["draft", "live", "rejected"],
+      place_type: [
+        "restaurant",
+        "cafe",
+        "winery",
+        "brewery",
+        "cocktail_bar",
+        "dessert",
+        "ice_cream",
+        "bakery",
+        "hike",
+        "viewpoint",
+        "beach",
+        "park",
+        "garden",
+        "activity",
+        "gallery",
+        "market",
+        "shop",
+        "sunset_spot",
+        "walk",
+      ],
+      price_tier: ["$", "$$", "$$$"],
+      weather_works_in: ["any", "dry_only", "indoor_friendly"],
+    },
+  },
+} as const

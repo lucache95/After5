@@ -8,6 +8,7 @@ import { RecentBuildsToast } from '@/components/RecentBuildsToast';
 import { UserMenu } from '@/components/UserMenu';
 import { Polaroid } from '@/components/Polaroid';
 import { HonestTestimonials } from '@/components/HonestTestimonials';
+import { WowFactorStrip } from '@/components/WowFactorStrip';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
@@ -330,6 +331,9 @@ export default async function HomePage() {
 
         {/* ─── Explore real dates (server-fetched from /dates catalog) ─ */}
         <ExploreDatesStrip />
+
+        {/* ─── Wow factor — every plan gets a "twist" modifier baked in ── */}
+        <WowFactorStrip />
 
         {/* ─── Benefits ─────────────────────────────────────────── */}
         <section className="border-t border-border">
