@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>Your After5 sign-in link</title>
+<style>
+  /* Email clients ignore <style> in many places — every important style
+     is also inlined. This block is fallback for clients that DO support it
+     (Gmail web, Apple Mail). */
+  body, table, td, p, a, h1, h2 { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  a.btn:hover { background-color: #2a2a2a !important; }
+  @media (prefers-color-scheme: dark) {
+    .bg-cream { background-color: #FDF9F3 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#FDF9F3;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FDF9F3" class="bg-cream" style="background-color:#FDF9F3;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+
+          <!-- Brand wordmark -->
+          <tr>
+            <td align="left" style="padding:0 0 36px 0;">
+              <a href="https://tryafter5.app" style="font-family:'Inter','Segoe UI',sans-serif;font-size:20px;font-weight:700;color:#1A1A1A;text-decoration:none;letter-spacing:-0.01em;">After5</a>
+            </td>
+          </tr>
+
+          <!-- Main card -->
+          <tr>
+            <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E8DFCB;border-radius:18px;padding:36px 32px;">
+
+              <!-- Eyebrow -->
+              <p style="margin:0 0 12px 0;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#8B8884;">
+                Sign in to After5
+              </p>
+
+              <!-- Headline with italic accent -->
+              <h1 style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',sans-serif;font-size:30px;font-weight:700;line-height:1.1;letter-spacing:-0.02em;color:#1A1A1A;">
+                Good to <em style="font-style:italic;font-weight:600;color:#C2552B;">see</em> you.
+              </h1>
+
+              <p style="margin:0 0 28px 0;font-family:'Inter',sans-serif;font-size:15px;line-height:1.55;color:#6B6864;">
+                Tap the button below to sign in. No password, no fuss — the link is good for one hour.
+              </p>
+
+              <!-- CTA button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                <tr>
+                  <td bgcolor="#1A1A1A" style="background-color:#1A1A1A;border-radius:9999px;">
+                    <a class="btn" href="{{ .ConfirmationURL }}" target="_blank"
+                       style="display:inline-block;padding:14px 32px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;color:#FDF9F3;text-decoration:none;border-radius:9999px;">
+                      Sign in to After5 &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 4px 0;font-family:'Inter',sans-serif;font-size:12px;line-height:1.55;color:#8B8884;">
+                Or paste this link into your browser:
+              </p>
+              <p style="margin:0;font-family:'Inter',sans-serif;font-size:12px;line-height:1.55;color:#8B8884;word-break:break-all;">
+                <a href="{{ .ConfirmationURL }}" style="color:#C2552B;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Reassurance + footer -->
+          <tr>
+            <td style="padding:32px 8px 0 8px;">
+              <p style="margin:0 0 8px 0;font-family:'Inter',sans-serif;font-size:12px;line-height:1.6;color:#8B8884;">
+                Didn&rsquo;t request this? Ignore the email — your account stays safe.
+              </p>
+              <p style="margin:0 0 8px 0;font-family:'Inter',sans-serif;font-size:12px;line-height:1.6;color:#8B8884;">
+                Curated date plans for Kelowna couples, by people who actually live here.
+                <a href="https://tryafter5.app" style="color:#1A1A1A;text-decoration:underline;">tryafter5.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
