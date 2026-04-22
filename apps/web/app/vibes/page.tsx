@@ -59,7 +59,7 @@ export default function VibesIndexPage() {
           <div className="flex items-center gap-6 text-xs text-muted">
             <Link href="/privacy" className="transition-colors hover:text-text">Privacy</Link>
             <Link href="/terms" className="transition-colors hover:text-text">Terms</Link>
-            <a href="mailto:lucas@after5.app" className="transition-colors hover:text-text">lucas@after5.app</a>
+            <a href="mailto:lucas@lucassenechal.com" className="transition-colors hover:text-text">lucas@lucassenechal.com</a>
           </div>
         </div>
       </footer>

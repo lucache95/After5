@@ -4,14 +4,21 @@
 // together, sorted newest-first:
 //   - Recent claims:  "Emma from Glenmore just claimed a spot · 3 hr ago"
 //   - Recent builds:  "Sarah from Lower Mission built 'Westside Sunset' · 1 day ago"
-// Fades in 4s after page load, rotates every 8s, dismissible for the session.
-// Claims come from /api/stats (includes 10 seed rows for launch UX).
+//
+// Choreography:
+//   1. First mount: 4s grace period before fading in (don't fight the hero).
+//   2. Each rotation: 320ms exit (fade + slide-down + scale-down) → swap
+//      content → 320ms enter (fade + slide-up + scale-up). Rotation cadence
+//      is 8s so users still get ~7s to read each card.
+//   3. Mobile: pinned bottom-left with safe-area padding; tighter width
+//      and slightly smaller padding so it doesn't crowd touch targets.
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { relativeTime } from '@/lib/relative-time';
 import { Avatar } from './Avatar';
+import { cn } from '@/lib/cn';
 import { X } from 'lucide-react';
 
 interface ClaimEvent {
@@ -33,12 +40,17 @@ interface BuildEvent {
 type ProofEvent = ClaimEvent | BuildEvent;
 
 const DISMISSED_KEY = 'after5_social_proof_dismissed';
+const ROTATE_MS = 8000;
+const TRANSITION_MS = 320;
+
+type Phase = 'enter' | 'visible' | 'exit';
 
 export function RecentBuildsToast() {
   const [events, setEvents] = useState<ProofEvent[]>([]);
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [phase, setPhase] = useState<Phase>('enter');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -59,7 +71,7 @@ export function RecentBuildsToast() {
           .not('slug', 'is', null)
           .order('generated_at', { ascending: false })
           .limit(10),
-        fetch('/api/stats', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/stats', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (cancelled) return;
@@ -82,24 +94,41 @@ export function RecentBuildsToast() {
         at: r.created_at,
       }));
 
-      // Merge, sort newest-first, cap at 12 for rotation variety.
       const merged: ProofEvent[] = [...builds, ...claims]
         .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
         .slice(0, 12);
 
       if (merged.length > 0) {
         setEvents(merged);
-        setTimeout(() => setVisible(true), 4000);
+        setTimeout(() => {
+          setVisible(true);
+          // Allow the entrance animation to play, then settle.
+          requestAnimationFrame(() => setPhase('visible'));
+        }, 4000);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [dismissed]);
 
+  // Choreographed rotation: exit → swap → enter.
   useEffect(() => {
-    if (events.length <= 1) return;
-    const id = setInterval(() => setIdx((i) => (i + 1) % events.length), 8000);
-    return () => clearInterval(id);
-  }, [events.length]);
+    if (events.length <= 1 || !visible) return;
+    const interval = setInterval(() => {
+      setPhase('exit');
+      window.setTimeout(() => {
+        setIdx((i) => (i + 1) % events.length);
+        setPhase('enter');
+        // Two rAFs to guarantee the browser paints the entering state
+        // before transitioning to visible.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setPhase('visible'));
+        });
+      }, TRANSITION_MS);
+    }, ROTATE_MS);
+    return () => clearInterval(interval);
+  }, [events.length, visible]);
 
   if (dismissed || !visible || events.length === 0) return null;
   const e = events[idx];
@@ -110,58 +139,73 @@ export function RecentBuildsToast() {
     if (typeof window !== 'undefined') sessionStorage.setItem(DISMISSED_KEY, '1');
   }
 
-  // Build readable message inline.
   const ago = relativeTime(e.at);
   const cityLabel = e.city ? ` from ${e.city}` : '';
 
   const body = e.type === 'claim' ? (
     <>
-      <p className="text-sm leading-snug text-text">
+      <p className="text-[13px] leading-snug text-text md:text-sm">
         <span className="font-medium">{e.name}</span>
         <span className="text-secondary">{cityLabel} just claimed a free spot</span>
       </p>
-      <p className="mt-0.5 text-xs text-muted">{ago}</p>
+      <p className="mt-0.5 text-[11px] text-muted md:text-xs">{ago}</p>
     </>
   ) : (
     <>
-      <p className="text-sm leading-snug text-text">
+      <p className="text-[13px] leading-snug text-text md:text-sm">
         <span className="font-medium">{e.name}</span>
         <span className="text-secondary">{cityLabel} built</span>
       </p>
-      <p className="mt-0.5 truncate text-sm font-medium text-text">{e.title}</p>
-      <p className="mt-0.5 text-xs text-muted">{ago}</p>
+      <p className="mt-0.5 truncate text-[13px] font-medium text-text md:text-sm">{e.title}</p>
+      <p className="mt-0.5 text-[11px] text-muted md:text-xs">{ago}</p>
     </>
   );
 
   const href = e.type === 'build' ? `/dates/${e.slug}` : '/login';
 
+  // Phase → transform/opacity. Visible = settled state; enter starts
+  // slightly down + faded; exit slides down + fades.
+  const phaseClass =
+    phase === 'visible'
+      ? 'opacity-100 translate-y-0 scale-100'
+      : phase === 'exit'
+        ? 'opacity-0 translate-y-3 scale-[0.96]'
+        : /* enter */ 'opacity-0 translate-y-3 scale-[0.96]';
+
   return (
-    <div className="fixed bottom-4 left-4 z-40 max-w-[340px] animate-[fadeIn_.4s_ease-out]">
-      <Link
-        href={href}
-        className="flex items-start gap-3 rounded-card border border-border bg-background px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-shadow hover:shadow-[0_8px_32px_rgba(0,0,0,0.14)]"
+    <div
+      // Mobile: tighter width, padding bottom for safe-area + room above
+      // sticky bottom CTAs. Desktop: original size.
+      className="fixed bottom-3 left-3 right-3 z-40 max-w-[320px] md:bottom-4 md:left-4 md:right-auto md:max-w-[340px]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
+      <div
+        className={cn(
+          'transform-gpu transition-all ease-out',
+          phaseClass,
+        )}
+        style={{ transitionDuration: `${TRANSITION_MS}ms` }}
       >
-        <Avatar name={e.name} size="md" />
-        <div className="flex-1 min-w-0">{body}</div>
-        <button
-          type="button"
-          onClick={(ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            dismiss();
-          }}
-          aria-label="Dismiss"
-          className="-mr-1 -mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-text"
+        <Link
+          href={href}
+          className="flex items-start gap-3 rounded-card border border-border bg-background px-3.5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-shadow hover:shadow-[0_8px_32px_rgba(0,0,0,0.14)] md:px-4"
         >
-          <X className="h-3.5 w-3.5" strokeWidth={2.5} />
-        </button>
-      </Link>
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+          <Avatar name={e.name} size="md" />
+          <div className="flex-1 min-w-0">{body}</div>
+          <button
+            type="button"
+            onClick={(ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              dismiss();
+            }}
+            aria-label="Dismiss"
+            className="-mr-1 -mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-text active:bg-surface"
+          >
+            <X className="pointer-events-none h-3.5 w-3.5" strokeWidth={2.5} />
+          </button>
+        </Link>
+      </div>
     </div>
   );
 }

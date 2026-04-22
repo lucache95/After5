@@ -119,8 +119,8 @@ export default async function DatesIndexPage() {
             <Link href="/terms" className="transition-colors hover:text-text">
               Terms
             </Link>
-            <a href="mailto:lucas@after5.app" className="transition-colors hover:text-text">
-              lucas@after5.app
+            <a href="mailto:lucas@lucassenechal.com" className="transition-colors hover:text-text">
+              lucas@lucassenechal.com
             </a>
           </div>
         </div>
