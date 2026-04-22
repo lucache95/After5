@@ -5,12 +5,12 @@
 // user actually clicks Download so we don't pay the bundle cost upfront.
 
 import { useState } from 'react';
-import { Share2, Download, Calendar, MapPin, Check } from 'lucide-react';
+import { Download, Calendar, MapPin } from 'lucide-react';
 import { downloadIcs } from '@/lib/calendar';
+import { ShareSheet } from './ShareSheet';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 export function ItineraryActions({ itinerary }: { itinerary: Itinerary }) {
-  const [copied, setCopied] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   // Prefer the SEO-canonical slug URL when available so shared links carry
@@ -23,25 +23,6 @@ export function ItineraryActions({ itinerary }: { itinerary: Itinerary }) {
           ? `${window.location.origin}/plan/i/${itinerary.id}`
           : ''
       : '';
-
-  async function onShare() {
-    if (!shareUrl) return;
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({
-          title: itinerary.title,
-          text: `${itinerary.title} — a date plan from After5`,
-          url: shareUrl,
-        });
-      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      }
-    } catch {
-      // user dismissed, no-op
-    }
-  }
 
   async function onDownloadPdf() {
     setPdfLoading(true);
@@ -75,23 +56,13 @@ export function ItineraryActions({ itinerary }: { itinerary: Itinerary }) {
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        onClick={onShare}
-        className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
-      >
-        {copied ? (
-          <>
-            <Check className="h-4 w-4" strokeWidth={2} />
-            Link copied
-          </>
-        ) : (
-          <>
-            <Share2 className="h-4 w-4" strokeWidth={2} />
-            Share this plan
-          </>
-        )}
-      </button>
+      <ShareSheet
+        shareUrl={shareUrl}
+        title={itinerary.title}
+        hook={itinerary.hook || `${itinerary.title} — a date plan from After5`}
+        label="Share this plan"
+        className="w-full"
+      />
 
       <button
         type="button"

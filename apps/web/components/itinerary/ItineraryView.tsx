@@ -15,6 +15,8 @@ import { ModifierCard } from './ModifierCard';
 import { AnchorNav } from './AnchorNav';
 import { CuratorCard } from './CuratorCard';
 import { SavePlanButton } from './SavePlanButton';
+import { Polaroid } from '@/components/Polaroid';
+import { coverImageFor } from '@/lib/place-image';
 import { TIMEZONE_LABEL } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
 import type { ItineraryStats } from '@/lib/itinerary-stats';
@@ -37,21 +39,39 @@ export function ItineraryView({
       <ItineraryGalleryHero stops={itinerary.stops} />
 
       {/* Title + meta block — sits between the gallery and the two-column body.
-          Mirrors Airbnb's "Entire chalet · 6 guests · 2 bedrooms" treatment. */}
+          Mirrors Airbnb's "Entire chalet · 6 guests · 2 bedrooms" treatment.
+          Floating polaroid accent on the right ties this surface to the
+          /login + /account brand language. */}
       <header className="mx-auto max-w-content px-6 pt-8 md:px-10 md:pt-10">
-        {itinerary.template_name && (
-          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-            {itinerary.template_name} · Kelowna
-          </p>
-        )}
-        <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl lg:text-[56px]">
-          {itinerary.title}
-        </h1>
-        {itinerary.hook && (
-          <p className="mt-5 max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
-            {itinerary.hook}
-          </p>
-        )}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_auto] md:items-start md:gap-12">
+          <div className="min-w-0">
+            {itinerary.template_name && (
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
+                {itinerary.template_name} · Kelowna
+              </p>
+            )}
+            <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl lg:text-[56px]">
+              {itinerary.title}
+            </h1>
+            {itinerary.hook && (
+              <p className="mt-5 max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
+                {itinerary.hook}
+              </p>
+            )}
+          </div>
+
+          {/* Polaroid accent — uses the wow-stop cover. Hidden on mobile to
+              keep the title block scannable. */}
+          <div className="hidden shrink-0 self-start md:block">
+            <Polaroid
+              src={coverImageFor(itinerary.stops)}
+              alt={itinerary.title}
+              label="KELOWNA · 26"
+              size="md"
+              rotation={5}
+            />
+          </div>
+        </div>
 
         {/* Compact meta row — cost · duration · stops · vibes */}
         <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary [font-variant-numeric:tabular-nums]">

@@ -17,7 +17,7 @@ import { ChooserCards } from '@/components/itinerary/ChooserCards';
 import { RadiusMap } from '@/components/RadiusMap';
 import { HintCard } from '@/components/HintCard';
 import { FeedbackPulse } from '@/components/itinerary/FeedbackPulse';
-import { ShareForVoteButton } from '@/components/itinerary/ShareForVoteButton';
+import { ShareSheet } from '@/components/itinerary/ShareSheet';
 import { hintsForStep } from '@/lib/plan-hints';
 import { preflight, type TemplateLite } from '@/lib/preflight';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -1578,8 +1578,17 @@ function ResultsView(props: {
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-3">
-            <ShareForVoteButton
+            <ShareSheet
+              shareUrl={typeof window !== 'undefined' && active?.slug
+                ? `${window.location.origin}/dates/${active.slug}`
+                : typeof window !== 'undefined' && active?.id
+                  ? `${window.location.origin}/plan/i/${active.id}`
+                  : ''}
+              title={active?.title ?? 'Three Kelowna date plans'}
+              hook={active?.hook ?? 'Three plans built for tonight — pick one or vote with friends.'}
               itineraryIds={itineraries.map((it) => it.id).filter((id): id is string => Boolean(id))}
+              variant="emphasis"
+              label="Share"
             />
             <button
               type="button"
