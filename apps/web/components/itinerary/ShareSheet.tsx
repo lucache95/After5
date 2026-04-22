@@ -119,14 +119,21 @@ function ShareSheetModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm md:items-center"
-      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-end justify-center md:items-center"
       role="dialog"
       aria-modal="true"
     >
+      {/* Dedicated backdrop — handles click-outside-to-close. Separate from
+          the panel so the panel never has to play stopPropagation games. */}
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/50 backdrop-blur-sm"
+      />
+
       <div
         ref={sheetRef}
-        onClick={(e) => e.stopPropagation()}
         className="relative w-full max-h-[92vh] overflow-y-auto rounded-t-[20px] border-t border-border bg-background pb-8 pt-6 shadow-[0_-24px_64px_-20px_rgba(0,0,0,0.35)] md:max-w-[520px] md:rounded-[20px] md:border md:pb-7"
         style={{ animation: 'sheetIn .3s cubic-bezier(0.2, 0.8, 0.2, 1)' }}
       >
@@ -144,11 +151,15 @@ function ShareSheetModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
             aria-label="Close"
-            className="-mr-1 -mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-text"
+            className="relative z-10 -mr-1 -mt-1 inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-text active:bg-surface"
           >
-            <X className="h-4 w-4" strokeWidth={2.25} />
+            <X className="pointer-events-none h-5 w-5" strokeWidth={2.25} />
           </button>
         </div>
 
