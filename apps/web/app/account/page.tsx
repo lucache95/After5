@@ -73,8 +73,10 @@ export default async function AccountPage() {
   // returns 0 (which made "Your spot" misalign with the banner).
   const admin = createAdminClient();
 
-  // Parallel data fetch — profile, saved plans, picks, total signups.
-  const [profileRes, savedRes, picksRes, countRes] = await Promise.all([
+  // Parallel data fetch — profile, saved plans (preview only), saved count,
+  // picks, total signups. The dashboard shows 8 polaroids max so the page
+  // doesn't drown in chaos at scale; full collection lives at /account/saved.
+  const [profileRes, savedRes, savedCountRes, picksRes, countRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('first_name, city, neighborhood, created_at')
@@ -85,7 +87,11 @@ export default async function AccountPage() {
       .select('id, saved_at, itinerary:itineraries(id, slug, title, total_cost_pp, total_duration_min, stops)')
       .eq('user_id', user.id)
       .order('saved_at', { ascending: false })
-      .limit(12),
+      .limit(8),
+    supabase
+      .from('saved_plans')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id),
     supabase
       .from('itineraries')
       .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, generated_at')
@@ -101,6 +107,7 @@ export default async function AccountPage() {
 
   const profile = profileRes.data;
   const saved = (savedRes.data ?? []) as unknown as SavedRow[];
+  const savedTotal = savedCountRes.count ?? saved.length;
   const picks = (picksRes.data ?? []) as unknown as PickRow[];
   const claimed = countRes.count ?? 0;
   const remaining = Math.max(0, EARLY_ACCESS_CAP - claimed);
@@ -201,9 +208,9 @@ export default async function AccountPage() {
                 Saved dates
               </h2>
             </div>
-            {saved.length > 0 && (
+            {savedTotal > 0 && (
               <p className="text-xs text-muted [font-variant-numeric:tabular-nums]">
-                {saved.length} {saved.length === 1 ? 'plan' : 'plans'}
+                {savedTotal} {savedTotal === 1 ? 'plan' : 'plans'}
               </p>
             )}
           </div>
@@ -211,6 +218,7 @@ export default async function AccountPage() {
           {saved.length === 0 ? (
             <EmptyDates />
           ) : (
+            <>
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
               {saved.map((s, i) => {
                 if (!s.itinerary) return null;
@@ -239,6 +247,18 @@ export default async function AccountPage() {
                 );
               })}
             </div>
+            {savedTotal > saved.length && (
+              <div className="mt-10 flex justify-center">
+                <Link
+                  href="/account/saved"
+                  className="inline-flex items-center gap-2 rounded-pill border border-border bg-background px-6 py-3 text-sm font-medium text-text transition-colors hover:bg-surface"
+                >
+                  View all {savedTotal} saved plans
+                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                </Link>
+              </div>
+            )}
+            </>
           )}
         </section>
 
