@@ -27,13 +27,11 @@ export async function GET() {
   // the server.
   const supabase = createAdminClient();
 
-  // Aggregate count — REAL signups only (excludes source='seed_demo' visual
-  // seeds). The banner needs to be honest: 100 spots claimed must mean 100
-  // real people. Seeds still appear in the rotating toast for variety.
+  // Aggregate count — every subscriber row is a real signup now (seed_demo
+  // rows were deleted on 2026-04-22).
   const { count } = await supabase
     .from('subscribers')
-    .select('*', { count: 'exact', head: true })
-    .neq('source', 'seed_demo');
+    .select('*', { count: 'exact', head: true });
 
   const claimed = count ?? 0;
   const remaining = Math.max(0, EARLY_ACCESS_CAP - claimed);
