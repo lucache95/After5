@@ -25,7 +25,7 @@ const PRINCIPLES = [
     body: 'After5 is for the next 30 seconds: turn "where should we go?" into a real plan. Matching, sharing, swiping someone else\'s plan — that\'s coming. The plan itself stays the centre.',
   },
   {
-    title: 'Forever free for the first 1000.',
+    title: 'Forever free for the first 100.',
     body: 'No pricing page. No upsell. Our early Kelownans get every future feature on the house — that\'s the deal.',
   },
 ];

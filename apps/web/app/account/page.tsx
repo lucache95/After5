@@ -48,7 +48,7 @@ interface PickRow {
   generated_at: string;
 }
 
-const EARLY_ACCESS_CAP = 1000;
+const EARLY_ACCESS_CAP = 100;
 
 // Per-theme background swatch — pulls from the existing /vibes images
 // so themes get real Okanagan photography in their preview tiles.
@@ -370,7 +370,7 @@ export default async function AccountPage() {
                   Your spot
                 </p>
                 <h2 className="font-display text-2xl font-bold leading-tight text-text md:text-3xl">
-                  You&apos;re #{Math.min(claimed, EARLY_ACCESS_CAP)} of the first 1,000.
+                  You&apos;re #{Math.min(claimed, EARLY_ACCESS_CAP)} of the first 100.
                 </h2>
                 <p className="mt-3 max-w-md text-sm leading-relaxed text-secondary">
                   Forever free. We&apos;ll never charge you for plans, ever. Thanks for being early.

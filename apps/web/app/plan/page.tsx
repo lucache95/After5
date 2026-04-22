@@ -1554,7 +1554,7 @@ function EmailGate({
                 </button>
               </div>
               <p className="pt-1 text-xs text-muted">
-                Free forever for the first 1,000 Kelownans. No credit card.
+                Free forever for the first 100 Kelownans. No credit card.
               </p>
             </form>
           </>

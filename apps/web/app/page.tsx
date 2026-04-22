@@ -434,17 +434,17 @@ export default async function HomePage() {
               </a>
               . Coming to Kamloops, Vernon, Penticton.
             </p>
-            <div className="flex items-center gap-6 text-xs text-muted">
-              <Link
-                href="/privacy"
-                className="transition-colors hover:text-text"
-              >
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted">
+              <Link href="/about" className="transition-colors hover:text-text">
+                About
+              </Link>
+              <Link href="/roadmap" className="transition-colors hover:text-text">
+                Roadmap
+              </Link>
+              <Link href="/privacy" className="transition-colors hover:text-text">
                 Privacy
               </Link>
-              <Link
-                href="/terms"
-                className="transition-colors hover:text-text"
-              >
+              <Link href="/terms" className="transition-colors hover:text-text">
                 Terms
               </Link>
               <a
