@@ -8,7 +8,7 @@
 // plenty fast for the UI effect.
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const revalidate = 60;
 
@@ -21,7 +21,11 @@ interface RecentSignup {
 }
 
 export async function GET() {
-  const supabase = await createClient();
+  // Service-role client — subscribers RLS only allows INSERT for anon, so
+  // a user-context client returns 0 rows here. We only return non-PII
+  // fields (first_name, city, created_at) to the public — emails stay on
+  // the server.
+  const supabase = createAdminClient();
 
   // Aggregate count — includes seed rows so the banner has a non-zero
   // figure at launch. Real signups land in the same table and bump it.
