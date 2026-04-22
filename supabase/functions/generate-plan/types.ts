@@ -60,6 +60,10 @@ export interface Place {
   // 'exceeds_price' | 'matches' | 'overpriced' — does this feel like more
   // value than what it costs? Tight budgets bias toward 'exceeds_price'.
   perceived_value?: 'exceeds_price' | 'matches' | 'overpriced';
+  // AI-classified photo metadata (nullable until classify-photos has run).
+  photo_time_of_day?: 'day' | 'dusk' | 'evening' | 'any' | null;
+  photo_season?: 'winter' | 'spring' | 'summer' | 'fall' | 'any' | null;
+  photo_has_snow?: boolean | null;
 }
 
 export interface TemplateSlot {

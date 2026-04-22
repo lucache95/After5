@@ -232,6 +232,41 @@ serve(async (req: Request) => {
       { inputs, itineraries, placesById }
     );
 
+    // 7b. Scrub photos that don't match the season or stop time.
+    // Drops snow shots in non-winter; drops daytime shots at evening stops.
+    // Setting photo_url to null lets the frontend fall back to the type-based
+    // image (handled by lib/place-image.ts on the client).
+    const nowMonth0 = new Date().getMonth();
+    const seasonNow =
+      nowMonth0 >= 2 && nowMonth0 <= 4 ? 'spring' :
+      nowMonth0 >= 5 && nowMonth0 <= 7 ? 'summer' :
+      nowMonth0 >= 8 && nowMonth0 <= 10 ? 'fall' : 'winter';
+
+    let photosScrubbed = 0;
+    for (const it of written) {
+      for (const stop of it.stops) {
+        if (!stop.photo_url) continue;
+        const place = placesById.get(stop.place_id);
+        if (!place) continue;
+
+        const startHour = parseInt(stop.start_time.split(':')[0] ?? '0', 10);
+        const isEveningStop = startHour >= 19;
+
+        // Reason 1: snow visible AND we're not in winter
+        const isStaleSnow = place.photo_has_snow === true && seasonNow !== 'winter';
+        // Reason 2: bright daytime photo at an evening stop
+        const isWrongTime = isEveningStop && place.photo_time_of_day === 'day';
+
+        if (isStaleSnow || isWrongTime) {
+          stop.photo_url = null;
+          photosScrubbed += 1;
+        }
+      }
+    }
+    if (photosScrubbed > 0) {
+      sharedLog.photos_scrubbed = photosScrubbed;
+    }
+
     // 8. Persist to DB.
     // Generate the slug AFTER insert (we need the row id), via UPDATE.
     // is_public=true so every new plan immediately becomes indexable SEO content.

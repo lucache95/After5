@@ -21,6 +21,8 @@ const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 
 interface ClassifyResult {
   time_of_day: 'day' | 'dusk' | 'evening' | 'any';
+  season: 'winter' | 'spring' | 'summer' | 'fall' | 'any';
+  has_snow: boolean;
   confidence: number;
   notes: string;
 }
@@ -47,20 +49,33 @@ async function classifyPhoto(
           { type: 'image', source: { type: 'url', url: photoUrl } },
           {
             type: 'text',
-            text: `Photo of "${placeName}" (a ${placeType}). Classify by visible time of day.
+            text: `Photo of "${placeName}" (a ${placeType}). Classify time of day, visible season, and whether snow is visible.
 
 Return JSON only, no prose:
 {
   "time_of_day": "day" | "dusk" | "evening" | "any",
+  "season": "winter" | "spring" | "summer" | "fall" | "any",
+  "has_snow": true | false,
   "confidence": 0.0-1.0,
-  "notes": "brief reason, 15 words max"
+  "notes": "brief reason, 20 words max"
 }
 
-Rules:
+time_of_day rules:
 - "day": clearly daytime, blue sky or bright sunlight
 - "dusk": golden hour, sunset, twilight, magic hour
 - "evening": after dark, artificial lighting, night sky, lit interior at night
-- "any": no time-of-day signal — interior close-up, food shot, product shot, abstract texture`,
+- "any": no time-of-day signal — interior close-up, food shot, product shot, abstract texture
+
+season rules:
+- "winter": bare trees, snow on ground, snow on mountains, leafless landscape
+- "spring": blossoms, fresh green leaves, light foliage
+- "summer": full lush green, full leaf cover, vibrant outdoor scene
+- "fall": orange/yellow/red leaves, autumn colour, leafless if late autumn
+- "any": no clear seasonal signal — interior, food, abstract, year-round-looking shot
+
+has_snow:
+- true ONLY if visible snow on the ground, on mountains, on roofs, etc — even a small patch counts
+- false otherwise (mist/fog/clouds/cream foam don't count)`,
           },
         ],
       }],
@@ -80,6 +95,8 @@ Rules:
   try {
     const parsed = JSON.parse(cleaned) as ClassifyResult;
     if (!['day', 'dusk', 'evening', 'any'].includes(parsed.time_of_day)) return null;
+    if (!['winter', 'spring', 'summer', 'fall', 'any'].includes(parsed.season)) return null;
+    if (typeof parsed.has_snow !== 'boolean') return null;
     return parsed;
   } catch {
     console.error('parse error', text);
@@ -118,7 +135,9 @@ serve(async (req: Request) => {
     .not('photo_url', 'is', null)
     .order('updated_at', { ascending: true })
     .limit(batchSize);
-  if (!force) query = query.is('photo_time_of_day', null);
+  // Skip already-classified rows unless force=true. v2 added season +
+  // has_snow, so anything missing photo_season also needs re-running.
+  if (!force) query = query.is('photo_season', null);
 
   const { data: places, error } = await query;
   if (error) {
@@ -150,6 +169,8 @@ serve(async (req: Request) => {
       .from('places')
       .update({
         photo_time_of_day: result.time_of_day,
+        photo_season: result.season,
+        photo_has_snow: result.has_snow,
         last_ai_review_at: new Date().toISOString(),
         last_ai_review_confidence: result.confidence,
       })
@@ -163,9 +184,13 @@ serve(async (req: Request) => {
     await supabase.from('place_reviews').insert({
       place_id: place.id,
       reviewer_type: 'ai',
-      reviewer_id: 'photo-classifier-v1',
+      reviewer_id: 'photo-classifier-v2',
       action: 'enrich',
-      after_data: { photo_time_of_day: result.time_of_day },
+      after_data: {
+        photo_time_of_day: result.time_of_day,
+        photo_season: result.season,
+        photo_has_snow: result.has_snow,
+      },
       notes: result.notes,
       confidence: result.confidence,
     });
@@ -174,6 +199,8 @@ serve(async (req: Request) => {
       id: place.id,
       name: place.name,
       time_of_day: result.time_of_day,
+      season: result.season,
+      has_snow: result.has_snow,
       confidence: result.confidence,
     });
 
