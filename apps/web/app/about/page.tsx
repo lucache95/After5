@@ -21,12 +21,12 @@ const PRINCIPLES = [
     body: 'We list a spot if we\'d send our friends. Hours, drive times, and order matter — nothing closes mid-date on our watch.',
   },
   {
-    title: 'No swipes. No matchmaking.',
-    body: 'You already have a date. After5 is for the next 30 seconds: turn "where should we go?" into a real plan.',
+    title: 'The plan comes first.',
+    body: 'After5 is for the next 30 seconds: turn "where should we go?" into a real plan. Matching, sharing, swiping someone else\'s plan — that\'s coming. The plan itself stays the centre.',
   },
   {
-    title: 'Forever free for the first 100.',
-    body: 'No pricing page. No upsell. Our early users get every future feature on the house — that\'s the deal.',
+    title: 'Forever free for the first 1000.',
+    body: 'No pricing page. No upsell. Our early Kelownans get every future feature on the house — that\'s the deal.',
   },
 ];
 
@@ -142,21 +142,20 @@ export default function AboutPage() {
         {/* TEAM */}
         <section className="mt-24 md:mt-32">
           <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-            The curators
+            The curator
           </p>
           <h2 className="font-display text-3xl font-bold tracking-[-0.02em] text-text md:text-4xl">
-            Three Kelownans who&apos;ve done every stop.
+            One Kelownan who&apos;s done every stop.
           </h2>
           <p className="mt-4 max-w-prose text-base leading-relaxed text-secondary">
-            We&apos;re a small team based here in the Okanagan. Every plan in the
-            catalog has been built and reality-checked by at least one of us — that&apos;s
-            why we say &quot;curated by people who actually live here&quot; and mean it.
+            After5 is just me right now — built and reality-checked from Lower Mission. Every spot in
+            the catalog is one I&apos;d send a friend to. As we grow, the plan is to bring on locals
+            who actually know their neighbourhood — but until then, &quot;curated by people who
+            actually live here&quot; means me, with a paper notebook, on a Tuesday night.
           </p>
 
-          <div className="mt-10 grid grid-cols-2 gap-6 md:grid-cols-3 md:gap-8">
+          <div className="mt-10 flex justify-center md:justify-start">
             <TeamCard initial="L" name="Lucas" role="Founder · Lower Mission" color="bg-rose-500" />
-            <TeamCard initial="A" name="Ada"   role="Local sleuth · Glenmore"  color="bg-amber-500" />
-            <TeamCard initial="M" name="Mia"   role="Photographer · Pandosy"   color="bg-emerald-500" />
           </div>
         </section>
 

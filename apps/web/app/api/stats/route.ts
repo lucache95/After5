@@ -12,7 +12,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const revalidate = 60;
 
-const EARLY_ACCESS_CAP = 100;
+const EARLY_ACCESS_CAP = 1000;
 
 interface RecentSignup {
   first_name: string;
