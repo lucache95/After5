@@ -48,6 +48,13 @@ export async function GET(request: NextRequest) {
     console.error('[auth/callback] mirrorToSubscribers failed', err);
   });
 
+  // Claim any anonymously-generated itineraries that were tagged with this
+  // email at the gate. So the user lands on /account and immediately sees
+  // the plans they just made — no manual reconnecting.
+  await claimItineraries(data.session.user).catch((err) => {
+    console.error('[auth/callback] claimItineraries failed', err);
+  });
+
   // Path-only redirect to avoid open-redirect via crafted next param.
   const safeNext = next.startsWith('/') ? next : '/account';
   return NextResponse.redirect(`${origin}${safeNext}`);
@@ -94,5 +101,27 @@ async function mirrorToSubscribers(user: SessionUser) {
     .insert({ email, first_name: firstName, source: 'auth_signup' });
   if (error) {
     console.error('[auth/callback] subscribers insert error', error);
+  }
+}
+
+interface SessionUserWithId extends SessionUser {
+  id: string;
+}
+
+async function claimItineraries(user: SessionUserWithId) {
+  const email = user.email?.toLowerCase().trim();
+  if (!email || !user.id) return;
+
+  const admin = createAdminClient();
+  const { error, count } = await admin
+    .from('itineraries')
+    .update({ user_id: user.id }, { count: 'exact' })
+    .eq('claim_email', email)
+    .is('user_id', null);
+
+  if (error) {
+    console.error('[auth/callback] claim itineraries error', error);
+  } else if (count && count > 0) {
+    console.log(`[auth/callback] claimed ${count} itineraries for ${email}`);
   }
 }

@@ -1392,19 +1392,44 @@ function EmailGate({
   type Sub = 1 | 2 | 3;
   const [substep, setSubstep] = useState<Sub>(1);
   const [email, setEmail] = useState('');
-  const [inKelowna, setInKelowna] = useState(true);
   const [city, setCity] = useState('');
   const [firstName, setFirstName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+  // Fires once on the FIRST step submit. Creates the auth.user (unconfirmed)
+  // and sends the magic link. shouldCreateUser=true means new emails get an
+  // account silently — they see plans immediately and the link in their
+  // inbox is for coming back. Existing emails just get a sign-in link.
+  async function sendMagicLink() {
+    if (magicLinkSent) return;
+    try {
+      const supabase = createClient();
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${origin}/auth/callback?next=/account`,
+          data: {
+            first_name: firstName || undefined,
+            city: city || undefined,
+          },
+        },
+      });
+      setMagicLinkSent(true);
+    } catch (err) {
+      console.error('magic link failed', err);
+    }
+  }
+
   // Saves whatever we have so far. Called at each advance so partial submits
-  // still get captured even if the user bails on a later step.
+  // still get captured even if the user bails on a later step. Also writes
+  // claim_email on the itineraries so /auth/callback can attach them.
   async function persist(extra: Record<string, unknown> = {}) {
     if (!emailValid) return;
-    // Stash first_name + city in localStorage so the results page can
-    // personalize the header copy ("Built three plans for you, Sarah.")
     if (typeof window !== 'undefined') {
       if (firstName) localStorage.setItem('after5_first_name', firstName);
       if (city) localStorage.setItem('after5_city', city);
@@ -1415,7 +1440,6 @@ function EmailGate({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          location: inKelowna ? 'kelowna' : 'other',
           city: city || null,
           first_name: firstName || null,
           source: 'plan_gate',
@@ -1431,7 +1455,9 @@ function EmailGate({
 
   async function advance(nextSub: Sub | 'done') {
     setSubmitting(true);
-    await persist();
+    // Run subscribe + magic-link in parallel so the user doesn't wait twice.
+    // Magic link only fires the first time — repeat sends would spam.
+    await Promise.all([persist(), sendMagicLink()]);
     setSubmitting(false);
     if (nextSub === 'done') onContinue();
     else setSubstep(nextSub);
@@ -1481,12 +1507,12 @@ function EmailGate({
         {substep === 1 && (
           <>
             <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-              One quick thing before you see them.
+              Save your plans to your <em className="font-display font-semibold not-italic text-accent" style={{ fontStyle: 'italic' }}>account.</em>
             </h1>
             <p className="mt-5 text-base text-secondary md:text-lg">
-              We're testing how After5 works for real Kelowna couples. Drop your
-              email and we'll send you new date plans + the occasional local
-              insider tip. Unsubscribe whenever.
+              Drop your email — we'll send a one-tap link so you can come back to
+              these plans any time. No password, no waiting on the email.
+              You'll see your plans on the next screen.
             </p>
 
             <form
@@ -1508,19 +1534,13 @@ function EmailGate({
                 autoFocus
               />
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface px-5 py-4 transition-colors has-[:checked]:border-accent">
-                <input
-                  type="checkbox"
-                  checked={inKelowna}
-                  onChange={(e) => setInKelowna(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-accent"
-                />
-                <span className="text-sm text-secondary">
-                  <span className="text-text">I'm in or near Kelowna.</span>{' '}
-                  These plans are Kelowna-specific. If you're elsewhere we'll let
-                  you know when we expand to your city.
-                </span>
-              </label>
+              <div className="rounded-card border border-border bg-surface px-5 py-4">
+                <p className="text-sm text-secondary">
+                  <span className="font-medium text-text">What you get:</span>{' '}
+                  Your three plans saved to your dashboard, the ability to share
+                  + revisit them, and a sign-in link for next time.
+                </p>
+              </div>
 
               <div className="flex items-center gap-4 pt-2">
                 <button
@@ -1528,11 +1548,11 @@ function EmailGate({
                   disabled={!emailValid || submitting}
                   className="inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
                 >
-                  {submitting ? 'One sec…' : 'Continue →'}
+                  {submitting ? 'Creating your account…' : 'Create account →'}
                 </button>
               </div>
               <p className="pt-1 text-xs text-muted">
-                Email is required to view your plans. Steps after this are optional.
+                Free forever for the first 100 Kelownans. No credit card.
               </p>
             </form>
           </>
@@ -1544,9 +1564,7 @@ function EmailGate({
               Where are you based?
             </h1>
             <p className="mt-5 text-base text-secondary md:text-lg">
-              {inKelowna
-                ? 'Which Kelowna neighborhood — or just "Kelowna" works. Helps us tune plans to your side of town.'
-                : 'Where do you live? When we expand to your city, you\'ll be the first to know.'}
+              Which neighborhood — or just "Kelowna" works. Helps us tune plans to your side of town.
             </p>
 
             <form
@@ -1560,7 +1578,7 @@ function EmailGate({
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder={inKelowna ? 'e.g. Glenmore, Lower Mission, Rutland…' : 'e.g. Vernon, Penticton, Vancouver…'}
+                placeholder="e.g. Glenmore, Lower Mission, Rutland…"
                 className="block w-full rounded-card border border-border bg-background px-5 py-4 text-base text-text outline-none transition-colors focus:border-accent"
                 autoFocus
               />

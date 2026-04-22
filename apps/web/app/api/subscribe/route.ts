@@ -53,16 +53,23 @@ export async function POST(req: Request) {
   }
 
   // Attribute the just-generated itineraries with the user's first name +
-  // neighborhood. Powers the social-proof toast ("Sarah from Glenmore built
-  // a date 2 hours ago"). Only write fields we actually have.
+  // neighborhood (powers the social-proof toast) AND with claim_email so
+  // /auth/callback can attach them to the user once they click the magic
+  // link. Only write fields we actually have.
   const ids = body.itinerary_ids ?? (body.itinerary_id ? [body.itinerary_id] : []);
-  if (ids.length > 0 && (firstName || city)) {
-    const patch: { built_by_name?: string; built_by_neighborhood?: string } = {};
+  if (ids.length > 0) {
+    const patch: {
+      built_by_name?: string;
+      built_by_neighborhood?: string;
+      claim_email?: string;
+    } = { claim_email: email };
     if (firstName) patch.built_by_name = firstName;
     if (city) patch.built_by_neighborhood = city;
-    const { error: attrErr } = await supabase.from('itineraries')
+    const { error: attrErr } = await supabase
+      .from('itineraries')
       .update(patch)
-      .in('id', ids);
+      .in('id', ids)
+      .is('user_id', null);
     if (attrErr) console.error('attribution error', attrErr);
   }
 

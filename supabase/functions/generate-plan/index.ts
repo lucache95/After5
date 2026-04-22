@@ -57,6 +57,10 @@ const InputSchema = z.object({
   // Time-of-day frame. 'morning' = 10am slot start, 'evening' = 6pm,
   // 'all_day' = 10am with longer duration.
   time_of_day: z.enum(['morning', 'evening', 'all_day']).default('evening'),
+  // Anonymous gate flow: when an unauthed user enters their email, we send
+  // a magic link AND tag the resulting itineraries with claim_email so
+  // /auth/callback can attach them to the user once they click the link.
+  claim_email: z.string().email().optional(),
 });
 
 // ─── Handler ───────────────────────────────────────────────────────────
@@ -115,7 +119,7 @@ serve(async (req: Request) => {
     // Audit log scaffold — populated as we go, attached to each itinerary
     // on insert. Lets us answer "why did this plan look like that?" without
     // re-running the function.
-    const sharedLog = {
+    const sharedLog: Record<string, unknown> = {
       inputs,
       candidate_pool_size: candidates.length,
       templates_considered: allTemplates.map((t) => ({
@@ -186,6 +190,26 @@ serve(async (req: Request) => {
         }
       }
     }
+
+    // 5b. Adjacency validator — no two stops in the same category_group
+    //     back-to-back (no two bars, no two cafes). Tries to swap one of the
+    //     offending stops with a candidate from a different group; if that
+    //     fails, leaves the plan and logs the violation so we can audit.
+    const adjacencyFixes: Array<{ template_id: string; before: string[]; after: string[]; swaps: number }> = [];
+    for (const it of itineraries) {
+      const before = it.stops.map((s) => s.place_name);
+      const swaps = fixAdjacency(it, candidates, usedAcrossBatch);
+      if (swaps > 0) {
+        adjacencyFixes.push({
+          template_id: it.template_id,
+          before,
+          after: it.stops.map((s) => s.place_name),
+          swaps,
+        });
+      }
+    }
+
+    sharedLog.adjacency_fixes = adjacencyFixes;
 
     // 6. Pick a Wow-Factor modifier per itinerary. Different modifier per
     //    plan so the 3 returned itineraries each have their own twist.
@@ -277,6 +301,7 @@ serve(async (req: Request) => {
       intent: inputs.intent || null,
       modifier_id: modifierIdsPicked[idx] ?? null,
       user_id: userId,
+      claim_email: !userId && inputs.claim_email ? inputs.claim_email.toLowerCase() : null,
       generation_log: {
         ...sharedLog,
         this_itinerary: {
@@ -382,6 +407,85 @@ function pickModifiersForBatch(
     if (idx >= 0) remaining.splice(idx, 1);
   }
   return picked;
+}
+
+// Map place_type → broad category so we can detect adjacency violations.
+// Adjacent stops in the same group feel monotonous (two bars in a row,
+// two cafes back-to-back). Cross-group adjacency (cafe → restaurant) is
+// fine. Outdoor/view/activity are not enforced — feeling fresh outside
+// matters less than the food/drink/sweet rhythm.
+function categoryGroupForType(t: string | undefined | null): string {
+  if (!t) return 'other';
+  if (t === 'restaurant') return 'food';
+  if (t === 'winery' || t === 'brewery' || t === 'cocktail_bar') return 'drink';
+  if (t === 'cafe' || t === 'dessert' || t === 'ice_cream' || t === 'bakery') return 'sweet';
+  return 'other';
+}
+
+const ENFORCED_GROUPS = new Set(['food', 'drink', 'sweet']);
+
+// Walks the stops list, finds adjacent pairs in the same enforced category
+// group, and tries to swap the second stop with a candidate from the same
+// place_type but a different group (e.g. swap a 2nd cocktail bar for a
+// brewery — same drink-vibe slot but different sub-group). Returns the
+// number of successful swaps. Mutates `it.stops` in place.
+function fixAdjacency(
+  it: Itinerary,
+  candidates: Place[],
+  used: Set<string>,
+): number {
+  let swaps = 0;
+  for (let i = 1; i < it.stops.length; i++) {
+    const a = it.stops[i - 1];
+    const b = it.stops[i];
+    const ga = categoryGroupForType(a.place_type);
+    const gb = categoryGroupForType(b.place_type);
+    if (!ENFORCED_GROUPS.has(ga) || ga !== gb) continue;
+    // Find a candidate that matches the original slot's place_type loosely
+    // (any non-conflicting type from candidates, not already used in this
+    // plan, and from a different category group than the previous stop).
+    const used_in_plan = new Set(it.stops.map((s) => s.place_id));
+    const swap = candidates.find((p) => {
+      if (used_in_plan.has(p.id)) return false;
+      if (used.has(p.id)) return false;
+      const gp = categoryGroupForType(p.type);
+      // Different group from previous stop, AND different from next stop if
+      // there is one (avoid creating a new adjacency violation downstream).
+      if (gp === ga) return false;
+      const next = it.stops[i + 1];
+      if (next) {
+        const gn = categoryGroupForType(next.place_type);
+        if (ENFORCED_GROUPS.has(gp) && gp === gn) return false;
+      }
+      return true;
+    });
+    if (!swap) continue;
+    // Perform the swap. Preserve b's start_time + duration_min so the
+    // schedule doesn't shift; the LLM writing pass re-renders what_to_do
+    // downstream from the new place. estimated_cost_pp comes from the
+    // swap's typical_per_person (or 0 if unknown).
+    it.stops[i] = {
+      place_id: swap.id,
+      place_name: swap.name,
+      place_slug: swap.slug,
+      place_type: swap.type,
+      start_time: b.start_time,
+      duration_min: b.duration_min,
+      drive_to_next_min: b.drive_to_next_min,
+      estimated_cost_pp: swap.typical_per_person ?? 0,
+      neighborhood: swap.neighborhood,
+      lat: swap.lat,
+      lng: swap.lng,
+      address: swap.address ?? null,
+      photo_url: swap.photo_url ?? null,
+      local_insight: swap.local_insight ?? null,
+      reservation_required: swap.reservation_required ?? false,
+      reservation_url: swap.reservation_url ?? null,
+    };
+    used.add(swap.id);
+    swaps += 1;
+  }
+  return swaps;
 }
 
 // Decode the JWT in the Authorization header without verifying signature.

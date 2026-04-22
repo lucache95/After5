@@ -71,6 +71,7 @@ export type Database = {
         Row: {
           built_by_name: string | null
           built_by_neighborhood: string | null
+          claim_email: string | null
           generated_at: string
           generation_log: Json | null
           hook: string | null
@@ -95,6 +96,7 @@ export type Database = {
         Insert: {
           built_by_name?: string | null
           built_by_neighborhood?: string | null
+          claim_email?: string | null
           generated_at?: string
           generation_log?: Json | null
           hook?: string | null
@@ -119,6 +121,7 @@ export type Database = {
         Update: {
           built_by_name?: string | null
           built_by_neighborhood?: string | null
+          claim_email?: string | null
           generated_at?: string
           generation_log?: Json | null
           hook?: string | null
