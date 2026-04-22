@@ -27,11 +27,13 @@ export async function GET() {
   // the server.
   const supabase = createAdminClient();
 
-  // Aggregate count — includes seed rows so the banner has a non-zero
-  // figure at launch. Real signups land in the same table and bump it.
+  // Aggregate count — REAL signups only (excludes source='seed_demo' visual
+  // seeds). The banner needs to be honest: 100 spots claimed must mean 100
+  // real people. Seeds still appear in the rotating toast for variety.
   const { count } = await supabase
     .from('subscribers')
-    .select('*', { count: 'exact', head: true });
+    .select('*', { count: 'exact', head: true })
+    .neq('source', 'seed_demo');
 
   const claimed = count ?? 0;
   const remaining = Math.max(0, EARLY_ACCESS_CAP - claimed);

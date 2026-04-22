@@ -19,6 +19,7 @@ const SECTIONS: Section[] = [
   { id: 'why',      label: 'Why it works' },
   { id: 'route',    label: 'Map' },
   { id: 'timeline', label: 'Stops' },
+  { id: 'know',     label: 'Know' },
   { id: 'more',     label: 'Similar' },
 ];
 

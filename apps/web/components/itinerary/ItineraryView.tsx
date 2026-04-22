@@ -15,19 +15,24 @@ import { ModifierCard } from './ModifierCard';
 import { AnchorNav } from './AnchorNav';
 import { CuratorCard } from './CuratorCard';
 import { SavePlanButton } from './SavePlanButton';
+import { ThingsToKnow } from './ThingsToKnow';
+import { SimilarPlans } from './SimilarPlans';
 import { Polaroid } from '@/components/Polaroid';
 import { coverImageFor } from '@/lib/place-image';
 import { TIMEZONE_LABEL } from '@/lib/format';
 import type { Itinerary } from '@/lib/itinerary-types';
 import type { ItineraryStats } from '@/lib/itinerary-stats';
+import type { SimilarPlanCard } from '@/lib/itinerary-similar';
 
 export function ItineraryView({
   itinerary,
   stats,
+  similar,
   fromHref,
 }: {
   itinerary: Itinerary;
   stats?: ItineraryStats;
+  similar?: SimilarPlanCard[];
   /** Path of the page rendering this view (e.g. /dates/abc-123) — passed
    *  through to StopCard so /places/* links carry a back-link query param. */
   fromHref?: string;
@@ -177,6 +182,18 @@ export function ItineraryView({
                 ))}
               </ol>
             </div>
+
+            {/* Things to know — practical heads-up derived from stops */}
+            <div className="mt-16">
+              <ThingsToKnow itinerary={itinerary} />
+            </div>
+
+            {/* More like this — sibling plans on the same template */}
+            {similar && similar.length > 0 && (
+              <div className="mt-16">
+                <SimilarPlans plans={similar} />
+              </div>
+            )}
           </div>
 
           {/* Sticky right rail — Airbnb's reserve card analog. Floats while

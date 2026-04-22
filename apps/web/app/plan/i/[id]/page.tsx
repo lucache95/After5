@@ -5,6 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { OtherDates } from '@/components/itinerary/OtherDates';
+import { loadSimilarPlans } from '@/lib/itinerary-similar';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
 // Legacy UUID-based public URL. The canonical route is /dates/[slug] for SEO.
@@ -59,6 +60,11 @@ export default async function PublicItineraryPage(props: {
 
   // Derive vibe set from stop neighborhoods/types as a quiet fallback for older
   // rows that don't have a vibe column. The Edge Function output now carries it.
+  const similar = await loadSimilarPlans({
+    id: row.id,
+    template_id: row.template_id ?? '',
+  });
+
   const itinerary: Itinerary = {
     id: row.id,
     slug: row.slug ?? undefined,
@@ -95,7 +101,7 @@ export default async function PublicItineraryPage(props: {
         </nav>
       </header>
 
-      <ItineraryView itinerary={itinerary} />
+      <ItineraryView itinerary={itinerary} similar={similar} />
 
       <OtherDates excludeId={row.id} />
 
