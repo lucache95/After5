@@ -441,6 +441,9 @@ export default async function HomePage() {
               <Link href="/roadmap" className="transition-colors hover:text-text">
                 Roadmap
               </Link>
+              <Link href="/tell-us" className="transition-colors hover:text-text">
+                Bug or idea?
+              </Link>
               <Link href="/privacy" className="transition-colors hover:text-text">
                 Privacy
               </Link>

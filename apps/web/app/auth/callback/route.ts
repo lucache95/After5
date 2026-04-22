@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { sendWelcomeEmail } from '@/lib/email/welcome';
 
 // OAuth + magic link land here. Exchange the `code` query param for a
 // session cookie, then redirect to ?next=... (defaults to /account).
@@ -43,10 +44,22 @@ export async function GET(request: NextRequest) {
   }
 
   // Mirror the auth user into subscribers so social-proof counts include
-  // OAuth/magic-link signups. Best-effort — log + continue if it fails.
-  await mirrorToSubscribers(data.session.user).catch((err) => {
+  // OAuth/magic-link signups. Returns true when a new subscriber row was
+  // just created so we can fire the welcome email exactly once.
+  const isNewUser = await mirrorToSubscribers(data.session.user).catch((err) => {
     console.error('[auth/callback] mirrorToSubscribers failed', err);
+    return false;
   });
+
+  if (isNewUser) {
+    await sendWelcomeEmail({
+      to: data.session.user.email!,
+      firstName:
+        (data.session.user.user_metadata?.first_name as string | undefined)
+        ?? (data.session.user.user_metadata?.full_name as string | undefined)?.split(' ')[0]
+        ?? null,
+    }).catch((err) => console.error('[auth/callback] welcome email failed', err));
+  }
 
   // Claim any anonymously-generated itineraries that were tagged with this
   // email at the gate. So the user lands on /account and immediately sees
@@ -65,9 +78,9 @@ interface SessionUser {
   user_metadata?: { full_name?: string; name?: string; first_name?: string } | null;
 }
 
-async function mirrorToSubscribers(user: SessionUser) {
+async function mirrorToSubscribers(user: SessionUser): Promise<boolean> {
   const email = user.email?.toLowerCase().trim();
-  if (!email) return;
+  if (!email) return false;
 
   const meta = user.user_metadata ?? {};
   const firstName =
@@ -93,7 +106,7 @@ async function mirrorToSubscribers(user: SessionUser) {
     if (!existing.first_name && firstName) {
       await admin.from('subscribers').update({ first_name: firstName }).eq('id', existing.id);
     }
-    return;
+    return false;
   }
 
   const { error } = await admin
@@ -101,7 +114,9 @@ async function mirrorToSubscribers(user: SessionUser) {
     .insert({ email, first_name: firstName, source: 'auth_signup' });
   if (error) {
     console.error('[auth/callback] subscribers insert error', error);
+    return false;
   }
+  return true;
 }
 
 interface SessionUserWithId extends SessionUser {

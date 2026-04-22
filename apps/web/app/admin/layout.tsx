@@ -22,6 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <ul className="flex items-center gap-1 text-sm">
             <NavItem href="/admin/places" label="Places" />
             <NavItem href="/admin/dates" label="Dates" />
+            <NavItem href="/admin/feedback" label="Inbox" />
           </ul>
         </nav>
       </header>
