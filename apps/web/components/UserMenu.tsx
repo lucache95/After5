@@ -99,10 +99,12 @@ export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-l
 
   return (
     <div ref={wrapRef} className="relative flex items-center gap-4">
+      {/* "My dates" text hidden on small screens — avatar alone takes you to
+          /account via the menu. Keeps the nav from wrapping on iPhone SE. */}
       <Link
         href="/account"
         className={cn(
-          'text-sm font-medium transition-colors',
+          'hidden text-sm font-medium transition-colors sm:inline',
           variant === 'on-dark'
             ? 'text-white/95 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.55)]'
             : 'text-secondary hover:text-text',

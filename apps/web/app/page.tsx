@@ -90,10 +90,8 @@ export default async function HomePage() {
           >
             After5
           </Link>
-          <div className="flex items-center gap-5">
-            <div className="hidden sm:block">
-              <UserMenu variant="on-dark" />
-            </div>
+          <div className="flex items-center gap-3 sm:gap-5">
+            <UserMenu variant="on-dark" />
             <Link
               href="/plan"
               className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text shadow-[0_4px_16px_rgba(0,0,0,0.18)] transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
