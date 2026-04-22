@@ -91,7 +91,7 @@ function LoginForm() {
   const othersJoined = recent.length > 3 ? recent.length - 3 : (claimed && claimed > 3 ? claimed - 3 : 0);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#FDF9F3]">
+    <main className="relative min-h-screen overflow-hidden bg-background">
       {/* Ambient warm gradient — soft amber/rose pools in opposite corners.
           Gives the page atmosphere without fighting the card for attention. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">

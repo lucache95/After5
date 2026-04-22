@@ -8,9 +8,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#FAFAF7',
-        surface: '#F4F2EC',
-        border: '#E5E3DD',
+        // Warm cream system. Background = the page canvas; surface = card/
+        // grouped-content fills that need to pop against the page. Both warmed
+        // up from the original near-white "Refined Minimal" palette so the
+        // whole site reads as one editorial cream-and-terra-cotta voice.
+        background: '#FDF9F3',
+        surface: '#F4ECDD',
+        border: '#E8DFCB',
         muted: '#8B8884',
         secondary: '#6B6864',
         text: '#1A1A1A',

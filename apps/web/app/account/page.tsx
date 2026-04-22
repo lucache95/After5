@@ -102,14 +102,14 @@ export default async function AccountPage() {
   const totalSavedCount = saved.length;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#FDF9F3]">
+    <main className="relative min-h-screen overflow-hidden bg-background">
       {/* Ambient warm gradient */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -left-40 -top-32 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-amber-200/45 via-orange-200/25 to-transparent blur-3xl" />
         <div className="absolute -right-40 top-72 h-[520px] w-[520px] rounded-full bg-gradient-to-tl from-rose-200/45 via-amber-100/25 to-transparent blur-3xl" />
       </div>
 
-      <header className="relative z-20 border-b border-amber-100/50 bg-[#FDF9F3]/85 backdrop-blur-md">
+      <header className="relative z-20 border-b border-border bg-background/85 backdrop-blur-md">
         <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
           <Link href="/" className="font-display text-xl font-semibold tracking-tight text-text">
             After5
