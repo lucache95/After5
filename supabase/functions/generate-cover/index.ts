@@ -87,13 +87,15 @@ function buildPrompt(it: ItineraryRow): string {
 }
 
 async function callReplicate(apiToken: string, prompt: string): Promise<string | null> {
-  // Create prediction
+  // Create prediction. We poll instead of relying on Prefer:wait alone, since
+  // wait returns 200 with output:null when the model is still warming up
+  // (single-call works, batches of 5+ hit this and report `replicate_failed`).
   const create = await fetch('https://api.replicate.com/v1/models/' + REPLICATE_MODEL + '/predictions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiToken}`,
       'Content-Type': 'application/json',
-      Prefer: 'wait',
+      Prefer: 'wait=30',
     },
     body: JSON.stringify({
       input: {
@@ -112,14 +114,47 @@ async function callReplicate(apiToken: string, prompt: string): Promise<string |
     return null;
   }
 
-  const data = await create.json() as { output?: string | string[]; status?: string; error?: string };
-  if (data.error) {
-    console.error('replicate error', data.error);
+  type Prediction = {
+    id?: string;
+    status?: string;
+    output?: string | string[] | null;
+    error?: string | null;
+    urls?: { get?: string };
+  };
+  let pred = await create.json() as Prediction;
+  if (pred.error) {
+    console.error('replicate error', pred.error);
     return null;
   }
 
-  const out = Array.isArray(data.output) ? data.output[0] : data.output;
-  return out ?? null;
+  // Already done in the first response (Prefer:wait worked) — short-circuit.
+  if (pred.status === 'succeeded' && pred.output) {
+    return Array.isArray(pred.output) ? pred.output[0] : pred.output;
+  }
+
+  // Otherwise poll until terminal. flux-schnell finishes in 1-3s typically;
+  // we cap at 60 polls × 1s = 60s before giving up on a single prediction.
+  const pollUrl = pred.urls?.get ?? `https://api.replicate.com/v1/predictions/${pred.id}`;
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    const r = await fetch(pollUrl, {
+      headers: { Authorization: `Bearer ${apiToken}` },
+    });
+    if (!r.ok) {
+      console.error('replicate poll failed', r.status);
+      return null;
+    }
+    pred = await r.json() as Prediction;
+    if (pred.status === 'succeeded' && pred.output) {
+      return Array.isArray(pred.output) ? pred.output[0] : pred.output;
+    }
+    if (pred.status === 'failed' || pred.status === 'canceled') {
+      console.error('replicate prediction', pred.status, pred.error);
+      return null;
+    }
+  }
+  console.error('replicate poll timeout');
+  return null;
 }
 
 async function uploadToStorage(
@@ -221,6 +256,10 @@ serve(async (req: Request) => {
     }
 
     const prompt = buildPrompt(it);
+    // Replicate's free/default tier rate-limits at ~1 prediction every 2s
+    // (429 if you fire faster). Sleep BEFORE every call so we never exceed
+    // it, then let the polling helper do its thing.
+    await new Promise((r) => setTimeout(r, 2500));
     const replicateUrl = await callReplicate(replicateToken, prompt);
     if (!replicateUrl) {
       results.push({ id: it.id, error: 'replicate_failed' });
@@ -248,10 +287,8 @@ serve(async (req: Request) => {
     }
 
     results.push({ id: it.id, cover: publicUrl });
-
-    // Light pacing — Replicate is happy at this rate, also keeps us inside
-    // the function timeout if the batch is larger.
-    await new Promise((r) => setTimeout(r, 500));
+    // Pacing happens at the top of the loop now (sleep BEFORE each Replicate
+    // call) so we never trip the 1-prediction/~2s rate limit.
   }
 
   return new Response(
