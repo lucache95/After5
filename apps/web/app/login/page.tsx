@@ -32,6 +32,16 @@ function LoginForm() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [claimed, setClaimed] = useState<number | null>(null);
   const [recent, setRecent] = useState<{ first_name: string; city: string | null }[]>([]);
+  // Resend cooldown — Supabase enforces a 60s gap between OTP sends to the
+  // same email. Showing a countdown beats letting users mash the button and
+  // hit a "rate limit exceeded" error (the bug Jocelyn reported on Apr 23).
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   // Live spots-remaining + recent signups for the early-access callout
   // and social-proof strip. Banner is hidden on /login — this page carries
@@ -68,6 +78,7 @@ function LoginForm() {
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    if (cooldown > 0) return;
     setPhase('sending');
     setErrorMsg('');
     const supabase = createClient();
@@ -79,10 +90,22 @@ function LoginForm() {
       },
     });
     if (error) {
-      setErrorMsg(error.message);
+      // Translate the most common Supabase auth error (rate limit) into
+      // language a normal person can act on. The raw message reads like
+      // a 500 error to non-technical users.
+      const raw = error.message ?? '';
+      const isRateLimit = /rate.?limit|over_email|too.?many|over_request/i.test(raw);
+      setErrorMsg(
+        isRateLimit
+          ? 'You just requested a link a moment ago. Check your spam folder, or wait 60 seconds and try again.'
+          : raw || 'Something went wrong. Please try again.',
+      );
       setPhase('error');
+      // Cooldown anyway — the user is likely about to mash the button.
+      setCooldown(60);
     } else {
       setPhase('sent');
+      setCooldown(60);
     }
   }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { ensureWelcomeSent } from '@/lib/email/welcome';
 
 // Captures emails from the plan flow gate. Idempotent on (email, source) so
 // repeat submissions don't fail. Returns 200 either way to avoid leaking
@@ -50,6 +51,13 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error('subscribe error', error);
+  } else {
+    // Fire welcome email asap. Idempotent — checks subscribers.welcome_sent_at,
+    // skips if already sent. Non-blocking: a Resend hiccup must not fail the
+    // gate flow. Runs after the response in the background via void.
+    void ensureWelcomeSent({ email, firstName, admin: supabase }).then((res) => {
+      if (res.error) console.error('[subscribe] welcome', res.error);
+    });
   }
 
   // Attribute the just-generated itineraries with the user's first name +

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { sendWelcomeEmail } from '@/lib/email/welcome';
+import { ensureWelcomeSent } from '@/lib/email/welcome';
 
 // OAuth + magic link land here. Exchange the `code` query param for a
 // session cookie, then redirect to ?next=... (defaults to /account).
@@ -44,20 +44,24 @@ export async function GET(request: NextRequest) {
   }
 
   // Mirror the auth user into subscribers so social-proof counts include
-  // OAuth/magic-link signups. Returns true when a new subscriber row was
-  // just created so we can fire the welcome email exactly once.
-  const isNewUser = await mirrorToSubscribers(data.session.user).catch((err) => {
+  // OAuth/magic-link signups. Always runs — idempotent on email.
+  await mirrorToSubscribers(data.session.user).catch((err) => {
     console.error('[auth/callback] mirrorToSubscribers failed', err);
     return false;
   });
 
-  if (isNewUser) {
-    await sendWelcomeEmail({
-      to: data.session.user.email!,
-      firstName:
-        (data.session.user.user_metadata?.first_name as string | undefined)
-        ?? (data.session.user.user_metadata?.full_name as string | undefined)?.split(' ')[0]
-        ?? null,
+  // Welcome email — gated on subscribers.welcome_sent_at, so this is safe
+  // to call on every callback (including return logins). Helper sets the
+  // flag after Resend confirms send.
+  if (data.session.user.email) {
+    const firstName =
+      (data.session.user.user_metadata?.first_name as string | undefined)
+      ?? (data.session.user.user_metadata?.full_name as string | undefined)?.split(' ')[0]
+      ?? null;
+    await ensureWelcomeSent({
+      email: data.session.user.email,
+      firstName,
+      admin: createAdminClient(),
     }).catch((err) => console.error('[auth/callback] welcome email failed', err));
   }
 

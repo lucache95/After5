@@ -129,7 +129,11 @@ export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-l
 
       {open && (
         <div
-          className="absolute right-0 top-12 z-50 w-60 origin-top-right rounded-card border border-border bg-background py-2 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.18)]"
+          // Anchor near the avatar but constrain so it never overflows
+          // small viewports. -right-2 nudges it slightly past the avatar's
+          // right edge so the corner aligns with the trigger; the max-width
+          // clamp keeps it inside the screen on iPhone SE width.
+          className="absolute -right-2 top-12 z-50 w-[min(15rem,calc(100vw-2rem))] origin-top-right rounded-card border border-border bg-background py-2 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.18)]"
           role="menu"
         >
           <div className="border-b border-border px-4 py-3">
