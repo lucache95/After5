@@ -23,6 +23,12 @@ export async function sendWelcomeEmail(opts: { to: string; firstName?: string | 
   <style>
     body, table, td, p, a, h1, h2 { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     a.btn:hover { background-color: #2a2a2a !important; }
+    /* Mobile polaroid sizing — Outlook desktop ignores @media (Word renderer)
+       and shows the desktop dimensions, which is acceptable degradation. */
+    @media only screen and (max-width: 480px) {
+      .pol-1 { width: 138px !important; height: 188px !important; margin-right: -38px !important; }
+      .pol-2 { width: 122px !important; height: 166px !important; margin-left:  -38px !important; margin-top: 24px !important; }
+    }
   </style>
 </head>
 <body style="margin:0;padding:0;background-color:#FDF9F3;">
@@ -60,12 +66,12 @@ export async function sendWelcomeEmail(opts: { to: string; firstName?: string | 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px 0;">
                 <tr>
                   <td align="center" valign="middle" style="padding:8px 0;">
-                    <img src="${SITE_URL}/email/polaroid-west-kelowna.png"
+                    <img class="pol-1" src="${EMAIL_ASSETS}/polaroid-west-kelowna.png"
                          width="202" height="275" alt="Couple on a trail above Okanagan Lake"
-                         style="display:inline-block;width:202px;height:275px;border:0;outline:0;margin-right:-32px;vertical-align:middle;">
-                    <img src="${SITE_URL}/email/polaroid-lakeside.png"
+                         style="display:inline-block;width:202px;height:275px;border:0;outline:0;margin-right:-55px;vertical-align:middle;">
+                    <img class="pol-2" src="${EMAIL_ASSETS}/polaroid-lakeside.png"
                          width="181" height="246" alt="Couple at Okanagan Lake"
-                         style="display:inline-block;width:181px;height:246px;border:0;outline:0;margin-left:-32px;margin-top:34px;vertical-align:middle;">
+                         style="display:inline-block;width:181px;height:246px;border:0;outline:0;margin-left:-55px;margin-top:34px;vertical-align:middle;">
                   </td>
                 </tr>
               </table>
