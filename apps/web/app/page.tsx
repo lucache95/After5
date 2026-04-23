@@ -449,10 +449,10 @@ export default async function HomePage() {
                 Terms
               </Link>
               <a
-                href="mailto:lucas@lucassenechal.com"
+                href="mailto:hello@tryafter5.app"
                 className="transition-colors hover:text-text"
               >
-                lucas@lucassenechal.com
+                hello@tryafter5.app
               </a>
             </div>
           </div>

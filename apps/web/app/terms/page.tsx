@@ -56,8 +56,8 @@ export default function TermsPage() {
           We can remove accounts that abuse the service (scraping, spam, anything
           that breaks the experience for other users). If your account gets
           removed unfairly, email{' '}
-          <a className="text-text underline decoration-border decoration-1 underline-offset-[4px] hover:decoration-text" href="mailto:lucas@lucassenechal.com">
-            lucas@lucassenechal.com
+          <a className="text-text underline decoration-border decoration-1 underline-offset-[4px] hover:decoration-text" href="mailto:hello@tryafter5.app">
+            hello@tryafter5.app
           </a>.
         </p>
 

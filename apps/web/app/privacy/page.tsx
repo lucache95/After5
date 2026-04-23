@@ -27,8 +27,8 @@ export default function PrivacyPage() {
         <p>
           After5 is built and operated by Lucas Senechal in Kelowna, BC. This page
           explains what we collect and why. If anything here is unclear, email
-          <a className="ml-1 text-text underline decoration-border decoration-1 underline-offset-[4px] hover:decoration-text" href="mailto:lucas@lucassenechal.com">
-            lucas@lucassenechal.com
+          <a className="ml-1 text-text underline decoration-border decoration-1 underline-offset-[4px] hover:decoration-text" href="mailto:hello@tryafter5.app">
+            hello@tryafter5.app
           </a>.
         </p>
 
@@ -70,8 +70,8 @@ export default function PrivacyPage() {
         <h2 className="font-display text-xl font-semibold text-text">Deleting your data</h2>
         <p>
           Email{' '}
-          <a className="text-text underline decoration-border decoration-1 underline-offset-[4px] hover:decoration-text" href="mailto:lucas@lucassenechal.com">
-            lucas@lucassenechal.com
+          <a className="text-text underline decoration-border decoration-1 underline-offset-[4px] hover:decoration-text" href="mailto:hello@tryafter5.app">
+            hello@tryafter5.app
           </a>{' '}
           and we'll delete every row associated with your account within 7 days.
         </p>

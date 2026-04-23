@@ -101,7 +101,7 @@ export default function RoadmapPage() {
               I&apos;m building this in public. Here&apos;s what works today, what&apos;s
               coming next, where money fits in, and what I&apos;m{' '}
               <span className="text-text">not</span> doing (yet). If you have ideas,{' '}
-              <a href="mailto:lucas@lucassenechal.com" className="text-accent underline decoration-accent/40 underline-offset-[6px] transition-colors hover:decoration-accent">
+              <a href="mailto:hello@tryafter5.app" className="text-accent underline decoration-accent/40 underline-offset-[6px] transition-colors hover:decoration-accent">
                 email me
               </a>{' '}
               — I read everything.
@@ -175,7 +175,7 @@ export default function RoadmapPage() {
           </h2>
           <p className="mt-4 max-w-prose text-base leading-relaxed text-secondary">
             Order subject to feedback. If you want one of these now,{' '}
-            <a href="mailto:lucas@lucassenechal.com" className="text-accent underline decoration-accent/40 underline-offset-[6px] transition-colors hover:decoration-accent">
+            <a href="mailto:hello@tryafter5.app" className="text-accent underline decoration-accent/40 underline-offset-[6px] transition-colors hover:decoration-accent">
               say so
             </a>{' '}
             and it moves up.
@@ -254,7 +254,7 @@ export default function RoadmapPage() {
             </div>
             <div className="mt-7">
               <a
-                href="mailto:lucas@lucassenechal.com?subject=After5%20%E2%80%94%20our%20spot"
+                href="mailto:hello@tryafter5.app?subject=After5%20%E2%80%94%20our%20spot"
                 className="inline-flex items-center gap-2 rounded-pill bg-text px-6 py-3 text-sm font-medium text-background transition-transform hover:-translate-y-0.5"
               >
                 Email me about your spot
@@ -290,7 +290,7 @@ export default function RoadmapPage() {
             </div>
             <div className="mt-7">
               <a
-                href="mailto:lucas@lucassenechal.com?subject=After5%20%E2%80%94%20want%20to%20help"
+                href="mailto:hello@tryafter5.app?subject=After5%20%E2%80%94%20want%20to%20help"
                 className="inline-flex items-center gap-2 rounded-pill bg-text px-6 py-3 text-sm font-medium text-background transition-transform hover:-translate-y-0.5"
               >
                 Email me
@@ -312,10 +312,10 @@ export default function RoadmapPage() {
             Things will break. Photos will be wrong. A plan will recommend a spot that closed last
             week. When that happens, tell me — I&apos;ll fix it the same day. Email{' '}
             <a
-              href="mailto:lucas@lucassenechal.com"
+              href="mailto:hello@tryafter5.app"
               className="italic font-semibold text-accent underline decoration-accent/30 underline-offset-[6px] transition-colors hover:decoration-accent"
             >
-              lucas@lucassenechal.com
+              hello@tryafter5.app
             </a>{' '}
             with anything: a bug, a place we&apos;re missing, an idea, a feature you&apos;d
             pay for. The roadmap above is mostly your inbox in disguise.

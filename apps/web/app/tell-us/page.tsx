@@ -178,8 +178,8 @@ function PickKind({ onPick }: { onPick: (k: Kind) => void }) {
 
       <p className="mt-12 text-center text-xs text-muted">
         Or just email{' '}
-        <a href="mailto:lucas@lucassenechal.com" className="text-accent underline decoration-accent/40 underline-offset-[4px] hover:decoration-accent">
-          lucas@lucassenechal.com
+        <a href="mailto:hello@tryafter5.app" className="text-accent underline decoration-accent/40 underline-offset-[4px] hover:decoration-accent">
+          hello@tryafter5.app
         </a>
       </p>
     </>
@@ -304,7 +304,7 @@ function Compose({
 
         {error && (
           <p className="mt-5 rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-            Couldn&apos;t send — {error}. Try again or email lucas@lucassenechal.com.
+            Couldn&apos;t send — {error}. Try again or email hello@tryafter5.app.
           </p>
         )}
 

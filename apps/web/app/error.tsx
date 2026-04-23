@@ -27,7 +27,7 @@ export default function ErrorBoundary({
       </h1>
       <p className="mt-6 max-w-prose text-base text-secondary">
         Not your fault. Try again — most things resolve on a retry. If it persists,
-        email lucas@lucassenechal.com and I'll fix it directly.
+        email hello@tryafter5.app and I'll fix it directly.
       </p>
       <div className="mt-12 flex flex-wrap gap-6">
         <button

@@ -117,8 +117,8 @@ export default async function PublicItineraryPage(props: {
             <Link href="/terms" className="transition-colors hover:text-text">
               Terms
             </Link>
-            <a href="mailto:lucas@lucassenechal.com" className="transition-colors hover:text-text">
-              lucas@lucassenechal.com
+            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-text">
+              hello@tryafter5.app
             </a>
           </div>
         </div>

@@ -168,10 +168,10 @@ export default function AboutPage() {
             <h2 className="font-display text-2xl font-bold leading-tight text-text md:text-3xl">
               Email{' '}
               <a
-                href="mailto:lucas@lucassenechal.com"
+                href="mailto:hello@tryafter5.app"
                 className="italic font-semibold text-accent underline decoration-accent/30 underline-offset-[6px] transition-colors hover:decoration-accent"
               >
-                lucas@lucassenechal.com
+                hello@tryafter5.app
               </a>
               .
             </h2>
