@@ -34,6 +34,7 @@ interface SavedRow {
     total_cost_pp: number | null;
     total_duration_min: number | null;
     stops: unknown;
+    cover_image_url: string | null;
   } | null;
 }
 
@@ -46,6 +47,7 @@ interface PickRow {
   total_duration_min: number | null;
   stops: unknown;
   generated_at: string;
+  cover_image_url: string | null;
 }
 
 const EARLY_ACCESS_CAP = 100;
@@ -84,7 +86,7 @@ export default async function AccountPage() {
       .maybeSingle(),
     supabase
       .from('saved_plans')
-      .select('id, saved_at, itinerary:itineraries(id, slug, title, total_cost_pp, total_duration_min, stops)')
+      .select('id, saved_at, itinerary:itineraries(id, slug, title, total_cost_pp, total_duration_min, stops, cover_image_url)')
       .eq('user_id', user.id)
       .order('saved_at', { ascending: false })
       .limit(8),
@@ -94,7 +96,7 @@ export default async function AccountPage() {
       .eq('user_id', user.id),
     supabase
       .from('itineraries')
-      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, generated_at')
+      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, generated_at, cover_image_url')
       .eq('is_public', true)
       .not('slug', 'is', null)
       .order('generated_at', { ascending: false })
@@ -222,7 +224,7 @@ export default async function AccountPage() {
               {saved.map((s, i) => {
                 if (!s.itinerary) return null;
                 const stops = (Array.isArray(s.itinerary.stops) ? s.itinerary.stops : []) as Stop[];
-                const cover = coverImageFor(stops);
+                const cover = coverImageFor(stops, { itineraryCover: s.itinerary.cover_image_url });
                 const hr = Math.round(((s.itinerary.total_duration_min ?? 0) / 60) * 10) / 10;
                 return (
                   <article key={s.id} className="group relative">
@@ -279,7 +281,7 @@ export default async function AccountPage() {
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
               {picks.slice(0, 4).map((p) => {
                 const stops = (Array.isArray(p.stops) ? p.stops : []) as Stop[];
-                const cover = coverImageFor(stops);
+                const cover = coverImageFor(stops, { itineraryCover: p.cover_image_url });
                 const hr = Math.round(((p.total_duration_min ?? 0) / 60) * 10) / 10;
                 return (
                   <Link

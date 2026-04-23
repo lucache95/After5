@@ -39,7 +39,7 @@ export default async function TypePage(props: { params: Promise<{ slug: string }
       .limit(60),
     supabase
       .from('itineraries')
-      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
+      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
       .eq('is_public', true)
       .not('slug', 'is', null)
       .order('generated_at', { ascending: false })

@@ -43,7 +43,7 @@ export default async function ModifierPage(props: { params: Promise<{ id: string
   const supabase = await createClient();
   const { data } = await supabase
     .from('itineraries')
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
     .eq('is_public', true)
     .eq('modifier_id', m.id)
     .not('slug', 'is', null)

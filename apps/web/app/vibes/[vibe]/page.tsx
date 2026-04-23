@@ -39,7 +39,7 @@ export default async function VibePage(props: { params: Promise<{ vibe: string }
       .limit(48),
     supabase
       .from('itineraries')
-      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs')
+      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs, cover_image_url')
       .eq('is_public', true)
       .not('slug', 'is', null)
       .order('generated_at', { ascending: false })

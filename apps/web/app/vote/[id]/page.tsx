@@ -20,6 +20,7 @@ interface ItineraryRow {
   total_cost_pp: number | null;
   total_duration_min: number | null;
   stops: unknown;
+  cover_image_url: string | null;
 }
 
 interface VoteRow {
@@ -43,7 +44,7 @@ export default async function VotePage(props: { params: Promise<{ id: string }> 
 
   const { data: itinsRaw } = await supabase
     .from('itineraries')
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
     .in('id', sess.itinerary_ids);
 
   const itins = (itinsRaw ?? []) as ItineraryRow[];

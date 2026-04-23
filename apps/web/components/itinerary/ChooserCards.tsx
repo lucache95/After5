@@ -21,7 +21,7 @@ export function ChooserCards({
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
       {itineraries.map((it, i) => {
-        const cover = coverImageFor(it.stops);
+        const cover = coverImageFor(it.stops, { itineraryCover: it.cover_image_url });
         const isActive = i === activeIdx;
         const totalHr = Math.round((it.total_duration_min / 60) * 10) / 10;
 

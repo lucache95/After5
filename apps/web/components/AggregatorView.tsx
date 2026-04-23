@@ -26,6 +26,7 @@ export interface DateCardData {
   total_cost_pp: number | null;
   total_duration_min: number | null;
   stops: Array<{ photo_url?: string | null; place_type?: string }>;
+  cover_image_url?: string | null;
 }
 
 interface Props {
@@ -126,7 +127,7 @@ export function AggregatorView({
           </p>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
             {dates.map((it) => {
-              const cover = coverImageFor(it.stops);
+              const cover = coverImageFor(it.stops, { itineraryCover: it.cover_image_url });
               const totalHr = it.total_duration_min !== null
                 ? Math.round((it.total_duration_min / 60) * 10) / 10
                 : 0;

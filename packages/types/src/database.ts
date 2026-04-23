@@ -7,11 +7,88 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      email_broadcast_sends: {
+        Row: {
+          broadcast_id: string
+          error: string | null
+          resend_id: string | null
+          sent_at: string
+          subscriber_id: string
+        }
+        Insert: {
+          broadcast_id: string
+          error?: string | null
+          resend_id?: string | null
+          sent_at?: string
+          subscriber_id: string
+        }
+        Update: {
+          broadcast_id?: string
+          error?: string | null
+          resend_id?: string | null
+          sent_at?: string
+          subscriber_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_broadcast_sends_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "email_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_broadcast_sends_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_broadcasts: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          id: string
+          kind: string
+          notes: string | null
+          recipient_count: number
+          sent_at: string
+          subject: string
+          triggered_by: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          recipient_count?: number
+          sent_at?: string
+          subject: string
+          triggered_by?: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          recipient_count?: number
+          sent_at?: string
+          subject?: string
+          triggered_by?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           created_at: string
@@ -72,6 +149,9 @@ export type Database = {
           built_by_name: string | null
           built_by_neighborhood: string | null
           claim_email: string | null
+          cover_image_generated_at: string | null
+          cover_image_prompt: string | null
+          cover_image_url: string | null
           generated_at: string
           generation_log: Json | null
           hook: string | null
@@ -97,6 +177,9 @@ export type Database = {
           built_by_name?: string | null
           built_by_neighborhood?: string | null
           claim_email?: string | null
+          cover_image_generated_at?: string | null
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
           generated_at?: string
           generation_log?: Json | null
           hook?: string | null
@@ -122,6 +205,9 @@ export type Database = {
           built_by_name?: string | null
           built_by_neighborhood?: string | null
           claim_email?: string | null
+          cover_image_generated_at?: string | null
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
           generated_at?: string
           generation_log?: Json | null
           hook?: string | null
@@ -410,8 +496,10 @@ export type Database = {
           pairing_tags: string[]
           perceived_value: string | null
           phone: string | null
+          photo_has_snow: boolean | null
           photo_quality: string | null
           photo_review_notes: string | null
+          photo_season: string | null
           photo_time_of_day: string | null
           photo_url: string | null
           photos: Json | null
@@ -481,8 +569,10 @@ export type Database = {
           pairing_tags?: string[]
           perceived_value?: string | null
           phone?: string | null
+          photo_has_snow?: boolean | null
           photo_quality?: string | null
           photo_review_notes?: string | null
+          photo_season?: string | null
           photo_time_of_day?: string | null
           photo_url?: string | null
           photos?: Json | null
@@ -552,8 +642,10 @@ export type Database = {
           pairing_tags?: string[]
           perceived_value?: string | null
           phone?: string | null
+          photo_has_snow?: boolean | null
           photo_quality?: string | null
           photo_review_notes?: string | null
+          photo_season?: string | null
           photo_time_of_day?: string | null
           photo_url?: string | null
           photos?: Json | null
@@ -729,34 +821,43 @@ export type Database = {
           city: string | null
           created_at: string
           email: string
+          email_opt_out: boolean
           first_name: string | null
           id: string
           itinerary_id: string | null
           location: string | null
+          opted_out_at: string | null
           source: string
           user_agent: string | null
+          welcome_sent_at: string | null
         }
         Insert: {
           city?: string | null
           created_at?: string
           email: string
+          email_opt_out?: boolean
           first_name?: string | null
           id?: string
           itinerary_id?: string | null
           location?: string | null
+          opted_out_at?: string | null
           source?: string
           user_agent?: string | null
+          welcome_sent_at?: string | null
         }
         Update: {
           city?: string | null
           created_at?: string
           email?: string
+          email_opt_out?: boolean
           first_name?: string | null
           id?: string
           itinerary_id?: string | null
           location?: string | null
+          opted_out_at?: string | null
           source?: string
           user_agent?: string | null
+          welcome_sent_at?: string | null
         }
         Relationships: [
           {
@@ -807,6 +908,45 @@ export type Database = {
           slots?: Json
           suitable_for?: Database["public"]["Enums"]["occasion"][]
           vibe?: string[]
+        }
+        Relationships: []
+      }
+      user_feedback: {
+        Row: {
+          body: string
+          created_at: string
+          email: string | null
+          id: string
+          kind: string
+          page_url: string | null
+          status: string
+          subject: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          kind: string
+          page_url?: string | null
+          status?: string
+          subject?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          kind?: string
+          page_url?: string | null
+          status?: string
+          subject?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

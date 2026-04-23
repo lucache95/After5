@@ -75,6 +75,7 @@ interface ItineraryRow {
   total_cost_pp: number | null;
   total_duration_min: number | null;
   stops: unknown;
+  cover_image_url: string | null;
 }
 
 interface StopLite {
@@ -121,7 +122,7 @@ async function loadDatesFeaturing(placeId: string): Promise<ItineraryRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('itineraries')
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
     .eq('is_public', true)
     .not('slug', 'is', null)
     .order('generated_at', { ascending: false })
@@ -541,7 +542,7 @@ export default async function PlacePage(props: {
                 // Exclude the current place so each card shows a DIFFERENT
                 // photo (the next stop in the plan, not just the same lake/bar
                 // we're already looking at).
-                const cover2 = coverImageFor(stops, { excludePlaceId: p.id });
+                const cover2 = coverImageFor(stops, { excludePlaceId: p.id, itineraryCover: it.cover_image_url });
                 const totalHr = it.total_duration_min !== null
                   ? Math.round((it.total_duration_min / 60) * 10) / 10
                   : 0;

@@ -17,6 +17,7 @@ interface ItineraryLite {
   total_cost_pp: number | null;
   total_duration_min: number | null;
   stops: unknown;
+  cover_image_url?: string | null;
 }
 
 const TOKEN_KEY = 'after5_vote_token';
@@ -109,7 +110,7 @@ export function VoteCards({
             place_type?: string;
             photo_url?: string | null;
           }>;
-          const cover = coverImageFor(stops);
+          const cover = coverImageFor(stops, { itineraryCover: it.cover_image_url });
           const totalHr =
             it.total_duration_min !== null
               ? Math.round((it.total_duration_min / 60) * 10) / 10

@@ -31,7 +31,7 @@ export async function loadSimilarPlans(
   const admin = createAdminClient();
   const { data } = await admin
     .from('itineraries')
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, loved_count, template_id, stops')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, loved_count, template_id, stops, cover_image_url')
     .eq('template_id', itinerary.template_id)
     .eq('is_public', true)
     .neq('id', itinerary.id)
@@ -47,6 +47,9 @@ export async function loadSimilarPlans(
     .map((r) => {
       const stops = (Array.isArray(r.stops) ? r.stops : []) as unknown as Stop[];
       const withPhoto = stops.find((s) => s.photo_url);
+      // Prefer the AI-generated branded cover when present (avoids two
+      // similar plans sharing the same stop photo).
+      const aiCover = (r as { cover_image_url?: string | null }).cover_image_url ?? null;
       return {
         id: r.id,
         slug: r.slug,
@@ -56,7 +59,7 @@ export async function loadSimilarPlans(
         total_duration_min: r.total_duration_min ?? 0,
         loved_count: r.loved_count ?? 0,
         template_id: r.template_id ?? '',
-        cover_photo: withPhoto?.photo_url ?? null,
+        cover_photo: aiCover ?? withPhoto?.photo_url ?? null,
         cover_type: stops[0]?.place_type ?? null,
         stop_count: stops.length,
       };

@@ -119,6 +119,7 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
     total_cost_pp: row.total_cost_pp ?? 0,
     total_duration_min: row.total_duration_min ?? 0,
     vibe: [],
+    cover_image_url: (row as { cover_image_url?: string | null }).cover_image_url ?? null,
   };
 
   // Aggregate review stats + sibling plans, fetched in parallel since they

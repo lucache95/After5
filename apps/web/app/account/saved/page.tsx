@@ -30,6 +30,7 @@ interface SavedRow {
     total_cost_pp: number | null;
     total_duration_min: number | null;
     stops: unknown;
+    cover_image_url: string | null;
   } | null;
 }
 
@@ -50,7 +51,7 @@ export default async function SavedPlansPage(props: {
     supabase
       .from('saved_plans')
       .select(
-        'id, saved_at, itinerary:itineraries(id, slug, title, hook, total_cost_pp, total_duration_min, stops)',
+        'id, saved_at, itinerary:itineraries(id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url)',
         { count: 'exact' },
       )
       .eq('user_id', user.id)
@@ -124,7 +125,7 @@ export default async function SavedPlansPage(props: {
             {rows.map((s) => {
               if (!s.itinerary) return null;
               const stops = (Array.isArray(s.itinerary.stops) ? s.itinerary.stops : []) as Stop[];
-              const cover = coverImageFor(stops);
+              const cover = coverImageFor(stops, { itineraryCover: s.itinerary.cover_image_url });
               const hr = Math.round(((s.itinerary.total_duration_min ?? 0) / 60) * 10) / 10;
               const href = s.itinerary.slug ? `/dates/${s.itinerary.slug}` : `/plan/i/${s.itinerary.id}`;
               return (

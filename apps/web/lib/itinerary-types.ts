@@ -42,4 +42,5 @@ export interface Itinerary {
   total_cost_pp: number;
   total_duration_min: number;
   vibe: string[];
+  cover_image_url?: string | null;
 }

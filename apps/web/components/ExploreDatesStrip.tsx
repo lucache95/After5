@@ -16,6 +16,7 @@ interface Row {
   total_cost_pp: number | null;
   total_duration_min: number | null;
   stops: unknown;
+  cover_image_url: string | null;
 }
 
 interface StopLite {
@@ -27,7 +28,7 @@ export async function ExploreDatesStrip() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('itineraries')
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
     .eq('is_public', true)
     .not('title', 'is', null)
     .not('slug', 'is', null)
@@ -65,7 +66,7 @@ export async function ExploreDatesStrip() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
           {items.map((it) => {
             const stops = (Array.isArray(it.stops) ? it.stops : []) as StopLite[];
-            const cover = coverImageFor(stops);
+            const cover = coverImageFor(stops, { itineraryCover: it.cover_image_url });
             const totalHr =
               it.total_duration_min !== null
                 ? Math.round((it.total_duration_min / 60) * 10) / 10

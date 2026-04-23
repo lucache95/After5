@@ -69,7 +69,7 @@ export function ItineraryView({
               keep the title block scannable. */}
           <div className="hidden shrink-0 self-start md:block">
             <Polaroid
-              src={coverImageFor(itinerary.stops)}
+              src={coverImageFor(itinerary.stops, { itineraryCover: itinerary.cover_image_url })}
               alt={itinerary.title}
               label="KELOWNA · 26"
               size="md"
