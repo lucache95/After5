@@ -50,8 +50,12 @@ export function coverImageFor(
     photo_url?: string | null;
     place_type?: string | null;
   }>,
-  opts: { excludePlaceId?: string } = {},
+  opts: { excludePlaceId?: string; itineraryCover?: string | null } = {},
 ): string {
+  // Prefer the AI-generated, branded cover when present — beats borrowing
+  // a stop photo (which can dup across plans + show snow in spring).
+  if (opts.itineraryCover) return opts.itineraryCover;
+
   const pool = opts.excludePlaceId
     ? stops.filter((s) => s.place_id !== opts.excludePlaceId)
     : stops;
