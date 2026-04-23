@@ -23,6 +23,7 @@ export interface DateRow {
   stops: unknown;
   inputs?: { vibe?: string[]; location?: 'out' | 'home' } | null;
   generated_at?: string | null;
+  cover_image_url?: string | null;
 }
 
 const VIBE_OPTIONS = [
@@ -160,7 +161,7 @@ export function DatesFilter({ items }: { items: DateRow[] }) {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
           {filtered.map((it) => {
             const stops = (Array.isArray(it.stops) ? it.stops : []) as Array<{ place_type?: string; photo_url?: string | null }>;
-            const cover = coverImageFor(stops);
+            const cover = coverImageFor(stops, { itineraryCover: it.cover_image_url });
             const totalHr =
               it.total_duration_min !== null
                 ? Math.round((it.total_duration_min / 60) * 10) / 10

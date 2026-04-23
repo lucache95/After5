@@ -8,7 +8,9 @@ import { DatesFilter, type DateRow } from '@/components/DatesFilter';
 // Human-browseable index of every public date plan. Complements sitemap.xml:
 // one is for crawlers, this is for humans who want to shop around.
 
-export const revalidate = 3600;
+// 60s ISR — cover-image backfill is ongoing, want new covers to appear
+// within a minute of generation rather than waiting an hour.
+export const revalidate = 60;
 
 const SITE_URL = 'https://tryafter5.app';
 
@@ -49,14 +51,16 @@ export default async function DatesIndexPage() {
   const { data } = await supabase
     .from('itineraries')
     // pull `inputs` so the filter can read vibe + location off the original gen
-    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs, generated_at')
+    .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, inputs, generated_at, cover_image_url')
     .eq('is_public', true)
     .not('title', 'is', null)
     .not('slug', 'is', null)
     .order('generated_at', { ascending: false })
     .limit(120);
 
-  const items = (data ?? []) as DateRow[];
+  // Cast through unknown — generated DB types haven't been regenerated since
+  // cover_image_url was added; column exists in prod, type-gen is just stale.
+  const items = ((data ?? []) as unknown) as DateRow[];
 
   return (
     <main className="min-h-screen">
