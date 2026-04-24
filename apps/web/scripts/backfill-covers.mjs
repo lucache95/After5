@@ -80,6 +80,15 @@ function buildPrompt(stop) {
   return `Generate an image: re-shoot this exact venue as a ${STYLE_SUFFIX} ${action}.`;
 }
 
+// Used when no stop has a real source photo (at-home activities, photo-less
+// hike trailheads, etc.). Generates entirely from text — no img2img.
+function buildTextOnlyPrompt(stop) {
+  const type = stop?.place_type ?? '';
+  const action = PROMPT_BY_TYPE[type] ?? 'A peaceful Okanagan Valley scene with warm cream and terra-cotta palette';
+  const name = stop?.place_name ? ` (specifically: ${stop.place_name})` : '';
+  return `Generate an image: ${action}${name}. ${STYLE_SUFFIX}`;
+}
+
 // Pick the first stop that has a fetchable real photo (not the /places/*
 // generic fallback we ship with the site).
 function pickSourceStop(stops) {
@@ -99,28 +108,36 @@ async function fetchImageBase64(url) {
   return { mime: 'image/jpeg', b64: buf.toString('base64') };
 }
 
-async function callGemini(stop) {
-  const photo = await fetchImageBase64(stop.photo_url);
-  if (photo.error) return { error: `photo: ${photo.error}` };
+async function callGemini(stop, opts = {}) {
+  // Two modes:
+  // - With photo: img2img restyle (preferred, preserves venue).
+  // - Without photo: pure text-to-image (for at-home activities / stops
+  //   without real photos). Prompt describes the scene from scratch.
+  const parts = [];
+  const prompt = opts.textOnly ? buildTextOnlyPrompt(stop) : buildPrompt(stop);
+  parts.push({ text: prompt });
 
-  const prompt = buildPrompt(stop);
+  if (!opts.textOnly) {
+    const photo = await fetchImageBase64(stop.photo_url);
+    if (photo.error) return { error: `photo: ${photo.error}` };
+    parts.push({ inline_data: { mime_type: photo.mime, data: photo.b64 } });
+  }
+
   const resp = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: photo.mime, data: photo.b64 } }] }],
-    }),
+    body: JSON.stringify({ contents: [{ parts }] }),
   });
 
   if (resp.status === 429) return { rate_limited: true };
   if (!resp.ok) return { error: `${resp.status} ${(await resp.text()).slice(0, 100)}` };
 
   const data = await resp.json();
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  const inlinePart = parts.find((p) => p.inlineData || p.inline_data);
+  const respParts = data?.candidates?.[0]?.content?.parts ?? [];
+  const inlinePart = respParts.find((p) => p.inlineData || p.inline_data);
   const inline = inlinePart?.inlineData ?? inlinePart?.inline_data;
   if (!inline?.data) {
-    const textPart = parts.find((p) => p.text);
+    const textPart = respParts.find((p) => p.text);
     return { error: `no_image (got: ${textPart?.text?.slice(0, 80) ?? 'nothing'})` };
   }
   return { bytes: Buffer.from(inline.data, 'base64'), prompt };
@@ -137,15 +154,26 @@ async function uploadCover(itineraryId, bytes) {
 }
 
 // ── Pull targets ───────────────────────────────────────────
+// Default: plans that don't yet have a Nano Banana cover (old FLUX
+// prompts are getting upgraded as we go).
+// --force: re-process every public plan, including ones that already
+// have Nano covers (slight stylistic variation each run).
 let q = supabase
   .from('itineraries')
-  .select('id, slug, title, stops, season, inputs')
+  .select('id, slug, title, stops, season, inputs, cover_image_prompt')
   .eq('is_public', true)
   .not('title', 'is', null)
   .order('generated_at', { ascending: false });
-if (!FORCE) q = q.is('cover_image_url', null);
-const { data, error } = await q;
+const { data: allRows, error } = await q;
 if (error) throw error;
+const data = FORCE
+  ? allRows
+  : allRows.filter((r) => {
+      const p = r.cover_image_prompt ?? '';
+      // The new Nano Banana prompts always contain this exact phrase.
+      // Anything missing it is either no cover yet or an old FLUX cover.
+      return !p.includes('Pinterest-style candid');
+    });
 
 const targets = data.slice(0, cap);
 console.log(`${data.length} candidates · processing ${targets.length} · pacing ${PACE_MS}ms · force=${FORCE}`);
@@ -160,17 +188,24 @@ for (const [i, it] of targets.entries()) {
   const idx = `${(i + 1).toString().padStart(3)}/${targets.length}`;
   const title = (it.title ?? '').slice(0, 50);
 
-  const stop = pickSourceStop(it.stops);
-  if (!stop) {
+  // Prefer img2img with the first stop that has a real photo. Fall back to
+  // text-only generation using the first stop's name + type when no stop
+  // has a fetchable photo (at-home activities, photo-less hike trailheads).
+  const sourceStop = pickSourceStop(it.stops);
+  const stops = Array.isArray(it.stops) ? it.stops : [];
+  const subjectStop = sourceStop ?? stops[0];
+  if (!subjectStop) {
     failed += 1;
-    console.log(`  ${idx}  ✗  no_source_photo  · ${title}`);
+    console.log(`  ${idx}  ✗  no_stops  · ${title}`);
     continue;
   }
+  const textOnly = !sourceStop;
+  const mode = textOnly ? 'text' : 'img2img';
 
   // 3 attempts on rate limit / transient
   let result = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const r = await callGemini(stop);
+    const r = await callGemini(subjectStop, { textOnly });
     if (r.bytes) { result = r; break; }
     if (r.rate_limited) {
       const back = attempt * 8000;
@@ -207,7 +242,7 @@ for (const [i, it] of targets.entries()) {
   }
 
   ok += 1;
-  console.log(`  ${idx}  ✓  ${title}  [${stop.place_type}]`);
+  console.log(`  ${idx}  ✓  ${title}  [${subjectStop.place_type}/${mode}]`);
 }
 
 const mins = ((Date.now() - t0) / 60000).toFixed(1);
