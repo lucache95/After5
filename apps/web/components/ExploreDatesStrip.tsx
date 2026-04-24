@@ -26,16 +26,34 @@ interface StopLite {
 
 export async function ExploreDatesStrip() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from('itineraries')
+  // Cast `from` through unknown — generated DB types are stale (haven't been
+  // regenerated since is_featured was added). Column exists in prod.
+  const { data } = await (
+    supabase.from('itineraries') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: unknown) => {
+          eq: (col: string, val: unknown) => {
+            not: (col: string, op: string, val: unknown) => {
+              not: (col: string, op: string, val: unknown) => {
+                order: (col: string, opts: { ascending: boolean }) => {
+                  limit: (n: number) => Promise<{ data: Row[] | null }>;
+                };
+              };
+            };
+          };
+        };
+      };
+    }
+  )
     .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
     .eq('is_public', true)
+    .eq('is_featured', true)
     .not('title', 'is', null)
     .not('slug', 'is', null)
     .order('generated_at', { ascending: false })
     .limit(6);
 
-  const items = (data ?? []) as Row[];
+  const items = data ?? [];
   if (items.length === 0) return null;
 
   return (
