@@ -25,6 +25,7 @@ const env = Object.fromEntries(
 
 const limitIdx = process.argv.indexOf('--limit');
 const cap = limitIdx > -1 ? parseInt(process.argv[limitIdx + 1], 10) : Infinity;
+const FORCE = process.argv.includes('--force');
 
 const STORAGE_BUCKET = 'itinerary-covers';
 const REPLICATE_MODEL = 'black-forest-labs/flux-schnell';
@@ -172,13 +173,16 @@ async function uploadToStorage(imageUrl, itineraryId) {
   return { url: data.publicUrl };
 }
 
-const { data, error } = await supabase
+// Without --force we only backfill plans missing a cover. With --force we
+// regenerate every public titled plan (used after a prompt change).
+let q = supabase
   .from('itineraries')
   .select('id, slug, title, hook, template_id, stops, inputs, season')
   .eq('is_public', true)
   .not('title', 'is', null)
-  .is('cover_image_url', null)
   .order('generated_at', { ascending: false });
+if (!FORCE) q = q.is('cover_image_url', null);
+const { data, error } = await q;
 if (error) throw error;
 
 const targets = data.slice(0, cap);

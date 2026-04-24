@@ -318,8 +318,50 @@ serve(async (req: Request) => {
       };
     }
 
+    // De-dupe at the source: if a near-twin (same template_id, ≥70% stop
+    // overlap, generated in the last 30 days) is already public, this new
+    // plan stays in the DB so the user sees it, but is_public=false so it
+    // doesn't pollute /dates with two near-identical cards. User flagged
+    // this when "Axes, Then Locked in a Room" and "Throw axes, then crack
+    // a room" both showed up at the same time.
+    const templateIds = Array.from(new Set(written.map((it) => it.template_id).filter(Boolean)));
+    const sinceIso = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+    const { data: dupCandidates } = templateIds.length
+      ? await supabase
+          .from('itineraries')
+          .select('template_id, stops')
+          .in('template_id', templateIds)
+          .eq('is_public', true)
+          .gte('generated_at', sinceIso)
+          .limit(500)
+      : { data: [] };
+
+    const existingByTpl = new Map<string, string[][]>();
+    for (const r of (dupCandidates ?? []) as Array<{ template_id: string | null; stops: unknown }>) {
+      if (!r.template_id) continue;
+      const ids = (Array.isArray(r.stops) ? r.stops : [])
+        .map((s) => (s as { place_id?: string }).place_id)
+        .filter((x): x is string => !!x);
+      if (!existingByTpl.has(r.template_id)) existingByTpl.set(r.template_id, []);
+      existingByTpl.get(r.template_id)!.push(ids);
+    }
+
+    function isNearTwin(newIds: string[], tplId: string | null): boolean {
+      if (!tplId || newIds.length === 0) return false;
+      const cands = existingByTpl.get(tplId) ?? [];
+      for (const cand of cands) {
+        if (cand.length === 0) continue;
+        const overlap = newIds.filter((id) => cand.includes(id)).length;
+        const ratio = overlap / Math.max(newIds.length, cand.length);
+        if (ratio >= 0.7) return true;
+      }
+      return false;
+    }
+
     const insertRows = written.map((it, idx) => {
       const quality = computeQualityScore(it);
+      const myStopIds = it.stops.map((s) => s.place_id).filter((x): x is string => !!x);
+      const isPublic = !isNearTwin(myStopIds, it.template_id);
       return {
       template_id: it.template_id,
       inputs,
@@ -329,7 +371,7 @@ serve(async (req: Request) => {
       why_it_works: it.why_it_works,
       total_cost_pp: it.total_cost_pp,
       total_duration_min: it.total_duration_min,
-      is_public: true,
+      is_public: isPublic,
       season,
       when_planned: inputs.when,
       planned_for_date: inputs.when === 'future' ? (inputs.future_date ?? null) : null,
