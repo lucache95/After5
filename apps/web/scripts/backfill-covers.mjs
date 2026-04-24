@@ -35,7 +35,11 @@ const cap = limitIdx > -1 ? parseInt(process.argv[limitIdx + 1], 10) : Infinity;
 const FORCE = process.argv.includes('--force');
 
 const STORAGE_BUCKET = 'itinerary-covers';
-const GEMINI_KEY = env.GEMINI_API_KEY ?? 'AIzaSyDIzNmTIFj1XmCKozI5Ilp86AAI8MOqWpg';
+const GEMINI_KEY = env.GEMINI_API_KEY;
+if (!GEMINI_KEY) {
+  console.error('Set GEMINI_API_KEY in .env.local');
+  process.exit(1);
+}
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_KEY}`;
 const PACE_MS = 1500;
 
