@@ -45,29 +45,109 @@ function buildPrompt(it: ItineraryRow): string {
   const vibe = (it.inputs?.vibe ?? []).slice(0, 2).join(', ');
   const season = it.season || 'spring';
 
-  // Compose a Pinterest editorial-photography style prompt. Avoid people
-  // (faces are the hardest thing to get right + we don't want stock-couple
-  // vibes). Lean into objects + scene + light. Warm cream + terra-cotta
-  // palette to match the brand. Always Kelowna BC for grounding.
-  const sceneBits: string[] = [];
-  if (types.includes('winery') || types.includes('cocktail_bar') || types.includes('brewery')) {
-    sceneBits.push('two glasses on a wooden table');
+  // Build a scene pool — list ALL relevant scene options (not just the first
+  // matching type). Then deterministically pick one based on the itinerary
+  // id so the same plan stays stable across re-renders, but different plans
+  // diverge instead of all converging on "wine glasses on a table".
+  //
+  // Categories ordered by VISUAL DISTINCTIVENESS: distinctive activities
+  // contribute multiple options at the top, generic drinks contribute fewer
+  // at the bottom. The id-based pick still draws from the whole pool.
+  const scenes: string[] = [];
+
+  // Distinctive activities — escape rooms, axe throwing, ranges, galleries
+  if (types.includes('activity') || types.includes('gallery')) {
+    scenes.push(
+      'a wooden axe-throwing target with chalk score marks',
+      'a moody dim-lit escape-room hallway with vintage props',
+      'a quiet downtown art studio with soft lamps and brushes on a table',
+      'an arcade neon sign reflecting on a polished bartop',
+    );
   }
-  if (types.includes('restaurant')) {
-    sceneBits.push('a candlelit bistro table set for two');
-  }
-  if (types.includes('cafe') || types.includes('bakery')) {
-    sceneBits.push('a steaming espresso and pastry on a warm cafe table');
-  }
+
+  // Outdoor — hikes, viewpoints, sunset spots
   if (types.includes('hike') || types.includes('viewpoint') || types.includes('sunset_spot')) {
-    sceneBits.push('a winding trail overlooking Okanagan Lake');
+    scenes.push(
+      'a winding bunchgrass trail above Okanagan Lake at golden hour',
+      'a sage-and-pine ridgeline overlooking Kelowna with distant blue mountains',
+      'an empty wooden bench at a hilltop viewpoint, warm dusk light',
+    );
   }
-  if (types.includes('beach') || types.includes('park') || types.includes('walk')) {
-    sceneBits.push('a quiet wooden boardwalk near the lake');
+
+  // Lake-side parks, beaches, walks
+  if (types.includes('beach') || types.includes('park') || types.includes('walk') || types.includes('garden')) {
+    scenes.push(
+      'a quiet wooden boardwalk along the Okanagan lakefront',
+      'soft evening light across a small public garden in spring',
+      'an empty pier with two beach chairs at golden hour',
+    );
   }
-  if (sceneBits.length === 0) {
-    sceneBits.push('a peaceful Okanagan Valley scene');
+
+  // Markets and shops — distinctive scene
+  if (types.includes('market') || types.includes('shop')) {
+    scenes.push(
+      'a colorful farmers market stall with crates of fresh produce in afternoon light',
+      'a vintage record-shop window backlit by warm interior lamps',
+    );
   }
+
+  // Sweets — desserts, ice cream, bakeries
+  if (types.includes('dessert') || types.includes('ice_cream') || types.includes('bakery')) {
+    scenes.push(
+      'two ice-cream cones held against a soft sunset sky',
+      'a window-lit pastry counter with croissants and tarts',
+      'a candlelit dessert plate with a single fork on a marble counter',
+    );
+  }
+
+  // Cafés — only if cafe is a real anchor (not paired with above)
+  if (types.includes('cafe')) {
+    scenes.push(
+      'a steaming espresso on a warm wooden cafe table with a folded book',
+      'a sunlit cafe corner with a single ceramic cup and morning shadows',
+    );
+  }
+
+  // Restaurants — sit-down dining
+  if (types.includes('restaurant')) {
+    scenes.push(
+      'a candlelit bistro table for two with linen napkins',
+      'warm pendant lights through a restaurant window at dusk',
+      'an intimate corner table with bread and butter and a single tealight',
+    );
+  }
+
+  // Drinks — wine, cocktails, beer (LAST priority because over-represented)
+  if (types.includes('winery')) {
+    scenes.push(
+      'a sunlit vineyard row with grape leaves catching golden light',
+      'a wine barrel and a single glass on a stone patio',
+    );
+  }
+  if (types.includes('cocktail_bar')) {
+    scenes.push(
+      'a copper-pendant-lit cocktail bar with two coupes on dark wood',
+      'a single negroni glowing under a vintage Edison bulb',
+    );
+  }
+  if (types.includes('brewery')) {
+    scenes.push(
+      'two pints on a sunlit patio table with green leaves above',
+      'a dim brewery taproom with rows of taps in soft focus',
+    );
+  }
+
+  if (scenes.length === 0) {
+    scenes.push(
+      'a quiet Okanagan vineyard at golden hour',
+      'a soft pastel sunset over Okanagan Lake from a hilltop',
+    );
+  }
+
+  // Deterministic pick — sum char codes of itinerary id, mod scenes.length.
+  // Same plan always renders the same scene; different plans diverge.
+  const seed = (it.id || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+  const scene = scenes[seed % scenes.length];
 
   const seasonHint =
     season === 'winter' ? 'crisp winter light, bare trees, soft snow on distant mountains' :
@@ -77,7 +157,7 @@ function buildPrompt(it: ItineraryRow): string {
 
   return [
     'Editorial Pinterest-style photograph,',
-    sceneBits[0] + ',',
+    scene + ',',
     `Kelowna British Columbia, ${neighborhoods.length ? neighborhoods.join(' / ') + ', ' : ''}${vibe ? vibe + ' mood,' : ''}`,
     `${seasonHint},`,
     'cinematic golden-hour atmosphere, warm cream and terra-cotta color palette,',
