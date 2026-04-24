@@ -1,11 +1,16 @@
 # After5 Date Engine v2 — Architecture Design
 
 **Date:** 2026-04-23
-**Status:** Draft v3 — external reviewer (Steven) findings addressed (~18 architectural + security issues on top of v2's 15)
+**Status:** Draft v4 — generator algorithm spec + bandit shadow-logging + 7 open product questions folded in
 **Author:** Lucas Senechal (w/ Claude)
 **Related research:**
 - `.planning/research/date-engine-v2/01-current-system-audit.md`
 - `.planning/research/date-engine-v2/02-venue-pipeline-research.md`
+
+**Companion specs** (authoritative for the areas they cover; this doc summarizes):
+- `2026-04-23-matching-mechanic-walkthrough.md` — plain-language end-to-end flow, edge cases, canonical E2E test sequence
+- `2026-04-23-date-plan-generator-deep-dive.md` — the 8-stage generator pipeline, scoring formula, validation pass, evaluation rubric
+- `2026-04-23-contextual-bandits-for-plan-selection.md` — long-term Phase-7+ evolution of plan selection with Phase-2 shadow-logging prep
 
 ---
 
@@ -261,7 +266,35 @@ match_seeking_since   timestamptz nullable
 social_score          int                 -- 0-10, LLM quality for content pipeline
 moderation_status     text enum           -- pending|approved|flagged|rejected
 context_embedding     vector(1536) nullable  -- for semantic feed ranking ("cozy wine bar" → matches); pgvector HNSW index
+archetype             text enum nullable  -- crowd_pleaser|drinks_led|activity_first|adventurous|low_key|daytime|cultural|outdoorsy (§5.3.1; bandit warm-up)
 ```
+
+**`bandit_decisions`** *(new — Phase 2 shadow-log, feeds Phase 8 bandit)*
+
+```
+id                    bigserial pk
+user_id               uuid fk profiles
+generation_id         uuid                -- groups the 3 plans shown in one generate-plan call
+slot                  int                 -- 1, 2, or 3
+archetype             text
+itinerary_id          uuid fk itineraries
+context               jsonb               -- feature vector at decision time
+propensity            float               -- P(chose this archetype | context, policy); synthetic for MMR
+policy_version        text                -- "mmr-v1", "bandit-v1", etc.
+decided_at            timestamptz
+-- reward fields filled in async as signal arrives:
+user_picked           bool
+published             bool
+sought_match          bool
+matched               bool
+did_it_happen         bool
+date_rating           int nullable
+reward_finalized_at   timestamptz nullable
+index (user_id, decided_at DESC)
+index (generation_id)
+```
+
+*Purpose:* Shadow-log every MMR decision from Phase 2 onward. Phase 8 bandit policy trains on this accumulated history. Cheap insurance — skipping this delays Phase 8 by 1–2 months.
 
 ### 4.5 Dating layer
 
@@ -595,9 +628,9 @@ Nine subsystems, each with clear boundaries. Subsystems communicate through the 
 **Display-time Google Places photos** (separate path, with mandatory URL cache): When rendering a venue detail view, if the place has `google_place_id`, an edge function fetches fresh `photoUri`s from the Google Places API with required `authorAttributions`. **The signed URL (not the bytes) is cached for 1 hour in Upstash Redis**, keyed on `(google_place_id, photo_index)`. Google's TOS allows this; caching the URL (not the image) is the standard mitigation. Without this cache, cost math at 1k DAU × 5 venue views/day = ~150k calls/month = ~$2,550/mo, which blows through the Phase 7 budget ceiling. With the 1-hour cache, typical traffic collapses to ~10% of that. Covered by the budget circuit breaker.
 
 ### 5.3 Multi-City Infrastructure + Generator Evolution *(Phase 2)*
-**Purpose:** Remove Kelowna hardcoding; wire feedback loop.
+**Purpose:** Remove Kelowna hardcoding; wire feedback loop; formalize the generator pipeline.
 
-**Owns:** `cities`, `events`, `feed_cache` tables.
+**Owns:** `cities`, `events`, `feed_cache` tables. `archetype` column on `itineraries`. `bandit_decisions` shadow-log table.
 
 **Workflows:**
 - City bootstrap — seed `kelowna` row, extract constants, pass `city_id` through generate-plan
@@ -606,6 +639,68 @@ Nine subsystems, each with clear boundaries. Subsystems communicate through the 
 - Feed cache worker — per-user feed recomputed every ~5 min
 
 **Key decision:** `events` is the single source of truth for all derived scores.
+
+#### 5.3.1 Generator algorithm (8 stages)
+
+*Authoritative source: `2026-04-23-date-plan-generator-deep-dive.md`. This subsection summarizes the load-bearing decisions.*
+
+The generator is not a single LLM call — it's an 8-stage pipeline where the LLM has exactly one job: write voice over facts it receives, never choose facts itself. Each stage has a latency budget; total p95 ≤ 12s.
+
+| # | Stage | Runtime | Budget | Owns |
+|---|---|---|---|---|
+| 1 | Request validation + rate limit + budget reservation | Edge fn | <50ms | Zod, Upstash, `reserveBudget()` |
+| 2 | Candidate retrieval (hard filters) | Postgres | <100ms | SQL over `places` filtered by city, operational, photo, hours, dietary, avoid_types |
+| 3 | Semantic narrowing | pgvector HNSW | <200ms | Mood embedding cache → top 80 by vector distance |
+| 4 | Venue-level composite scoring | Pure fn | <50ms | `quality_score` (Bayesian-smoothed) + `completion_score` + semantic + partner bias (capped, Inv. 7b) + freshness + editorial − staleness − user-history |
+| 5 | Itinerary construction (arc + slot fill) | Pure fn | <500ms | Archetype selection → per-stop filter by type, time, distance, cumulative budget → `selectWeightedTopK` per stop |
+| 6 | Plan-level scoring + 3-plan selection | Pure fn | <200ms | MMR over candidate plans with λ≈0.7; Jaccard + embedding distance for diversity |
+| 7 | Narrative generation | Claude Sonnet | 3–8s | Cacheable system prompt + city voice_hints; structured output with Zod schema |
+| 8 | Post-generation validation + persistence | Pure fn + Postgres | <200ms | **The validation pass that makes "hallucination-proof" literal — see Invariant 22** |
+
+**Venue-level scoring formula** (Stage 4):
+
+```
+venue_score = 
+    w_quality        * bayesian_quality_score
+  + w_completion     * completion_score          -- 2× weight in first 6 months
+  + w_semantic       * (1 - vector_distance)
+  + w_partner        * capped_partner_bias       -- Inv. 7b
+  + w_freshness      * freshness_factor
+  + w_editorial      * editorial_boost           -- decays post-launch
+  - w_staleness      * staleness_score
+  - w_user_history   * seen_recently_penalty
+```
+
+**Bayesian smoothing** on `quality_score`:
+```
+bayesian_score = (v / (v + m)) * R + (m / (v + m)) * C
+```
+Where `v` = rating count, `R` = venue mean, `C` = city mean, `m ≈ 20`. Prevents a 1-rating venue from beating a 100-rating venue. IMDb Top-250 formula.
+
+**3-plan diversity** (Stage 6): MMR with λ≈0.7 biased toward quality; target ≥0.6 pairwise Jaccard distance on venue sets across the 3 plans. MMR is temporary — Phase 8 replaces it with a contextual bandit once ≥1k completed dates per city exist.
+
+**Claude narrative pass** (Stage 7): cacheable system prompt (≥1024 tokens for caching discount) + city `voice_hints`. User inputs go in the user message (uncached). Structured output schema enforced. Prompt caching gives ~90% discount on cached tokens at steady state.
+
+**Post-gen validation pass** (Stage 8 — the actual hallucination shield):
+
+1. **Schema validation** — Zod rejects malformed responses (retry once, fall back to templated narrative on 2nd fail)
+2. **Venue-name whitelist** — `venue_blurbs[].venue_name` must exactly match a venue in the itinerary
+3. **NER narrative fact-check** — proper-noun extraction over narrative text; any proper noun not in (itinerary venue names ∪ city neighborhoods) triggers rewrite or fallback
+4. **Price/time whitelist** — regex-extract `\$\d+` and `\d+(am|pm)` patterns; cross-check structured data
+5. **Persist** — `itineraries` row with `visibility='public'`, `match_status='none'`, `archetype=<label>`
+6. **Shadow-log** decision to `bandit_decisions` (even though policy is MMR for now)
+
+**Archetype labeling at generation time** (Phase 2 deliverable, sets up Phase 8 bandit):
+
+Every generated plan gets tagged with an archetype: `crowd_pleaser | drinks_led | activity_first | adventurous | low_key | daytime | cultural | outdoorsy`. The label is derived from the arc + venue types; cheap, deterministic, stored in `itineraries.archetype`. See `2026-04-23-contextual-bandits-for-plan-selection.md` §3 for the starter set and the rationale for shadow-logging now to warm-start the Phase 8 bandit.
+
+#### 5.3.2 Cold-start for new cities
+
+*Handled in detail in the generator deep-dive §9; key points:*
+- Editorial seed: 30–50 curator-picked "canonical great dates" per city with `editorial_boost=1.0` that decays over weeks
+- Quality priors from external data: weighted Google ratings × recency × review count as a starting point, overwritten by real `match_ratings`
+- Cross-city transfer via `venue_embedding` similarity
+- Explicit first-time UX: *"Kelowna launched 3 weeks ago — we're still learning. Let us know how these plans feel."*
 
 ### 5.4 Venue Ingestion Pipeline *(Phase 3)*
 **Purpose:** Bulk-seed cities; keep inventory growing.
@@ -748,8 +843,24 @@ P8       ─────────── (ongoing, light touch) ────�
 ### Phase 1 — Image Aesthetic Pipeline *(~3–4 weeks)*
 `place_photos` table, Inngest `enrich-venue-images` workflow, backfill Kelowna to 95%+ coverage.
 
-### Phase 2 — Multi-City Hooks + Generator Evolution *(~2–3 weeks)*
+### Phase 2 — Multi-City Hooks + Generator Evolution *(~3–4 weeks — revised)*
 `cities` table + seed, `city_id` FKs, `events` table, nightly derivation, `feed_cache` infrastructure, trust-tier bias in scoring.
+
+**Generator algorithm formalization** (scope expansion for v4 — see §5.3.1):
+- 8-stage pipeline made explicit in `generate-plan/`
+- Composite venue scoring (Bayesian-smoothed quality + completion + semantic + capped partner bias + freshness − staleness − user-history)
+- MMR-based 3-plan diversity with λ≈0.7 + Jaccard-distance target ≥0.6
+- Archetype labeling at generation time → `itineraries.archetype`
+- `bandit_decisions` shadow-log (policy is still MMR; logging warms up Phase 8)
+- Post-gen validation pass: Zod schema + venue whitelist + NER + price/time regex
+- Templated narrative fallback on LLM failure
+- Adversarial fixture set (100+ prompt-injection cases) as CI regression
+- Mood embedding cache table
+- Per-user rate limiting at edge (Upstash token bucket — already Phase 0)
+- Recent-generation exclusion for regenerate flow
+- Prompt caching on system prompt + `cities.voice_hints`
+- Partial-success response shape (2/3 plans returned cleanly if 1 fails validation)
+- "Not enough options at this budget/time" explicit UX
 
 ### Phase 3 — Venue Ingestion Pipeline *(~4–6 weeks)*
 Overture + FSQ OS bulk import, Placekey dedupe, Google Places enrichment, auto-categorization, Kelowna grows 170 → 500+.
@@ -775,8 +886,20 @@ Swipes + matches + ratings schema, profiles split (public/private), RLS for blur
 ### Phase 7.5 — Mobile App Launch *(~6–10 weeks)*
 React Native + Expo, shared types/schemas via monorepo package, APNs/FCM wiring, deep linking, App Store + Play Store submission.
 
-### Phase 8 — Moderation Hardening *(ongoing)*
-Reports triage UI, expanded safety classifier, trust level automation, shadow-ban, ID verification only if abuse patterns demand it.
+### Phase 8 — Moderation Hardening + Bandit Swap *(ongoing, starts post-Phase-7)*
+
+*Moderation (always-on):* Reports triage UI, expanded safety classifier, trust level automation, shadow-ban, ID verification only if abuse patterns demand it.
+
+*Contextual bandit over MMR* (gated on ≥1k completed dates per city + 4-week observation window post-Phase-7 stabilization):
+- Train Thompson Sampling policy over archetype arms using `bandit_decisions` log (shadow-logged since Phase 2)
+- Offline evaluation (IPS + Doubly Robust) before any online deployment
+- Shadow deployment: bandit computes in parallel with MMR for 2 weeks; decisions compared but MMR shown to user
+- A/B test 50/50 bandit vs MMR for 4+ weeks, stratified by city
+- Primary metric: match_rate per generated plan. Guardrails: narrative_quality (unchanged), factual_error_rate (unchanged)
+- Realistic expected lift: ~10–15% on match rate (not the 20–40% headline — treat that as upside)
+- **Don't stack with Phase 7 launch** — separate experiments
+
+*Full bandit spec:* `2026-04-23-contextual-bandits-for-plan-selection.md`
 
 ### Critical path callouts
 - Start TikTok + Instagram API approvals by end of Phase 4 (2–4 weeks wait) → unblocks Phase 6b
@@ -824,6 +947,11 @@ Twenty-one load-bearing rules (with sub-invariants 5b and 7b). Each includes enf
 19. **Every inbound webhook verifies signature before any side effect.** *(Resend, Inngest, Supabase Auth, social platforms — each handler rejects on signature mismatch or replay/stale timestamp. No DB writes, no external calls, no notification dispatches until signature valid. Integration test coverage per endpoint.)*
 20. **SIM-swap protection on phone-authed sessions.** *(Login from a new device fingerprint (UA + IP ASN + device ID) when phone is the only auth factor requires a second factor — passkey, linked Google/Apple, or email re-verification. Phone additions trigger immediate email alert to account's email-of-record. Users prompted to link a second factor at match-success time.)*
 21. **Admin reads of PII are logged before return.** *(`/api/admin/*` edge-function wrapper writes `{event_type: 'admin.read', actor_id, resource_type, resource_id}` to `events` BEFORE returning data. A compromised admin session cannot browse PII silently.)*
+
+### Generator integrity
+22. **Generated narratives are fact-checked against the structured itinerary before persistence.** *(Stage 8 of the generator pipeline performs: (a) Zod schema validation, (b) venue-name whitelist (narrative `venue_blurbs[].venue_name` must exactly match an itinerary venue), (c) NER proper-noun extraction and cross-check against itinerary venues ∪ city neighborhoods, (d) regex extraction of `\$\d+` and `\d+(am|pm)` patterns with cross-check against structured data. Any failure triggers retry, then falls back to templated narrative. Without this, an LLM can narratively reference real-but-wrong venues ("swing by Quails' Gate") that aren't in the plan — breaking logistics/cost/timing even when the selection itself is hallucination-proof. This is the invariant that makes "hallucination-proof by design" literal, not marketing.)*
+23. **Dietary and accessibility constraints are HARD filters with verified-only tag requirement.** *(A place is eligible for dietary-filtered generation only if `dietary_tags` was human-verified — `llm_attributed=false` on those tags. Silent violation of a vegetarian filter is a trust-destroying bug. If a city has too few verified-vegetarian venues, surface the scarcity explicitly rather than dropping the filter.)*
+24. **Every MMR decision is shadow-logged to `bandit_decisions` with a synthetic propensity.** *(Phase 2 deliverable, feeds Phase 8 bandit training. Missing this log for months = no warm-start data when the bandit goes live. Archetype labeling at generation time is cheap (deterministic rule over arc + venue types) and produces the training labels.)*
 
 ### Admin override principle
 Every one-way invariant (11, 12, 13, 14) has admin override with required `reason` field, logged to `events` as the audit trail. This keeps system integrity without crippling operational needs. Invariant 21 ensures even read-access by admin is logged.
@@ -1001,6 +1129,18 @@ Non-critical workflows (ingestion, content generation, outreach, feed recompute)
 - **Brigading regression**: fixture simulates 5 reports from a 1-day-old same-ASN account cohort against a victim; assert trust_level does NOT downgrade. Then 5 reports from distinct trusted-reporter buckets; assert trust_level DOES downgrade.
 - **Webhook signature fuzzing**: for each inbound webhook endpoint, test rejects on bad signature / expired timestamp / replay. Refuses to process unsigned requests.
 - **Budget race test**: 100 concurrent `reserveBudget` calls targeting a near-full budget; assert no overshoot past the cap; assert idempotency keys correctly deduplicate retries.
+
+**Generator evaluation rubric** (trimmed from 7 dimensions in the deep-dive to 3 load-bearing ones for solo-founder scale; expand when there's a team):
+
+| Metric | Automation | Cadence | Deploy gate | Target |
+|---|---|---|---|---|
+| **factual_error_rate** | Full — automated against every generation | Continuous | **Hard gate: never deploy if >2%** | <1% |
+| **match_rate per generation** | Full — from `events` + `matches` | Continuous | Soft gate: compare to previous 14d before ramp | Trend upward |
+| **narrative_quality** | Human-sampled (Lucas or a reviewer) | 20 plans/month | Soft gate: narrative_quality ≥4.0/5.0 on 20-sample weekly before ramp | ≥4.0/5.0 |
+
+*factual_error_rate* is the metric that determines trust. It's the *only* non-negotiable deploy gate. Every narrative referencing a non-itinerary venue, a wrong hour, or an invented price is a trust-shredding bug that doesn't come back once a user sees it. Stage 8 validation (Invariant 22) is what keeps this gate green; if Stage 8 ever gets bypassed, factual_error_rate becomes the canary.
+
+Full 7-dimension rubric (coherence, mood-fit, diversity, adversarial robustness, downstream date-completion) is in the generator deep-dive §10; revisit when there's headcount to run it.
 
 ### 8.7 Environment strategy
 
@@ -1241,7 +1381,7 @@ Explicit deferrals so future-us doesn't accidentally drift into building them.
 - Granular notification prefs — on/off per channel enough
 
 ### Dating features
-- Match insurance / safety button — defer
+- ~~Match insurance / safety button — defer~~ **Upgraded to in-scope for Phase 7 (simple version).** Given safety is a Day-1 concern per external reviewers, minimum-viable check-in ships with the dating layer: optional tap-to-confirm push 30 min after `scheduled_for`; if unresponded, escalate to an opt-in emergency contact. Full match-insurance + location sharing remain deferred
 - Pre-match video intros — defer
 - Live-photo verification badge — only if ID verification insufficient
 - Priority signals ("super swipe") — monetization, defer
@@ -1285,6 +1425,16 @@ Things we haven't decided yet that will need answers in the relevant phase.
 - **User-uploaded photo CDN strategy.** User uploads go to Supabase Storage, but delivery: raw Supabase Storage URLs vs piping through Cloudflare Images for transforms? Answer depends on usage patterns we'll learn from Phase 7.
 - **OpenTable vs Resy deep-link priority.** Both are link-out-only in v2. Generator should pick the more-likely-to-work link when both exist. Affinity per city (Resy denser in NYC, OpenTable denser in Canada).
 - **RLS bypass for admin — JWT claim vs service role.** Admin dashboard reads via `/api/admin/*` edge functions with service role OR JWT claim + elevated RLS policies. Second approach is safer but more RLS complexity. Lock in by Phase 4.
+
+### Matching-mechanic product questions (surfaced in walkthrough companion doc)
+- **Concurrent-seeking cap per creator.** How many `seeking` itineraries can one creator have open at once? Schema allows unlimited; realistic cap is probably 2–3 to prevent feed pollution and review-queue overwhelm. Decide before Phase 7 launch.
+- **Swiper-proposes-different-date reciprocity.** Current design is fully asymmetric — swiper can only accept the exact plan offered. Worth considering Y2 "after-match reschedule to a different seeking date" flow. Not v2 scope.
+- **Match abandonment state.** When `matches.scheduled_for` passes and nobody submits a `match_ratings` row, what state is the match in? Currently no auto-transition. Recommend adding `matches.state='abandoned'` if neither party rates within 7 days. Affects `places.completion_score` aggregation — decide before signal matters.
+- **Preference persistence across dates.** `age_preferences` / `gender_preferences` are one setting per user. A swiper's preferences for a wine-bar date might differ from a hiking date. Not v2 scope, but Y2 might want preferences per archetype or date type.
+- **"She declined me" moment.** When Alex and Sam swipe right on Maya's date and Maya picks Jordan, Alex and Sam see their swipe "expired" with no explanation. Current design avoids the emotional cost of explicit rejection. Worth A/B testing explicit-rejection vs ambiguous-expiry at scale.
+- **Swipe undo primitive.** No undo in v2 — a swiper who changes their mind has to hope the creator declines them. Adding `swipes.status='withdrawn'` is cheap; decide based on user signal post-Phase-7.
+- **Party-size awareness.** Generator input should include `party_size` (default 2). Affects budget interpretation (total vs per-person), venue eligibility (some venues don't do parties of 6), archetype selection. Missing from current generator schema; add in Phase 2.
+- **"Why this plan" explainer surface.** Pipeline already produces reasoning data (scoring weights, tag matches). A 1-sentence explainer per plan ("Mission Hill's rooftop matches your 'cozy' mood and Sandhill is a 4-min walk") builds trust and calibrates expectations. Consider for Phase 5 rollout.
 
 ---
 
