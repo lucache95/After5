@@ -1322,7 +1322,7 @@ Expected: "No schema changes found" — local schema matches remote.
 pnpm supabase db execute "select service, month, budget_usd, spent_usd from monthly_budget order by service;"
 ```
 
-Expected: 6 rows covering claude, replicate, elevenlabs (if seeded later), google_places, firecrawl, resend, cloudflare_images.
+Expected: 6 rows — `claude`, `cloudflare_images`, `firecrawl`, `google_places`, `replicate`, `resend`. (The `elevenlabs` row isn't seeded in Phase 0 — it'll be inserted at Phase 6a when the TTS pipeline first calls `reserveBudget('elevenlabs', ...)`. The CHECK constraint on `monthly_budget.service` already allows it.)
 
 - [ ] **Tag the wave completion**
 
@@ -1813,24 +1813,12 @@ export default function PhoneAuthPage() {
     // Phone must be E.164 format: +1XXXXXXXXXX
     const normalized = phone.startsWith('+') ? phone : `+1${phone.replace(/\D/g, '')}`;
 
-    // App-layer rate limit mirror (Invariant 18 — spec §8.11 says mirror Supabase Auth's
-    // built-in SMS rate limit at app layer for observability). 5/hr per phone.
-    // This is a client-side best-effort check; Supabase Auth enforces server-side too.
-    const rlKey = `phone-otp:${normalized}`;
-    const rlState = JSON.parse(localStorage.getItem(rlKey) ?? '{"count":0,"resetAt":0}');
-    const now = Date.now();
-    if (now > rlState.resetAt) {
-      rlState.count = 0;
-      rlState.resetAt = now + 3600_000;
-    }
-    if (rlState.count >= 5) {
-      setError('Too many code requests for this number. Try again in an hour.');
-      setLoading(false);
-      return;
-    }
-    rlState.count += 1;
-    localStorage.setItem(rlKey, JSON.stringify(rlState));
-
+    // NOTE on Invariant 18 / spec §8.11: phone-OTP rate limit is enforced server-side
+    // by Supabase Auth (5/hr per phone + 30/5min per IP — see supabase/config.toml).
+    // Spec §8.11 also asks for an app-layer mirror writing to events.rate_limit_violation
+    // for observability. That mirror requires Redis-fronted server-side logic we'll add
+    // when the observability dashboard lands (Phase 3). Skipping for Phase 0 rather than
+    // pretending a client-side localStorage check satisfies the invariant.
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalized,
     });
