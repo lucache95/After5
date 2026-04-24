@@ -16,6 +16,10 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh6.googleusercontent.com' },
       // Mapbox Static Images API — used for the route map (no WebGL needed).
       { protocol: 'https', hostname: 'api.mapbox.com' },
+      // Supabase Storage — hosts AI-generated itinerary covers (FLUX schnell)
+      // and email assets (welcome polaroid PNGs). Without this, next/image
+      // returns a broken-image placeholder.
+      { protocol: 'https', hostname: 'ufufmcpnysvwtutpbian.supabase.co' },
     ],
   },
 };
