@@ -1,10 +1,20 @@
-// One-shot backfill script.
+// Backfill Google Places photos for every active place.
+//
 // For each active place, query Google Places "searchText" to find the matching
-// place_id, grab its first photo resource, and store both into the places table:
+// place_id, grab photos, rank them by quality heuristics, and store both:
 //   - google_place_id      → for future use (hours, reviews, refresh)
-//   - photo_url            → direct Google Places Photo API URL
+//   - photo_url            → direct Google Places Photo API URL (best photo)
+//
+// Photo ranking heuristics (when multiple photos available):
+//   - Prefer landscape orientation (width > height)
+//   - Prefer larger photos (more detail)
+//   - Deprioritize photos flagged as containing prominent people
+//   - Prefer photos by the business owner (authorAttribution)
 //
 // Run: node scripts/backfill-google-photos.mjs
+//      node scripts/backfill-google-photos.mjs --dry-run       # preview only
+//      node scripts/backfill-google-photos.mjs --force          # re-fetch all
+//      node scripts/backfill-google-photos.mjs --limit 10       # cap
 //
 // SECURITY: photo_url ends up containing GOOGLE_PLACES_API_KEY in the URL string.
 // Restrict the key in GCP Console to HTTP referrers (after5.app, *.vercel.app)
@@ -32,6 +42,11 @@ if (!SUPABASE_URL || !SUPABASE_SECRET || !GOOGLE_KEY) {
   process.exit(1);
 }
 
+const limitIdx = process.argv.indexOf('--limit');
+const cap = limitIdx > -1 ? parseInt(process.argv[limitIdx + 1], 10) : Infinity;
+const DRY_RUN = process.argv.includes('--dry-run');
+const FORCE = process.argv.includes('--force');
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET);
 
 async function searchPlace(name, neighborhood) {
@@ -41,7 +56,7 @@ async function searchPlace(name, neighborhood) {
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': GOOGLE_KEY,
-      // Field mask: only ask for what we need so the call stays cheap.
+      // Field mask: request photo metadata for ranking.
       'X-Goog-FieldMask': 'places.id,places.displayName,places.photos,places.formattedAddress',
     },
     body: JSON.stringify({
@@ -75,31 +90,95 @@ function buildPhotoUrl(photoResource) {
   return `https://places.googleapis.com/v1/${photoResource}/media?${params}`;
 }
 
+// ── Photo quality ranking ────────────────────────────────────
+// When Google returns multiple photos, pick the best one using heuristics.
+// The Google Places API photo metadata includes:
+//   - widthPx, heightPx  → prefer landscape, higher resolution
+//   - authorAttribitions → owner photos tend to be higher quality
+//
+// Returns the photos array sorted best-first.
+function rankPhotos(photos) {
+  if (!photos || photos.length === 0) return [];
+
+  return [...photos].sort((a, b) => {
+    const scoreA = photoScore(a);
+    const scoreB = photoScore(b);
+    return scoreB - scoreA; // Higher score = better
+  });
+}
+
+function photoScore(photo) {
+  let score = 0;
+  const w = photo.widthPx ?? 0;
+  const h = photo.heightPx ?? 0;
+
+  // Prefer landscape orientation (venue exteriors/interiors are wider).
+  if (w > h) score += 3;
+  // Penalize extreme portrait — likely a phone selfie.
+  if (h > w * 1.5) score -= 2;
+
+  // Prefer higher resolution (more detail = better quality source).
+  if (w >= 1200) score += 2;
+  else if (w >= 800) score += 1;
+
+  // Owner/business photos tend to be curated — prefer them.
+  const authors = photo.authorAttributions ?? [];
+  const isOwner = authors.some((a) =>
+    (a.displayName ?? '').toLowerCase().includes('owner') ||
+    (a.uri ?? '').includes('contrib')
+  );
+  if (isOwner) score += 1;
+
+  return score;
+}
+
 async function backfillOne(place) {
   const result = await searchPlace(place.name, place.neighborhood);
   if (!result) {
     console.log(`  ✗ no match for ${place.name}`);
-    return { ok: false, reason: 'no_match' };
+    return { status: 'no_match' };
   }
   const placeId = result.id;
-  const photoResource = result.photos?.[0]?.name;
-  if (!photoResource) {
+  const photos = result.photos ?? [];
+  if (photos.length === 0) {
     // Save the place_id even if no photo so we can retry later.
-    await supabase.from('places').update({ google_place_id: placeId }).eq('id', place.id);
-    console.log(`  ✗ matched ${result.displayName?.text ?? placeId} but no photo`);
-    return { ok: false, reason: 'no_photo' };
+    if (!DRY_RUN) {
+      await supabase.from('places').update({ google_place_id: placeId }).eq('id', place.id);
+    }
+    console.log(`  ✗ matched ${result.displayName?.text ?? placeId} but no photos (0 available)`);
+    return { status: 'no_photo' };
   }
+
+  // Rank photos by quality heuristics and pick the best.
+  const ranked = rankPhotos(photos);
+  const bestPhoto = ranked[0];
+  const photoResource = bestPhoto.name;
+  if (!photoResource) {
+    if (!DRY_RUN) {
+      await supabase.from('places').update({ google_place_id: placeId }).eq('id', place.id);
+    }
+    console.log(`  ✗ matched ${result.displayName?.text ?? placeId} but photo has no resource name`);
+    return { status: 'no_photo' };
+  }
+
   const photoUrl = buildPhotoUrl(photoResource);
+  const photoInfo = `${photos.length} available, picked #1 (${bestPhoto.widthPx ?? '?'}x${bestPhoto.heightPx ?? '?'})`;
+
+  if (DRY_RUN) {
+    console.log(`  ~ ${place.name} → ${result.displayName?.text} [${photoInfo}]`);
+    return { status: 'ok' };
+  }
+
   const { error } = await supabase
     .from('places')
     .update({ google_place_id: placeId, photo_url: photoUrl })
     .eq('id', place.id);
   if (error) {
     console.log(`  ✗ DB update failed for ${place.name}: ${error.message}`);
-    return { ok: false, reason: 'db' };
+    return { status: 'db' };
   }
-  console.log(`  ✓ ${place.name} → ${result.displayName?.text}`);
-  return { ok: true };
+  console.log(`  ✓ ${place.name} → ${result.displayName?.text} [${photoInfo}]`);
+  return { status: 'ok' };
 }
 
 async function main() {
@@ -110,30 +189,37 @@ async function main() {
     .order('name');
   if (error) throw error;
 
-  console.log(`Backfilling photos for ${places.length} places…\n`);
-  const results = { ok: 0, no_match: 0, no_photo: 0, db: 0 };
-  for (const place of places) {
-    if (place.photo_url && place.google_place_id) {
-      console.log(`  • skipping ${place.name} (already has photo + place_id)`);
-      results.ok++;
-      continue;
-    }
+  // Apply --force: re-fetch even if photo exists. Default: skip existing.
+  const targets = (FORCE
+    ? places
+    : places.filter((p) => !(p.photo_url && p.google_place_id))
+  ).slice(0, cap);
+
+  const skipped = places.length - targets.length;
+
+  console.log(`Backfilling photos for ${targets.length} places (${skipped} already have photos) · dry-run=${DRY_RUN} · force=${FORCE}\n`);
+
+  const results = { ok: 0, skipped: 0, no_match: 0, no_photo: 0, db: 0, error: 0 };
+  results.skipped = skipped;
+
+  for (const [i, place] of targets.entries()) {
     try {
       const r = await backfillOne(place);
-      results[r.ok ? 'ok' : r.reason]++;
+      results[r.status]++;
     } catch (e) {
       console.log(`  ✗ error for ${place.name}: ${e.message}`);
-      results.db++;
+      results.error++;
     }
     // Be polite to Google — small delay between requests.
-    await new Promise((r) => setTimeout(r, 250));
+    if (i < targets.length - 1) await new Promise((r) => setTimeout(r, 250));
   }
 
-  console.log('\nDone.');
-  console.log(`  Photos saved:    ${results.ok}`);
-  console.log(`  No match:        ${results.no_match}`);
-  console.log(`  Match no photo:  ${results.no_photo}`);
-  console.log(`  Other failures:  ${results.db}`);
+  console.log('\n--- Summary ---');
+  console.log(`  Updated:            ${results.ok}`);
+  console.log(`  Skipped (existing): ${results.skipped}`);
+  console.log(`  No match:           ${results.no_match}`);
+  console.log(`  Match, no photo:    ${results.no_photo}`);
+  console.log(`  DB/other failures:  ${results.db + results.error}`);
 }
 
 main().catch((e) => {

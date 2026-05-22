@@ -476,6 +476,7 @@ export type Database = {
           evening_photo_url: string | null
           feedback_score: number
           friction_score: string | null
+          generated_photo_url: string | null
           google_place_id: string | null
           hours_week: Json | null
           id: string
@@ -549,6 +550,7 @@ export type Database = {
           evening_photo_url?: string | null
           feedback_score?: number
           friction_score?: string | null
+          generated_photo_url?: string | null
           google_place_id?: string | null
           hours_week?: Json | null
           id?: string
@@ -622,6 +624,7 @@ export type Database = {
           evening_photo_url?: string | null
           feedback_score?: number
           friction_score?: string | null
+          generated_photo_url?: string | null
           google_place_id?: string | null
           hours_week?: Json | null
           id?: string

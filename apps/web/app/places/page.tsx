@@ -26,6 +26,7 @@ interface Row {
   type: string;
   vibe_tags: string[];
   photo_url: string | null;
+  generated_photo_url: string | null;
   price_tier: string;
 }
 
@@ -41,7 +42,7 @@ export default async function PlacesIndexPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('places')
-    .select('id, name, slug, neighborhood, type, vibe_tags, photo_url, price_tier')
+    .select('id, name, slug, neighborhood, type, vibe_tags, photo_url, generated_photo_url, price_tier')
     .eq('is_active', true)
     .order('name');
   const items = (data ?? []) as Row[];
@@ -90,7 +91,7 @@ export default async function PlacesIndexPage() {
               </h2>
               <div className="grid grid-cols-2 gap-5 md:grid-cols-4 md:gap-6">
                 {groupItems.map((p) => {
-                  const cover = imageForStop({ photo_url: p.photo_url, place_type: p.type });
+                  const cover = imageForStop({ photo_url: p.photo_url, generated_photo_url: p.generated_photo_url, place_type: p.type });
                   return (
                     <Link key={p.id} href={`/places/${p.slug}`} className="group flex flex-col">
                       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-surface">

@@ -28,9 +28,14 @@ const FALLBACK = '/places/place-walk.jpg';
 
 export function imageForStop(opts: {
   photo_url?: string | null;
+  generated_photo_url?: string | null;
   place_type?: string | null;
 }): string {
+  // 1. Real Google Places photo — highest fidelity.
   if (opts.photo_url) return opts.photo_url;
+  // 2. AI-generated place cover (Gemini) — venue-specific visual.
+  if (opts.generated_photo_url) return opts.generated_photo_url;
+  // 3. Type-based generic fallback (/places/place-restaurant.jpg, etc.).
   if (opts.place_type && TYPE_TO_IMAGE[opts.place_type]) {
     return TYPE_TO_IMAGE[opts.place_type];
   }

@@ -49,6 +49,7 @@ interface PlaceRow {
   reservation_required: boolean;
   reservation_url: string | null;
   photo_url: string | null;
+  generated_photo_url: string | null;
   photos: string[];
   google_place_id: string | null;
   lat: number | null;
@@ -143,7 +144,7 @@ export async function generateMetadata(props: {
   const p = await loadPlace(slug);
   if (!p) return { title: 'Place not found · After5' };
 
-  const cover = imageForStop({ photo_url: p.photo_url, place_type: p.type });
+  const cover = imageForStop({ photo_url: p.photo_url, generated_photo_url: p.generated_photo_url, place_type: p.type });
   const ogImage = cover.startsWith('http') ? cover : `${SITE}${cover}`;
   const desc = (
     p.llm_summary ??
@@ -200,7 +201,7 @@ export default async function PlacePage(props: {
   const safeBackHref = from && from.startsWith('/') && !from.startsWith('//') ? from : null;
 
   const dates = await loadDatesFeaturing(p.id);
-  const cover = imageForStop({ photo_url: p.photo_url, place_type: p.type });
+  const cover = imageForStop({ photo_url: p.photo_url, generated_photo_url: p.generated_photo_url, place_type: p.type });
   const directionsUrl = p.lat && p.lng
     ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', Kelowna BC')}`;
