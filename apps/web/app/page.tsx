@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
 import { getSeason, SEASON_LABELS } from '@/lib/season';
 import { PLAN_THEMES } from '@/lib/themes';
@@ -9,10 +9,14 @@ import { UserMenu } from '@/components/UserMenu';
 import { Polaroid } from '@/components/Polaroid';
 import { HonestTestimonials } from '@/components/HonestTestimonials';
 import { WowFactorStrip } from '@/components/WowFactorStrip';
+import { createClient } from '@/lib/supabase/server';
+import { coverImageFor } from '@/lib/place-image';
 
 // After5 marketing landing.
 // Refined Minimal + editorial photography — the vibe gallery does the visual heavy
 // lifting while type and spacing stay restrained. See apps/web/.design/brief.md.
+
+export const revalidate = 900; // ISR: regenerate every 15 minutes
 
 const VIBES = [
   { id: 'romantic',     label: 'Romantic',    sub: 'Sunset, wine, slow dinner.',          img: '/vibes/vibe-romantic.jpg'    },
@@ -71,8 +75,139 @@ const BENEFITS = [
   { n: '03', head: 'Three options every time',  body: 'Pick the night that fits the energy. Skip the others.' },
 ] as const;
 
+// ─── Types for server-fetched data ──────────────────────────────────────────
+
+interface ItineraryRow {
+  id: string;
+  title: string | null;
+  total_cost_pp: number | null;
+  total_duration_min: number | null;
+  cover_image_url: string | null;
+  stops: unknown;
+  inputs: { vibe?: string[] } | null;
+}
+
+interface StopShape {
+  place_type?: string;
+  place_name?: string;
+  photo_url?: string | null;
+  start_time?: string;
+}
+
+interface LocalInsightRow {
+  name: string;
+  local_insight: string;
+}
+
+// ─── Server-side data fetching ──────────────────────────────────────────────
+
+async function fetchLandingData() {
+  const supabase = await createClient();
+
+  // 1. Recent high-quality public itineraries for the sample plans section
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: liveItineraries } = await (
+    supabase.from('itineraries') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: unknown) => {
+          not: (col: string, op: string, val: unknown) => {
+            gte: (col: string, val: string) => {
+              order: (col: string, opts: { ascending: boolean }) => {
+                limit: (n: number) => Promise<{ data: ItineraryRow[] | null }>;
+              };
+            };
+          };
+        };
+      };
+    }
+  )
+    .select('id, title, total_cost_pp, total_duration_min, cover_image_url, stops, inputs')
+    .eq('is_public', true)
+    .not('title', 'is', null)
+    .gte('generated_at', ninetyDaysAgo)
+    .order('generated_at', { ascending: false })
+    .limit(3);
+
+  // 2. Total itinerary count for the live counter
+  const { count: totalCount } = await (
+    supabase.from('itineraries') as unknown as {
+      select: (cols: string, opts: { count: string; head: boolean }) => Promise<{ count: number | null }>;
+    }
+  ).select('id', { count: 'exact', head: true });
+
+  // 3. Random venue with a local_insight for the benefits section
+  const { data: insightRows } = await (
+    supabase.from('places') as unknown as {
+      select: (cols: string) => {
+        not: (col: string, op: string, val: unknown) => {
+          eq: (col: string, val: unknown) => {
+            limit: (n: number) => Promise<{ data: LocalInsightRow[] | null }>;
+          };
+        };
+      };
+    }
+  )
+    .select('name, local_insight')
+    .not('local_insight', 'is', null)
+    .eq('is_active', true)
+    .limit(20);
+
+  // Pick a random insight from the pool, filtering for reasonable length
+  const goodInsights = (insightRows ?? []).filter(
+    (r) => r.local_insight && !r.local_insight.startsWith('#') && r.local_insight.length >= 40 && r.local_insight.length <= 220,
+  );
+  const randomInsight = goodInsights.length > 0
+    ? goodInsights[Math.floor(Math.random() * goodInsights.length)]
+    : null;
+
+  return {
+    liveItineraries: liveItineraries ?? [],
+    totalCount: totalCount ?? 0,
+    localInsight: randomInsight,
+  };
+}
+
 export default async function HomePage() {
   const currentSeason = getSeason();
+  const { liveItineraries, totalCount, localInsight } = await fetchLandingData();
+
+  // Build sample plans: prefer live data, fall back to static
+  const livePlans = liveItineraries
+    .filter((it) => {
+      const stops = Array.isArray(it.stops) ? it.stops : [];
+      return stops.length >= 2 && it.title;
+    })
+    .map((it) => {
+      const stops = (Array.isArray(it.stops) ? it.stops : []) as StopShape[];
+      const vibes = it.inputs?.vibe ?? [];
+      const cover = coverImageFor(
+        stops.map((s) => ({ photo_url: s.photo_url, place_type: s.place_type })),
+        { itineraryCover: it.cover_image_url },
+      );
+      const totalHr = it.total_duration_min
+        ? `${Math.round((it.total_duration_min / 60) * 10) / 10} hr`
+        : '3 hr';
+      return {
+        title: it.title!,
+        vibe: vibes,
+        cost: `$${Math.round(it.total_cost_pp ?? 0)}`,
+        time: totalHr,
+        img: cover,
+        imgAlt: `${it.title} date plan in Kelowna`,
+        stops: stops.slice(0, 4).map((s) => ({
+          time: s.start_time ?? '',
+          name: s.place_name ?? 'Stop',
+        })),
+      };
+    });
+
+  // Merge: live plans first, then static fallbacks to ensure we always show 3
+  const samplePlans = [
+    ...livePlans,
+    ...SAMPLE_PLANS.slice(livePlans.length),
+  ].slice(0, 3);
+
+  const formattedCount = totalCount.toLocaleString('en-US');
   return (
     <>
       {/* ─── Nav ── overlays the hero image, no chrome bar ─────
@@ -135,28 +270,33 @@ export default async function HomePage() {
                 </span>
               </div>
               <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-white md:text-6xl lg:text-[78px]">
-                Plan the{' '}
-                <span className="italic font-semibold text-amber-200/95">perfect</span>
-                {' '}Kelowna date in 30 seconds.
+                A Kelowna date{' '}
+                <span className="italic font-semibold text-amber-200/95">worth talking about</span>
+                {' '}&mdash; in 30&nbsp;seconds.
               </h1>
               <p className="mt-7 max-w-[560px] text-lg text-white/85 md:text-xl">
                 Curated itineraries built for your vibe, budget, and time —
                 by people who actually live here.
               </p>
-              <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+              {totalCount > 0 && (
+                <p className="mt-5 text-sm font-medium text-white/70">
+                  {formattedCount} dates planned in Kelowna
+                </p>
+              )}
+              <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
                 <Link
-                  href="/plan"
+                  href="/plan?surprise=true"
                   className="inline-flex items-center gap-2 rounded-pill bg-white px-7 py-3.5 text-base font-medium text-text transition-transform hover:-translate-y-0.5"
                 >
-                  Plan my date — free
-                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                  <Sparkles className="h-4 w-4" strokeWidth={2.25} />
+                  Surprise me
                 </Link>
-                <a
-                  href="#vibes"
+                <Link
+                  href="/plan"
                   className="text-base text-white/90 underline decoration-white/40 decoration-1 underline-offset-[6px] transition-colors hover:text-white hover:decoration-white"
                 >
-                  Browse by vibe
-                </a>
+                  Plan my date
+                </Link>
               </div>
             </div>
           </div>
@@ -266,8 +406,7 @@ export default async function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
-              {SAMPLE_PLANS.map((p, i) => {
-                const highlight = i === 1;
+              {samplePlans.map((p, i) => {
                 return (
                   <article
                     key={p.title}
@@ -344,6 +483,18 @@ export default async function HomePage() {
                   </p>
                   <h3 className="mt-7 text-lg font-semibold text-text">{b.head}</h3>
                   <p className="mt-3 max-w-[34ch] text-base text-secondary">{b.body}</p>
+                  {b.n === '01' && localInsight && (
+                    <blockquote className="mt-5 border-l-2 border-accent/40 pl-4">
+                      <p className="text-sm italic leading-relaxed text-secondary">
+                        &ldquo;{localInsight.local_insight.length > 180
+                          ? localInsight.local_insight.slice(0, 180).replace(/[,\s]+$/, '') + '...'
+                          : localInsight.local_insight}&rdquo;
+                      </p>
+                      <cite className="mt-2 block text-xs font-medium not-italic text-muted">
+                        &mdash; {localInsight.name}
+                      </cite>
+                    </blockquote>
+                  )}
                 </div>
               ))}
             </div>
@@ -352,6 +503,29 @@ export default async function HomePage() {
 
         {/* ─── Honest testimonials (placeholders until real ones land) ─ */}
         <HonestTestimonials />
+
+        {/* ─── Insiders CTA ────────────────────────────────────── */}
+        <section className="border-t border-border">
+          <div className="mx-auto max-w-content px-6 py-16 text-center md:px-10 md:py-20">
+            <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Early access
+            </p>
+            <h2 className="font-display text-2xl font-bold leading-tight tracking-[-0.01em] text-text md:text-3xl">
+              Help us build the best dates in Kelowna.
+            </h2>
+            <p className="mx-auto mt-4 max-w-[520px] text-base text-secondary">
+              Join the Insiders program — test new features before anyone else,
+              share local intel, and shape what After5 becomes.
+            </p>
+            <Link
+              href="/join"
+              className="mt-8 inline-flex items-center gap-2 rounded-pill border border-border bg-surface px-6 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+            >
+              Become an Insider
+              <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+            </Link>
+          </div>
+        </section>
 
         {/* ─── CTA band ─────────────────────────────────────────── */}
         <section className="relative border-t border-border overflow-hidden">
@@ -430,7 +604,7 @@ export default async function HomePage() {
               >
                 Lucas Senechal
               </a>
-              . Coming to Kamloops, Vernon, Penticton.
+              . Coming soon to more Okanagan cities.
             </p>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted">
               <Link href="/about" className="transition-colors hover:text-text">
@@ -441,6 +615,9 @@ export default async function HomePage() {
               </Link>
               <Link href="/tell-us" className="transition-colors hover:text-text">
                 Bug or idea?
+              </Link>
+              <Link href="/join" className="transition-colors hover:text-text">
+                Become an Insider
               </Link>
               <Link href="/privacy" className="transition-colors hover:text-text">
                 Privacy
