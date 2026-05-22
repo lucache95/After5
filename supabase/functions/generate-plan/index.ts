@@ -63,6 +63,12 @@ const InputSchema = z.object({
   claim_email: z.string().email().optional(),
 });
 
+// ─── Rate-limit config ────────────────────────────────────────────────
+
+const RATE_LIMIT_ENDPOINT = 'generate-plan';
+const ANON_LIMIT_PER_HOUR = 10;
+const AUTH_LIMIT_PER_HOUR = 20;
+
 // ─── Handler ───────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -92,6 +98,28 @@ serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     const userId = extractUserIdFromAuthHeader(authHeader);
     console.log('[generate-plan] auth header present:', !!authHeader, 'header_prefix:', authHeader?.slice(0, 30) ?? 'none', 'extracted user_id:', userId);
+
+    // 2b. Rate-limit check — BEFORE any AI API calls.
+    // Authenticated users get a higher limit and are tracked by user_id.
+    // Anonymous users are tracked by IP.
+    const rateLimitIdentifier = userId
+      ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? req.headers.get('x-real-ip')
+      ?? 'unknown';
+    const rateLimitMax = userId ? AUTH_LIMIT_PER_HOUR : ANON_LIMIT_PER_HOUR;
+
+    const rateLimitResult = await checkRateLimit(supabase, rateLimitIdentifier, RATE_LIMIT_ENDPOINT, rateLimitMax);
+    if (!rateLimitResult.allowed) {
+      console.warn('[generate-plan] rate limited:', rateLimitIdentifier, 'count:', rateLimitResult.count, 'limit:', rateLimitMax);
+      return jsonResponse(
+        {
+          error: 'rate_limited',
+          message: `Too many requests. Limit is ${rateLimitMax} generations per hour. Try again later.`,
+          retry_after_seconds: rateLimitResult.retryAfterSeconds,
+        },
+        429,
+      );
+    }
 
     // 3. Filter candidate places
     const candidates = await filterPlaces(supabase, inputs);
@@ -590,6 +618,100 @@ function extractUserIdFromAuthHeader(header: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+// ─── Rate-limit helpers ───────────────────────────────────────────────
+
+// Fixed-window rate limiter backed by the rate_limits table.
+// Returns { allowed: true } and increments the counter if under the limit,
+// or { allowed: false, count, retryAfterSeconds } if the caller should wait.
+//
+// Uses INSERT ... ON CONFLICT to atomically upsert the counter in a single
+// round-trip. The window is the current clock-hour (date_trunc('hour')).
+async function checkRateLimit(
+  supabase: ReturnType<typeof createClient>,
+  identifier: string,
+  endpoint: string,
+  maxRequests: number,
+): Promise<{ allowed: true } | { allowed: false; count: number; retryAfterSeconds: number }> {
+  // Upsert: insert a row with count=1 or increment the existing row's count.
+  // Returns the new count so we can decide in one query.
+  const { data, error } = await supabase.rpc('rate_limit_check', {
+    p_identifier: identifier,
+    p_endpoint: endpoint,
+    p_max_requests: maxRequests,
+  });
+
+  // If the RPC doesn't exist yet (first deploy before migration runs),
+  // fall back to a manual check so the function degrades gracefully.
+  if (error) {
+    console.warn('[rate-limit] RPC failed, falling back to manual check:', error.message);
+    return await checkRateLimitManual(supabase, identifier, endpoint, maxRequests);
+  }
+
+  // The RPC returns { allowed: boolean, current_count: number, retry_after_seconds: number }
+  const result = data as { allowed: boolean; current_count: number; retry_after_seconds: number };
+  if (result.allowed) {
+    return { allowed: true };
+  }
+  return { allowed: false, count: result.current_count, retryAfterSeconds: result.retry_after_seconds };
+}
+
+// Manual fallback: two queries (SELECT then INSERT/UPDATE). Slightly racy
+// under extreme concurrency, but good enough as a fallback.
+async function checkRateLimitManual(
+  supabase: ReturnType<typeof createClient>,
+  identifier: string,
+  endpoint: string,
+  maxRequests: number,
+): Promise<{ allowed: true } | { allowed: false; count: number; retryAfterSeconds: number }> {
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setMinutes(0, 0, 0); // truncate to current hour
+
+  // Check current count
+  const { data: existing } = await supabase
+    .from('rate_limits')
+    .select('request_count')
+    .eq('identifier', identifier)
+    .eq('endpoint', endpoint)
+    .eq('window_start', windowStart.toISOString())
+    .maybeSingle();
+
+  const currentCount = existing?.request_count ?? 0;
+  if (currentCount >= maxRequests) {
+    const nextHour = new Date(windowStart);
+    nextHour.setHours(nextHour.getHours() + 1);
+    const retryAfterSeconds = Math.max(1, Math.ceil((nextHour.getTime() - now.getTime()) / 1000));
+    return { allowed: false, count: currentCount, retryAfterSeconds };
+  }
+
+  // Increment (or insert)
+  if (existing) {
+    await supabase
+      .from('rate_limits')
+      .update({ request_count: currentCount + 1 })
+      .eq('identifier', identifier)
+      .eq('endpoint', endpoint)
+      .eq('window_start', windowStart.toISOString());
+  } else {
+    await supabase
+      .from('rate_limits')
+      .insert({
+        identifier,
+        endpoint,
+        window_start: windowStart.toISOString(),
+        request_count: 1,
+      });
+  }
+
+  // Fire-and-forget: purge rows older than 2 hours to keep the table small.
+  const cutoff = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+  supabase.from('rate_limits').delete().lt('window_start', cutoff).then(({ error }) => {
+    if (error) console.warn('[rate-limit] cleanup error:', error.message);
+  });
+
+  return { allowed: true };
 }
 
 // Mirrors apps/web/lib/slug.ts so the canonical SEO URL we ship to the client
