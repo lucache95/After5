@@ -14,12 +14,36 @@
 //    same exact type as one already picked in this plan (templates that
 //    intentionally repeat — like cocktail_bar→...→cocktail_bar — still pick
 //    a different bar instead of the same one twice).
+//
+// v3 — taste system:
+//  - NEGATIVE SPACE: top-3 most-used venues in last 7 days get a soft scoring
+//    penalty. Prevents the "Earls and the park" repetition problem.
+//  - RECENCY BOOST: venues added in the last 6 months get a score bump when
+//    user signals "trendy" / "new" / "adventurous" / "try_something_new".
+//  - EDITORIAL PACK OVERRIDES: when an editorial pack is active, its
+//    scoring_overrides inject additional per-predicate score deltas.
+//  - DELIGHTER RULE: post-selection step injects a surprise "one weird thing"
+//    stop — replaces the weakest stop or adds a bonus stop.
 
-import type { Place, PlanInputs, Template, TemplateSlot, Itinerary, ItineraryStop } from './types.ts';
+import type { Place, PlanInputs, Template, TemplateSlot, Itinerary, ItineraryStop, EditorialPack } from './types.ts';
+import { resolvePredicate } from './editorial-packs.ts';
 
 interface ScoredPlace {
   place: Place;
   score: number;
+}
+
+// ─── Taste context ─────────────────────────────────────────────────────
+// Passed from the orchestrator so scoring can apply negative-space,
+// recency, and editorial-pack overrides without fetching data itself.
+
+export interface TasteContext {
+  /** Place IDs → penalty. Top-3 most-used venues in last 7 days. */
+  negativeSpacePenalties: Map<string, number>;
+  /** True when user signals suggest they want new/fresh/trendy venues. */
+  recencyBoostActive: boolean;
+  /** Active editorial pack, if any. */
+  pack: EditorialPack | null;
 }
 
 // Returns true if the place's hours window covers the slot start time.
@@ -85,6 +109,7 @@ function scorePlace(
   inputs: PlanInputs,
   alreadyPicked: Place[],
   usedAcrossBatch: Set<string>,
+  taste?: TasteContext,
 ): number {
   let score = p.quality_score + p.feedback_score;
   score += vibeOverlap(p, inputs.vibe) * 1.5;
@@ -126,6 +151,39 @@ function scorePlace(
   // feedback_score = less popular = more likely "discovery").
   if (inputs.intent === 'try_something_new' && p.feedback_score < 3) {
     score += 2;
+  }
+
+  // ─── v3 taste rules ────────────────────────────────────────────────
+
+  if (taste) {
+    // NEGATIVE SPACE: soft penalty for overused venues (top-3 most-used
+    // in the last 7 days). Not a hard exclude — just deprioritized so they
+    // can still win if they're genuinely the best fit.
+    const nsPenalty = taste.negativeSpacePenalties.get(p.id);
+    if (nsPenalty) score -= nsPenalty;
+
+    // RECENCY BOOST: when the user wants something new/trendy, boost
+    // venues added to the system in the last 6 months.
+    if (taste.recencyBoostActive && p.created_at) {
+      const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+      const ageMs = Date.now() - new Date(p.created_at).getTime();
+      if (ageMs < SIX_MONTHS_MS) {
+        // Stronger boost the newer the venue is. Max +4 for brand-new,
+        // tapering to +1 at 6 months.
+        const freshness = 1 - ageMs / SIX_MONTHS_MS;
+        score += 1 + freshness * 3;
+      }
+    }
+
+    // EDITORIAL PACK OVERRIDES: per-predicate score adjustments from the
+    // active pack. Each override tests the place against a predicate and
+    // applies a delta (positive = boost, negative = penalty).
+    if (taste.pack) {
+      for (const override of taste.pack.scoring_overrides) {
+        const predFn = resolvePredicate(override.predicate);
+        if (predFn(p)) score += override.delta;
+      }
+    }
   }
 
   return score;
@@ -179,7 +237,7 @@ export function buildItineraryFromTemplate(
   inputs: PlanInputs,
   startTime?: string,
   usedAcrossBatch: Set<string> = new Set(),
-  opts: { skipHoursFilter?: boolean } = {},
+  opts: { skipHoursFilter?: boolean; taste?: TasteContext } = {},
 ): Itinerary | null {
   const eligibleByType = candidates.filter((p) => p.is_active !== false);
   const picked: Place[] = [];
@@ -203,7 +261,7 @@ export function buildItineraryFromTemplate(
         (p) =>
           ({
             place: p,
-            score: scorePlace(p, slot, inputs, picked, usedAcrossBatch),
+            score: scorePlace(p, slot, inputs, picked, usedAcrossBatch, opts.taste),
           }) as ScoredPlace,
       )
       .sort((a, b) => b.score - a.score);
@@ -300,4 +358,102 @@ function computeSlotStarts(template: Template, firstStart: string): string[] {
     cursor = addMinutes(cursor, slot.duration_min + flatDrive);
   }
   return starts;
+}
+
+// ─── "One Weird Thing" delighter injection ─────────────────────────────
+// After the main venues are selected, try to inject one surprise stop —
+// a place tagged is_delighter (cheese shop, hidden rooftop, bookstore-bar,
+// etc). Replaces the weakest-scored stop OR adds a bonus stop if the plan
+// has room. Returns the delighter place if injected, null otherwise.
+
+export interface DelighterResult {
+  injected: boolean;
+  delighter_place_id: string | null;
+  replaced_place_id: string | null;
+  action: 'replaced_weakest' | 'added_bonus' | 'skipped';
+}
+
+export function injectDelighter(
+  itinerary: Itinerary,
+  candidates: Place[],
+  inputs: PlanInputs,
+  usedInPlan: Set<string>,
+  usedAcrossBatch: Set<string>,
+): DelighterResult {
+  const delighters = candidates.filter(
+    (p) => p.is_delighter === true && !usedInPlan.has(p.id) && !usedAcrossBatch.has(p.id),
+  );
+  if (delighters.length === 0) {
+    return { injected: false, delighter_place_id: null, replaced_place_id: null, action: 'skipped' };
+  }
+
+  // Pick the best-scoring delighter (vibe overlap + quality).
+  const scored = delighters
+    .map((d) => ({
+      place: d,
+      score: d.quality_score + d.feedback_score + vibeOverlap(d, inputs.vibe) * 1.5,
+    }))
+    .sort((a, b) => b.score - a.score);
+  const pick = scored[0].place;
+
+  // Find the weakest stop in the itinerary. Score each stop by its place's
+  // quality + feedback to find the least compelling one.
+  const stopScores = itinerary.stops.map((s) => {
+    const place = candidates.find((c) => c.id === s.place_id);
+    return {
+      stop: s,
+      score: place ? place.quality_score + place.feedback_score : 0,
+    };
+  });
+  const weakest = stopScores.reduce((min, curr) => (curr.score < min.score ? curr : min), stopScores[0]);
+
+  // Only replace if the delighter is meaningfully better than the weakest
+  // stop (at least +2 score delta). Otherwise skip — don't force it.
+  const delighterScore = pick.quality_score + pick.feedback_score;
+  if (delighterScore <= weakest.score + 2) {
+    return { injected: false, delighter_place_id: null, replaced_place_id: null, action: 'skipped' };
+  }
+
+  // Check budget: replacing shouldn't blow the budget.
+  const weakestCost = weakest.stop.estimated_cost_pp;
+  const delighterCost = pick.typical_per_person ?? 0;
+  const newTotal = itinerary.total_cost_pp - weakestCost + delighterCost;
+  const budgetCeiling = Math.max(inputs.budget_per_person * 1.3, 50);
+  if (newTotal > budgetCeiling) {
+    return { injected: false, delighter_place_id: null, replaced_place_id: null, action: 'skipped' };
+  }
+
+  // Replace the weakest stop with the delighter, preserving timing.
+  const idx = itinerary.stops.indexOf(weakest.stop);
+  const replacedId = weakest.stop.place_id;
+
+  itinerary.stops[idx] = {
+    place_id: pick.id,
+    place_name: pick.name,
+    place_slug: pick.slug,
+    place_type: pick.type,
+    start_time: weakest.stop.start_time,
+    duration_min: Math.min(weakest.stop.duration_min, pick.typical_duration_min),
+    estimated_cost_pp: delighterCost,
+    drive_to_next_min: weakest.stop.drive_to_next_min,
+    photo_url: pick.photo_url,
+    address: pick.address,
+    neighborhood: pick.neighborhood,
+    lat: pick.lat,
+    lng: pick.lng,
+    local_insight: pick.local_insight,
+    reservation_url: pick.reservation_url,
+    reservation_required: pick.reservation_required,
+  };
+
+  itinerary.total_cost_pp = newTotal;
+  usedInPlan.add(pick.id);
+  usedAcrossBatch.add(pick.id);
+
+  return {
+    injected: true,
+    delighter_place_id: pick.id,
+    replaced_place_id: replacedId,
+    action: 'replaced_weakest',
+  };
 }

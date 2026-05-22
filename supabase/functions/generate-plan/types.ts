@@ -22,6 +22,7 @@ export interface PlanInputs {
   when?: 'tonight' | 'future';
   future_date?: string;
   intent?: 'impress' | 'chill' | 'reconnect' | 'try_something_new' | '';
+  time_of_day?: 'morning' | 'evening' | 'all_day';
 }
 
 export interface Place {
@@ -64,6 +65,57 @@ export interface Place {
   photo_time_of_day?: 'day' | 'dusk' | 'evening' | 'any' | null;
   photo_season?: 'winter' | 'spring' | 'summer' | 'fall' | 'any' | null;
   photo_has_snow?: boolean | null;
+  // Taste system fields — pulled from places table for editorial packs,
+  // negative-space, recency boost, and the delighter rule.
+  created_at?: string;
+  total_appearances?: number;
+  is_delighter?: boolean;
+}
+
+// ─── Editorial Pack types ──────────────────────────────────────────────
+
+/** Constraints a pack places on venue selection. */
+export interface PackVenueConstraint {
+  /** At least N stops must satisfy this predicate. */
+  min_count: number;
+  /** Filter function key — resolved at runtime in scoring. */
+  predicate: string;
+}
+
+/** Sequence ordering rules for a pack. */
+export interface PackSequenceRule {
+  /** Which stop index (0-based) this rule targets. -1 = last. */
+  position: number | 'last';
+  /** The predicate that the stop at this position must satisfy. */
+  predicate: string;
+}
+
+export interface EditorialPack {
+  id: string;
+  name: string;
+  /** Short tagline used as a seed for LLM tone — injected into the prompt. */
+  voice_note: string;
+  /** Venue-level constraints that augment default scoring. */
+  venue_constraints: PackVenueConstraint[];
+  /** Ordering rules applied after selection. */
+  sequence_rules: PackSequenceRule[];
+  /** Budget range this pack targets (per person). null = any. */
+  budget_range: { min: number; max: number } | null;
+  /** Time-of-day affinity. null = any. */
+  time_of_day: ('morning' | 'evening' | 'all_day')[] | null;
+  /** Occasion affinity. null = any. */
+  occasions: Occasion[] | null;
+  /** Vibe tags that make this pack a strong match. */
+  vibe_affinity: string[];
+  /** Scoring overrides applied to candidates when this pack is active. */
+  scoring_overrides: PackScoringOverride[];
+}
+
+export interface PackScoringOverride {
+  /** Predicate key identifying which places this override hits. */
+  predicate: string;
+  /** Additive score adjustment (positive = boost, negative = penalty). */
+  delta: number;
 }
 
 export interface TemplateSlot {

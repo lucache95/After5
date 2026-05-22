@@ -41,6 +41,8 @@ interface WritingPassInput {
   inputs: PlanInputs;
   itineraries: Itinerary[];
   placesById: Map<string, Place>;
+  /** Editorial pack voice note — injected into the user message to set tone. */
+  packVoiceNote?: string | null;
 }
 
 interface LLMItineraryWriting {
@@ -169,6 +171,12 @@ function buildUserMessage(input: WritingPassInput): string {
     lines.push(`  e.g. note "vegetarian" → call out a specific veg-friendly stop in the why_it_works.`);
     lines.push(`  Don't be sappy or forced; do be specific. Skipping the note entirely is the worst sin.`);
     lines.push(`  Optionally hint at it in titles or hooks IF it fits naturally — never shoehorned.`);
+  }
+  // Editorial pack voice note — sets the overall tone for this generation.
+  if (input.packVoiceNote) {
+    lines.push('');
+    lines.push(`TONE DIRECTIVE (from editorial pack — this overrides your default voice for this batch):`);
+    lines.push(input.packVoiceNote);
   }
   lines.push('');
   lines.push(`Three itineraries to write copy for. Return ONLY a JSON array of length 3.`);

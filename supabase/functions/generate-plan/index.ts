@@ -19,8 +19,10 @@ import { z } from 'npm:zod@3.23.8';
 import { corsHeaders } from '../_shared/cors.ts';
 import { filterPlaces, coversAllMustIncludes } from './places-filter.ts';
 import { loadTemplates, selectTopTemplates } from './templates.ts';
-import { buildItineraryFromTemplate } from './scoring.ts';
+import { buildItineraryFromTemplate, injectDelighter } from './scoring.ts';
+import type { TasteContext } from './scoring.ts';
 import { writeItineraries } from './prompt.ts';
+import { selectPack, isSurpriseMe, packIsSatisfiable, enforceSequenceRules } from './editorial-packs.ts';
 import type { Itinerary, Place } from './types.ts';
 
 // ─── Input schema ──────────────────────────────────────────────────────
@@ -173,6 +175,71 @@ serve(async (req: Request) => {
       return '18:00';
     })();
 
+    // ─── 4b. Taste system setup ─────────────────────────────────────────
+    // Query negative-space data: which venues appeared most in the last 7
+    // days? Top 3 get a soft scoring penalty to prevent staleness.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    const negativeSpacePenalties = new Map<string, number>();
+    try {
+      const { data: recentItins } = await supabase
+        .from('itineraries')
+        .select('stops')
+        .gte('generated_at', sevenDaysAgo)
+        .limit(200);
+
+      if (recentItins && recentItins.length > 0) {
+        const usageCounts = new Map<string, number>();
+        for (const row of recentItins) {
+          const stops = Array.isArray(row.stops) ? row.stops : [];
+          for (const s of stops) {
+            const pid = (s as { place_id?: string }).place_id;
+            if (pid) usageCounts.set(pid, (usageCounts.get(pid) ?? 0) + 1);
+          }
+        }
+        // Sort by usage, take top 3, assign descending penalties: -6, -4, -2
+        const sorted = Array.from(usageCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3);
+        const penalties = [6, 4, 2];
+        sorted.forEach(([placeId], idx) => {
+          negativeSpacePenalties.set(placeId, penalties[idx]);
+        });
+      }
+    } catch (nsErr) {
+      // Non-fatal — proceed without negative-space data
+      console.error('[taste] negative-space query failed, proceeding without:', nsErr);
+    }
+
+    // Recency boost: active when user signals "trendy" / "new" / "adventurous"
+    // or has intent = try_something_new.
+    const RECENCY_VIBES = ['trendy', 'new', 'adventurous', 'modern', 'fresh'];
+    const recencyBoostActive =
+      inputs.intent === 'try_something_new' ||
+      inputs.vibe.some((v) => RECENCY_VIBES.includes(v));
+
+    // Editorial pack selection — match on inputs or random "surprise me".
+    const surpriseMe = isSurpriseMe(inputs);
+    let activePack = selectPack(inputs, surpriseMe);
+
+    // Verify the pack is satisfiable with the current candidate pool
+    if (activePack && !packIsSatisfiable(activePack, candidates)) {
+      console.log(`[taste] pack "${activePack.name}" not satisfiable, falling back to default`);
+      activePack = null;
+    }
+
+    const tasteContext: TasteContext = {
+      negativeSpacePenalties,
+      recencyBoostActive,
+      pack: activePack,
+    };
+
+    sharedLog.taste = {
+      negative_space_venues: Array.from(negativeSpacePenalties.entries()).map(([id, penalty]) => ({ id, penalty })),
+      recency_boost_active: recencyBoostActive,
+      editorial_pack: activePack ? { id: activePack.id, name: activePack.name } : null,
+      surprise_me: surpriseMe,
+    };
+
     // 5. Build one itinerary per template, tracking which place_ids have been
     //    used across the batch so each subsequent itinerary picks distinct
     //    spots (cross-plan diversity). Stochastic top-K inside scoring also
@@ -185,10 +252,10 @@ serve(async (req: Request) => {
       // at 10am, cafes at 9pm, etc.) — try once more without the hours
       // filter so the user always gets *something* rather than a 422.
       for (let attempt = 0; attempt < 3; attempt++) {
-        const it = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch);
+        const it = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch, { taste: tasteContext });
         if (it) return it;
       }
-      const relaxed = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch, { skipHoursFilter: true });
+      const relaxed = buildItineraryFromTemplate(t, candidates, inputs, effectiveStartAt, usedAcrossBatch, { skipHoursFilter: true, taste: tasteContext });
       if (relaxed) return relaxed;
       return null;
     }
@@ -219,7 +286,40 @@ serve(async (req: Request) => {
       }
     }
 
-    // 5b. Adjacency validator — no two stops in the same category_group
+    // 5b. "One Weird Thing" — try to inject a delighter stop into each
+    //     itinerary. Replaces the weakest stop if a tagged delighter is
+    //     meaningfully better. Non-destructive: skips if no delighters exist
+    //     or if injection would blow the budget.
+    const delighterResults: Array<{ template_id: string; action: string; delighter_id: string | null; replaced_id: string | null }> = [];
+    for (const it of itineraries) {
+      const usedInPlan = new Set(it.stops.map((s) => s.place_id));
+      const result = injectDelighter(it, candidates, inputs, usedInPlan, usedAcrossBatch);
+      if (result.injected || result.action !== 'skipped') {
+        delighterResults.push({
+          template_id: it.template_id,
+          action: result.action,
+          delighter_id: result.delighter_place_id,
+          replaced_id: result.replaced_place_id,
+        });
+      }
+    }
+    if (delighterResults.length > 0) {
+      sharedLog.delighter_results = delighterResults;
+    }
+
+    // 5c. Enforce editorial pack sequence rules (e.g. "last stop must be a
+    //     view spot" for the Sunset Date pack). Runs after delighter injection
+    //     so the delighter doesn't clobber a rule-required position.
+    if (activePack && activePack.sequence_rules.length > 0) {
+      const seqFixes: Array<{ template_id: string; swaps: number }> = [];
+      for (const it of itineraries) {
+        const swaps = enforceSequenceRules(activePack, it.stops, candidates);
+        if (swaps > 0) seqFixes.push({ template_id: it.template_id, swaps });
+      }
+      if (seqFixes.length > 0) sharedLog.pack_sequence_fixes = seqFixes;
+    }
+
+    // 5e. Adjacency validator — no two stops in the same category_group
     //     back-to-back (no two bars, no two cafes). Tries to swap one of the
     //     offending stops with a candidate from a different group; if that
     //     fails, leaves the plan and logs the violation so we can audit.
@@ -257,7 +357,7 @@ serve(async (req: Request) => {
     const written = await writeItineraries(
       Deno.env.get('ANTHROPIC_API_KEY')!,
       Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-6',
-      { inputs, itineraries, placesById }
+      { inputs, itineraries, placesById, packVoiceNote: activePack?.voice_note ?? null }
     );
 
     // 7b. Scrub photos that don't match the season or stop time.
