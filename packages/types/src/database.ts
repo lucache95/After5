@@ -790,6 +790,7 @@ export type Database = {
       saved_plans: {
         Row: {
           id: string
+          feedback_email_sent_at: string | null
           itinerary_id: string
           note: string | null
           saved_at: string
@@ -797,6 +798,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          feedback_email_sent_at?: string | null
           itinerary_id: string
           note?: string | null
           saved_at?: string
@@ -804,6 +806,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          feedback_email_sent_at?: string | null
           itinerary_id?: string
           note?: string | null
           saved_at?: string

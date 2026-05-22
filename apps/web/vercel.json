@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/weekly-broadcast",
       "schedule": "0 16 * * 0"
+    },
+    {
+      "path": "/api/cron/post-date-feedback",
+      "schedule": "0 17 * * *"
     }
   ]
 }
