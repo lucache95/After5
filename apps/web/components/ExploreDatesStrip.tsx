@@ -1,8 +1,8 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { coverImageFor } from '@/lib/place-image';
+import { SafeCoverImage } from '@/components/SafeCoverImage';
 
 // Homepage discovery surface — the most recent public date plans rendered as
 // image-first cards. Surfaces the SEO catalog at /dates/[slug] without making
@@ -96,7 +96,7 @@ export async function ExploreDatesStrip() {
                 className="group flex flex-col"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-background">
-                  <Image
+                  <SafeCoverImage
                     src={cover}
                     alt=""
                     fill

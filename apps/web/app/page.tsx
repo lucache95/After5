@@ -9,6 +9,7 @@ import { UserMenu } from '@/components/UserMenu';
 import { Polaroid } from '@/components/Polaroid';
 import { HonestTestimonials } from '@/components/HonestTestimonials';
 import { WowFactorStrip } from '@/components/WowFactorStrip';
+import { SafeCoverImage } from '@/components/SafeCoverImage';
 import { createClient } from '@/lib/supabase/server';
 import { coverImageFor } from '@/lib/place-image';
 
@@ -406,7 +407,7 @@ export default async function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
-              {samplePlans.map((p, i) => {
+              {samplePlans.map((p) => {
                 return (
                   <article
                     key={p.title}
@@ -414,7 +415,7 @@ export default async function HomePage() {
                   >
                     {/* Image hero — does the emotional lifting */}
                     <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-surface">
-                      <Image
+                      <SafeCoverImage
                         src={p.img}
                         alt={p.imgAlt}
                         fill
