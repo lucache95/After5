@@ -6,8 +6,11 @@
 // always tilts the same way (no jitter on re-render) but a row of
 // polaroids gets a natural variety of angles.
 
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
+import { useCallback, useState } from 'react';
 import { cn } from '@/lib/cn';
 
 const SIZES = {
@@ -40,6 +43,9 @@ interface PolaroidProps {
   className?: string;
 }
 
+/** Local fallback image used when the primary src fails to load. */
+const FALLBACK_SRC = '/places/place-walk.jpg';
+
 export function Polaroid({
   src,
   alt,
@@ -52,6 +58,25 @@ export function Polaroid({
   const tilt = rotation ?? tiltFor(label ?? src);
   const s = SIZES[size];
 
+  const [imgError, setImgError] = useState(false);
+
+  // When the primary image fails (expired Google URL, missing Supabase
+  // cover, network blip, etc.) swap to the local fallback. If even the
+  // fallback errors out we show the gradient placeholder so users never
+  // see broken alt-text.
+  const [fallbackError, setFallbackError] = useState(false);
+  const showGradient = imgError && fallbackError;
+  const displaySrc = imgError ? FALLBACK_SRC : src;
+
+  const handleError = useCallback(() => {
+    if (!imgError) {
+      setImgError(true);
+    } else {
+      // Even the local fallback failed — show gradient placeholder.
+      setFallbackError(true);
+    }
+  }, [imgError]);
+
   const inner = (
     <div
       className={cn(
@@ -63,13 +88,25 @@ export function Polaroid({
       style={{ transform: `rotate(${tilt}deg)` }}
     >
       <div className={cn('relative overflow-hidden bg-surface', s.img)}>
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes="260px"
-          className="object-cover"
-        />
+        {showGradient ? (
+          /* Warm on-brand gradient with the date title overlaid so the
+             polaroid looks intentional rather than broken. Colours pulled
+             from the palette: accent #C2552B, surface #F4ECDD. */
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#F4ECDD] via-[#E8CFBA] to-[#C2552B]/40 p-2">
+            <span className="line-clamp-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-text/50">
+              {label ?? alt}
+            </span>
+          </div>
+        ) : (
+          <Image
+            src={displaySrc}
+            alt={alt}
+            fill
+            sizes="260px"
+            className="object-cover"
+            onError={handleError}
+          />
+        )}
       </div>
       {label && (
         <p

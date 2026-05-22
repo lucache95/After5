@@ -56,6 +56,10 @@ export function coverImageFor(
   // a stop photo (which can dup across plans + show snow in spring).
   if (opts.itineraryCover) return opts.itineraryCover;
 
+  // Guard: if stops array is empty/undefined, return a guaranteed-valid
+  // local asset so callers never receive an unusable value.
+  if (!stops || stops.length === 0) return FALLBACK;
+
   const pool = opts.excludePlaceId
     ? stops.filter((s) => s.place_id !== opts.excludePlaceId)
     : stops;
