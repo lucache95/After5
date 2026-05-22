@@ -1709,6 +1709,46 @@ function ResultsView(props: {
   else if (/first time|new to/.test(noteLower)) noteHook = 'as a first-time intro to Kelowna';
   else if (note && note.trim().length > 12) noteHook = 'with your note in mind';
 
+  // Compute differentiation labels: "Most ambitious" (longest duration),
+  // "Best value" (cheapest), "Quickest" (shortest duration). Any card that
+  // doesn't win a unique superlative gets "Our pick".
+  const cardLabels = useMemo(() => {
+    if (itineraries.length === 0) return [];
+    const labels = new Array<string>(itineraries.length).fill('Our pick');
+    const used = new Set<number>();
+
+    // Longest duration -> "Most ambitious"
+    let longestIdx = 0;
+    for (let i = 1; i < itineraries.length; i++) {
+      if (itineraries[i].total_duration_min > itineraries[longestIdx].total_duration_min) longestIdx = i;
+    }
+    labels[longestIdx] = 'Most ambitious';
+    used.add(longestIdx);
+
+    // Cheapest -> "Best value"
+    let cheapestIdx = -1;
+    for (let i = 0; i < itineraries.length; i++) {
+      if (used.has(i)) continue;
+      if (cheapestIdx === -1 || itineraries[i].total_cost_pp < itineraries[cheapestIdx].total_cost_pp) cheapestIdx = i;
+    }
+    if (cheapestIdx >= 0) {
+      labels[cheapestIdx] = 'Best value';
+      used.add(cheapestIdx);
+    }
+
+    // Shortest duration -> "Quickest"
+    let shortestIdx = -1;
+    for (let i = 0; i < itineraries.length; i++) {
+      if (used.has(i)) continue;
+      if (shortestIdx === -1 || itineraries[i].total_duration_min < itineraries[shortestIdx].total_duration_min) shortestIdx = i;
+    }
+    if (shortestIdx >= 0) {
+      labels[shortestIdx] = 'Quickest';
+    }
+
+    return labels;
+  }, [itineraries]);
+
   const headline = firstName
     ? `Built three plans for you, ${firstName}.`
     : 'Built three plans just for you.';
@@ -1760,7 +1800,7 @@ function ResultsView(props: {
             </button>
           </div>
         </div>
-        <ChooserCards itineraries={itineraries} activeIdx={activeIdx} onPick={setActiveIdx} />
+        <ChooserCards itineraries={itineraries} activeIdx={activeIdx} onPick={setActiveIdx} labels={cardLabels} />
       </div>
 
       {/* Full rich detail view of the active pick */}

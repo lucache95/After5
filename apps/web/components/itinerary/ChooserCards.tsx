@@ -9,14 +9,26 @@ import { cn } from '@/lib/cn';
 import { coverImageFor } from '@/lib/place-image';
 import type { Itinerary } from '@/lib/itinerary-types';
 
+// Badge color mapping for differentiation labels. "Our pick" keeps the gold
+// treatment; the rest get distinct, muted tones so all three cards read as
+// differentiated at a glance.
+const LABEL_STYLES: Record<string, { bg: string; text: string }> = {
+  'Most ambitious': { bg: 'bg-violet-500/95', text: 'text-white' },
+  'Best value':     { bg: 'bg-emerald-500/95', text: 'text-white' },
+  'Quickest':       { bg: 'bg-sky-500/95',     text: 'text-white' },
+  'Our pick':       { bg: 'bg-amber-400/95',   text: 'text-amber-950' },
+};
+
 export function ChooserCards({
   itineraries,
   activeIdx,
   onPick,
+  labels,
 }: {
   itineraries: Itinerary[];
   activeIdx: number;
   onPick: (i: number) => void;
+  labels?: string[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
@@ -24,6 +36,8 @@ export function ChooserCards({
         const cover = coverImageFor(it.stops, { itineraryCover: it.cover_image_url });
         const isActive = i === activeIdx;
         const totalHr = Math.round((it.total_duration_min / 60) * 10) / 10;
+        const label = labels?.[i] ?? (i === 0 ? 'Our pick' : null);
+        const labelStyle = label ? (LABEL_STYLES[label] ?? LABEL_STYLES['Our pick']) : null;
 
         return (
           <button
@@ -48,18 +62,20 @@ export function ChooserCards({
                 className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.02]"
               />
               <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
-                {i === 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-pill bg-amber-400/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-950 backdrop-blur-sm shadow-sm">
-                    <span aria-hidden>★</span> Our pick
+                {label && labelStyle && (
+                  <span className={cn(
+                    'inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-semibold tracking-wide backdrop-blur-sm shadow-sm',
+                    labelStyle.bg,
+                    labelStyle.text,
+                  )}>
+                    {label === 'Our pick' && <span aria-hidden>★</span>}
+                    {label}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-500/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white backdrop-blur-sm shadow-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/90" /> Custom built for you
-                </span>
               </div>
             </div>
 
-            {/* Title block — template eyebrow + title + meta. */}
+            {/* Title block — template eyebrow + title + meta + why_it_works preview. */}
             <div className="mt-3 px-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
                 {it.template_name}
@@ -74,6 +90,11 @@ export function ChooserCards({
                 <span className="mx-1.5 text-border">·</span>
                 <span>{it.stops.length} stops</span>
               </p>
+              {it.why_it_works && (
+                <p className="mt-2.5 line-clamp-2 text-sm leading-snug text-secondary">
+                  {it.why_it_works}
+                </p>
+              )}
             </div>
           </button>
         );

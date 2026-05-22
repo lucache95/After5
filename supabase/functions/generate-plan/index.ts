@@ -359,11 +359,23 @@ serve(async (req: Request) => {
 
     // 7. LLM writing pass
     const placesById = new Map<string, Place>(candidates.map((p) => [p.id, p]));
-    const written = await writeItineraries(
+    const writeResult = await writeItineraries(
       Deno.env.get('ANTHROPIC_API_KEY')!,
       Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-6',
       { inputs, itineraries, placesById, packVoiceNote: activePack?.voice_note ?? null }
     );
+    const written = writeResult.itineraries;
+
+    // 7a. Alert if deterministic fallback was used for what_to_do.
+    // This means both the initial LLM pass and the retry failed to produce
+    // copy for these stops — worth investigating the prompt or place data.
+    if (writeResult.fallback_count > 0) {
+      console.error(
+        `[generate-plan] FALLBACK: ${writeResult.fallback_count} stop(s) used deterministic what_to_do fallback after LLM retry. ` +
+        `Affected stops: ${writeResult.fallback_stops.map((s) => `${s.place_name} (${s.place_id})`).join(', ')}`
+      );
+      sharedLog.what_to_do_fallbacks = writeResult.fallback_stops;
+    }
 
     // 7b. Scrub photos that don't match the season or stop time.
     // Drops snow shots in non-winter; drops daytime shots at evening stops.

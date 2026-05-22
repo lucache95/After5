@@ -78,7 +78,8 @@ async function classifyOne(place) {
     }],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 200,
+      maxOutputTokens: 1024,
+      responseMimeType: 'application/json',
     },
   };
 
@@ -142,10 +143,12 @@ async function main() {
       console.log(`  ${idx}  ${r.score}/5  ${place.name}  ${r.notes}${flag}`);
 
       if (!DRY_RUN) {
+        // Map numeric score to DB enum: hero (5), okay (4-3), needs_review (2), bad (1)
+        const qualityMap = { 5: 'hero', 4: 'okay', 3: 'okay', 2: 'needs_review', 1: 'bad' };
         const { error: updateErr } = await supabase
           .from('places')
           .update({
-            photo_quality: String(r.score),
+            photo_quality: qualityMap[r.score] ?? 'needs_review',
             photo_review_notes: r.notes,
           })
           .eq('id', place.id);

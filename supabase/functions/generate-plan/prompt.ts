@@ -53,19 +53,67 @@ interface LLMItineraryWriting {
   stops: { place_id: string; what_to_do: string }[];
 }
 
+// Minimum character threshold for a what_to_do to be considered non-empty.
+// Anything shorter than this is treated as a gap that needs retry/fallback.
+const WHAT_TO_DO_MIN_LENGTH = 20;
+
+export interface WriteResult {
+  itineraries: Itinerary[];
+  /** Number of stops that used the deterministic fallback. */
+  fallback_count: number;
+  /** place_name + place_id pairs for every stop that fell back. */
+  fallback_stops: Array<{ place_id: string; place_name: string }>;
+}
+
 export async function writeItineraries(
   apiKey: string,
   model: string,
   input: WritingPassInput
-): Promise<Itinerary[]> {
+): Promise<WriteResult> {
   const client = new Anthropic({ apiKey });
 
+  // --- First LLM pass ---
+  let written = await callLLMWritingPass(client, model, input);
+  let merged = mergeWriting(input, written);
+
+  // --- Check for empty/short what_to_do and retry once if needed ---
+  const gapsAfterFirst = countWhatToDoGaps(merged);
+  if (gapsAfterFirst > 0) {
+    console.log(`[writing] ${gapsAfterFirst} stop(s) with empty/short what_to_do after first pass — retrying`);
+    const retryWritten = await callLLMWritingPass(client, model, input);
+    // Only patch stops that are still empty — don't clobber good copy from pass 1
+    merged = patchEmptyStops(merged, retryWritten);
+  }
+
+  // --- Deterministic fallback for any still-empty stops ---
+  const fallbackStops: Array<{ place_id: string; place_name: string }> = [];
+  for (const it of merged) {
+    for (const stop of it.stops) {
+      if (!stop.what_to_do || stop.what_to_do.length < WHAT_TO_DO_MIN_LENGTH) {
+        const place = input.placesById.get(stop.place_id);
+        stop.what_to_do = buildFallbackWhatToDo(stop.place_name, place?.local_insight ?? null);
+        fallbackStops.push({ place_id: stop.place_id, place_name: stop.place_name });
+      }
+    }
+  }
+
+  return {
+    itineraries: merged,
+    fallback_count: fallbackStops.length,
+    fallback_stops: fallbackStops,
+  };
+}
+
+/** Run a single LLM writing pass and return parsed results (empty array on failure). */
+async function callLLMWritingPass(
+  client: Anthropic,
+  model: string,
+  input: WritingPassInput
+): Promise<LLMItineraryWriting[]> {
   const userMessage = buildUserMessage(input);
 
   const response = await client.messages.create({
     model,
-    // Richer 2-3 sentence per-stop prose means larger output — 4k leaves head-
-    // room so the JSON never truncates mid-stop.
     max_tokens: 4096,
     temperature: 0.7,
     system: [
@@ -82,16 +130,14 @@ export async function writeItineraries(
 
   const textBlock = response.content.find((b) => b.type === 'text');
   if (!textBlock || textBlock.type !== 'text') {
-    throw new Error('LLM returned no text content');
+    console.error('LLM returned no text content');
+    return [];
   }
 
-  // If the LLM returns prose instead of JSON (rare but happens — Claude
-  // occasionally explains why it can't comply), fall back to placeholder
-  // copy so the user gets a usable plan instead of a 500.
   let written: LLMItineraryWriting[];
   try {
     written = parseLLMResponse(textBlock.text);
-  } catch (err) {
+  } catch (_err) {
     console.error('LLM returned non-JSON, using fallback titles. Snippet:', textBlock.text.slice(0, 120));
     written = [];
   }
@@ -100,11 +146,14 @@ export async function writeItineraries(
   );
   console.log('LLM writing pass: what_to_do per itinerary:', whatToDoCounts.join(','));
 
-  // Merge writing back into the itineraries (places are fixed; LLM only added copy)
+  return written;
+}
+
+/** Merge LLM writing output back into the source itineraries. */
+function mergeWriting(input: WritingPassInput, written: LLMItineraryWriting[]): Itinerary[] {
   return input.itineraries.map((it) => {
     const w = written.find((x) => x.template_id === it.template_id);
     if (!w) {
-      // Fall back to a deterministic placeholder so we never return empty strings
       return {
         ...it,
         title: it.template_name,
@@ -118,9 +167,6 @@ export async function writeItineraries(
       title: w.title,
       hook: w.hook,
       why_it_works: w.why_it_works,
-      // Match by ARRAY INDEX, not place_id. The LLM sometimes drops/mutates
-      // UUIDs or returns a different number of stops than we sent; zipping by
-      // order is robust and we know the LLM writes in the order we gave.
       stops: it.stops.map((s, i) => {
         const byIndex = w.stops[i];
         const byId = w.stops.find((x) => x.place_id === s.place_id);
@@ -129,6 +175,52 @@ export async function writeItineraries(
       }),
     };
   });
+}
+
+/** Count stops across all itineraries with empty or too-short what_to_do. */
+function countWhatToDoGaps(itineraries: Itinerary[]): number {
+  let gaps = 0;
+  for (const it of itineraries) {
+    for (const stop of it.stops) {
+      if (!stop.what_to_do || stop.what_to_do.length < WHAT_TO_DO_MIN_LENGTH) gaps++;
+    }
+  }
+  return gaps;
+}
+
+/**
+ * Patch stops that still have empty what_to_do using copy from a retry pass.
+ * Only overwrites empty stops — keeps good copy from the first pass intact.
+ */
+function patchEmptyStops(merged: Itinerary[], retryWritten: LLMItineraryWriting[]): Itinerary[] {
+  return merged.map((it) => {
+    const rw = retryWritten.find((x) => x.template_id === it.template_id);
+    if (!rw) return it;
+    return {
+      ...it,
+      stops: it.stops.map((s, i) => {
+        if (s.what_to_do && s.what_to_do.length >= WHAT_TO_DO_MIN_LENGTH) return s;
+        const byIndex = rw.stops[i];
+        const byId = rw.stops.find((x) => x.place_id === s.place_id);
+        const retryWhat = byIndex?.what_to_do || byId?.what_to_do || '';
+        if (retryWhat.length >= WHAT_TO_DO_MIN_LENGTH) {
+          return { ...s, what_to_do: retryWhat };
+        }
+        return s;
+      }),
+    };
+  });
+}
+
+/**
+ * Build a deterministic fallback what_to_do from the place name and local
+ * insight. Used when both the initial pass and retry fail to produce copy.
+ */
+function buildFallbackWhatToDo(placeName: string, localInsight: string | null): string {
+  if (localInsight && localInsight.length > 10) {
+    return `Head to ${placeName} and take it in. ${localInsight}`;
+  }
+  return `Stop by ${placeName} — a local favourite worth checking out on its own.`;
 }
 
 function buildUserMessage(input: WritingPassInput): string {
