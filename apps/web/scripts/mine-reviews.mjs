@@ -12,6 +12,7 @@
 //      node scripts/mine-reviews.mjs --force           # re-mine all
 //      node scripts/mine-reviews.mjs --limit 10        # cap at 10
 //      node scripts/mine-reviews.mjs --dry-run         # preview, no writes
+//      node scripts/mine-reviews.mjs --low-confidence  # re-mine low-confidence only
 
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
@@ -40,7 +41,27 @@ const limitIdx = process.argv.indexOf('--limit');
 const cap = limitIdx > -1 ? parseInt(process.argv[limitIdx + 1], 10) : Infinity;
 const FORCE = process.argv.includes('--force');
 const DRY_RUN = process.argv.includes('--dry-run');
+const LOW_CONFIDENCE = process.argv.includes('--low-confidence');
 const PACE_MS = 1000;
+
+const MODEL = 'claude-haiku-4-5-20251001';
+
+// ── Confidence helpers ────────────────────────────────────────
+function reviewConfidence(count) {
+  if (count >= 10) return 'high';
+  if (count >= 5) return 'medium';
+  return 'low';
+}
+
+function buildMeta(reviewCount, source) {
+  return {
+    review_count: reviewCount,
+    source,
+    model: MODEL,
+    generated_at: new Date().toISOString(),
+    confidence: reviewConfidence(reviewCount),
+  };
+}
 
 // ── Google Places API ──────────────────────────────────────────
 async function fetchGoogleReviews(googlePlaceId) {
@@ -92,7 +113,7 @@ Output 2-4 sentences. Be specific and vivid, not generic. Write like a local fri
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: MODEL,
       max_tokens: 300,
       temperature: 0.3,
       messages: [{ role: 'user', content: prompt }],
@@ -113,19 +134,29 @@ async function main() {
   // Pull candidates: active places, optionally only those missing local_insight.
   let q = supabase
     .from('places')
-    .select('id, name, type, google_place_id, local_insight, reviews')
+    .select('id, name, type, google_place_id, local_insight, local_insight_meta, reviews')
     .eq('is_active', true)
     .order('name');
 
-  if (!FORCE) {
+  if (!FORCE && !LOW_CONFIDENCE) {
     q = q.or('local_insight.is.null,local_insight.eq.');
   }
 
   const { data: places, error } = await q;
   if (error) throw error;
 
-  const targets = places.slice(0, cap);
-  console.log(`${places.length} candidates, processing ${targets.length} (force=${FORCE}, dry-run=${DRY_RUN})\n`);
+  // When --low-confidence is set, filter to venues whose previous run had < 5 reviews.
+  let filtered = places;
+  if (LOW_CONFIDENCE) {
+    filtered = places.filter((p) => {
+      const meta = p.local_insight_meta;
+      return meta && meta.confidence === 'low';
+    });
+  }
+
+  const targets = filtered.slice(0, cap);
+  const mode = LOW_CONFIDENCE ? 'low-confidence' : FORCE ? 'force' : 'missing';
+  console.log(`${places.length} candidates, processing ${targets.length} (mode=${mode}, dry-run=${DRY_RUN})\n`);
 
   let ok = 0;
   let skipped = 0;
@@ -140,6 +171,7 @@ async function main() {
 
     // Gather reviews: prefer cached DB reviews, fall back to Google API.
     let reviews = [];
+    let reviewSource = 'google_reviews_cached';
     const dbReviews = Array.isArray(place.reviews) ? place.reviews : [];
     if (dbReviews.length > 0) {
       reviews = dbReviews.map((r) => ({
@@ -152,6 +184,7 @@ async function main() {
     if (reviews.length === 0 && place.google_place_id && GOOGLE_KEY) {
       reviews = (await fetchGoogleReviews(place.google_place_id))
         .filter((r) => r.text.length > 10);
+      reviewSource = 'google_reviews_live';
     }
 
     if (reviews.length === 0) {
@@ -174,11 +207,14 @@ async function main() {
         continue;
       }
 
+      const meta = buildMeta(reviews.length, reviewSource);
+
       const { error: updateErr } = await supabase
         .from('places')
         .update({
           local_insight: insight,
-          last_ai_review_at: new Date().toISOString(),
+          local_insight_meta: meta,
+          last_ai_review_at: meta.generated_at,
         })
         .eq('id', place.id);
 
@@ -189,7 +225,8 @@ async function main() {
       }
 
       ok++;
-      console.log(`  ${idx}  +  ${name}  (${reviews.length} reviews)`);
+      const conf = meta.confidence.toUpperCase();
+      console.log(`  ${idx}  +  ${name}  (${reviews.length} reviews, ${conf})`);
       console.log(`         "${insight.slice(0, 120)}${insight.length > 120 ? '...' : ''}"`);
     } catch (e) {
       failed++;
