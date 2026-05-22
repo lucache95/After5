@@ -111,6 +111,10 @@ serve(async (req: Request) => {
     const rateLimitMax = userId ? AUTH_LIMIT_PER_HOUR : ANON_LIMIT_PER_HOUR;
 
     const rateLimitResult = await checkRateLimit(supabase, rateLimitIdentifier, RATE_LIMIT_ENDPOINT, rateLimitMax);
+    const rateLimitFallback = rateLimitResult._fallback === true;
+    const extraHeaders: Record<string, string> = rateLimitFallback
+      ? { 'X-Rate-Limit-Mode': 'fallback' }
+      : {};
     if (!rateLimitResult.allowed) {
       console.warn('[generate-plan] rate limited:', rateLimitIdentifier, 'count:', rateLimitResult.count, 'limit:', rateLimitMax);
       return jsonResponse(
@@ -120,6 +124,7 @@ serve(async (req: Request) => {
           retry_after_seconds: rateLimitResult.retryAfterSeconds,
         },
         429,
+        extraHeaders,
       );
     }
 
@@ -563,10 +568,14 @@ serve(async (req: Request) => {
       };
     });
 
-    return jsonResponse({
-      itineraries: withIds,
-      generated_at: new Date().toISOString(),
-    });
+    return jsonResponse(
+      {
+        itineraries: withIds,
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      extraHeaders,
+    );
   } catch (err) {
     console.error('generate-plan error', err);
     const msg = err instanceof Error ? err.message : 'unknown error';
@@ -574,10 +583,10 @@ serve(async (req: Request) => {
   }
 });
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'content-type': 'application/json' },
+    headers: { ...corsHeaders, 'content-type': 'application/json', ...extraHeaders },
   });
 }
 
@@ -733,7 +742,7 @@ async function checkRateLimit(
   identifier: string,
   endpoint: string,
   maxRequests: number,
-): Promise<{ allowed: true } | { allowed: false; count: number; retryAfterSeconds: number }> {
+): Promise<({ allowed: true } | { allowed: false; count: number; retryAfterSeconds: number }) & { _fallback?: true }> {
   // Upsert: insert a row with count=1 or increment the existing row's count.
   // Returns the new count so we can decide in one query.
   const { data, error } = await supabase.rpc('rate_limit_check', {
@@ -745,8 +754,13 @@ async function checkRateLimit(
   // If the RPC doesn't exist yet (first deploy before migration runs),
   // fall back to a manual check so the function degrades gracefully.
   if (error) {
-    console.warn('[rate-limit] RPC failed, falling back to manual check:', error.message);
-    return await checkRateLimitManual(supabase, identifier, endpoint, maxRequests);
+    console.error(
+      '[RATE-LIMIT WARNING] RPC rate_limit_check not available — falling back to non-atomic JS rate limiter. ' +
+      'This is NOT safe under concurrency. Deploy the rate_limits migration to fix this. ' +
+      `RPC error: ${error.message}`
+    );
+    const fallbackResult = await checkRateLimitManual(supabase, identifier, endpoint, maxRequests);
+    return { ...fallbackResult, _fallback: true as const };
   }
 
   // The RPC returns { allowed: boolean, current_count: number, retry_after_seconds: number }
@@ -757,8 +771,13 @@ async function checkRateLimit(
   return { allowed: false, count: result.current_count, retryAfterSeconds: result.retry_after_seconds };
 }
 
-// Manual fallback: two queries (SELECT then INSERT/UPDATE). Slightly racy
-// under extreme concurrency, but good enough as a fallback.
+// TEMPORARY FALLBACK — remove once the rate_limit_check RPC migration is
+// confirmed deployed to all environments. This non-atomic JS path uses two
+// separate queries (SELECT then INSERT/UPDATE) and is NOT safe under
+// concurrency: concurrent requests can read the same count and both pass,
+// exceeding the intended limit. The atomic RPC path above is the correct
+// implementation; this exists only so the function doesn't hard-fail if the
+// migration hasn't run yet.
 async function checkRateLimitManual(
   supabase: ReturnType<typeof createClient>,
   identifier: string,
