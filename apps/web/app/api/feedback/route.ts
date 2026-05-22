@@ -1,23 +1,74 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { verifyFeedbackToken } from '@/lib/email/feedback-token';
 
-// Anonymous feedback capture. Three signals from the post-results pulse:
-//   stop_votes      — array of {stop_idx, vote: 'up'|'down'}
-//   skip_stop_idx   — single stop index the user would drop
-//   would_do        — 'yes' | 'maybe' | 'no'
-// Idempotent best-effort. We never block the user on this; if it fails,
-// they don't even know.
+// Anonymous feedback capture. Two entry points:
+//   1. Post-date email — token-authenticated (source: 'post_date_email')
+//   2. In-app pulse after viewing results (source: 'plan_results')
+//
+// When source is 'post_date_email', the request MUST include a valid
+// feedback token. On success, we mark the saved_plan as completed so
+// the token becomes single-use.
+//
+// Rate limit: max 5 submissions per IP per hour (in-memory, resets on
+// cold start — good enough for burst protection on serverless).
 
+// ── Rate limiting ─────────────────────────────────────────────────────
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_LIMIT_MAX = 5;
+
+interface RateBucket {
+  count: number;
+  resetAt: number;
+}
+
+const rateLimitMap = new Map<string, RateBucket>();
+
+// Clean up stale entries every 10 minutes to prevent unbounded growth.
+// This interval is cleaned up when the module is garbage-collected on
+// serverless cold-start recycle, so no explicit teardown is needed.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateLimitMap) {
+    if (now > bucket.resetAt) rateLimitMap.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const bucket = rateLimitMap.get(ip);
+  if (!bucket || now > bucket.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > RATE_LIMIT_MAX;
+}
+
+// ── Types ─────────────────────────────────────────────────────────────
 interface Body {
   itinerary_id?: string;
+  token?: string;
   source?: string;
-  stop_votes?: Array<{ stop_idx: number; vote: 'up' | 'down' }>;
+  stop_votes?: Array<{ stop_idx: number; vote: 'up' | 'down' | 'skip' }>;
   skip_stop_idx?: number | null;
   would_do?: 'yes' | 'maybe' | 'no' | null;
   notes?: string | null;
 }
 
 export async function POST(req: Request) {
+  // ── Rate limit ────────────────────────────────────────
+  const forwarded = req.headers.get('x-forwarded-for');
+  const ip = forwarded?.split(',')[0]?.trim() ?? 'unknown';
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: 'rate_limited', message: 'Too many submissions. Try again later.' },
+      { status: 429 },
+    );
+  }
+
+  // ── Parse body ────────────────────────────────────────
   let body: Body;
   try {
     body = await req.json();
@@ -29,6 +80,49 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid_itinerary_id' }, { status: 400 });
   }
 
+  // ── Token verification for post-date email submissions ─
+  let savedPlanId: string | null = null;
+
+  if (body.source === 'post_date_email') {
+    if (!body.token) {
+      return NextResponse.json({ error: 'missing_token' }, { status: 400 });
+    }
+
+    const result = verifyFeedbackToken(body.token);
+    if (result.status === 'expired') {
+      return NextResponse.json(
+        { error: 'token_expired', message: 'This feedback link has expired.' },
+        { status: 410 },
+      );
+    }
+    if (result.status === 'invalid') {
+      return NextResponse.json({ error: 'invalid_token' }, { status: 403 });
+    }
+
+    // Ensure the token's itinerary matches the submitted one
+    if (result.itineraryId !== body.itinerary_id) {
+      return NextResponse.json({ error: 'token_mismatch' }, { status: 403 });
+    }
+
+    savedPlanId = result.savedPlanId;
+
+    // Check one-time use
+    const admin = createAdminClient();
+    const { data: savedPlan } = await (admin as any)
+      .from('saved_plans')
+      .select('feedback_completed_at')
+      .eq('id', savedPlanId)
+      .maybeSingle();
+
+    if (savedPlan?.feedback_completed_at) {
+      return NextResponse.json(
+        { error: 'already_submitted', message: 'Feedback already submitted for this date.' },
+        { status: 409 },
+      );
+    }
+  }
+
+  // ── Insert feedback ───────────────────────────────────
   const supabase = await createClient();
   const userAgent = req.headers.get('user-agent') ?? null;
 
@@ -47,5 +141,15 @@ export async function POST(req: Request) {
     console.error('feedback insert error', error);
     return NextResponse.json({ ok: true, persisted: false });
   }
+
+  // ── Mark one-time use for token-based submissions ─────
+  if (savedPlanId) {
+    const admin = createAdminClient();
+    await (admin as any)
+      .from('saved_plans')
+      .update({ feedback_completed_at: new Date().toISOString() })
+      .eq('id', savedPlanId);
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -5,8 +5,25 @@
 //
 // Reuses the same SUBSCRIBER_TOKEN_SECRET as unsubscribe tokens — one
 // secret for all lightweight email-link signatures.
+//
+// Security hardening (2026-05-22):
+//   - TTL: tokens embed an `iat` (issued-at) timestamp and expire after
+//     72 hours. The email arrives ~24h post-date, giving the user 2
+//     extra days to click.
+//   - Scoping: payload includes saved_plan_id + itinerary_id + email,
+//     so the HMAC is bound to a specific plan and user.
+//   - One-time use: enforced at the DB layer via `feedback_completed_at`
+//     on `saved_plans` (checked in the page server component).
+//   - Rate limiting: enforced at the API route level (/api/feedback).
+//
+// Future consideration: signing-key rotation. Currently we use a single
+// SUBSCRIBER_TOKEN_SECRET. A rotation scheme (key-id prefix + grace
+// period) would let us cycle keys without invalidating in-flight links.
 
 import { createHmac, timingSafeEqual } from 'crypto';
+
+/** Token TTL in milliseconds — 72 hours. */
+export const FEEDBACK_TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
 
 interface FeedbackPayload {
   /** saved_plans.id */
@@ -15,6 +32,8 @@ interface FeedbackPayload {
   it: string;
   /** user email */
   e: string;
+  /** issued-at UTC epoch (seconds) */
+  iat: number;
 }
 
 function b64url(buf: Buffer | string): string {
@@ -42,17 +61,21 @@ export function makeFeedbackToken(opts: {
     sp: opts.savedPlanId,
     it: opts.itineraryId,
     e: opts.email.toLowerCase().trim(),
+    iat: Math.floor(Date.now() / 1000),
   };
   const json = JSON.stringify(payload);
   const sig = createHmac('sha256', secret()).update(json).digest();
   return `${b64url(json)}.${b64url(sig)}`;
 }
 
-export function verifyFeedbackToken(
-  token: string,
-): { savedPlanId: string; itineraryId: string; email: string } | null {
+export type FeedbackTokenResult =
+  | { status: 'valid'; savedPlanId: string; itineraryId: string; email: string }
+  | { status: 'expired' }
+  | { status: 'invalid' };
+
+export function verifyFeedbackToken(token: string): FeedbackTokenResult {
   const dot = token.indexOf('.');
-  if (dot === -1) return null;
+  if (dot === -1) return { status: 'invalid' };
 
   const payloadB64 = token.slice(0, dot);
   const sigB64 = token.slice(dot + 1);
@@ -61,7 +84,7 @@ export function verifyFeedbackToken(
   try {
     json = fromB64url(payloadB64).toString('utf8');
   } catch {
-    return null;
+    return { status: 'invalid' };
   }
 
   const expected = createHmac('sha256', secret()).update(json).digest();
@@ -69,17 +92,25 @@ export function verifyFeedbackToken(
   try {
     provided = fromB64url(sigB64);
   } catch {
-    return null;
+    return { status: 'invalid' };
   }
 
-  if (provided.length !== expected.length) return null;
-  if (!timingSafeEqual(expected, provided)) return null;
+  if (provided.length !== expected.length) return { status: 'invalid' };
+  if (!timingSafeEqual(expected, provided)) return { status: 'invalid' };
 
   try {
     const p = JSON.parse(json) as FeedbackPayload;
-    if (!p.sp || !p.it || !p.e) return null;
-    return { savedPlanId: p.sp, itineraryId: p.it, email: p.e };
+    if (!p.sp || !p.it || !p.e) return { status: 'invalid' };
+
+    // TTL check: reject tokens older than 72 hours.
+    // Tokens minted before the `iat` field was added lack it — treat
+    // them as expired (they predate this hardening and should not work).
+    if (!p.iat) return { status: 'expired' };
+    const ageMs = Date.now() - p.iat * 1000;
+    if (ageMs > FEEDBACK_TOKEN_TTL_MS) return { status: 'expired' };
+
+    return { status: 'valid', savedPlanId: p.sp, itineraryId: p.it, email: p.e };
   } catch {
-    return null;
+    return { status: 'invalid' };
   }
 }

@@ -107,6 +107,7 @@ export function FeedbackForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           itinerary_id: itineraryId,
+          token,
           source: 'post_date_email',
           stop_votes: stopVotesPayload,
           would_do: wouldRecommend,
@@ -114,7 +115,17 @@ export function FeedbackForm({
         }),
       });
       if (!res.ok) {
-        throw new Error('failed');
+        const data = await res.json().catch(() => ({}));
+        if (data.error === 'already_submitted') {
+          setError('You\u2019ve already submitted feedback for this date.');
+        } else if (data.error === 'token_expired') {
+          setError('This feedback link has expired.');
+        } else if (data.error === 'rate_limited') {
+          setError('Too many submissions. Please try again later.');
+        } else {
+          throw new Error('failed');
+        }
+        return;
       }
       setDone(true);
     } catch {
