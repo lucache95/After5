@@ -764,6 +764,9 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          insider_approved_at: string | null
+          insider_points: number
+          insider_role: string | null
           neighborhood: string | null
           updated_at: string
         }
@@ -773,6 +776,9 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id: string
+          insider_approved_at?: string | null
+          insider_points?: number
+          insider_role?: string | null
           neighborhood?: string | null
           updated_at?: string
         }
@@ -782,6 +788,9 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          insider_approved_at?: string | null
+          insider_points?: number
+          insider_role?: string | null
           neighborhood?: string | null
           updated_at?: string
         }

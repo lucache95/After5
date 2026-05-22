@@ -108,7 +108,7 @@ export async function PATCH(req: NextRequest) {
       .update({
         insider_role: assignedRole,
         insider_approved_at: now,
-      } as Record<string, unknown>)
+      })
       .eq('id', profiles[0].id);
   }
 
