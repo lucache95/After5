@@ -270,6 +270,7 @@ function PlanFlow() {
   const searchParams = useSearchParams();
   const vibeParam = searchParams.get('vibe');
   const themeParam = searchParams.get('theme');
+  const surpriseParam = searchParams.get('surprise');
   // Resolve theme preset once at mount. If themeParam matches a known
   // theme, the preset overrides the defaults below.
   const themePreset = themeParam ? THEMES.find((t) => t.id === themeParam)?.preset ?? null : null;
@@ -394,6 +395,14 @@ function PlanFlow() {
     };
     generate(surprise);
   };
+
+  // Auto-trigger surprise flow when landing via ?surprise=true (hero CTA).
+  useEffect(() => {
+    if (surpriseParam === 'true' && phase === 'inputs') {
+      surpriseMe();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surpriseParam]);
 
   const next = () => {
     if (!canAdvance()) return;
@@ -1714,6 +1723,7 @@ function ResultsView(props: {
   // doesn't win a unique superlative gets "Our pick".
   const cardLabels = useMemo(() => {
     if (itineraries.length === 0) return [];
+    if (itineraries.length === 1) return ['Our pick'];
     const labels = new Array<string>(itineraries.length).fill('Our pick');
     const used = new Set<number>();
 

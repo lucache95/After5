@@ -18,7 +18,7 @@ import type { VenueRow, FeedbackRow, PairingRow } from './page';
 
 const EFFORT_OPTIONS = ['low', 'moderate', 'high'] as const;
 const ENERGY_OPTIONS = ['low', 'medium', 'high'] as const;
-const PERCEIVED_VALUE_OPTIONS = ['poor', 'fair', 'good', 'great', 'exceptional'] as const;
+const PERCEIVED_VALUE_OPTIONS = ['exceeds_price', 'matches', 'overpriced'] as const;
 
 // ---------------------------------------------------------------------------
 // Component

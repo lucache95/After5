@@ -490,6 +490,7 @@ export type Database = {
           llm_summary: string | null
           lng: number | null
           local_insight: string | null
+          local_insight_meta: Json | null
           name: string
           neighborhood: string
           notes: string | null
@@ -564,6 +565,7 @@ export type Database = {
           llm_summary?: string | null
           lng?: number | null
           local_insight?: string | null
+          local_insight_meta?: Json | null
           name: string
           neighborhood: string
           notes?: string | null
@@ -638,6 +640,7 @@ export type Database = {
           llm_summary?: string | null
           lng?: number | null
           local_insight?: string | null
+          local_insight_meta?: Json | null
           name?: string
           neighborhood?: string
           notes?: string | null
@@ -997,6 +1000,121 @@ export type Database = {
           vibe_weights?: Json
         }
         Relationships: []
+      }
+      insider_applications: {
+        Row: {
+          id: string
+          created_at: string
+          email: string
+          first_name: string
+          instagram: string | null
+          motivation: string
+          best_date_spot: string
+          status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          email: string
+          first_name: string
+          instagram?: string | null
+          motivation: string
+          best_date_spot: string
+          status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          instagram?: string | null
+          motivation?: string
+          best_date_spot?: string
+          status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      insider_tasks: {
+        Row: {
+          id: string
+          created_at: string
+          assigned_to: string
+          task_type: string
+          title: string
+          description: string | null
+          venue_id: string | null
+          itinerary_id: string | null
+          points_reward: number
+          status: string
+          submitted_at: string | null
+          submission_notes: string | null
+          submission_photo_url: string | null
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          assigned_to: string
+          task_type: string
+          title: string
+          description?: string | null
+          venue_id?: string | null
+          itinerary_id?: string | null
+          points_reward?: number
+          status?: string
+          submitted_at?: string | null
+          submission_notes?: string | null
+          submission_photo_url?: string | null
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          assigned_to?: string
+          task_type?: string
+          title?: string
+          description?: string | null
+          venue_id?: string | null
+          itinerary_id?: string | null
+          points_reward?: number
+          status?: string
+          submitted_at?: string | null
+          submission_notes?: string | null
+          submission_photo_url?: string | null
+          completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insider_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insider_tasks_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insider_tasks_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vote_sessions: {
         Row: {
