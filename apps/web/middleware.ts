@@ -16,6 +16,15 @@ interface CookieToSet {
 // or route-level guards (e.g. /admin/*, /account) handle redirects.
 
 export async function middleware(request: NextRequest) {
+  // Canonical domain: redirect www → apex so auth cookies (PKCE verifier)
+  // always live on the same origin as the OAuth callback.
+  const host = request.headers.get('host') ?? '';
+  if (host.startsWith('www.')) {
+    const url = request.nextUrl.clone();
+    url.host = host.replace('www.', '');
+    return NextResponse.redirect(url, 301);
+  }
+
   // Auth code rescue: if Supabase falls back to Site URL and lands the
   // OAuth/magic-link `?code=` on a page that doesn't know how to exchange
   // it, forward to /auth/callback so we still capture the session. Only
