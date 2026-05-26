@@ -34,6 +34,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          resolved_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          resolved_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          resolved_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: number
+          payload: Json
+          subject_id: string | null
+          subject_type: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: never
+          payload?: Json
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: never
+          payload?: Json
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -99,6 +153,57 @@ export type Database = {
             columns: ["blocker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          both_ready: boolean
+          created_at: string
+          id: string
+          legal_hold: boolean
+          lock_id: string | null
+          offer_id: string
+          revoked_at: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          both_ready?: boolean
+          created_at?: string
+          id?: string
+          legal_hold?: boolean
+          lock_id?: string | null
+          offer_id: string
+          revoked_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          both_ready?: boolean
+          created_at?: string
+          id?: string
+          legal_hold?: boolean
+          lock_id?: string | null
+          offer_id?: string
+          revoked_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_lock_id_fkey"
+            columns: ["lock_id"]
+            isOneToOne: false
+            referencedRelation: "locks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
             referencedColumns: ["id"]
           },
         ]
@@ -212,6 +317,41 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          expo_push_token: string | null
+          id: string
+          last_seen: string
+          platform: string | null
+          user_id: string
+          web_push_sub: Json | null
+        }
+        Insert: {
+          expo_push_token?: string | null
+          id?: string
+          last_seen?: string
+          platform?: string | null
+          user_id: string
+          web_push_sub?: Json | null
+        }
+        Update: {
+          expo_push_token?: string | null
+          id?: string
+          last_seen?: string
+          platform?: string | null
+          user_id?: string
+          web_push_sub?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -333,6 +473,24 @@ export type Database = {
           sent_at?: string
           subject?: string
           triggered_by?: string
+        }
+        Relationships: []
+      }
+      feature_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
         }
         Relationships: []
       }
@@ -691,6 +849,45 @@ export type Database = {
           },
         ]
       }
+      jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          dedup_key: string | null
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          payload: Json
+          run_after: string
+          status: Database["public"]["Enums"]["job_status"]
+          type: Database["public"]["Enums"]["job_type"]
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          dedup_key?: string | null
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          payload?: Json
+          run_after?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          type: Database["public"]["Enums"]["job_type"]
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          dedup_key?: string | null
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          payload?: Json
+          run_after?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          type?: Database["public"]["Enums"]["job_type"]
+        }
+        Relationships: []
+      }
       lock_participants: {
         Row: {
           active: boolean
@@ -882,6 +1079,106 @@ export type Database = {
           vibe_affinity?: string[]
         }
         Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          account_enabled: boolean
+          created_at: string
+          email_enabled: boolean
+          matches_enabled: boolean
+          messages_enabled: boolean
+          offers_enabled: boolean
+          push_enabled: boolean
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          reminders_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_enabled?: boolean
+          created_at?: string
+          email_enabled?: boolean
+          matches_enabled?: boolean
+          messages_enabled?: boolean
+          offers_enabled?: boolean
+          push_enabled?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          reminders_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_enabled?: boolean
+          created_at?: string
+          email_enabled?: boolean
+          matches_enabled?: boolean
+          messages_enabled?: boolean
+          offers_enabled?: boolean
+          push_enabled?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          reminders_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          channel: Database["public"]["Enums"]["notification_channel"] | null
+          created_at: string
+          dedup_key: string | null
+          delivered: boolean
+          delivery_error: string | null
+          id: string
+          payload: Json
+          read_at: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          channel?: Database["public"]["Enums"]["notification_channel"] | null
+          created_at?: string
+          dedup_key?: string | null
+          delivered?: boolean
+          delivery_error?: string | null
+          id?: string
+          payload?: Json
+          read_at?: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["notification_channel"] | null
+          created_at?: string
+          dedup_key?: string | null
+          delivered?: boolean
+          delivery_error?: string | null
+          id?: string
+          payload?: Json
+          read_at?: string | null
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       offers: {
         Row: {
@@ -2166,7 +2463,47 @@ export type Database = {
             }
             Returns: string
           }
+      can_enter_lock_flow: { Args: { p_user: string }; Returns: boolean }
+      cancel_jobs: {
+        Args: {
+          p_dedup_key: string
+          p_type: Database["public"]["Enums"]["job_type"]
+        }
+        Returns: number
+      }
+      chat_lock_ready: { Args: { p_thread: string }; Returns: boolean }
+      claim_due_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          dedup_key: string | null
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          payload: Json
+          run_after: string
+          status: Database["public"]["Enums"]["job_status"]
+          type: Database["public"]["Enums"]["job_type"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      close_chat_thread: { Args: { p_offer: string }; Returns: undefined }
+      complete_job: { Args: { p_id: string }; Returns: undefined }
       disablelongtransactions: { Args: never; Returns: string }
+      dispatch_notification: {
+        Args: {
+          p_payload?: Json
+          p_type: Database["public"]["Enums"]["notification_type"]
+          p_user: string
+        }
+        Returns: Json
+      }
       dropgeometrycolumn:
         | {
             Args: {
@@ -2197,8 +2534,28 @@ export type Database = {
           }
         | { Args: { schema_name: string; table_name: string }; Returns: string }
         | { Args: { table_name: string }; Returns: string }
+      emit_analytics: {
+        Args: {
+          p_actor_id: string
+          p_event_type: string
+          p_payload?: Json
+          p_subject_id?: string
+          p_subject_type?: string
+        }
+        Returns: number
+      }
       enablelongtransactions: { Args: never; Returns: string }
+      enqueue_job: {
+        Args: {
+          p_dedup_key?: string
+          p_payload?: Json
+          p_run_after: string
+          p_type: Database["public"]["Enums"]["job_type"]
+        }
+        Returns: string
+      }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      fail_job: { Args: { p_error: string; p_id: string }; Returns: undefined }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -2299,12 +2656,25 @@ export type Database = {
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      mark_notification_delivered: {
+        Args: { p_error?: string; p_id: string }
+        Returns: undefined
+      }
       mk_instance: {
         Args: { p_creator: string; p_itin: string; p_starts: string }
         Returns: string
       }
       mk_itinerary: { Args: { p_user: string }; Returns: string }
       mk_user: { Args: { p_label: string }; Returns: string }
+      notification_rate_check: {
+        Args: {
+          p_type: Database["public"]["Enums"]["notification_type"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      offer_expires_at: { Args: { p_from?: string }; Returns: string }
+      open_chat_thread: { Args: { p_offer: string }; Returns: string }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -2345,6 +2715,14 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      promote_chat_thread_to_lock: {
+        Args: { p_lock: string; p_offer: string }
+        Returns: undefined
+      }
+      raise_admin_alert: {
+        Args: { p_kind: string; p_payload?: Json }
+        Returns: string
+      }
       rate_limit_check: {
         Args: {
           p_endpoint: string
@@ -2353,6 +2731,11 @@ export type Database = {
         }
         Returns: Json
       }
+      register_device: {
+        Args: { p_platform: string; p_token: string; p_web_push?: Json }
+        Returns: string
+      }
+      requeue_stuck_jobs: { Args: { p_grace?: string }; Returns: number }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -2968,8 +3351,46 @@ export type Database = {
         | "cancelled"
       effort_level: "low" | "moderate" | "high"
       energy_level: "low" | "medium" | "high"
+      job_status: "pending" | "running" | "done" | "failed" | "cancelled"
+      job_type:
+        | "offer_expiry"
+        | "standby_roll"
+        | "pending_expiry"
+        | "stale_date_close"
+        | "day_of_reconfirm"
+        | "safety_checkin"
+        | "reconfirm_timeout"
+        | "bulk_withdraw"
+        | "chat_purge"
+        | "rating_window"
+        | "deletion_process"
+        | "analytics_relay"
+        | "notify"
       lock_status: "active" | "completed" | "cancelled" | "no_show"
       modifier_difficulty: "tame" | "spicy" | "chaos"
+      notification_channel:
+        | "push_ios"
+        | "push_android"
+        | "web_push"
+        | "email"
+        | "admin_alert"
+        | "suppressed"
+      notification_type:
+        | "new_match"
+        | "offer_received"
+        | "offer_expiring"
+        | "standby_promoted"
+        | "date_reconfirm"
+        | "safety_checkin"
+        | "safety_alert"
+        | "new_message"
+        | "rating_request"
+        | "moderation_action"
+        | "account"
+        | "verification_passed"
+        | "verification_failed"
+        | "appeal_resolved"
+        | "offer_withdrawn"
       occasion: "date" | "solo" | "friends"
       offer_status: "active" | "accepted" | "passed" | "expired"
       payment_preference: "i_pay" | "they_pay" | "split"
@@ -3180,8 +3601,49 @@ export const Constants = {
       ],
       effort_level: ["low", "moderate", "high"],
       energy_level: ["low", "medium", "high"],
+      job_status: ["pending", "running", "done", "failed", "cancelled"],
+      job_type: [
+        "offer_expiry",
+        "standby_roll",
+        "pending_expiry",
+        "stale_date_close",
+        "day_of_reconfirm",
+        "safety_checkin",
+        "reconfirm_timeout",
+        "bulk_withdraw",
+        "chat_purge",
+        "rating_window",
+        "deletion_process",
+        "analytics_relay",
+        "notify",
+      ],
       lock_status: ["active", "completed", "cancelled", "no_show"],
       modifier_difficulty: ["tame", "spicy", "chaos"],
+      notification_channel: [
+        "push_ios",
+        "push_android",
+        "web_push",
+        "email",
+        "admin_alert",
+        "suppressed",
+      ],
+      notification_type: [
+        "new_match",
+        "offer_received",
+        "offer_expiring",
+        "standby_promoted",
+        "date_reconfirm",
+        "safety_checkin",
+        "safety_alert",
+        "new_message",
+        "rating_request",
+        "moderation_action",
+        "account",
+        "verification_passed",
+        "verification_failed",
+        "appeal_resolved",
+        "offer_withdrawn",
+      ],
       occasion: ["date", "solo", "friends"],
       offer_status: ["active", "accepted", "passed", "expired"],
       payment_preference: ["i_pay", "they_pay", "split"],

@@ -1281,14 +1281,14 @@ export const HANDLERS: Record<string, Handler> = {
   reconfirm_timeout: async (db, job) => { await db.rpc('match_reconfirm_timeout', { p_lock: id(job, 'lock_id') }); },
   bulk_withdraw: async (db, job) => { await db.rpc('match_bulk_withdraw', { p_actor: id(job, 'user_id') }); },
   chat_purge: async (db, job) => { await db.rpc('chat_purge_thread', { p_thread: id(job, 'thread_id') }); },           // P6/S7
-  rating_window: async (db, job) => { await db.rpc('rating_window_close', { p_lock: id(job, 'lock_id') }); },          // P7/S8
+  rating_window: async (db, job) => { await db.rpc('close_rating_window', { p_lock: id(job, 'lock_id') }); },          // P7/S8
   deletion_process: async (db, job) => { await db.rpc('process_deletion', { p_user: id(job, 'user_id') }); },          // P9/S10
   analytics_relay: async (db, job) => { await db.rpc('analytics_relay_drain', { p_batch: job.payload }); },            // P11/S12 owns the body
   notify: genericNotify,
 };
 ```
 
-> **Note on later-stage RPC names:** `match_stale_date_close`, `match_expire_pending`, `match_reconfirm_timeout`, `match_bulk_withdraw`, `chat_purge_thread`, `rating_window_close`, `process_deletion`, `analytics_relay_drain` are the **callee names P2 dispatches to**; their bodies are owned by S6/S7/S8/S10/S12 respectively. If the owning stage finalizes a different canonical name, update this one dispatch line (a single seam) — never re-add a P2-local stub. The Deno test only asserts the dispatch *call*, so it passes before the callees exist; the e2e SQL (Task 13) exercises only `offer_expiry` against the real S6 RPC once S6 lands.
+> **Note on later-stage RPC names:** `match_stale_date_close`, `match_expire_pending`, `match_reconfirm_timeout`, `match_bulk_withdraw`, `chat_purge_thread`, `close_rating_window`, `process_deletion`, `analytics_relay_drain` are the **callee names P2 dispatches to**; their bodies are owned by S6/S7/S8/S10/S12 respectively. If the owning stage finalizes a different canonical name, update this one dispatch line (a single seam) — never re-add a P2-local stub. The Deno test only asserts the dispatch *call*, so it passes before the callees exist; the e2e SQL (Task 13) exercises only `offer_expiry` against the real S6 RPC once S6 lands.
 
 - [ ] **Step 4: Run test, expect PASS** (`deno test --allow-env supabase/functions/process-jobs/handlers_test.ts`).
 
@@ -1955,7 +1955,7 @@ git commit -m "P2/S2: regenerate database types for the async/config/notify/chat
 
 **Key assumptions stated:**
 - **S1 prerequisites:** `_fixtures.sql` (`mk_user`/`mk_itinerary`/`mk_instance`), `profiles.account_state`/`standing`/`rollover_frozen`, `profiles.primary_city_id` + `cities.timezone`, base tables (`offers`, `locks`, `queue_entries`, `date_instances`), `set_updated_at()`, `rate_limits`+`rate_limit_check`.
-- **Later-stage callee RPCs** (`match_expire_offer`, `match_auto_roll`, `match_stale_date_close`, `match_expire_pending`, `match_reconfirm_timeout`, `match_bulk_withdraw`, `chat_purge_thread`, `rating_window_close`, `process_deletion`, `analytics_relay_drain`) are dispatched by canonical name; their bodies land in S6/S7/S8/S10/S12. If an owning stage finalizes a different name, update the single dispatch line — never re-add a P2-local stub.
+- **Later-stage callee RPCs** (`match_expire_offer`, `match_auto_roll`, `match_stale_date_close`, `match_expire_pending`, `match_reconfirm_timeout`, `match_bulk_withdraw`, `chat_purge_thread`, `close_rating_window`, `process_deletion`, `analytics_relay_drain`) are dispatched by canonical name; their bodies land in S6/S7/S8/S10/S12. If an owning stage finalizes a different name, update the single dispatch line — never re-add a P2-local stub.
 - **Root vitest config** owned by P1/S3 (C10); P2 ships no local config.
 - **Secrets/env:** `JOBS_RUNNER_SECRET`, `CRON_SECRET`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, `EXPO_ACCESS_TOKEN`, `OPS_ALERT_EMAIL` (Resend) — documented here per C11.8.
 - **Vercel Pro** for the every-minute cron; `pg_cron` + `net.http_post` is the documented fallback.

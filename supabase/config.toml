@@ -9,6 +9,9 @@ project_id = "After5"
 [functions.generate-plan]
 verify_jwt = false
 
+[functions.process-jobs]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.
