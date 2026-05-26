@@ -149,11 +149,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "blocks_blocker_id_fkey"
             columns: ["blocker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -306,6 +320,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "date_instances_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "date_instances_itinerary_id_fkey"
             columns: ["itinerary_id"]
             isOneToOne: false
@@ -354,6 +375,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "devices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       disputes: {
@@ -398,6 +426,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_raised_by_fkey"
+            columns: ["raised_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -597,6 +632,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "insider_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       insider_tasks: {
@@ -655,6 +697,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insider_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "insider_tasks_itinerary_id_fkey"
@@ -922,6 +971,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lock_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       locks: {
@@ -967,11 +1023,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "locks_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "locks_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locks_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "locks_date_instance_id_fkey"
@@ -986,6 +1056,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locks_matched_user_id_fkey"
+            columns: ["matched_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1039,11 +1116,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_ratings_ratee_id_fkey"
+            columns: ["ratee_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "match_ratings_rater_id_fkey"
             columns: ["rater_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_ratings_rater_id_fkey"
+            columns: ["rater_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1131,6 +1222,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       notifications: {
@@ -1178,6 +1276,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       offers: {
@@ -1220,11 +1325,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "offers_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "offers_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "offers_date_instance_id_fkey"
@@ -1682,6 +1801,33 @@ export type Database = {
           },
         ]
       }
+      profile_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          placeholder: string | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_active?: boolean
+          label: string
+          placeholder?: string | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          placeholder?: string | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_state: Database["public"]["Enums"]["account_lifecycle"]
@@ -1692,6 +1838,7 @@ export type Database = {
           clear_photo_url: string | null
           created_at: string
           dating_enabled: boolean
+          dealbreakers: string[]
           distance_pref_km: number
           email: string | null
           first_name: string | null
@@ -1702,7 +1849,10 @@ export type Database = {
           insider_points: number
           insider_role: string | null
           neighborhood: string | null
+          onboarding_completed_at: string | null
+          onboarding_step: string
           primary_city_id: string | null
+          prompt_answers: Json
           reliability_score: number | null
           rollover_frozen: boolean
           standing: Database["public"]["Enums"]["standing_state"]
@@ -1719,6 +1869,7 @@ export type Database = {
           clear_photo_url?: string | null
           created_at?: string
           dating_enabled?: boolean
+          dealbreakers?: string[]
           distance_pref_km?: number
           email?: string | null
           first_name?: string | null
@@ -1729,7 +1880,10 @@ export type Database = {
           insider_points?: number
           insider_role?: string | null
           neighborhood?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: string
           primary_city_id?: string | null
+          prompt_answers?: Json
           reliability_score?: number | null
           rollover_frozen?: boolean
           standing?: Database["public"]["Enums"]["standing_state"]
@@ -1746,6 +1900,7 @@ export type Database = {
           clear_photo_url?: string | null
           created_at?: string
           dating_enabled?: boolean
+          dealbreakers?: string[]
           distance_pref_km?: number
           email?: string | null
           first_name?: string | null
@@ -1756,7 +1911,10 @@ export type Database = {
           insider_points?: number
           insider_role?: string | null
           neighborhood?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: string
           primary_city_id?: string | null
+          prompt_answers?: Json
           reliability_score?: number | null
           rollover_frozen?: boolean
           standing?: Database["public"]["Enums"]["standing_state"]
@@ -1816,6 +1974,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_private_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       queue_entries: {
@@ -1858,11 +2023,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "queue_entries_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "queue_entries_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_entries_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "queue_entries_date_instance_id_fkey"
@@ -1944,6 +2123,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -2096,6 +2282,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "swipes_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "swipes_date_instance_id_fkey"
             columns: ["date_instance_id"]
             isOneToOne: false
@@ -2108,6 +2301,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swipes_swiper_id_fkey"
+            columns: ["swiper_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -2267,6 +2467,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "verifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       vote_sessions: {
@@ -2331,6 +2538,39 @@ export type Database = {
           f_table_schema?: unknown
           srid?: number | null
           type?: string | null
+        }
+        Relationships: []
+      }
+      public_profile_card: {
+        Row: {
+          age: number | null
+          badge_is_new: boolean | null
+          badge_verified: boolean | null
+          blurred_photo_url: string | null
+          profile_id: string | null
+          prompt_answers: Json | null
+          reliability_score: number | null
+          vibe_tags: string[] | null
+        }
+        Insert: {
+          age?: number | null
+          badge_is_new?: never
+          badge_verified?: never
+          blurred_photo_url?: string | null
+          profile_id?: string | null
+          prompt_answers?: Json | null
+          reliability_score?: number | null
+          vibe_tags?: string[] | null
+        }
+        Update: {
+          age?: number | null
+          badge_is_new?: never
+          badge_verified?: never
+          blurred_photo_url?: string | null
+          profile_id?: string | null
+          prompt_answers?: Json | null
+          reliability_score?: number | null
+          vibe_tags?: string[] | null
         }
         Relationships: []
       }
@@ -2463,6 +2703,7 @@ export type Database = {
             }
             Returns: string
           }
+      advance_onboarding_step: { Args: { p_to_step: string }; Returns: string }
       can_enter_lock_flow: { Args: { p_user: string }; Returns: boolean }
       cancel_jobs: {
         Args: {
@@ -2660,12 +2901,6 @@ export type Database = {
         Args: { p_error?: string; p_id: string }
         Returns: undefined
       }
-      mk_instance: {
-        Args: { p_creator: string; p_itin: string; p_starts: string }
-        Returns: string
-      }
-      mk_itinerary: { Args: { p_user: string }; Returns: string }
-      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -2730,6 +2965,10 @@ export type Database = {
           p_max_requests: number
         }
         Returns: Json
+      }
+      recompute_profile_verification: {
+        Args: { p_user: string }
+        Returns: undefined
       }
       register_device: {
         Args: { p_platform: string; p_token: string; p_web_push?: Json }
@@ -3442,7 +3681,12 @@ export type Database = {
         | "locked_ban"
         | "suspended"
       swipe_direction: "right" | "left"
-      verification_state: "unverified" | "pending" | "verified" | "failed"
+      verification_state:
+        | "unverified"
+        | "pending"
+        | "verified"
+        | "failed"
+        | "appeal"
       weather_works_in: "any" | "dry_only" | "indoor_friendly"
     }
     CompositeTypes: {
@@ -3699,7 +3943,13 @@ export const Constants = {
         "suspended",
       ],
       swipe_direction: ["right", "left"],
-      verification_state: ["unverified", "pending", "verified", "failed"],
+      verification_state: [
+        "unverified",
+        "pending",
+        "verified",
+        "failed",
+        "appeal",
+      ],
       weather_works_in: ["any", "dry_only", "indoor_friendly"],
     },
   },

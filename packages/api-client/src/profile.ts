@@ -26,7 +26,6 @@ export async function upsertProfile(
   // callers can patch any subset of profile columns.
   const { error } = await client
     .from('profiles')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .update(patch as never)
     .eq('id', userId);
   if (error) throw error;
@@ -57,7 +56,7 @@ export async function savePreferences(
     distance_pref_km: prefs.distance_pref_km,
     dealbreakers: prefs.dealbreakers,
   };
-  const { error } = await client.from('profiles').update(patch as never).eq('id', userId);
+  const { error } = await client.from('profiles').update(patch).eq('id', userId);
   if (error) throw error;
 }
 
@@ -94,13 +93,7 @@ export async function confirmPhone(client: After5Client) {
 // ─── Onboarding ────────────────────────────────────────────────────────
 
 export async function advanceOnboarding(client: After5Client, toStep: string) {
-  // advance_onboarding_step lands in this batch's migration; the generated
-  // Database type may not yet list it, so widen the rpc name.
-  const rpc = client.rpc as unknown as (
-    fn: string,
-    args: { p_to_step: string },
-  ) => Promise<{ data: unknown; error: unknown }>;
-  const { data, error } = await rpc('advance_onboarding_step', { p_to_step: toStep });
+  const { data, error } = await client.rpc('advance_onboarding_step', { p_to_step: toStep });
   if (error) throw error;
   return data;
 }
@@ -116,6 +109,7 @@ export async function registerDevice(
   const { data, error } = await client.rpc('register_device', {
     p_token: token,
     p_platform: platform,
+    // jsonb arg: Record<string, unknown> isn't assignable to the generated Json type.
     p_web_push: webPush as never,
   });
   if (error) throw error;
