@@ -16,6 +16,9 @@ BEGIN
   update profiles set standing='suspended' where id=u;
   IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'suspended must fail gate'; END IF;
 
+  update profiles set standing='locked_ban', rollover_frozen=false where id=u;
+  IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'locked_ban must fail gate'; END IF;
+
   update profiles set standing='good', rollover_frozen=true where id=u;
   IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'rollover_frozen must fail gate'; END IF;
   RAISE NOTICE 'can_enter_lock_flow OK';

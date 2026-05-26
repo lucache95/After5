@@ -24,7 +24,9 @@ create table if not exists analytics_events (
   payload     jsonb not null default '{}',
   created_at  timestamptz not null default now()
 );
-create index if not exists analytics_events_pending_idx on analytics_events (created_at);
+-- Drain/retention scans by recency (P11 analytics_relay_drain + >30d purge). Append-only
+-- outbox has no "pending" state, so this is a plain created_at index (not partial).
+create index if not exists analytics_events_created_idx on analytics_events (created_at);
 create index if not exists analytics_events_actor_idx on analytics_events (actor_id) where actor_id is not null;
 
 alter table analytics_events enable row level security;

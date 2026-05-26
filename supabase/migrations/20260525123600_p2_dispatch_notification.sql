@@ -94,19 +94,23 @@ begin
     elsif v_is_safety then v_channel := 'admin_alert';  -- safety w/ no channel: fail loud
     else v_channel := 'suppressed';
     end if;
-
-    -- For safety types, an 'email' channel is only acceptable if email is wired;
-    -- the network layer (notify.ts) escalates to admin_alert on email failure.
-    -- If there is genuinely NO device AND no email, fail loud here.
-    if v_is_safety and v_channel in ('suppressed') then v_channel := 'admin_alert'; end if;
-    if v_is_safety and v_channel = 'email' and not coalesce(v_prefs.email_enabled, true) then
-      v_channel := 'admin_alert';
-    end if;
+    -- The chain above already guarantees the safety fail-loud: a safety notification with
+    -- no push device AND email disabled routes to 'admin_alert'; with email enabled, email
+    -- is the guaranteed safety fallback. Safety never lands on 'suppressed'. No extra guard.
   end if;
 
+  -- Insert is race-safe against the notifications_dedup_uniq partial index: a concurrent
+  -- dispatch that wins the (type, dedup_key) race makes this ON CONFLICT a no-op (returns
+  -- the existing row below) instead of raising 23505 to the caller.
   insert into notifications (user_id, type, payload, dedup_key, channel)
   values (p_user, p_type, coalesce(p_payload,'{}'), v_dedup, v_channel)
+  on conflict (type, dedup_key) where dedup_key is not null do nothing
   returning id into v_notif_id;
+  if v_notif_id is null and v_dedup is not null then
+    select id into v_notif_id from notifications where type=p_type and dedup_key=v_dedup limit 1;
+    return json_build_object('notification_id', v_notif_id, 'channel', 'suppressed',
+                             'tokens', '[]'::jsonb, 'reason', 'dedup_race');
+  end if;
 
   -- fail-loud terminus: a safety notification that resolved to admin_alert raises one now.
   if v_is_safety and v_channel = 'admin_alert' then
