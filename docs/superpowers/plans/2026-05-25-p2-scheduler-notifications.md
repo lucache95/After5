@@ -1,148 +1,178 @@
-# P2 — Async Backbone: Scheduler + Notifications — Implementation Plan
+SUBORDINATE EXECUTION SLICE. This plan is not authoritative by itself. It must be implemented only through INTEGRATION-CONTRACT.md v2 and RECONCILED-MASTER-PLAN.md. If this file conflicts with either, this file loses.
+
+# P2 (Stage S2) — Async / Config / Notify / Chat-core Spine — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the job/worker layer that drives every timer the matching mechanic relies on (offer expiry, standby auto-roll, ~30-day pending expiry, stale-date auto-close, day-of reconfirmation, 30-min safety check-in) and the notification system (delivery log + push via Expo with a web fallback + consent/preferences + storm rate-limiting). Without this layer the P5 state machine is **inert** — offers never expire, standby never rolls, safety check-ins never fire. P2 ships the backbone and a clean enqueue/dispatch interface that P5 (future) calls; P2 itself does **not** implement the loop transitions — it provides the runner, the handlers' skeletons, and the dispatch surface they will use.
+> **Authority & scope.** This is the **S2 shared spine** of the Reconciled Master Plan. P2 **owns** most of the canonical async/config/notify objects every other stage consumes. The canonical names, enums, signatures, and migration bands below are defined by `INTEGRATION-CONTRACT.md` (C1, C3, C6, C10, C11). Where this plan previously guessed names (`enqueue`, `kind`, `run_at`, `dedupe_key`, `notify`, `p5_promote_standby`, …) those guesses are **SUPERSEDED**; this plan now defines exactly the contract names. Build this stage **after S1 (schema spine)** and **before every consumer** (S3/S4/S5/S6/S7/…).
+
+**Goal:** Ship the shared async + config + notification + chat-core backbone that the matching mechanic (S6/P5), chat (S7/P6), trust & safety (S8/P7), lifecycle (S10/P9), and analytics (S12/P11) all depend on:
+
+- the canonical `jobs` table + `job_type`/`job_status` enums + `enqueue_job`/`cancel_jobs` + a claim-and-dispatch runner (C1);
+- `notifications` log + `notification_type` enum + `notification_preferences` (consent/quiet-hours) + `devices` (C11.2) + `register_device` + `dispatch_notification` with the contract delivery order and the **safety fail-loud** terminus (C1, C11.8);
+- `feature_config` + `offer_expires_at()` (C11.1, band `123800`) — owned here because P5 (band `126xxx`) depends on it;
+- `analytics_events` append-only outbox table (C11.8, band `123900`) — table owned here; the `analytics_relay` drain handler is P11's;
+- `admin_alerts` + an always-on ops sink (C11.8) — the "fail loud" terminus for safety notifications with no device;
+- `can_enter_lock_flow(p_user)` gate (C3) — reads `account_state` + `standing` (columns added in S1) so S6 can call it before S8 ships the standing ladder;
+- chat-core primitives `open_chat_thread`/`close_chat_thread`/`promote_chat_thread_to_lock`/`chat_lock_ready` (C11.7, band `124500`) — the thread table + these four functions are an S2 prerequisite so P5's tests can call them; P6's rich messaging stays in S7.
+
+P2 ships the backbone and the canonical enqueue/dispatch/config interface. **P2 does not implement loop transitions.** The `offer_expiry` job handler calls P5's `match_expire_offer(p_offer)` (C2) — which is idempotent, marks the offer expired under the instance advisory lock, and triggers auto-roll inline. There is no separate "standby_roll" step owned here and **no `p5_*` stub**: P5 owns `match_expire_offer`/`match_auto_roll`/`match_next_standby`. **Depends on:** S6/P5 `match_expire_offer` for the `offer_expiry` handler body to do real work (until S6 lands, the handler's call is a documented dependency, not a stub we fill).
 
 **Architecture (concrete choice — justified):**
 
-- **Scheduler = a `jobs` table + a runner Edge Function invoked by a Vercel cron every minute.** *Why this and not Inngest (which the v2 architecture spec §3 names for async work):* (1) the repo already ships the exact pattern — `apps/web/vercel.json` defines `crons` hitting `/api/cron/*`, and those routes call a service-role Supabase client; we extend that pattern rather than introduce a new vendor. (2) The mechanic's timers are **minute-granular, DB-state-driven** (an offer's `expires_at`, an instance's `starts_at + 30min`), which is a query-and-act loop, not a multi-step retryable workflow — a `jobs` table with `run_after`/`status`/`attempts` columns expresses it precisely with full visibility in Postgres (the v2 hub-and-spoke principle). (3) Inngest is reserved in the spec for the **content/ingestion** pipelines (long compute, external API fan-out); the dating timers are short DB transactions better kept in the hub. (4) A `jobs` table is testable with psql like every other P0 invariant. The Vercel cron is the *trigger*; an Edge Function `process-jobs` is the *worker* (service-role, RLS-bypassing, claims due jobs with `FOR UPDATE SKIP LOCKED`, runs the handler, reschedules or completes). A thin Next.js route `/api/cron/process-jobs` (matching the two existing cron routes' auth + shape) invokes the Edge Function so the cron contract is identical to what already ships.
+- **Scheduler = the canonical `jobs` table (C1) + a runner Edge Function invoked by a Vercel cron every minute.** *Why this and not Inngest:* (1) the repo already ships the exact pattern — `apps/web/vercel.json` defines `crons` hitting `/api/cron/*`, and those routes call a service-role Supabase client. (2) The mechanic's timers are minute-granular, DB-state-driven (an offer's `expires_at`, an instance's `starts_at + 30min`) — a query-and-act loop, precisely a `jobs` table with `run_after`/`status`/`attempts`. (3) Inngest is reserved for the content/ingestion pipelines. (4) A `jobs` table is testable with psql like every other invariant. The Vercel cron is the *trigger*; the Edge Function `process-jobs` is the *worker* (service-role, claims due jobs with `for update skip locked`, dispatches per `type`, retries with backoff, dead-letters at `attempts >= 5`). A thin Next.js route `/api/cron/process-jobs` (matching the existing cron routes' auth + shape) invokes the Edge Function.
 
-- **Push provider = Expo Push (`exp.host`/EAS) for native iOS+Android, with a Web Push (VAPID) fallback.** *Why Expo:* the repo already scaffolds `apps/mobile` on Expo (spec §10; v2 spec §1/§3), and Expo's push service brokers both APNs and FCM behind a single HTTP endpoint with no certificate handling in P2 (those are deferred to the mobile launch per v2 §Phase-0 "deliberately deferred to Phase 7.5"). We register device tokens now and deliver through Expo. Web Push (VAPID) is the fallback so the lock/standby/check-in flow degrades (not dies) on web today; the spec is explicit that web push is "too weak to anchor the lock mechanic" — so web push is **best-effort fallback**, native is the load-bearing path. Email (Resend, already in the repo) is the final fallback for high-stakes notifications (offer received, day-of reconfirm) when no push token exists.
+- **Push provider = Expo Push for native iOS+Android, with a Web Push (VAPID) fallback, and Resend email as the final fallback** for high-stakes/safety notifications when no push token exists. Native is the load-bearing channel; web push is best-effort; email is the guaranteed fallback. **For safety types (`safety_checkin`,`safety_alert`) with no device, dispatch fails loud** to `admin_alerts` + ops email (C11.8) — never a silent drop.
 
-**Tech Stack:** Supabase Postgres (migrations `supabase/migrations/`), RLS with `auth.uid()`; one new Edge Function `supabase/functions/process-jobs/` (Deno) + one shared notification dispatch module `supabase/functions/_shared/notify.ts`; one new Vercel cron route `apps/web/app/api/cron/process-jobs/route.ts` (mirrors existing cron routes' `CRON_SECRET` auth); reuse the existing `rate_limits` table + `rate_limit_check` RPC for notification-storm limiting; Expo Push HTTP API (`https://exp.host/--/api/v2/push/send`) + Web Push (`web-push` semantics via VAPID); psql invariant tests in `supabase/tests/`; Deno unit tests (`deno test`) for the Edge Function handler logic; vitest for the Next.js cron route (assume P1 configured vitest in `apps/web`).
+**Tech Stack:** Supabase Postgres (migrations `supabase/migrations/`), RLS with `auth.uid()`; one new Edge Function `supabase/functions/process-jobs/` (Deno) + one shared notification dispatch module `supabase/functions/_shared/notify.ts`; one new Vercel cron route `apps/web/app/api/cron/process-jobs/route.ts` (mirrors existing cron routes' `CRON_SECRET` auth); reuse the existing `rate_limits` table + `rate_limit_check` RPC for notification-storm limiting; Expo Push HTTP API + Web Push (VAPID) + Resend; psql invariant tests in `supabase/tests/`; Deno unit tests for the Edge Function logic; vitest for the cron route (root config owned by P1/S3 — C10; do **not** bootstrap a duplicate vitest config here).
 
-**Source docs:** spec `docs/superpowers/specs/2026-05-25-experience-first-dating-core-loop-design.md` (§7.3 offer window, §7.6 auto-roll, §8 day-of reconfirm + 30-min check-in, §10 push dependency); roadmap `docs/superpowers/plans/2026-05-25-experience-first-dating-implementation-roadmap.md` (P2 scope + Closes); P0 plan `docs/superpowers/plans/2026-05-25-p0-data-model.md` (tables this builds on); architecture `docs/superpowers/specs/2026-04-23-date-engine-v2-architecture-design.md` §3 (runtime boundaries), §4.3 (`devices`), §4.10 (`notifications`), §5.1 (notification router).
+**Source docs:** `INTEGRATION-CONTRACT.md` (C1, C3, C6, C10, C11 — **authoritative**); `RECONCILED-MASTER-PLAN.md` (S2 stage, §7 canonical shared architecture); the P2 pre-build audit `audits/2026-05-25-p2-scheduler-notifications-audit.md`; spec `docs/superpowers/specs/2026-05-25-experience-first-dating-core-loop-design.md` (§7.3 offer window, §7.6 auto-roll, §8 day-of reconfirm + 30-min check-in, §10 push dependency).
 
-**Reconciliation note:** v2 §4.10 sketches a `notifications` *delivery log* and §4.3 a `devices` table; §5.1 names a `notification.dispatch(user_id, type, payload)` router. We adopt those names and shapes, and **add** what the core-loop spec requires but v2 omitted: a `jobs` scheduler table, a `notification_preferences`/consent model, and storm rate-limiting (reusing `rate_limits`). The v2 `notifications.type` enum is **superseded** by the richer core-loop set (offer/standby/reconfirm/check-in/...). P2 builds on P0's tables (`offers`, `locks`, `queue_entries`, `date_instances`, `profiles`) but treats their *transition logic* as P5's job — P2 enqueues jobs and emits notifications, it does not flip loop states (except the mechanical "expire this offer" / "auto-close this stale instance" which are pure timer effects, gated behind a documented P5 hook — see Task 11).
-
-**Conventions (follow exactly):** migration filenames `YYYYMMDDHHMMSS_snake_description.sql`; enable RLS on every table; create policies idempotently with `DO $$ BEGIN CREATE POLICY … EXCEPTION WHEN duplicate_object THEN NULL; END $$;`; attach the existing `set_updated_at()` trigger (defined in `20260419193959_initial_schema.sql`) to tables with `updated_at`; `auth.uid()` in policies; uuid PKs via `gen_random_uuid()`. Edge Functions follow `supabase/functions/generate-plan/` structure (Deno `serve`, service-role `createClient`, `_shared/cors.ts`). Cron routes follow `apps/web/app/api/cron/post-date-feedback/route.ts` (CRON_SECRET bearer auth + `?secret=` manual + `?dry_run=true`).
+**Conventions (follow exactly):** migration filenames `YYYYMMDDHHMMSS_snake_description.sql` in **P2's band `123000–1239xx`** (C6), except chat-core which lands at **`124500`** (C11.7) so it is available before P5's `126xxx` tests; enable RLS on every table; create policies idempotently with `DO $$ BEGIN CREATE POLICY … EXCEPTION WHEN duplicate_object THEN NULL; END $$;`; attach the existing `set_updated_at()` trigger to tables with `updated_at`; `auth.uid()` authz; all transition/admin logic `SECURITY DEFINER`; internal helpers `revoke execute from public, authenticated`; uuid PKs via `gen_random_uuid()`. Edge Functions follow `supabase/functions/generate-plan/` structure. Cron routes follow `apps/web/app/api/cron/post-date-feedback/route.ts`. **All psql tests use the C8 `_fixtures.sql` helpers (`mk_user`/`mk_itinerary`/`mk_instance`) — no bare `insert into profiles` (which violates the `auth.users` FK).** Tests `\i 'supabase/tests/_fixtures.sql'` (shipped by S1).
 
 **Local test loop:** `supabase db reset` (applies all migrations + seeds), then for a psql test:
 `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f <test.sql>`
-Tests use `DO $$ … END $$;` blocks that `RAISE EXCEPTION` on wrong behavior (clean exit = PASS). For Edge Function logic: `deno test --allow-env supabase/functions/process-jobs/<file>_test.ts`. For the cron route: `pnpm --filter @after5/web test` (vitest).
+Tests use `DO $$ … END $$;` blocks that `RAISE EXCEPTION` on wrong behavior (clean exit = PASS). For Edge Function logic: `deno test --allow-env supabase/functions/process-jobs/<file>_test.ts`. For the cron route: `pnpm test` (root vitest config, owned by P1/S3).
+
+---
+
+## Canonical contract objects this stage owns (single source — do not redefine elsewhere)
+
+| Object | Form | Contract | Band |
+|---|---|---|---|
+| `job_type` enum | 13 values (full set, below) | C1 | `123000` |
+| `job_status` enum | `pending,running,done,failed,cancelled` | C1 | `123000` |
+| `jobs` table | C1 shape (`id,type,run_after,dedup_key,payload,status,attempts,last_error,created_at`) | C1 | `123000` |
+| `enqueue_job` / `cancel_jobs` | C1 signatures | C1 | `123100` |
+| `notification_type` enum | 11 values (C1) | C1 | `123400` |
+| `notifications` log | recipient-read RLS | C1 | `123400` |
+| `notification_preferences` | consent + quiet-hours | C11.8 | `123300` |
+| `devices` | C11.2 form (surrogate id + `unique nulls not distinct`) | C11.2 | `123200` |
+| `register_device` / `dispatch_notification` | C1 signatures | C1 | `123200`/`123600` |
+| `feature_config` + `offer_expires_at()` | C11.1 | C11.1 | `123800` |
+| `analytics_events` outbox | append-only (drain handler = P11) | C11.8 | `123900` |
+| `admin_alerts` + ops sink | "fail loud" terminus | C11.8 | `123700` |
+| `can_enter_lock_flow(p_user)` | reads `account_state`+`standing` (S1 cols) | C3 | `123500` |
+| chat-core thread table + 4 fns | `open/close/promote/ready` | C11.7 | `124500` |
+
+**`job_type` enum (C1 — exactly these 13 values, no more, no fewer):**
+`offer_expiry`, `standby_roll`, `pending_expiry`, `stale_date_close`, `day_of_reconfirm`, `safety_checkin`, `reconfirm_timeout`, `bulk_withdraw`, `chat_purge`, `rating_window`, `deletion_process`, `analytics_relay`, `notify`.
+
+**`notification_type` enum (C1 — exactly these 11 values):**
+`new_match`, `offer_received`, `offer_expiring`, `standby_promoted`, `date_reconfirm`, `safety_checkin`, `safety_alert`, `new_message`, `rating_request`, `moderation_action`, `account`.
+
+> **Job-type → handler ownership (C1/C2):** P2 ships the runner + the dispatch table; each handler dispatches by `type`. The **state-mutating bodies** are owned by the consumer stage:
+> - `offer_expiry` → calls P5's `match_expire_offer(p_offer)` (C2; idempotent; auto-rolls inline). P2 owns only the call.
+> - `standby_roll` → calls P5's `match_auto_roll(p_instance)` (C2). Enqueued by P5, not by P2.
+> - `stale_date_close` → calls P5's `match_*` close path (S6 names it); P2 dispatches.
+> - `day_of_reconfirm` / `safety_checkin` / `reconfirm_timeout` → dispatch the relevant `dispatch_notification` to both parties (P2 owns the notify; P7/S8 owns escalation state).
+> - `bulk_withdraw` → calls P5/P9 withdraw path.
+> - `chat_purge` → P6/S7 retention.
+> - `rating_window` → P7/S8.
+> - `deletion_process` → P9/S10.
+> - `analytics_relay` → **P11/S12** drains `analytics_events` to PostHog (P2 ships the table only; the handler is referenced, not built here).
+> - `notify` → generic deferred notification (P2 owns).
+>
+> P2 does **not** invent `p5_*` hooks. The dispatch table maps each `type` to a callee RPC name (per C2/owners); for types whose RPC ships in a later stage, the handler invokes the canonical name and the dispatch is exercised once that stage lands. **Depends on:** S6 (`match_expire_offer`, `match_auto_roll`), S7 (`chat_purge`), S8 (`rating_window`), S10 (`deletion_process`), S12 (`analytics_relay`).
 
 ---
 
 ## File Structure
 
-- `supabase/migrations/202605251300NN_p2_*.sql` — one migration per schema task (jobs, notifications, devices, preferences, RPCs).
-- `supabase/tests/p2_*.sql` — one psql invariant/RLS test file per schema task that warrants it.
-- `supabase/functions/process-jobs/index.ts` — the runner Edge Function (claim → dispatch handler → reschedule/complete).
-- `supabase/functions/process-jobs/handlers.ts` — pure-ish per-job-type handlers (`offer_expiry`, `standby_roll`, `pending_expiry`, `stale_date_close`, `day_of_reconfirm`, `safety_check_in`).
-- `supabase/functions/process-jobs/handlers_test.ts` — Deno unit tests for handler dispatch + the P5-hook boundary.
-- `supabase/functions/_shared/notify.ts` — `dispatchNotification()` (consent check → rate-limit → Expo/Web-Push/email delivery → log row). Shared so any future Edge Function can call it.
-- `supabase/functions/_shared/notify_test.ts` — Deno unit tests for consent-gating + rate-limit short-circuit (delivery providers mocked).
-- `apps/web/app/api/cron/process-jobs/route.ts` — Vercel cron entry (every minute) that invokes the `process-jobs` Edge Function.
-- `apps/web/app/api/cron/process-jobs/route.test.ts` — vitest for auth + invocation contract.
+- `supabase/migrations/123NNN_p2_*.sql` — one migration per schema task (jobs, RPCs, devices, preferences, notifications, dispatch, admin_alerts, gate, feature_config, analytics_events) + `124500_p2_chat_core.sql`.
+- `supabase/tests/p2_*.sql` — one psql invariant/RLS test file per schema task that warrants it (all `\i '_fixtures.sql'`).
+- `supabase/functions/process-jobs/index.ts` — the runner Edge Function (claim → dispatch by `type` → reschedule/complete).
+- `supabase/functions/process-jobs/handlers.ts` — per-`job_type` dispatch table (calls canonical consumer RPCs; no `p5_*`).
+- `supabase/functions/process-jobs/handlers_test.ts` — Deno unit tests for handler dispatch + the consumer-RPC boundary.
+- `supabase/functions/_shared/notify.ts` — `dispatchNotification()` (consent → quiet-hours → rate-limit → push→web→email; safety fail-loud). Shared so any Edge Function can call it.
+- `supabase/functions/_shared/notify_test.ts` — Deno unit tests for the gate order + fail-loud (providers mocked).
+- `apps/web/app/api/cron/process-jobs/route.ts` — Vercel cron entry (every minute) invoking the `process-jobs` Edge Function.
+- `apps/web/app/api/cron/process-jobs/route.test.ts` — vitest (uses the **root** P1/S3 vitest config — C10; no local config).
 - `apps/web/vercel.json` — add the `*/1 * * * *` cron entry.
-- `supabase/config.toml` — register `[functions.process-jobs]` (`verify_jwt = false`; it is service-role-internal, called by the cron route with a shared secret).
+- `supabase/config.toml` — register `[functions.process-jobs]` (`verify_jwt = false`; service-role-internal, gated by a shared secret header).
 - `packages/types/src/database.ts` — regenerated last.
-
-**Job-type registry (concrete, frozen for P2):**
-
-| `job_type` | Fires when | Effect (P2 scope) | Spec ref |
-|---|---|---|---|
-| `offer_expiry` | `offers.expires_at` reached, still `active` | mark offer `expired` + emit `offer_expired` notif + enqueue `standby_roll` for the instance | §7.3 |
-| `standby_roll` | enqueued by `offer_expiry`/cancellation (P5) | emit `standby_promoted` notif to next standby candidate (the actual queue promotion is P5's RPC, invoked via the P5 hook) | §7.3, §7.6 |
-| `pending_expiry` | `queue_entries.created_at + 30 days` | emit `pending_expired` notif + flag entry for P5 reaping (via hook) | §7.3 (~30-day cap) |
-| `stale_date_close` | `date_instances.starts_at` passed with no lock | mark instance `cancelled` (auto-close) + emit `date_auto_closed` notif to creator | §7.3 |
-| `day_of_reconfirm` | locked date, morning-of (`starts_at` − configurable lead) | emit `day_of_reconfirm` notif to both parties | §8 |
-| `safety_check_in` | locked date, `starts_at` + 30 min | emit `safety_check_in` notif to both parties | §8 |
-
-**Notification `type` enum (frozen for P2):** `offer_received`, `offer_expired`, `standby_promoted`, `pending_expired`, `date_auto_closed`, `day_of_reconfirm`, `safety_check_in`, `lock_confirmed`, `new_interest` (the creator-side "someone swiped" hint), `cancellation`. (P5 emits these; P2 defines them + the dispatch path.)
 
 ---
 
-## Task 1: `job_type` / `job_status` enums + `jobs` table
+## Task 1: `job_type` / `job_status` enums + canonical `jobs` table (C1)
 
 **Files:**
-- Create: `supabase/migrations/20260525130000_p2_jobs.sql`
+- Create: `supabase/migrations/20260525123000_p2_jobs.sql`
 - Test: `supabase/tests/p2_jobs.sql`
 
-- [ ] **Step 1: Write the failing test** (table + the partial index that lets the runner claim due jobs)
+> **Conformance:** This is the **single** `jobs` table (C1). No other phase may create a `jobs` table. The column is `type` (not `job_type`/`kind`), the timestamp is `run_after` (not `run_at`), the dedup column is `dedup_key` (not `dedupe_key`). P5/P7/P9 shims that defined divergent shapes are **SUPERSEDED** — they reference this table.
+
+- [ ] **Step 1: Write the failing test** (table + the partial index that lets the runner claim due jobs + the C1 dedup index)
 
 ```sql
 -- supabase/tests/p2_jobs.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
 BEGIN
   PERFORM 1 FROM pg_tables WHERE tablename='jobs' AND rowsecurity=true;
   IF NOT FOUND THEN RAISE EXCEPTION 'jobs missing or RLS off'; END IF;
-  -- the runner claims pending jobs by run_after; an index must support that
-  PERFORM 1 FROM pg_indexes
-   WHERE tablename='jobs' AND indexdef ILIKE '%run_after%';
-  IF NOT FOUND THEN RAISE EXCEPTION 'jobs(run_after) index missing'; END IF;
-  -- dedup guarantee: a unique key on (job_type, dedup_key) where dedup_key not null
-  PERFORM 1 FROM pg_indexes
-   WHERE tablename='jobs' AND indexdef ILIKE '%unique%dedup_key%';
-  IF NOT FOUND THEN RAISE EXCEPTION 'jobs dedup unique index missing'; END IF;
+  -- C1 column names
+  PERFORM 1 FROM information_schema.columns WHERE table_name='jobs' AND column_name='type';
+  IF NOT FOUND THEN RAISE EXCEPTION 'jobs.type (job_type) column missing'; END IF;
+  PERFORM 1 FROM information_schema.columns WHERE table_name='jobs' AND column_name='run_after';
+  IF NOT FOUND THEN RAISE EXCEPTION 'jobs.run_after column missing'; END IF;
+  PERFORM 1 FROM information_schema.columns WHERE table_name='jobs' AND column_name='dedup_key';
+  IF NOT FOUND THEN RAISE EXCEPTION 'jobs.dedup_key column missing'; END IF;
+  -- full job_type enum (spot-check the consumer-critical values)
+  IF NOT ('offer_expiry' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing offer_expiry'; END IF;
+  IF NOT ('analytics_relay' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing analytics_relay'; END IF;
+  IF NOT ('chat_purge' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing chat_purge'; END IF;
+  IF NOT ('deletion_process' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing deletion_process'; END IF;
+  -- C1 active-dedup unique index
+  PERFORM 1 FROM pg_indexes WHERE tablename='jobs' AND indexname='jobs_dedup_active';
+  IF NOT FOUND THEN RAISE EXCEPTION 'jobs_dedup_active index missing'; END IF;
 END $$;
 ```
 
-- [ ] **Step 2: Run it, expect FAIL**
+- [ ] **Step 2: Run it, expect FAIL** — `relation "jobs" does not exist`.
 
-Run: `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f supabase/tests/p2_jobs.sql`
-Expected: FAIL — `relation "jobs" does not exist`.
-
-- [ ] **Step 3: Write the migration**
+- [ ] **Step 3: Write the migration** (verbatim C1 shape)
 
 ```sql
--- supabase/migrations/20260525130000_p2_jobs.sql
--- The scheduler backbone. A row = one timer the mechanic needs to fire.
--- A Vercel cron (every minute) invokes the process-jobs Edge Function, which
--- claims due rows (run_after <= now(), status='pending') with FOR UPDATE SKIP
--- LOCKED, runs the handler, then completes or reschedules.
+-- supabase/migrations/20260525123000_p2_jobs.sql
+-- THE canonical jobs table (INTEGRATION-CONTRACT C1). Single source; no other
+-- phase creates a jobs table. A row = one timer the mechanic needs to fire.
+-- A Vercel cron (every minute) invokes process-jobs, which claims due rows
+-- (status='pending', run_after<=now()) with FOR UPDATE SKIP LOCKED, dispatches
+-- per `type`, retries with backoff, dead-letters at attempts>=5.
 
 create type job_type as enum (
-  'offer_expiry',
-  'standby_roll',
-  'pending_expiry',
-  'stale_date_close',
-  'day_of_reconfirm',
-  'safety_check_in'
+  'offer_expiry','standby_roll','pending_expiry','stale_date_close',
+  'day_of_reconfirm','safety_checkin','reconfirm_timeout','bulk_withdraw',
+  'chat_purge','rating_window','deletion_process','analytics_relay','notify'
 );
-
 create type job_status as enum ('pending','running','done','failed','cancelled');
 
-create table if not exists jobs (
+create table jobs (
   id uuid primary key default gen_random_uuid(),
-  job_type job_type not null,
-  -- The loop entity this timer is about. Nullable target columns keep the
-  -- table generic; a handler reads whichever it needs.
-  date_instance_id uuid references date_instances(id) on delete cascade,
-  offer_id uuid references offers(id) on delete cascade,
-  lock_id uuid references locks(id) on delete cascade,
-  queue_entry_id uuid references queue_entries(id) on delete cascade,
-  payload jsonb not null default '{}'::jsonb,
-  -- Idempotency: a (job_type, dedup_key) is enqueued at most once while pending.
-  -- e.g. 'safety_check_in:<lock_id>' — re-enqueue is a no-op (ON CONFLICT).
-  dedup_key text,
-  status job_status not null default 'pending',
+  type job_type not null,
   run_after timestamptz not null default now(),
+  dedup_key text,
+  payload jsonb not null default '{}',
+  status job_status not null default 'pending',
   attempts int not null default 0,
-  max_attempts int not null default 5,
   last_error text,
-  locked_at timestamptz,           -- set when a runner claims it (crash recovery)
-  done_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  -- locked_at supports crash recovery (requeue_stuck_jobs); not in the C1 minimal
+  -- DDL but a permitted runner-internal column (no consumer reads it).
+  locked_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
--- Claim index: the runner's hot query is "pending jobs due now".
-create index if not exists jobs_due_idx
-  on jobs (run_after) where status = 'pending';
-create index if not exists jobs_type_idx on jobs (job_type, status);
-
--- Dedup: at most one pending job per (type, dedup_key).
-create unique index if not exists jobs_dedup_pending
-  on jobs (job_type, dedup_key) where status = 'pending' and dedup_key is not null;
-
-create trigger set_jobs_updated_at before update on jobs
-  for each row execute function set_updated_at();
+-- C1 active-dedup: at most one pending|running job per (type, dedup_key).
+create unique index jobs_dedup_active on jobs(type, dedup_key)
+  where status in ('pending','running') and dedup_key is not null;
+-- Runner hot query: pending jobs due now.
+create index jobs_due_idx on jobs (run_after) where status = 'pending';
+create index jobs_type_idx on jobs (type, status);
 
 alter table jobs enable row level security;
--- No policies: jobs are written/read only by the service-role runner.
--- (default-deny for anon/authenticated, same posture as rate_limits.)
+-- No policies: jobs are written/read only by the service-role runner
+-- (default-deny for anon/authenticated, same posture as rate_limits).
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS**
@@ -153,43 +183,53 @@ Expected: PASS (no output, exit 0).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130000_p2_jobs.sql supabase/tests/p2_jobs.sql
-git commit -m "P2: jobs scheduler table (run_after claim index + dedup) with service-role RLS"
+git add supabase/migrations/20260525123000_p2_jobs.sql supabase/tests/p2_jobs.sql
+git commit -m "P2/S2: canonical jobs table + job_type/job_status enums (INTEGRATION-CONTRACT C1)"
 ```
 
 ---
 
-## Task 2: `enqueue_job()` + `claim_due_jobs()` RPCs (idempotent enqueue, atomic claim)
+## Task 2: `enqueue_job()` + `cancel_jobs()` + claim/complete/fail/requeue RPCs (C1)
 
 **Files:**
-- Create: `supabase/migrations/20260525130100_p2_jobs_rpcs.sql`
+- Create: `supabase/migrations/20260525123100_p2_jobs_rpcs.sql`
 - Test: `supabase/tests/p2_jobs_rpcs.sql`
 
-- [ ] **Step 1: Write the failing test** (enqueue is idempotent on dedup_key; claim returns + locks a due job and skips not-yet-due rows)
+> **Conformance:** Exact C1 signatures —
+> - `enqueue_job(p_type job_type, p_run_after timestamptz, p_payload jsonb default '{}', p_dedup_key text default null) returns uuid`
+> - `cancel_jobs(p_type job_type, p_dedup_key text) returns int`
+>
+> Entity references (offer/lock/instance/queue) live **inside `payload`** (jsonb), not as columns. The runner claims with `for update skip locked`. `cancel_jobs` is what P5's `match_accept_offer` calls to cancel a pending `offer_expiry` (`cancel_jobs('offer_expiry', offer_id)`) — it MUST exist.
+
+- [ ] **Step 1: Write the failing test**
 
 ```sql
 -- supabase/tests/p2_jobs_rpcs.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
-DECLARE j1 uuid; j2 uuid; n int; claimed int;
+DECLARE j1 uuid; j2 uuid; n int; claimed int; cancelled int;
 BEGIN
-  -- idempotent enqueue: same (type, dedup_key) twice → one pending row
-  j1 := enqueue_job('safety_check_in', now() + interval '1 minute',
-                    p_dedup_key := 'sc:fixture', p_payload := '{}'::jsonb);
-  j2 := enqueue_job('safety_check_in', now() + interval '5 minute',
-                    p_dedup_key := 'sc:fixture', p_payload := '{}'::jsonb);
+  -- idempotent enqueue: same (type, dedup_key) twice while pending → one row
+  j1 := enqueue_job('safety_checkin', now() + interval '1 minute', '{}'::jsonb, 'sc:fixture');
+  j2 := enqueue_job('safety_checkin', now() + interval '5 minute', '{}'::jsonb, 'sc:fixture');
   IF j1 <> j2 THEN RAISE EXCEPTION 'enqueue not idempotent: % <> %', j1, j2; END IF;
   SELECT count(*) INTO n FROM jobs WHERE dedup_key='sc:fixture' AND status='pending';
   IF n <> 1 THEN RAISE EXCEPTION 'expected 1 pending dedup row, got %', n; END IF;
 
-  -- a job due in the past is claimable; one due in the future is not
-  PERFORM enqueue_job('offer_expiry', now() - interval '1 minute', p_dedup_key := 'due:past');
-  PERFORM enqueue_job('offer_expiry', now() + interval '1 hour',  p_dedup_key := 'due:future');
+  -- due-in-past is claimable; due-in-future is not
+  PERFORM enqueue_job('offer_expiry', now() - interval '1 minute', '{}'::jsonb, 'due:past');
+  PERFORM enqueue_job('offer_expiry', now() + interval '1 hour',  '{}'::jsonb, 'due:future');
   SELECT count(*) INTO claimed FROM claim_due_jobs(10);
-  -- claims: due:past (1) + sc:fixture is future so NOT claimed; due:future NOT claimed
   IF claimed <> 1 THEN RAISE EXCEPTION 'claim_due_jobs returned %, expected 1', claimed; END IF;
-  -- claimed rows are now status=running with locked_at set
   PERFORM 1 FROM jobs WHERE dedup_key='due:past' AND status='running' AND locked_at IS NOT NULL;
   IF NOT FOUND THEN RAISE EXCEPTION 'claimed job not marked running/locked'; END IF;
+
+  -- cancel_jobs cancels the pending due:future row (C1; P5 calls this on accept)
+  cancelled := cancel_jobs('offer_expiry', 'due:future');
+  IF cancelled <> 1 THEN RAISE EXCEPTION 'cancel_jobs cancelled %, expected 1', cancelled; END IF;
+  PERFORM 1 FROM jobs WHERE dedup_key='due:future' AND status='cancelled';
+  IF NOT FOUND THEN RAISE EXCEPTION 'cancel_jobs did not mark cancelled'; END IF;
+
   RAISE NOTICE 'jobs RPCs OK';
   ROLLBACK;
 END $$;
@@ -200,51 +240,57 @@ END $$;
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130100_p2_jobs_rpcs.sql
+-- supabase/migrations/20260525123100_p2_jobs_rpcs.sql
+-- Canonical job RPCs (INTEGRATION-CONTRACT C1). Exact signatures; callers across
+-- S6/S7/S8/S10/S12 use these names. Entity refs live in payload jsonb.
 
--- Idempotent enqueue. If a pending job with the same (type, dedup_key) exists,
--- return its id unchanged (does NOT reschedule it). dedup_key may be null
--- (then no dedup — every call inserts).
+-- Idempotent enqueue. If a pending|running job with the same (type, dedup_key)
+-- exists, return its id unchanged. dedup_key null => no dedup (every call inserts).
 create or replace function enqueue_job(
-  p_job_type        job_type,
-  p_run_after       timestamptz,
-  p_date_instance_id uuid default null,
-  p_offer_id        uuid default null,
-  p_lock_id         uuid default null,
-  p_queue_entry_id  uuid default null,
-  p_payload         jsonb default '{}'::jsonb,
-  p_dedup_key       text default null
+  p_type      job_type,
+  p_run_after timestamptz,
+  p_payload   jsonb default '{}',
+  p_dedup_key text default null
 ) returns uuid
 language plpgsql security definer set search_path = public as $fn$
 declare v_id uuid;
 begin
   if p_dedup_key is not null then
     select id into v_id from jobs
-     where job_type = p_job_type and dedup_key = p_dedup_key and status = 'pending'
+     where type = p_type and dedup_key = p_dedup_key and status in ('pending','running')
      limit 1;
     if found then return v_id; end if;
   end if;
 
-  insert into jobs (job_type, run_after, date_instance_id, offer_id, lock_id,
-                    queue_entry_id, payload, dedup_key)
-  values (p_job_type, p_run_after, p_date_instance_id, p_offer_id, p_lock_id,
-          p_queue_entry_id, p_payload, p_dedup_key)
-  on conflict (job_type, dedup_key) where (status='pending' and dedup_key is not null)
+  insert into jobs (type, run_after, payload, dedup_key)
+  values (p_type, p_run_after, coalesce(p_payload,'{}'), p_dedup_key)
+  on conflict (type, dedup_key) where (status in ('pending','running') and dedup_key is not null)
     do nothing
   returning id into v_id;
 
-  -- on_conflict do-nothing returns null; fetch the surviving row
   if v_id is null and p_dedup_key is not null then
     select id into v_id from jobs
-     where job_type = p_job_type and dedup_key = p_dedup_key and status = 'pending'
+     where type = p_type and dedup_key = p_dedup_key and status in ('pending','running')
      limit 1;
   end if;
   return v_id;
 end $fn$;
 
--- Atomically claim up to N due jobs: flips pending→running, stamps locked_at,
--- returns the claimed rows. SKIP LOCKED makes concurrent runners safe (a job is
--- claimed by exactly one runner). The Edge Function calls this once per tick.
+-- Cancel pending|running jobs matching (type, dedup_key). Returns rows cancelled.
+-- P5's match_accept_offer calls cancel_jobs('offer_expiry', offer_id) so a
+-- resolved offer's timer never fires.
+create or replace function cancel_jobs(p_type job_type, p_dedup_key text)
+returns int language plpgsql security definer set search_path = public as $fn$
+declare n int;
+begin
+  update jobs set status='cancelled'
+   where type = p_type and dedup_key = p_dedup_key and status in ('pending','running');
+  get diagnostics n = row_count;
+  return n;
+end $fn$;
+
+-- Atomically claim up to N due jobs (pending→running, stamp locked_at, +attempts).
+-- SKIP LOCKED makes concurrent runners / overlapping ticks safe.
 create or replace function claim_due_jobs(p_limit int default 50)
 returns setof jobs
 language plpgsql security definer set search_path = public as $fn$
@@ -259,26 +305,23 @@ begin
   )
   update jobs j
      set status = 'running', locked_at = now(), attempts = j.attempts + 1
-    from due
-   where j.id = due.id
+    from due where j.id = due.id
   returning j.*;
 end $fn$;
 
--- Mark a claimed job done.
 create or replace function complete_job(p_id uuid) returns void
 language plpgsql security definer set search_path = public as $fn$
 begin
-  update jobs set status='done', done_at=now(), last_error=null where id=p_id;
+  update jobs set status='done', last_error=null where id=p_id;
 end $fn$;
 
--- Fail/retry: if attempts < max_attempts, requeue with exponential backoff;
--- otherwise mark failed. Keeps the runner's error path one round-trip.
+-- Retry with exponential backoff; dead-letter at attempts>=5 (C1).
 create or replace function fail_job(p_id uuid, p_error text) returns void
 language plpgsql security definer set search_path = public as $fn$
-declare a int; m int;
+declare a int;
 begin
-  select attempts, max_attempts into a, m from jobs where id=p_id;
-  if a >= m then
+  select attempts into a from jobs where id=p_id;
+  if a >= 5 then
     update jobs set status='failed', last_error=p_error where id=p_id;
   else
     update jobs
@@ -288,11 +331,9 @@ begin
   end if;
 end $fn$;
 
--- Recover crashed runners: jobs stuck in 'running' past a grace window are
--- returned to 'pending' so the next tick re-claims them.
+-- Recover crashed runners: jobs stuck 'running' past a grace window → 'pending'.
 create or replace function requeue_stuck_jobs(p_grace interval default interval '5 minutes')
-returns int
-language plpgsql security definer set search_path = public as $fn$
+returns int language plpgsql security definer set search_path = public as $fn$
 declare n int;
 begin
   update jobs set status='pending', locked_at=null
@@ -301,11 +342,12 @@ begin
   return n;
 end $fn$;
 
-revoke all on function enqueue_job(job_type, timestamptz, uuid, uuid, uuid, uuid, jsonb, text) from anon, authenticated;
-revoke all on function claim_due_jobs(int) from anon, authenticated;
-revoke all on function complete_job(uuid) from anon, authenticated;
-revoke all on function fail_job(uuid, text) from anon, authenticated;
-revoke all on function requeue_stuck_jobs(interval) from anon, authenticated;
+revoke execute on function enqueue_job(job_type, timestamptz, jsonb, text) from public, authenticated;
+revoke execute on function cancel_jobs(job_type, text) from public, authenticated;
+revoke execute on function claim_due_jobs(int) from public, authenticated;
+revoke execute on function complete_job(uuid) from public, authenticated;
+revoke execute on function fail_job(uuid, text) from public, authenticated;
+revoke execute on function requeue_stuck_jobs(interval) from public, authenticated;
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS** (prints `jobs RPCs OK`).
@@ -313,96 +355,134 @@ revoke all on function requeue_stuck_jobs(interval) from anon, authenticated;
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130100_p2_jobs_rpcs.sql supabase/tests/p2_jobs_rpcs.sql
-git commit -m "P2: jobs RPCs — idempotent enqueue + atomic claim (SKIP LOCKED) + retry/requeue"
+git add supabase/migrations/20260525123100_p2_jobs_rpcs.sql supabase/tests/p2_jobs_rpcs.sql
+git commit -m "P2/S2: enqueue_job + cancel_jobs + claim/complete/fail/requeue (C1 signatures)"
 ```
 
 ---
 
-## Task 3: `devices` table (push token registry)
+## Task 3: `devices` table (C11.2 form) + `register_device()` (C1)
 
 **Files:**
-- Create: `supabase/migrations/20260525130200_p2_devices.sql`
+- Create: `supabase/migrations/20260525123200_p2_devices.sql`
 - Test: `supabase/tests/p2_devices.sql`
 
-- [ ] **Step 1: Write the failing test** (owner-only RLS + one row per (user, token))
+> **Conformance:** Use the **C11.2** `devices` DDL (surrogate `id` PK + `unique nulls not distinct (user_id, expo_push_token)`), NOT the C1 composite-PK form (that PK was a compile-breaker, fixed by C11.2). Columns: `id, user_id, expo_push_token, web_push_sub, platform, last_seen`. `register_device(p_token text, p_platform text, p_web_push jsonb default null)` is called from P1/S3 onboarding + the native bootstrap (this stage supplies the RPC so the load-bearing push path is registrable from day one — closes audit "no token-registration path").
+
+- [ ] **Step 1: Write the failing test** (C11.2 columns + `unique nulls not distinct` + owner RLS + register_device upserts)
 
 ```sql
 -- supabase/tests/p2_devices.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
+DECLARE u uuid; n int;
 BEGIN
   PERFORM 1 FROM pg_tables WHERE tablename='devices' AND rowsecurity=true;
   IF NOT FOUND THEN RAISE EXCEPTION 'devices missing or RLS off'; END IF;
-  PERFORM 1 FROM pg_indexes
-   WHERE tablename='devices' AND indexdef ILIKE '%unique%user_id%token%';
-  IF NOT FOUND THEN RAISE EXCEPTION 'devices unique(user,token) missing'; END IF;
+  -- C11.2 columns
+  PERFORM 1 FROM information_schema.columns WHERE table_name='devices' AND column_name='expo_push_token';
+  IF NOT FOUND THEN RAISE EXCEPTION 'devices.expo_push_token missing'; END IF;
+  PERFORM 1 FROM information_schema.columns WHERE table_name='devices' AND column_name='web_push_sub';
+  IF NOT FOUND THEN RAISE EXCEPTION 'devices.web_push_sub missing'; END IF;
+  PERFORM 1 FROM information_schema.columns WHERE table_name='devices' AND column_name='id';
+  IF NOT FOUND THEN RAISE EXCEPTION 'devices surrogate id missing'; END IF;
+  -- nulls-not-distinct unique constraint exists
+  PERFORM 1 FROM pg_indexes WHERE tablename='devices'
+    AND indexdef ILIKE '%user_id%expo_push_token%';
+  IF NOT FOUND THEN RAISE EXCEPTION 'devices (user_id, expo_push_token) unique missing'; END IF;
+
+  -- register_device upserts (same user+token twice => one row)
+  u := mk_user('dev');
+  PERFORM set_config('request.jwt.claim.sub', u::text, true);
+  PERFORM register_device('ExponentPushToken[x]','ios', null);
+  PERFORM register_device('ExponentPushToken[x]','ios', null);
+  SELECT count(*) INTO n FROM devices WHERE user_id=u;
+  IF n <> 1 THEN RAISE EXCEPTION 'register_device not idempotent: % rows', n; END IF;
+  RAISE NOTICE 'devices OK';
+  ROLLBACK;
 END $$;
 ```
 
 - [ ] **Step 2: Run it, expect FAIL** (`relation "devices" does not exist`).
 
-- [ ] **Step 3: Write the migration**
+- [ ] **Step 3: Write the migration** (C11.2 verbatim DDL + register_device)
 
 ```sql
--- supabase/migrations/20260525130200_p2_devices.sql
--- Push-token registry. Mobile (Expo) registers its push token on app start;
--- web registers its Web Push (VAPID) subscription. Dispatch reads active rows.
+-- supabase/migrations/20260525123200_p2_devices.sql
+-- Push-token registry (INTEGRATION-CONTRACT C11.2 — supersedes the C1 composite-PK
+-- form, which was a compile-breaker). Mobile (Expo) registers its push token on
+-- app start; web registers its Web Push (VAPID) subscription. Dispatch reads
+-- active rows via the service-role client.
 
-create type device_platform as enum ('ios','android','web');
-
-create table if not exists devices (
+create table devices (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
-  platform device_platform not null,
-  -- For ios/android this is the Expo push token (ExponentPushToken[...]).
-  -- For web this is a JSON-encoded Web Push subscription (endpoint + keys).
-  token text not null,
-  is_active boolean not null default true,
-  last_seen_at timestamptz not null default now(),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  expo_push_token text,
+  web_push_sub jsonb,
+  platform text,
+  last_seen timestamptz not null default now(),
+  unique nulls not distinct (user_id, expo_push_token)
 );
-create unique index if not exists devices_user_token_uniq on devices (user_id, token);
-create index if not exists devices_user_active_idx on devices (user_id) where is_active;
-
-create trigger set_devices_updated_at before update on devices
-  for each row execute function set_updated_at();
+create index devices_user_idx on devices (user_id);
 
 alter table devices enable row level security;
 do $$ begin
   create policy "devices_owner_all" on devices for all
     using (user_id = auth.uid()) with check (user_id = auth.uid());
 exception when duplicate_object then null; end $$;
--- The dispatch path reads devices via the service-role client (bypasses RLS).
+
+-- register_device(p_token, p_platform, p_web_push) — called from P1/S3 onboarding
+-- + native bootstrap. Upserts the caller's device row (auth.uid()), refreshes
+-- last_seen. C1 signature.
+create or replace function register_device(
+  p_token text, p_platform text, p_web_push jsonb default null
+) returns uuid
+language plpgsql security definer set search_path = public as $fn$
+declare v_uid uuid := auth.uid(); v_id uuid;
+begin
+  if v_uid is null then raise exception 'register_device requires an authenticated user'; end if;
+  insert into devices (user_id, expo_push_token, web_push_sub, platform, last_seen)
+  values (v_uid, p_token, p_web_push, p_platform, now())
+  on conflict (user_id, expo_push_token) do update
+    set web_push_sub = excluded.web_push_sub,
+        platform     = excluded.platform,
+        last_seen    = now()
+  returning id into v_id;
+  return v_id;
+end $fn$;
+
+revoke execute on function register_device(text, text, jsonb) from public;
+-- authenticated keeps execute (a user registers their own device via auth.uid()).
 ```
 
-- [ ] **Step 4: Apply + run test, expect PASS.**
+- [ ] **Step 4: Apply + run test, expect PASS** (prints `devices OK`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130200_p2_devices.sql supabase/tests/p2_devices.sql
-git commit -m "P2: devices push-token registry (Expo native + Web Push) owner-only RLS"
+git add supabase/migrations/20260525123200_p2_devices.sql supabase/tests/p2_devices.sql
+git commit -m "P2/S2: devices (C11.2 form) + register_device RPC (C1)"
 ```
 
 ---
 
-## Task 4: `notification_preferences` (consent / opt-out model)
+## Task 4: `notification_preferences` (consent + quiet-hours) (C11.8)
 
 **Files:**
-- Create: `supabase/migrations/20260525130300_p2_notification_preferences.sql`
+- Create: `supabase/migrations/20260525123300_p2_notification_preferences.sql`
 - Test: `supabase/tests/p2_notification_preferences.sql`
 
-- [ ] **Step 1: Write the failing test** (per-user prefs row, owner-only, with a safety-override flag the consent gate must respect)
+> **Conformance:** `dispatch_notification` reads this (C1 order: consent → quiet-hours → rate-limit). Safety types (`safety_checkin`, `safety_alert`) bypass it entirely (C1). Quiet-hours are stored here and **actually enforced** in `dispatch_notification` (Task 7) using the user's city timezone (`cities.timezone` via `profiles.primary_city_id`) — the audit flagged that the old plan stored quiet-hours columns but never applied them. If S1 has not yet wired `primary_city_id`, quiet-hours evaluation degrades to "no quiet window" (permissive) rather than evaluating in the wrong tz. **Depends on:** S1 `profiles.primary_city_id` + `cities.timezone`.
+
+- [ ] **Step 1: Write the failing test** (per-user prefs row, owner-only, quiet-hours columns present)
 
 ```sql
 -- supabase/tests/p2_notification_preferences.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
 BEGIN
   PERFORM 1 FROM pg_tables WHERE tablename='notification_preferences' AND rowsecurity=true;
   IF NOT FOUND THEN RAISE EXCEPTION 'notification_preferences missing or RLS off'; END IF;
-  -- safety notifications are not user-suppressible: the column documenting that
-  -- distinction must exist so the consent gate can honor it
   PERFORM 1 FROM information_schema.columns
    WHERE table_name='notification_preferences' AND column_name='quiet_hours_start';
   IF NOT FOUND THEN RAISE EXCEPTION 'quiet_hours_start missing'; END IF;
@@ -414,26 +494,25 @@ END $$;
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130300_p2_notification_preferences.sql
--- Per-user consent. Each loop notification category can be toggled per channel.
--- DESIGN: safety notifications (day_of_reconfirm, safety_check_in) are NOT
--- user-suppressible — the consent gate (notify.ts) ignores these toggles for
--- safety categories. We still store the toggles for transparency/auditing but
--- they have no effect on safety types. Quiet hours likewise never defer safety.
+-- supabase/migrations/20260525123300_p2_notification_preferences.sql
+-- Per-user consent + quiet-hours (INTEGRATION-CONTRACT C11.8). dispatch_notification
+-- reads this in the C1 order (consent → quiet-hours → rate-limit). Safety types
+-- (safety_checkin, safety_alert) bypass all of it (C1). Quiet hours are evaluated
+-- in the user's city timezone in dispatch_notification (Task 7), not stored-only.
 
-create table if not exists notification_preferences (
+create table notification_preferences (
   user_id uuid primary key references profiles(id) on delete cascade,
-  -- master switches per transport
   push_enabled boolean not null default true,
   email_enabled boolean not null default true,
-  -- category toggles (apply to push + email; safety categories override these)
-  offers_enabled boolean not null default true,         -- offer_received/expired, standby_promoted
-  interest_enabled boolean not null default true,       -- new_interest (creator side)
-  reminders_enabled boolean not null default true,      -- day_of_reconfirm (safety: not actually suppressible)
-  lifecycle_enabled boolean not null default true,      -- lock_confirmed, cancellation, *_auto_closed, pending_expired
-  -- quiet hours (local to the user's city tz; safety types bypass these)
-  quiet_hours_start time,                               -- e.g. 22:00, null = none
-  quiet_hours_end time,                                 -- e.g. 08:00
+  -- category toggles (apply to non-safety types)
+  offers_enabled boolean not null default true,        -- offer_received/offer_expiring/standby_promoted
+  matches_enabled boolean not null default true,       -- new_match
+  messages_enabled boolean not null default true,      -- new_message
+  reminders_enabled boolean not null default true,     -- date_reconfirm, rating_request
+  account_enabled boolean not null default true,       -- account, moderation_action
+  -- quiet hours, local to the user's city tz; safety types bypass these
+  quiet_hours_start time,
+  quiet_hours_end time,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -447,14 +526,12 @@ do $$ begin
     using (user_id = auth.uid()) with check (user_id = auth.uid());
 exception when duplicate_object then null; end $$;
 
--- Auto-create a default prefs row when a profile is created so the dispatch
--- path never has to special-case a missing row (absent row => use defaults
--- anyway in notify.ts, but this keeps the data clean).
+-- Auto-create a default prefs row on profile creation (dispatch treats a missing
+-- row as permissive defaults too, so this is data hygiene, not correctness-load-bearing).
 create or replace function ensure_notification_preferences() returns trigger
 language plpgsql security definer set search_path = public as $fn$
 begin
-  insert into notification_preferences (user_id) values (new.id)
-  on conflict (user_id) do nothing;
+  insert into notification_preferences (user_id) values (new.id) on conflict (user_id) do nothing;
   return new;
 end $fn$;
 do $$ begin
@@ -468,30 +545,35 @@ exception when duplicate_object then null; end $$;
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130300_p2_notification_preferences.sql supabase/tests/p2_notification_preferences.sql
-git commit -m "P2: notification_preferences (consent/opt-out + quiet hours; safety types non-suppressible)"
+git add supabase/migrations/20260525123300_p2_notification_preferences.sql supabase/tests/p2_notification_preferences.sql
+git commit -m "P2/S2: notification_preferences (consent + quiet-hours; safety bypass) (C11.8)"
 ```
 
 ---
 
-## Task 5: `notifications` delivery log + `notification_type` enum
+## Task 5: `notifications` delivery log + `notification_type` enum (C1)
 
 **Files:**
-- Create: `supabase/migrations/20260525130400_p2_notifications.sql`
+- Create: `supabase/migrations/20260525123400_p2_notifications.sql`
 - Test: `supabase/tests/p2_notifications.sql`
 
-- [ ] **Step 1: Write the failing test** (recipient-read RLS; type enum has the core-loop set)
+> **Conformance:** The enum is exactly the **C1 11-value** set (`new_match, offer_received, offer_expiring, standby_promoted, date_reconfirm, safety_checkin, safety_alert, new_message, rating_request, moderation_action, account`). The old plan's `offer_expired`/`date_auto_closed`/`lock_confirmed`/`new_interest`/`cancellation`/`pending_expired` enum values are **SUPERSEDED** — consumers map their events onto the C1 values (e.g. an expired offer notifies the candidate with `standby_promoted` to the next person and the creator with `account`/`date_reconfirm` per S6's spec; "someone swiped" is not a launch notification type). Recipient-read + mark-read RLS; service-role inserts/updates.
+
+- [ ] **Step 1: Write the failing test** (recipient-read RLS; enum has the C1 safety + match values)
 
 ```sql
 -- supabase/tests/p2_notifications.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
-DECLARE has_safety boolean;
 BEGIN
   PERFORM 1 FROM pg_tables WHERE tablename='notifications' AND rowsecurity=true;
   IF NOT FOUND THEN RAISE EXCEPTION 'notifications missing or RLS off'; END IF;
-  SELECT 'safety_check_in' = ANY (enum_range(null::notification_type)::text[])
-    INTO has_safety;
-  IF NOT has_safety THEN RAISE EXCEPTION 'notification_type missing safety_check_in'; END IF;
+  IF NOT ('safety_checkin' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing safety_checkin'; END IF;
+  IF NOT ('safety_alert' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing safety_alert'; END IF;
+  IF NOT ('new_match' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing new_match'; END IF;
 END $$;
 ```
 
@@ -500,42 +582,35 @@ END $$;
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130400_p2_notifications.sql
--- Append-only delivery log. One row per (recipient, event) — the dispatch path
--- inserts it, then attempts delivery and updates delivery state. Also the
--- backing store for an in-app notification center (recipient reads own rows).
+-- supabase/migrations/20260525123400_p2_notifications.sql
+-- Append-only delivery log + the canonical notification_type enum (C1).
+-- One row per (recipient, event); dispatch inserts it, then updates delivery
+-- state. Also the backing store for an in-app notification center.
 
 create type notification_type as enum (
-  'offer_received','offer_expired','standby_promoted','pending_expired',
-  'date_auto_closed','day_of_reconfirm','safety_check_in','lock_confirmed',
-  'new_interest','cancellation'
+  'new_match','offer_received','offer_expiring','standby_promoted','date_reconfirm',
+  'safety_checkin','safety_alert','new_message','rating_request','moderation_action','account'
 );
-create type notification_channel as enum ('push_ios','push_android','web_push','email','suppressed');
+create type notification_channel as enum ('push_ios','push_android','web_push','email','admin_alert','suppressed');
 
-create table if not exists notifications (
+create table notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
   type notification_type not null,
-  title text not null,
-  body text not null,
-  data jsonb not null default '{}'::jsonb,    -- deep-link payload (entity ids)
-  -- idempotency: an event that maps to one logical notification carries a key
-  -- so re-dispatch (job retry) doesn't double-send. e.g. 'offer_expired:<offer_id>'
+  payload jsonb not null default '{}',   -- title/body/deep-link entity ids (C1: dispatch takes p_payload)
   dedup_key text,
-  channel notification_channel,               -- chosen channel, or 'suppressed'
+  channel notification_channel,          -- chosen channel, 'suppressed', or 'admin_alert' (fail-loud)
   delivered boolean not null default false,
   delivery_error text,
   read_at timestamptz,
   created_at timestamptz not null default now()
 );
-create unique index if not exists notifications_dedup_uniq
+create unique index notifications_dedup_uniq
   on notifications (type, dedup_key) where dedup_key is not null;
-create index if not exists notifications_user_idx on notifications (user_id, created_at desc);
+create index notifications_user_idx on notifications (user_id, created_at desc);
 
 alter table notifications enable row level security;
 do $$ begin
-  -- recipient may read + mark-read their own; inserts/delivery updates are
-  -- service-role only (the dispatch path).
   create policy "notifications_recipient_read" on notifications for select
     using (user_id = auth.uid());
 exception when duplicate_object then null; end $$;
@@ -550,42 +625,42 @@ exception when duplicate_object then null; end $$;
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130400_p2_notifications.sql supabase/tests/p2_notifications.sql
-git commit -m "P2: notifications delivery log + notification_type enum, recipient-read RLS"
+git add supabase/migrations/20260525123400_p2_notifications.sql supabase/tests/p2_notifications.sql
+git commit -m "P2/S2: notifications log + notification_type enum (C1 11-value set)"
 ```
 
 ---
 
-## Task 6: Notification storm rate-limit — reuse `rate_limit_check` via a typed wrapper
+## Task 6: Notification storm rate-limit — typed wrapper over `rate_limit_check` (C1)
 
 **Files:**
-- Create: `supabase/migrations/20260525130500_p2_notification_rate_limit.sql`
+- Create: `supabase/migrations/20260525123450_p2_notification_rate_limit.sql`
 - Test: `supabase/tests/p2_notification_rate_limit.sql`
 
-**Design:** Reuse the existing `rate_limits` table + `rate_limit_check(p_identifier, p_endpoint, p_max_requests)` RPC (no new infra). The dispatch path calls a thin wrapper `notification_rate_check(user_id, type)` that maps each notification category to a per-hour cap and delegates to `rate_limit_check` with `identifier = user_id`, `endpoint = 'notify:<category>'`. Safety types pass a sentinel cap that the wrapper treats as "never limited."
+> **Conformance:** C1 says the dispatch order reuses `rate_limit_check`. C10 says P11's batching folds into this one anti-storm system — so there is **one** rate limiter here; P11 does **not** ship `notification_batches`/`coalesce_notification` (those are SUPERSEDED, DS1). Safety types (`safety_checkin`, `safety_alert`) are never limited.
 
-- [ ] **Step 1: Write the failing test** (wrapper caps a noisy category; safety category is never capped)
+**Design:** Reuse the existing `rate_limits` table + `rate_limit_check(p_identifier, p_endpoint, p_max_requests)` RPC. `notification_rate_check(user_id, type)` maps each notification category to a per-hour cap, delegating to `rate_limit_check` with `identifier=user_id`, `endpoint='notify:<type>'`. Safety types return "never limited."
+
+- [ ] **Step 1: Write the failing test** (a noisy category is capped; safety is never capped)
 
 ```sql
 -- supabase/tests/p2_notification_rate_limit.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
 DECLARE u uuid := gen_random_uuid(); r json; allowed boolean; i int;
 BEGIN
-  -- new_interest is capped (default cap small for the test via the wrapper's map);
-  -- exhaust it and confirm the wrapper denies further sends.
-  FOR i IN 1..20 LOOP
-    r := notification_rate_check(u, 'new_interest');
-  END LOOP;
-  r := notification_rate_check(u, 'new_interest');
+  FOR i IN 1..30 LOOP r := notification_rate_check(u, 'new_message'); END LOOP;
+  r := notification_rate_check(u, 'new_message');
   allowed := (r->>'allowed')::boolean;
-  IF allowed THEN RAISE EXCEPTION 'new_interest should be rate-limited after burst'; END IF;
+  IF allowed THEN RAISE EXCEPTION 'new_message should be rate-limited after burst'; END IF;
 
-  -- safety_check_in is NEVER limited regardless of volume
-  FOR i IN 1..100 LOOP
-    r := notification_rate_check(u, 'safety_check_in');
-  END LOOP;
+  FOR i IN 1..100 LOOP r := notification_rate_check(u, 'safety_checkin'); END LOOP;
   allowed := (r->>'allowed')::boolean;
-  IF NOT allowed THEN RAISE EXCEPTION 'safety_check_in must never be rate-limited'; END IF;
+  IF NOT allowed THEN RAISE EXCEPTION 'safety_checkin must never be rate-limited'; END IF;
+
+  FOR i IN 1..100 LOOP r := notification_rate_check(u, 'safety_alert'); END LOOP;
+  allowed := (r->>'allowed')::boolean;
+  IF NOT allowed THEN RAISE EXCEPTION 'safety_alert must never be rate-limited'; END IF;
   RAISE NOTICE 'notification rate-limit OK';
   ROLLBACK;
 END $$;
@@ -596,93 +671,163 @@ END $$;
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130500_p2_notification_rate_limit.sql
--- Anti-storm guard. Reuses the existing rate_limits table + rate_limit_check
--- RPC (20260522110000_rate_limits.sql). Per-category per-hour caps prevent a
--- runaway loop (e.g. many swipes → many new_interest pings) from flooding a
--- user. Safety categories are exempt (a check-in must always go out).
+-- supabase/migrations/20260525123450_p2_notification_rate_limit.sql
+-- The single anti-storm guard (C1 + C10: P11's batching folds in here; no second
+-- system). Reuses rate_limits + rate_limit_check (20260522110000_rate_limits.sql).
+-- Safety categories (safety_checkin, safety_alert) are exempt.
 
 create or replace function notification_rate_check(
-  p_user_id uuid,
-  p_type    notification_type
+  p_user_id uuid, p_type notification_type
 ) returns json
 language plpgsql security definer set search_path = public, extensions as $fn$
-declare
-  v_cap int;
-  v_endpoint text := 'notify:' || p_type::text;
+declare v_cap int; v_endpoint text := 'notify:' || p_type::text;
 begin
   -- Safety + high-stakes-1:1 events are never throttled.
-  if p_type in ('safety_check_in','day_of_reconfirm','offer_received',
-                'lock_confirmed','standby_promoted') then
+  if p_type in ('safety_checkin','safety_alert','offer_received','offer_expiring',
+                'standby_promoted','date_reconfirm','new_match') then
     return json_build_object('allowed', true, 'current_count', 0, 'retry_after_seconds', 0);
   end if;
-
-  -- Per-category hourly caps for noisy categories.
   v_cap := case p_type
-    when 'new_interest'   then 10   -- creator gets at most 10 "someone swiped" pings/hr
-    when 'cancellation'   then 20
-    when 'offer_expired'  then 20
-    when 'pending_expired' then 20
-    when 'date_auto_closed' then 20
+    when 'new_message'       then 30
+    when 'rating_request'    then 10
+    when 'moderation_action' then 20
+    when 'account'           then 20
     else 30
   end;
-
   return rate_limit_check(p_user_id::text, v_endpoint, v_cap);
 end $fn$;
 
-revoke all on function notification_rate_check(uuid, notification_type) from anon, authenticated;
+revoke execute on function notification_rate_check(uuid, notification_type) from public, authenticated;
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS** (prints `notification rate-limit OK`).
 
-> Note: the test bursts 20 `new_interest` to exceed the cap of 10 within one clock-hour window; the existing `rate_limit_check` uses `date_trunc('hour', now())` so all 20 land in the same window. PASS confirms the wrapper denies after the cap and never denies safety.
-
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130500_p2_notification_rate_limit.sql supabase/tests/p2_notification_rate_limit.sql
-git commit -m "P2: notification_rate_check wrapper over rate_limit_check (per-category caps, safety exempt)"
+git add supabase/migrations/20260525123450_p2_notification_rate_limit.sql supabase/tests/p2_notification_rate_limit.sql
+git commit -m "P2/S2: notification_rate_check wrapper (single anti-storm system; safety exempt) (C1/C10)"
 ```
 
 ---
 
-## Task 7: `dispatch_notification()` RPC — the consent+ratelimit+log core (DB side)
+## Task 7: `admin_alerts` + ops "fail loud" sink (C11.8)
 
 **Files:**
-- Create: `supabase/migrations/20260525130600_p2_dispatch_notification.sql`
+- Create: `supabase/migrations/20260525123700_p2_admin_alerts.sql`
+- Test: `supabase/tests/p2_admin_alerts.sql`
+
+> **Conformance:** C11.8 owns this here. `admin_alerts(id, kind, payload, created_at, resolved_at)` + an always-on out-of-band sink (ops email via Resend **and** a row insert). It is the terminus for the C1 safety fail-loud rule: a `safety_checkin`/`safety_alert` with no device inserts an `admin_alerts` row AND emails ops — never a silent drop. P7/S8 and P8/S9 **consume** this table (referenced, not built there). The SQL side here is the `raise_admin_alert(p_kind text, p_payload jsonb)` writer + table; the ops-email half is wired in `notify.ts` (Task 9) so the alert reaches a human out-of-band even if the in-app channel is empty.
+
+- [ ] **Step 1: Write the failing test** (table + writer; raising an alert inserts a row)
+
+```sql
+-- supabase/tests/p2_admin_alerts.sql
+\i 'supabase/tests/_fixtures.sql'
+DO $$
+DECLARE a uuid; n int;
+BEGIN
+  PERFORM 1 FROM pg_tables WHERE tablename='admin_alerts' AND rowsecurity=true;
+  IF NOT FOUND THEN RAISE EXCEPTION 'admin_alerts missing or RLS off'; END IF;
+  a := raise_admin_alert('safety_no_device', '{"user_id":"x","type":"safety_checkin"}'::jsonb);
+  SELECT count(*) INTO n FROM admin_alerts WHERE id=a AND kind='safety_no_device' AND resolved_at IS NULL;
+  IF n <> 1 THEN RAISE EXCEPTION 'raise_admin_alert did not insert open alert'; END IF;
+  RAISE NOTICE 'admin_alerts OK';
+  ROLLBACK;
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL.**
+
+- [ ] **Step 3: Write the migration**
+
+```sql
+-- supabase/migrations/20260525123700_p2_admin_alerts.sql
+-- Admin-alert channel — the "fail loud" terminus (INTEGRATION-CONTRACT C11.8).
+-- A safety notification with no deliverable device inserts a row here AND (via
+-- notify.ts) emails ops; it never dead-ends in an empty channel. P7/S8 + P8/S9
+-- consume this table (admin console + safety escalation).
+
+create table admin_alerts (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null,
+  payload jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+create index admin_alerts_open_idx on admin_alerts (created_at desc) where resolved_at is null;
+
+alter table admin_alerts enable row level security;
+-- Service-role + admin-only (admin RLS added by P8/S9 admin console using
+-- admin_has_role()); no anon/authenticated access by default.
+
+create or replace function raise_admin_alert(p_kind text, p_payload jsonb default '{}')
+returns uuid language plpgsql security definer set search_path = public as $fn$
+declare v_id uuid;
+begin
+  insert into admin_alerts (kind, payload) values (p_kind, coalesce(p_payload,'{}'))
+  returning id into v_id;
+  return v_id;
+end $fn$;
+
+revoke execute on function raise_admin_alert(text, jsonb) from public, authenticated;
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525123700_p2_admin_alerts.sql supabase/tests/p2_admin_alerts.sql
+git commit -m "P2/S2: admin_alerts table + raise_admin_alert writer (fail-loud terminus) (C11.8)"
+```
+
+---
+
+## Task 8: `dispatch_notification()` RPC — consent → quiet-hours → rate-limit → channel (C1)
+
+**Files:**
+- Create: `supabase/migrations/20260525123600_p2_dispatch_notification.sql`
 - Test: `supabase/tests/p2_dispatch_notification.sql`
 
-**Design:** The *decision* of whether to send (consent gate → quiet hours → rate limit) and the *log insert* live in one SECURITY DEFINER RPC so they are transactional and testable in psql. The RPC returns the chosen `channel` ('suppressed' if consent/rate denies) and the inserted `notifications.id` + the device tokens to deliver to. The Edge Function (`notify.ts`, Task 8) calls this RPC, then performs the *network delivery* (Expo/Web-Push/email) and calls `mark_notification_delivered()`. Splitting decision (DB, testable) from delivery (network, mocked) keeps both layers verifiable.
+> **Conformance:** Exact C1 signature `dispatch_notification(p_user uuid, p_type notification_type, p_payload jsonb)`. The old 6-arg form (`title, body, data, dedup_key`) is **SUPERSEDED** — title/body/deep-link/dedup all live inside `p_payload` (`{title, body, data, dedup_key}`). Order: **consent → quiet-hours → rate-limit → channel (push→web→email)** (C1). **Safety types (`safety_checkin`, `safety_alert`) bypass consent/quiet/rate-limit; if no device exists they MUST fail loud** — the RPC returns `channel='admin_alert'`, `raise_admin_alert(...)` fires, and `notify.ts` (Task 9) also emails ops (C1, C11.8). Quiet-hours evaluated in the user's city tz (degrade to permissive if `primary_city_id`/tz absent). **Depends on:** S1 `profiles.primary_city_id` + `cities.timezone`.
 
-- [ ] **Step 1: Write the failing test** (opt-out suppresses non-safety; safety always logged as deliverable; dedup prevents double-insert)
+> **Migration ordering note:** this migration is timestamped `123600` but reads `admin_alerts`/`raise_admin_alert` (`123700`). Postgres resolves plpgsql callee names at runtime, so creation order is fine for the function body; however `db reset` applies in timestamp order, so the `raise_admin_alert` call is resolved at first invocation (after both migrations apply). Tests run post-`db reset`, so both exist. (If a strict-order lint complains, renumber this to `123750` — still inside P2's band and after `admin_alerts`.)
+
+- [ ] **Step 1: Write the failing test** (opt-out suppresses non-safety; safety with no device → admin_alert + fail-loud; dedup)
 
 ```sql
 -- supabase/tests/p2_dispatch_notification.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
-DECLARE u uuid; res json; ch text; n int;
+DECLARE u uuid; res json; ch text; n int; alerts_before int; alerts_after int;
 BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(), 'u') returning id into u;
-  -- profiles_ensure_notif_prefs trigger created a default prefs row; opt out of offers
+  u := mk_user('disp');
+  -- opt out of everything (non-safety) + no device registered
   update notification_preferences
-     set offers_enabled = false, push_enabled = false, email_enabled = false
+     set push_enabled=false, email_enabled=false, offers_enabled=false
    where user_id = u;
 
-  -- a non-safety offer notification must be SUPPRESSED (no consent/channel)
-  res := dispatch_notification(u, 'offer_received', 'Offer', 'You got an offer',
-                               '{}'::jsonb, p_dedup_key := 'd1');
+  -- non-safety offer notification with no consent/channel → suppressed
+  res := dispatch_notification(u, 'offer_received',
+           json_build_object('title','Offer','body','You got an offer','dedup_key','d1')::jsonb);
   ch := res->>'channel';
   IF ch <> 'suppressed' THEN RAISE EXCEPTION 'opted-out offer not suppressed: %', ch; END IF;
 
-  -- a safety notification is NEVER suppressed (logged deliverable even with all toggles off)
-  res := dispatch_notification(u, 'safety_check_in', 'Check in', 'You ok?',
-                               '{}'::jsonb, p_dedup_key := 'd2');
+  -- safety notification, NO device → must fail loud to admin_alert (never suppressed)
+  SELECT count(*) INTO alerts_before FROM admin_alerts WHERE kind='safety_no_device';
+  res := dispatch_notification(u, 'safety_checkin',
+           json_build_object('title','Check in','body','You ok?','dedup_key','d2')::jsonb);
   ch := res->>'channel';
   IF ch = 'suppressed' THEN RAISE EXCEPTION 'safety notification was suppressed'; END IF;
+  IF ch <> 'admin_alert' THEN RAISE EXCEPTION 'safety w/ no device should fail loud, got %', ch; END IF;
+  SELECT count(*) INTO alerts_after FROM admin_alerts WHERE kind='safety_no_device';
+  IF alerts_after <> alerts_before + 1 THEN RAISE EXCEPTION 'no admin_alert raised for tokenless safety'; END IF;
 
   -- dedup: re-dispatch same (type, dedup_key) does not insert a 2nd row
-  res := dispatch_notification(u, 'safety_check_in', 'Check in', 'You ok?',
-                               '{}'::jsonb, p_dedup_key := 'd2');
-  SELECT count(*) INTO n FROM notifications WHERE type='safety_check_in' AND dedup_key='d2';
+  res := dispatch_notification(u, 'safety_checkin',
+           json_build_object('title','Check in','body','You ok?','dedup_key','d2')::jsonb);
+  SELECT count(*) INTO n FROM notifications WHERE type='safety_checkin' AND dedup_key='d2';
   IF n <> 1 THEN RAISE EXCEPTION 'dedup failed: % rows', n; END IF;
   RAISE NOTICE 'dispatch_notification OK';
   ROLLBACK;
@@ -694,80 +839,103 @@ END $$;
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130600_p2_dispatch_notification.sql
--- Decision + log half of notification dispatch (network delivery is in notify.ts).
--- Returns { notification_id, channel, tokens: [...] }. channel='suppressed' when
--- consent or rate-limit denies (no tokens returned). Safety categories bypass
--- consent + quiet-hours + rate-limit.
+-- supabase/migrations/20260525123600_p2_dispatch_notification.sql
+-- Decision + log + fail-loud half of dispatch (network delivery is in notify.ts).
+-- C1 signature: dispatch_notification(p_user, p_type, p_payload). Order:
+-- consent → quiet-hours → rate-limit → channel (push→web→email). Safety types
+-- bypass all gates; with no device they FAIL LOUD (channel='admin_alert' +
+-- raise_admin_alert) — never silent (C1, C11.8). p_payload carries
+-- {title, body, data, dedup_key}.
 
 create or replace function dispatch_notification(
-  p_user_id   uuid,
-  p_type      notification_type,
-  p_title     text,
-  p_body      text,
-  p_data      jsonb default '{}'::jsonb,
-  p_dedup_key text default null
+  p_user uuid, p_type notification_type, p_payload jsonb default '{}'
 ) returns json
 language plpgsql security definer set search_path = public, extensions as $fn$
 declare
-  v_is_safety boolean := p_type in ('safety_check_in','day_of_reconfirm');
+  v_is_safety boolean := p_type in ('safety_checkin','safety_alert');
+  v_dedup text := nullif(p_payload->>'dedup_key','');
   v_prefs notification_preferences%rowtype;
   v_allowed boolean := true;
   v_rate json;
-  v_notif_id uuid;
-  v_existing uuid;
+  v_notif_id uuid; v_existing uuid;
   v_tokens jsonb;
   v_channel notification_channel := 'suppressed';
+  v_tz text; v_local time; v_qs time; v_qe time; v_in_quiet boolean := false;
 begin
   -- dedup short-circuit
-  if p_dedup_key is not null then
-    select id into v_existing from notifications
-     where type = p_type and dedup_key = p_dedup_key limit 1;
+  if v_dedup is not null then
+    select id into v_existing from notifications where type=p_type and dedup_key=v_dedup limit 1;
     if found then
       return json_build_object('notification_id', v_existing, 'channel', 'suppressed',
                                'tokens', '[]'::jsonb, 'reason', 'dedup');
     end if;
   end if;
 
-  select * into v_prefs from notification_preferences where user_id = p_user_id;
+  select * into v_prefs from notification_preferences where user_id = p_user;
 
   if not v_is_safety then
-    -- consent gate (missing prefs row => permissive defaults)
+    -- 1) consent gate (missing prefs row => permissive defaults)
     if v_prefs.user_id is not null then
-      if (not v_prefs.push_enabled and not v_prefs.email_enabled) then
-        v_allowed := false;
-      elsif p_type in ('offer_received','offer_expired','standby_promoted')
-            and not v_prefs.offers_enabled then v_allowed := false;
-      elsif p_type = 'new_interest' and not v_prefs.interest_enabled then v_allowed := false;
-      elsif p_type in ('lock_confirmed','cancellation','date_auto_closed','pending_expired')
-            and not v_prefs.lifecycle_enabled then v_allowed := false;
+      if (not v_prefs.push_enabled and not v_prefs.email_enabled) then v_allowed := false;
+      elsif p_type in ('offer_received','offer_expiring','standby_promoted') and not v_prefs.offers_enabled then v_allowed := false;
+      elsif p_type = 'new_match' and not v_prefs.matches_enabled then v_allowed := false;
+      elsif p_type = 'new_message' and not v_prefs.messages_enabled then v_allowed := false;
+      elsif p_type in ('date_reconfirm','rating_request') and not v_prefs.reminders_enabled then v_allowed := false;
+      elsif p_type in ('account','moderation_action') and not v_prefs.account_enabled then v_allowed := false;
       end if;
     end if;
-    -- rate-limit gate
+    -- 2) quiet-hours gate (user's city tz; degrade permissive if tz unknown)
+    if v_allowed and v_prefs.quiet_hours_start is not null and v_prefs.quiet_hours_end is not null then
+      select c.timezone into v_tz from profiles pr
+        join cities c on c.id = pr.primary_city_id where pr.id = p_user;
+      if v_tz is not null then
+        v_local := (now() at time zone v_tz)::time;
+        v_qs := v_prefs.quiet_hours_start; v_qe := v_prefs.quiet_hours_end;
+        v_in_quiet := case when v_qs <= v_qe then (v_local >= v_qs and v_local < v_qe)
+                           else (v_local >= v_qs or v_local < v_qe) end; -- wraps midnight
+        if v_in_quiet then v_allowed := false; end if;
+      end if;
+    end if;
+    -- 3) rate-limit gate
     if v_allowed then
-      v_rate := notification_rate_check(p_user_id, p_type);
+      v_rate := notification_rate_check(p_user, p_type);
       if not (v_rate->>'allowed')::boolean then v_allowed := false; end if;
     end if;
   end if;
 
-  -- pick a channel: prefer an active native device, else web push, else email.
+  -- channel pick: native push → web push → email. Safety always proceeds.
   if v_allowed or v_is_safety then
-    select coalesce(jsonb_agg(jsonb_build_object('platform', platform, 'token', token)), '[]'::jsonb)
-      into v_tokens from devices where user_id = p_user_id and is_active;
-    if v_tokens @> '[{"platform":"ios"}]' or v_tokens @> '[{"platform":"android"}]' then
-      v_channel := case when v_tokens @> '[{"platform":"ios"}]' then 'push_ios' else 'push_android' end;
-    elsif v_tokens @> '[{"platform":"web"}]' then
-      v_channel := 'web_push';
-    elsif coalesce(v_prefs.email_enabled, true) or v_is_safety then
-      v_channel := 'email';
-    else
-      v_channel := 'suppressed';
+    select coalesce(jsonb_agg(jsonb_build_object(
+             'platform', platform, 'expo_push_token', expo_push_token, 'web_push_sub', web_push_sub)), '[]'::jsonb)
+      into v_tokens from devices
+     where user_id = p_user and (expo_push_token is not null or web_push_sub is not null);
+
+    if v_tokens @> '[{"platform":"ios"}]' then v_channel := 'push_ios';
+    elsif v_tokens @> '[{"platform":"android"}]' then v_channel := 'push_android';
+    elsif v_tokens @> '[{"platform":"web"}]' then v_channel := 'web_push';
+    elsif coalesce(v_prefs.email_enabled, true) then v_channel := 'email';
+    elsif v_is_safety then v_channel := 'admin_alert';  -- safety w/ no channel: fail loud
+    else v_channel := 'suppressed';
+    end if;
+
+    -- For safety types, an 'email' channel is only acceptable if email is wired;
+    -- the network layer (notify.ts) escalates to admin_alert on email failure.
+    -- If there is genuinely NO device AND no email, fail loud here.
+    if v_is_safety and v_channel in ('suppressed') then v_channel := 'admin_alert'; end if;
+    if v_is_safety and v_channel = 'email' and not coalesce(v_prefs.email_enabled, true) then
+      v_channel := 'admin_alert';
     end if;
   end if;
 
-  insert into notifications (user_id, type, title, body, data, dedup_key, channel)
-  values (p_user_id, p_type, p_title, p_body, p_data, p_dedup_key, v_channel)
+  insert into notifications (user_id, type, payload, dedup_key, channel)
+  values (p_user, p_type, coalesce(p_payload,'{}'), v_dedup, v_channel)
   returning id into v_notif_id;
+
+  -- fail-loud terminus: a safety notification that resolved to admin_alert raises one now.
+  if v_is_safety and v_channel = 'admin_alert' then
+    perform raise_admin_alert('safety_no_device',
+      json_build_object('user_id', p_user, 'type', p_type::text, 'notification_id', v_notif_id)::jsonb);
+  end if;
 
   return json_build_object(
     'notification_id', v_notif_id,
@@ -779,13 +947,11 @@ end $fn$;
 create or replace function mark_notification_delivered(p_id uuid, p_error text default null)
 returns void language plpgsql security definer set search_path = public as $fn$
 begin
-  update notifications
-     set delivered = (p_error is null), delivery_error = p_error
-   where id = p_id;
+  update notifications set delivered = (p_error is null), delivery_error = p_error where id = p_id;
 end $fn$;
 
-revoke all on function dispatch_notification(uuid, notification_type, text, text, jsonb, text) from anon, authenticated;
-revoke all on function mark_notification_delivered(uuid, text) from anon, authenticated;
+revoke execute on function dispatch_notification(uuid, notification_type, jsonb) from public, authenticated;
+revoke execute on function mark_notification_delivered(uuid, text) from public, authenticated;
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS** (prints `dispatch_notification OK`).
@@ -793,28 +959,27 @@ revoke all on function mark_notification_delivered(uuid, text) from anon, authen
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130600_p2_dispatch_notification.sql supabase/tests/p2_dispatch_notification.sql
-git commit -m "P2: dispatch_notification RPC (consent+quiet-hours+ratelimit gate, channel pick, dedup log)"
+git add supabase/migrations/20260525123600_p2_dispatch_notification.sql supabase/tests/p2_dispatch_notification.sql
+git commit -m "P2/S2: dispatch_notification (C1 signature; consent→quiet→rate→channel; safety fail-loud)"
 ```
 
 ---
 
-## Task 8: `_shared/notify.ts` — network delivery (Expo + Web Push + email) over the RPC
+## Task 9: `_shared/notify.ts` — network delivery (Expo + Web Push + email) + ops fail-loud
 
 **Files:**
 - Create: `supabase/functions/_shared/notify.ts`
 - Test: `supabase/functions/_shared/notify_test.ts`
 
-**Design:** `dispatchNotification()` calls the `dispatch_notification` RPC (Task 7) to get `{ notification_id, channel, tokens }`, then performs the actual network send for the chosen channel: Expo Push HTTP for `push_ios`/`push_android`, Web Push for `web_push`, Resend for `email`. On `suppressed` it returns early (no network). After delivery it calls `mark_notification_delivered`. Providers are injected so the test mocks them.
+> **Conformance:** `dispatchNotification()` calls the C1 `dispatch_notification` RPC (3-arg: `p_user`, `p_type`, `p_payload`), then performs the network send for the chosen channel. **For `channel='admin_alert'` (safety fail-loud), it emails ops via Resend** so the alert reaches a human even though the in-app channel was empty (C11.8). For safety types, if push/email delivery fails, it escalates to `raise_admin_alert` + ops email rather than logging a silent failure. Providers are injected so tests mock the network. **Expo receipt/error handling:** read the Expo ticket body (a 200 can carry per-message `status:'error'`) and treat per-message errors as delivery failures, not successes (closes audit "delivery metrics lie").
 
-- [ ] **Step 1: Write the failing test** (suppressed → no send; native channel → Expo provider called; mark-delivered called)
+- [ ] **Step 1: Write the failing test** (suppressed → no send; native channel → Expo called + mark-delivered; admin_alert safety → ops email called)
 
 ```ts
 // supabase/functions/_shared/notify_test.ts
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { dispatchNotification } from './notify.ts';
 
-// Fake supabase client whose rpc() returns scripted RPC responses.
 function fakeClient(dispatchResult: unknown) {
   const calls: Record<string, unknown[]> = {};
   return {
@@ -822,7 +987,6 @@ function fakeClient(dispatchResult: unknown) {
     rpc(name: string, args: unknown) {
       (calls[name] ??= []).push(args);
       if (name === 'dispatch_notification') return Promise.resolve({ data: dispatchResult, error: null });
-      if (name === 'mark_notification_delivered') return Promise.resolve({ data: null, error: null });
       return Promise.resolve({ data: null, error: null });
     },
   };
@@ -831,117 +995,127 @@ function fakeClient(dispatchResult: unknown) {
 Deno.test('suppressed channel performs no network send', async () => {
   const client = fakeClient({ notification_id: 'n1', channel: 'suppressed', tokens: [] });
   let expoCalled = false;
-  await dispatchNotification(client as never, {
-    userId: 'u1', type: 'offer_received', title: 't', body: 'b',
-  }, { sendExpo: async () => { expoCalled = true; return { ok: true }; } });
+  await dispatchNotification(client as never,
+    { userId: 'u1', type: 'offer_received', payload: { title: 't', body: 'b' } },
+    { sendExpo: async () => { expoCalled = true; return { ok: true }; } });
   assertEquals(expoCalled, false);
-  // suppressed never marks delivered
   assertEquals(client.calls['mark_notification_delivered'], undefined);
 });
 
 Deno.test('native channel sends via Expo and marks delivered', async () => {
   const client = fakeClient({
     notification_id: 'n2', channel: 'push_ios',
-    tokens: [{ platform: 'ios', token: 'ExponentPushToken[x]' }],
+    tokens: [{ platform: 'ios', expo_push_token: 'ExponentPushToken[x]' }],
   });
   let sentTo = '';
-  await dispatchNotification(client as never, {
-    userId: 'u1', type: 'safety_check_in', title: 't', body: 'b',
-  }, { sendExpo: async (toks) => { sentTo = toks[0]; return { ok: true }; } });
+  await dispatchNotification(client as never,
+    { userId: 'u1', type: 'safety_checkin', payload: { title: 't', body: 'b' } },
+    { sendExpo: async (toks) => { sentTo = toks[0]; return { ok: true }; } });
   assertEquals(sentTo, 'ExponentPushToken[x]');
   assertEquals((client.calls['mark_notification_delivered'] as unknown[]).length, 1);
 });
+
+Deno.test('safety admin_alert channel emails ops (fail loud)', async () => {
+  const client = fakeClient({ notification_id: 'n3', channel: 'admin_alert', tokens: [] });
+  let opsEmailed = false;
+  await dispatchNotification(client as never,
+    { userId: 'u1', type: 'safety_checkin', payload: { title: 't', body: 'b' } },
+    { sendOpsEmail: async () => { opsEmailed = true; return { ok: true }; } });
+  assertEquals(opsEmailed, true);
+});
 ```
 
-- [ ] **Step 2: Run it, expect FAIL**
-
-Run: `deno test --allow-env supabase/functions/_shared/notify_test.ts`
-Expected: FAIL — module `./notify.ts` not found / `dispatchNotification` undefined.
+- [ ] **Step 2: Run it, expect FAIL** — module `./notify.ts` not found.
 
 - [ ] **Step 3: Write the module**
 
 ```ts
 // supabase/functions/_shared/notify.ts
-// Network-delivery half of notification dispatch. Calls the dispatch_notification
-// RPC for the consent/ratelimit/log decision, then sends over the chosen channel.
-// Providers are injected (deps) so unit tests can mock the network.
+// Network-delivery half of notification dispatch. Calls the C1 dispatch_notification
+// RPC (p_user, p_type, p_payload) for the consent/quiet/ratelimit/log decision, then
+// sends over the chosen channel. channel='admin_alert' (safety fail-loud, C11.8)
+// emails ops. Providers are injected so unit tests mock the network.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 type DbClient = ReturnType<typeof createClient> | { rpc: (n: string, a: unknown) => Promise<{ data: unknown; error: unknown }> };
 
+// Mirrors the SQL notification_type enum (C1) exactly.
 export type NotificationType =
-  | 'offer_received' | 'offer_expired' | 'standby_promoted' | 'pending_expired'
-  | 'date_auto_closed' | 'day_of_reconfirm' | 'safety_check_in' | 'lock_confirmed'
-  | 'new_interest' | 'cancellation';
+  | 'new_match' | 'offer_received' | 'offer_expiring' | 'standby_promoted' | 'date_reconfirm'
+  | 'safety_checkin' | 'safety_alert' | 'new_message' | 'rating_request' | 'moderation_action' | 'account';
 
 export interface NotifyInput {
   userId: string;
   type: NotificationType;
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-  dedupKey?: string;
+  payload: { title?: string; body?: string; data?: Record<string, unknown>; dedup_key?: string };
 }
 
 interface DispatchDecision {
   notification_id: string;
-  channel: 'push_ios' | 'push_android' | 'web_push' | 'email' | 'suppressed';
-  tokens: Array<{ platform: string; token: string }>;
+  channel: 'push_ios' | 'push_android' | 'web_push' | 'email' | 'admin_alert' | 'suppressed';
+  tokens: Array<{ platform: string; expo_push_token?: string; web_push_sub?: unknown }>;
 }
 
-// Injectable providers (default impls call real services).
 export interface NotifyDeps {
   sendExpo?: (tokens: string[], n: NotifyInput) => Promise<{ ok: boolean; error?: string }>;
-  sendWebPush?: (subs: string[], n: NotifyInput) => Promise<{ ok: boolean; error?: string }>;
+  sendWebPush?: (subs: unknown[], n: NotifyInput) => Promise<{ ok: boolean; error?: string }>;
   sendEmail?: (userId: string, n: NotifyInput) => Promise<{ ok: boolean; error?: string }>;
+  sendOpsEmail?: (n: NotifyInput) => Promise<{ ok: boolean; error?: string }>;
 }
 
-// Default Expo push: one HTTP POST to the Expo push service (handles APNs+FCM).
+const SAFETY = new Set<NotificationType>(['safety_checkin', 'safety_alert']);
+
+// Default Expo push: POST to exp.host, then INSPECT the ticket body — a 200 can
+// carry per-message status:'error' (DeviceNotRegistered, MessageRejected). Treat
+// any per-message error as a delivery failure (do not trust res.ok alone).
 async function defaultSendExpo(tokens: string[], n: NotifyInput) {
   const messages = tokens.map((to) => ({
-    to, title: n.title, body: n.body, data: n.data ?? {}, sound: 'default',
-    priority: n.type === 'safety_check_in' || n.type === 'day_of_reconfirm' ? 'high' : 'default',
+    to, title: n.payload.title ?? '', body: n.payload.body ?? '', data: n.payload.data ?? {},
+    sound: 'default', priority: SAFETY.has(n.type) || n.type === 'date_reconfirm' ? 'high' : 'default',
   }));
   const res = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'accept': 'application/json' },
     body: JSON.stringify(messages),
   });
-  return res.ok ? { ok: true } : { ok: false, error: `expo ${res.status}` };
+  if (!res.ok) return { ok: false, error: `expo ${res.status}` };
+  const body = await res.json().catch(() => null) as { data?: Array<{ status?: string; message?: string }> } | null;
+  const errored = body?.data?.find((t) => t.status === 'error');
+  return errored ? { ok: false, error: `expo_ticket:${errored.message ?? 'error'}` } : { ok: true };
 }
 
-async function defaultSendWebPush(_subs: string[], _n: NotifyInput) {
-  // Web Push (VAPID) — best-effort fallback. Implementation note: use the
-  // VAPID keys from env (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY) and a Deno-compatible
-  // web-push sender. Kept minimal here; native is the load-bearing path.
+async function defaultSendWebPush(_subs: unknown[], _n: NotifyInput) {
+  // Web Push (VAPID) best-effort fallback — uses VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY
+  // env (documented in this plan's secrets). Native is load-bearing.
   return { ok: false, error: 'web_push_not_configured' };
 }
 
 async function defaultSendEmail(_userId: string, _n: NotifyInput) {
-  // High-stakes fallback when no push token exists. Wire to the repo's Resend
-  // sender (apps/web/lib/email/resend) via an internal endpoint or shared lib in
-  // a later task; for P2 this returns ok:false so delivery is logged as failed
-  // rather than silently dropped. (Email send is non-blocking for the mechanic.)
+  // High-stakes fallback via the repo's Resend sender. Wired through a small
+  // internal endpoint/shared lib; returns ok:false until wired so failures are
+  // logged (and, for safety types, escalated to ops) — never silently dropped.
   return { ok: false, error: 'email_not_wired' };
 }
 
+async function defaultSendOpsEmail(n: NotifyInput) {
+  // Always-on out-of-band ops alert (Resend → ops inbox) — the C11.8 fail-loud sink.
+  // Wire to OPS_ALERT_EMAIL + Resend. Returns ok:false until wired (the admin_alerts
+  // row already guarantees a human-visible record).
+  void n;
+  return { ok: false, error: 'ops_email_not_wired' };
+}
+
 export async function dispatchNotification(
-  db: DbClient,
-  input: NotifyInput,
-  deps: NotifyDeps = {},
+  db: DbClient, input: NotifyInput, deps: NotifyDeps = {},
 ): Promise<{ notificationId: string | null; channel: string; delivered: boolean }> {
   const sendExpo = deps.sendExpo ?? defaultSendExpo;
   const sendWebPush = deps.sendWebPush ?? defaultSendWebPush;
   const sendEmail = deps.sendEmail ?? defaultSendEmail;
+  const sendOpsEmail = deps.sendOpsEmail ?? defaultSendOpsEmail;
 
   const { data, error } = await db.rpc('dispatch_notification', {
-    p_user_id: input.userId,
-    p_type: input.type,
-    p_title: input.title,
-    p_body: input.body,
-    p_data: input.data ?? {},
-    p_dedup_key: input.dedupKey ?? null,
+    p_user: input.userId, p_type: input.type, p_payload: input.payload ?? {},
   });
   if (error) throw new Error(`dispatch_notification rpc failed: ${JSON.stringify(error)}`);
   const decision = data as DispatchDecision;
@@ -950,47 +1124,66 @@ export async function dispatchNotification(
     return { notificationId: decision.notification_id, channel: 'suppressed', delivered: false };
   }
 
+  // Safety fail-loud: the RPC already raised an admin_alerts row; we ALSO email ops.
+  if (decision.channel === 'admin_alert') {
+    await sendOpsEmail(input);
+    return { notificationId: decision.notification_id, channel: 'admin_alert', delivered: false };
+  }
+
   let result: { ok: boolean; error?: string };
   if (decision.channel === 'push_ios' || decision.channel === 'push_android') {
-    result = await sendExpo(decision.tokens.map((t) => t.token), input);
+    result = await sendExpo(decision.tokens.map((t) => t.expo_push_token!).filter(Boolean), input);
   } else if (decision.channel === 'web_push') {
-    result = await sendWebPush(decision.tokens.map((t) => t.token), input);
+    result = await sendWebPush(decision.tokens.map((t) => t.web_push_sub).filter(Boolean), input);
   } else {
     result = await sendEmail(input.userId, input);
   }
 
-  await db.rpc('mark_notification_delivered', {
-    p_id: decision.notification_id,
-    p_error: result.ok ? null : (result.error ?? 'delivery_failed'),
-  });
+  // Safety types whose delivery failed escalate to ops (never a silent failure).
+  if (!result.ok && SAFETY.has(input.type)) {
+    await db.rpc('raise_admin_alert', {
+      p_kind: 'safety_delivery_failed',
+      p_payload: { user_id: input.userId, type: input.type, notification_id: decision.notification_id, error: result.error },
+    });
+    await sendOpsEmail(input);
+  }
 
+  await db.rpc('mark_notification_delivered', {
+    p_id: decision.notification_id, p_error: result.ok ? null : (result.error ?? 'delivery_failed'),
+  });
   return { notificationId: decision.notification_id, channel: decision.channel, delivered: result.ok };
 }
 ```
 
-- [ ] **Step 4: Run test, expect PASS**
-
-Run: `deno test --allow-env supabase/functions/_shared/notify_test.ts`
-Expected: both tests pass.
+- [ ] **Step 4: Run test, expect PASS** — `deno test --allow-env supabase/functions/_shared/notify_test.ts`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add supabase/functions/_shared/notify.ts supabase/functions/_shared/notify_test.ts
-git commit -m "P2: _shared/notify.ts — Expo/Web-Push/email delivery over dispatch_notification RPC"
+git commit -m "P2/S2: _shared/notify.ts — Expo/web/email delivery + Expo receipt check + safety fail-loud to ops"
 ```
 
 ---
 
-## Task 9: `process-jobs/handlers.ts` — per-job-type handlers + P5 enqueue interface
+## Task 10: `process-jobs/handlers.ts` — dispatch table calling canonical consumer RPCs
 
 **Files:**
 - Create: `supabase/functions/process-jobs/handlers.ts`
 - Test: `supabase/functions/process-jobs/handlers_test.ts`
 
-**Design:** Each handler is `(db, job) => Promise<void>`. For P2 the handlers perform the **timer effect** (the things that are pure consequences of a clock, not loop decisions): `offer_expiry` marks the offer expired + dispatches `offer_expired` + enqueues a `standby_roll`; `stale_date_close` closes an unlocked instance + notifies the creator; `safety_check_in`/`day_of_reconfirm` dispatch the safety notification to both parties; `standby_roll`/`pending_expiry` dispatch their notification and call the documented **P5 hook** (`p5_promote_standby` / `p5_reap_pending`) which P2 defines as a *no-op RPC stub* (Task 10) so the seam is exercisable now and P5 fills it in without changing the runner. `dispatchHandlers` is a registry `Record<job_type, handler>`. This is also the **clean interface** the roadmap asks for: P5 enqueues work via `enqueue_job(...)` and the loop reacts via these handlers + the P5-hook RPCs — P5 never touches the runner.
+> **Conformance (the audit's #1 finding fixed):** There are **no `p5_promote_standby`/`p5_reap_pending` stubs** — those were fictional and are removed. Each `job_type` maps to the **canonical** consumer RPC (C2/owners):
+> - `offer_expiry` → `match_expire_offer(p_offer)` (C2; idempotent; auto-rolls inline). P2 does NOT write offer state directly (the audit's offer-double-write race is eliminated).
+> - `standby_roll` → `match_auto_roll(p_instance)` (C2). (Enqueued by P5, not by P2's offer_expiry handler.)
+> - `stale_date_close` → P5's close path (S6).
+> - `day_of_reconfirm` / `safety_checkin` / `reconfirm_timeout` → `dispatch_notification` to the relevant party/parties (P2 owns notify; P7/S8 owns escalation).
+> - `bulk_withdraw` → P5/P9 withdraw path; `chat_purge` → P6/S7; `rating_window` → P7/S8; `deletion_process` → P9/S10.
+> - `analytics_relay` → **P11/S12** (not built here — handler imported from P11's module; P2 ships the table only).
+> - `notify` → generic deferred `dispatch_notification` from payload.
+>
+> For job types whose consumer RPC ships in a later stage, the handler invokes the canonical name; the dispatch is exercised once that stage lands. **The handler never marks loop state itself.** **Depends on:** S6 (`match_expire_offer`, `match_auto_roll`, stale-close), S7 (`chat_purge`), S8 (`rating_window`), S10 (`deletion_process`), S12 (`analytics_relay`).
 
-- [ ] **Step 1: Write the failing test** (registry covers all 6 types; offer_expiry calls dispatch + enqueues standby_roll)
+- [ ] **Step 1: Write the failing test** (registry covers all 13 types; offer_expiry calls `match_expire_offer`, NOT a direct offer update; safety_checkin dispatches notify)
 
 ```ts
 // supabase/functions/process-jobs/handlers_test.ts
@@ -998,27 +1191,25 @@ import { assertEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.t
 import { HANDLERS } from './handlers.ts';
 
 const ALL_TYPES = [
-  'offer_expiry','standby_roll','pending_expiry',
-  'stale_date_close','day_of_reconfirm','safety_check_in',
+  'offer_expiry','standby_roll','pending_expiry','stale_date_close',
+  'day_of_reconfirm','safety_checkin','reconfirm_timeout','bulk_withdraw',
+  'chat_purge','rating_window','deletion_process','analytics_relay','notify',
 ];
 
 Deno.test('every job_type has a handler', () => {
   for (const t of ALL_TYPES) assert(typeof HANDLERS[t] === 'function', `missing handler ${t}`);
 });
 
-Deno.test('offer_expiry marks offer expired and enqueues standby_roll', async () => {
+Deno.test('offer_expiry calls match_expire_offer (no direct offer write)', async () => {
   const rpcCalls: Array<{ name: string; args: unknown }> = [];
   const fakeDb = {
-    rpc: (name: string, args: unknown) => { rpcCalls.push({ name, args }); return Promise.resolve({ data: { channel: 'suppressed', notification_id: 'n', tokens: [] }, error: null }); },
-    from: () => ({
-      update: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }) }),
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { candidate_id: 'c', creator_id: 'cr', date_instance_id: 'di' }, error: null }) }) }),
-    }),
+    rpc: (name: string, args: unknown) => { rpcCalls.push({ name, args }); return Promise.resolve({ data: null, error: null }); },
+    from: () => { throw new Error('handler must not write tables directly'); },
   };
   await HANDLERS['offer_expiry'](fakeDb as never, {
-    id: 'j1', job_type: 'offer_expiry', offer_id: 'o1', payload: {},
+    id: 'j1', type: 'offer_expiry', payload: { offer_id: 'o1' }, run_after: '', status: 'running',
   } as never);
-  assert(rpcCalls.some((c) => c.name === 'enqueue_job'), 'did not enqueue standby_roll');
+  assert(rpcCalls.some((c) => c.name === 'match_expire_offer'), 'did not call match_expire_offer');
 });
 ```
 
@@ -1028,117 +1219,76 @@ Deno.test('offer_expiry marks offer expired and enqueues standby_roll', async ()
 
 ```ts
 // supabase/functions/process-jobs/handlers.ts
-// Per-job-type handlers. Each performs the *timer effect* of its job and
-// dispatches the relevant notification(s). Loop *decisions* (promoting a
-// standby, reaping a pending entry) are delegated to P5-hook RPCs that P2
-// ships as no-op stubs (see migration 20260525130700) — the seam is live now;
-// P5 fills the RPC bodies without touching this runner.
+// Per-job_type dispatch table. Each handler invokes the CANONICAL consumer RPC
+// (INTEGRATION-CONTRACT C2 + owners) — P2 never writes loop state itself and ships
+// no p5_* stubs. payload carries entity ids ({offer_id}, {instance_id}, {lock_id}, …).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { dispatchNotification } from '../_shared/notify.ts';
+import { dispatchNotification, type NotificationType } from '../_shared/notify.ts';
 
 type Db = ReturnType<typeof createClient>;
 export interface Job {
   id: string;
-  job_type: string;
-  date_instance_id?: string | null;
-  offer_id?: string | null;
-  lock_id?: string | null;
-  queue_entry_id?: string | null;
+  type: string;
   payload: Record<string, unknown>;
+  run_after: string;
+  status: string;
 }
 export type Handler = (db: Db, job: Job) => Promise<void>;
 
-async function offerExpiry(db: Db, job: Job) {
-  // load the offer (candidate, creator, instance)
-  const { data: offer } = await db.from('offers')
-    .select('candidate_id, creator_id, date_instance_id').eq('id', job.offer_id!).single();
-  // mark expired only if still active (idempotent)
-  await db.from('offers').update({ status: 'expired', resolved_at: new Date().toISOString() })
-    .eq('id', job.offer_id!).eq('status', 'active');
-  if (offer) {
-    await dispatchNotification(db, {
-      userId: (offer as Record<string, string>).candidate_id,
-      type: 'offer_expired', title: 'Offer expired',
-      body: 'Your lock offer expired.', data: { offer_id: job.offer_id },
-      dedupKey: `offer_expired:${job.offer_id}`,
-    });
-    // hand off to the standby roll (P5 decides who is next; P2 just enqueues)
-    await db.rpc('enqueue_job', {
-      p_job_type: 'standby_roll', p_run_after: new Date().toISOString(),
-      p_date_instance_id: (offer as Record<string, string>).date_instance_id,
-      p_dedup_key: `standby_roll:${(offer as Record<string, string>).date_instance_id}:${Date.now()}`,
-    });
-  }
-}
+const id = (j: Job, k: string) => (j.payload[k] as string | undefined) ?? null;
 
-async function standbyRoll(db: Db, job: Job) {
-  // Ask P5 to promote the next standby; the RPC returns the promoted candidate
-  // (or null). P2's stub returns null. If a candidate is promoted, notify them.
-  const { data } = await db.rpc('p5_promote_standby', { p_date_instance_id: job.date_instance_id });
-  const promoted = data as { candidate_id?: string } | null;
-  if (promoted?.candidate_id) {
-    await dispatchNotification(db, {
-      userId: promoted.candidate_id, type: 'standby_promoted',
-      title: 'You’re up!', body: 'A spot opened on a night you liked.',
-      data: { date_instance_id: job.date_instance_id },
-      dedupKey: `standby_promoted:${job.date_instance_id}:${promoted.candidate_id}`,
-    });
-  }
-}
+// offer_expiry → P5's idempotent, lock-guarded match_expire_offer (C2). It marks
+// the offer expired, transitions the queue entry, and auto-rolls inline. P2 only calls.
+const offerExpiry: Handler = async (db, job) => {
+  await db.rpc('match_expire_offer', { p_offer: id(job, 'offer_id') });
+};
 
-async function pendingExpiry(db: Db, job: Job) {
-  const { data } = await db.rpc('p5_reap_pending', { p_queue_entry_id: job.queue_entry_id });
-  const reaped = data as { candidate_id?: string } | null;
-  if (reaped?.candidate_id) {
-    await dispatchNotification(db, {
-      userId: reaped.candidate_id, type: 'pending_expired',
-      title: 'Interest expired', body: 'Your interest in a night expired after 30 days.',
-      data: { queue_entry_id: job.queue_entry_id },
-      dedupKey: `pending_expired:${job.queue_entry_id}`,
-    });
-  }
-}
+// standby_roll → P5's match_auto_roll (C2). (Normally enqueued by P5, dispatched here.)
+const standbyRoll: Handler = async (db, job) => {
+  await db.rpc('match_auto_roll', { p_instance: id(job, 'instance_id') });
+};
 
-async function staleDateClose(db: Db, job: Job) {
-  const { data: inst } = await db.from('date_instances')
-    .select('creator_id, status').eq('id', job.date_instance_id!).single();
-  await db.from('date_instances').update({ status: 'cancelled' })
-    .eq('id', job.date_instance_id!).eq('status', 'seeking');
-  if (inst && (inst as Record<string, string>).status === 'seeking') {
-    await dispatchNotification(db, {
-      userId: (inst as Record<string, string>).creator_id, type: 'date_auto_closed',
-      title: 'Night auto-closed', body: 'Your unlocked night passed and was closed.',
-      data: { date_instance_id: job.date_instance_id },
-      dedupKey: `date_auto_closed:${job.date_instance_id}`,
-    });
-  }
-}
-
-async function notifyBothParties(db: Db, job: Job, type: 'day_of_reconfirm' | 'safety_check_in', title: string, body: string) {
-  const { data: lock } = await db.from('locks')
-    .select('creator_id, matched_user_id').eq('id', job.lock_id!).single();
+// notify both parties of a lock (day_of_reconfirm / safety_checkin / reconfirm_timeout).
+async function notifyLockParties(db: Db, job: Job, type: NotificationType, title: string, body: string) {
+  const lockId = id(job, 'lock_id');
+  const { data: lock } = await db.from('locks').select('creator_id, matched_user_id').eq('id', lockId!).single();
   if (!lock) return;
   const l = lock as Record<string, string>;
   for (const uid of [l.creator_id, l.matched_user_id]) {
-    await dispatchNotification(db, {
-      userId: uid, type, title, body,
-      data: { lock_id: job.lock_id }, dedupKey: `${type}:${job.lock_id}:${uid}`,
-    });
+    await dispatchNotification(db, { userId: uid, type, payload: { title, body, data: { lock_id: lockId }, dedup_key: `${type}:${lockId}:${uid}` } });
   }
 }
+
+// Generic deferred notification from payload (job_type 'notify').
+const genericNotify: Handler = async (db, job) => {
+  await dispatchNotification(db, {
+    userId: job.payload.user_id as string,
+    type: job.payload.notification_type as NotificationType,
+    payload: (job.payload.notification_payload as Record<string, unknown>) ?? {},
+  });
+};
 
 export const HANDLERS: Record<string, Handler> = {
   offer_expiry: offerExpiry,
   standby_roll: standbyRoll,
-  pending_expiry: pendingExpiry,
-  stale_date_close: staleDateClose,
-  day_of_reconfirm: (db, job) =>
-    notifyBothParties(db, job, 'day_of_reconfirm', 'Confirm your night', 'Still on for tonight? Tap to reconfirm.'),
-  safety_check_in: (db, job) =>
-    notifyBothParties(db, job, 'safety_check_in', 'Checking in', 'You good? Tap to confirm you’re safe.'),
+  // P5/S6 close path (RPC name finalized in S6); call by canonical name.
+  stale_date_close: async (db, job) => { await db.rpc('match_stale_date_close', { p_instance: id(job, 'instance_id') }); },
+  // pending_expiry: P5/S6 reaps an expired pending queue entry (canonical name in S6).
+  pending_expiry: async (db, job) => { await db.rpc('match_expire_pending', { p_queue_entry: id(job, 'queue_entry_id') }); },
+  day_of_reconfirm: (db, job) => notifyLockParties(db, job, 'date_reconfirm', 'Confirm your night', 'Still on for tonight? Tap to reconfirm.'),
+  safety_checkin: (db, job) => notifyLockParties(db, job, 'safety_checkin', 'Checking in', 'You good? Tap to confirm you’re safe.'),
+  reconfirm_timeout: async (db, job) => { await db.rpc('match_reconfirm_timeout', { p_lock: id(job, 'lock_id') }); },
+  bulk_withdraw: async (db, job) => { await db.rpc('match_bulk_withdraw', { p_actor: id(job, 'user_id') }); },
+  chat_purge: async (db, job) => { await db.rpc('chat_purge_thread', { p_thread: id(job, 'thread_id') }); },           // P6/S7
+  rating_window: async (db, job) => { await db.rpc('rating_window_close', { p_lock: id(job, 'lock_id') }); },          // P7/S8
+  deletion_process: async (db, job) => { await db.rpc('process_deletion', { p_user: id(job, 'user_id') }); },          // P9/S10
+  analytics_relay: async (db, job) => { await db.rpc('analytics_relay_drain', { p_batch: job.payload }); },            // P11/S12 owns the body
+  notify: genericNotify,
 };
 ```
+
+> **Note on later-stage RPC names:** `match_stale_date_close`, `match_expire_pending`, `match_reconfirm_timeout`, `match_bulk_withdraw`, `chat_purge_thread`, `rating_window_close`, `process_deletion`, `analytics_relay_drain` are the **callee names P2 dispatches to**; their bodies are owned by S6/S7/S8/S10/S12 respectively. If the owning stage finalizes a different canonical name, update this one dispatch line (a single seam) — never re-add a P2-local stub. The Deno test only asserts the dispatch *call*, so it passes before the callees exist; the e2e SQL (Task 13) exercises only `offer_expiry` against the real S6 RPC once S6 lands.
 
 - [ ] **Step 4: Run test, expect PASS** (`deno test --allow-env supabase/functions/process-jobs/handlers_test.ts`).
 
@@ -1146,157 +1296,404 @@ export const HANDLERS: Record<string, Handler> = {
 
 ```bash
 git add supabase/functions/process-jobs/handlers.ts supabase/functions/process-jobs/handlers_test.ts
-git commit -m "P2: job handlers (offer_expiry/standby_roll/.../safety_check_in) + P5 enqueue seam"
+git commit -m "P2/S2: job dispatch table → canonical consumer RPCs (offer_expiry→match_expire_offer; no p5_* stubs)"
 ```
 
 ---
 
-## Task 10: P5-hook stub RPCs (`p5_promote_standby`, `p5_reap_pending`)
+## Task 11: `feature_config` + `offer_expires_at()` (C11.1, band `123800`)
 
 **Files:**
-- Create: `supabase/migrations/20260525130700_p2_p5_hooks.sql`
-- Test: `supabase/tests/p2_p5_hooks.sql`
+- Create: `supabase/migrations/20260525123800_p2_feature_config.sql`
+- Test: `supabase/tests/p2_feature_config.sql`
 
-**Design:** P2 must not implement loop transitions, but the handlers above call two RPCs. We ship them as **documented no-op stubs** returning `null` so (a) the runner is fully exercisable end-to-end now, and (b) P5 replaces the bodies (promote the next standby / reap an expired pending entry) without changing the runner or handlers. This is the clean interface boundary the roadmap requires ("define how loop transitions enqueue jobs/notifications via a clean interface").
+> **Conformance:** Owned here (C11.1) because P5 (band `126xxx`) depends on it. Exact C11.1 DDL + helper. P5's `match_make_offer` sets `expires_at := offer_expires_at()` — **no hardcoded 24h anywhere** (CV8). Clamp 12–72h, DST-safe via `make_interval`.
 
-- [ ] **Step 1: Write the failing test** (both stubs exist and return null)
+- [ ] **Step 1: Write the failing test** (config row seeded; helper returns a clamped, DST-safe future ts)
 
 ```sql
--- supabase/tests/p2_p5_hooks.sql
+-- supabase/tests/p2_feature_config.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
-DECLARE a json; b json;
+DECLARE base timestamptz := '2026-05-25 12:00:00+00'; got timestamptz; hours numeric;
 BEGIN
-  a := p5_promote_standby(gen_random_uuid());
-  b := p5_reap_pending(gen_random_uuid());
-  IF a IS NOT NULL THEN RAISE EXCEPTION 'p5_promote_standby stub should return null'; END IF;
-  IF b IS NOT NULL THEN RAISE EXCEPTION 'p5_reap_pending stub should return null'; END IF;
-  RAISE NOTICE 'p5 hook stubs OK';
+  PERFORM 1 FROM feature_config WHERE key='offer_window_hours';
+  IF NOT FOUND THEN RAISE EXCEPTION 'feature_config offer_window_hours seed missing'; END IF;
+  got := offer_expires_at(base);
+  hours := extract(epoch from (got - base)) / 3600;
+  IF hours < 12 OR hours > 72 THEN RAISE EXCEPTION 'offer_expires_at out of 12-72h clamp: %', hours; END IF;
+  RAISE NOTICE 'feature_config OK (% hours)', hours;
 END $$;
 ```
 
-- [ ] **Step 2: Run it, expect FAIL** (`function p5_promote_standby(...) does not exist`).
+- [ ] **Step 2: Run it, expect FAIL.**
 
-- [ ] **Step 3: Write the migration**
+- [ ] **Step 3: Write the migration** (C11.1 verbatim)
 
 ```sql
--- supabase/migrations/20260525130700_p2_p5_hooks.sql
--- P5-transition seam. P2 ships these as no-op stubs so the scheduler/notification
--- backbone is fully testable today. P5 (matching state machine) REPLACES the
--- bodies with the real promotion/reaping transactions (which must also append to
--- audit_log and respect the §7.6 safety-freeze rules). The runner + handlers call
--- these by name and never change.
+-- supabase/migrations/20260525123800_p2_feature_config.sql
+-- feature_config + offer_expires_at() (INTEGRATION-CONTRACT C11.1). Owned by P2
+-- (band 123800) because P5 (band 126xxx) depends on these. P5's match_make_offer
+-- uses offer_expires_at() — no hardcoded 24h.
 
-create or replace function p5_promote_standby(p_date_instance_id uuid)
-returns json
-language plpgsql security definer set search_path = public as $fn$
-begin
-  -- P5 TODO: select the next 'standby' queue_entry for this instance (ordered),
-  -- create a fresh offer (respecting the one-active-offer invariant), enqueue an
-  -- offer_expiry job for its window, write audit_log, and return
-  -- json_build_object('candidate_id', <uuid>). For now: no-op.
-  return null;
-end $fn$;
+create table feature_config (
+  key text primary key, value jsonb not null,
+  updated_at timestamptz not null default now() );
+insert into feature_config(key,value) values ('offer_window_hours','24'::jsonb) on conflict do nothing;
 
-create or replace function p5_reap_pending(p_queue_entry_id uuid)
-returns json
-language plpgsql security definer set search_path = public as $fn$
-begin
-  -- P5 TODO: transition the queue_entry to 'offer_expired'/removed per §7.3,
-  -- write audit_log, return json_build_object('candidate_id', <uuid>). For now: no-op.
-  return null;
-end $fn$;
+create or replace function offer_expires_at(p_from timestamptz default now()) returns timestamptz
+language sql stable as $$
+  select p_from + make_interval(hours =>
+    greatest(12, least(72, (select (value#>>'{}')::int from feature_config where key='offer_window_hours'))) ) $$;
 
-revoke all on function p5_promote_standby(uuid) from anon, authenticated;
-revoke all on function p5_reap_pending(uuid) from anon, authenticated;
+alter table feature_config enable row level security;
+-- service-role + admin writes only (admin RLS added by P8/S9); no anon/authenticated.
 ```
 
-- [ ] **Step 4: Apply + run test, expect PASS** (prints `p5 hook stubs OK`).
+- [ ] **Step 4: Apply + run test, expect PASS.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130700_p2_p5_hooks.sql supabase/tests/p2_p5_hooks.sql
-git commit -m "P2: P5-transition hook stubs (p5_promote_standby, p5_reap_pending) — clean seam"
+git add supabase/migrations/20260525123800_p2_feature_config.sql supabase/tests/p2_feature_config.sql
+git commit -m "P2/S2: feature_config + offer_expires_at() (C11.1)"
 ```
 
 ---
 
-## Task 11: `process-jobs/index.ts` — the runner Edge Function
+## Task 12: `analytics_events` outbox table (C11.8, band `123900`)
+
+**Files:**
+- Create: `supabase/migrations/20260525123900_p2_analytics_events.sql`
+- Test: `supabase/tests/p2_analytics_events.sql`
+
+> **Conformance:** C11.8 — the **table** is created here (band `123900`) so P5/P2 can emit into it. The **`analytics_relay` job handler + retention (30d purge) are P11/S12** — referenced, not built here (Task 10's `analytics_relay` dispatch points at P11's `analytics_relay_drain`). Append-only outbox.
+
+- [ ] **Step 1: Write the failing test** (table exists, append-only shape)
+
+```sql
+-- supabase/tests/p2_analytics_events.sql
+\i 'supabase/tests/_fixtures.sql'
+DO $$
+BEGIN
+  PERFORM 1 FROM pg_tables WHERE tablename='analytics_events' AND rowsecurity=true;
+  IF NOT FOUND THEN RAISE EXCEPTION 'analytics_events missing or RLS off'; END IF;
+  PERFORM 1 FROM information_schema.columns WHERE table_name='analytics_events' AND column_name='event_name';
+  IF NOT FOUND THEN RAISE EXCEPTION 'analytics_events.event_name missing'; END IF;
+  PERFORM 1 FROM information_schema.columns WHERE table_name='analytics_events' AND column_name='relayed_at';
+  IF NOT FOUND THEN RAISE EXCEPTION 'analytics_events.relayed_at (drain marker) missing'; END IF;
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL.**
+
+- [ ] **Step 3: Write the migration**
+
+```sql
+-- supabase/migrations/20260525123900_p2_analytics_events.sql
+-- Append-only analytics outbox (INTEGRATION-CONTRACT C11.8). The table is owned by
+-- P2 (band 123900) so P5/P2 can emit. The analytics_relay job handler that drains
+-- this to PostHog + the 30-day retention purge are P11/S12 (referenced in handlers.ts
+-- via analytics_relay_drain). Every C2 transition emits a row here (C2/C8).
+
+create table analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_name text not null,
+  distinct_id uuid,                 -- user (nullable for system events)
+  properties jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  relayed_at timestamptz            -- set by P11's analytics_relay drain; null = pending
+);
+create index analytics_events_pending_idx on analytics_events (created_at) where relayed_at is null;
+
+alter table analytics_events enable row level security;
+-- service-role only (emit + drain); no anon/authenticated.
+
+-- emit_analytics(event_name, distinct_id, properties) — convenience writer C2 uses.
+create or replace function emit_analytics(p_event text, p_distinct_id uuid, p_props jsonb default '{}')
+returns uuid language plpgsql security definer set search_path = public as $fn$
+declare v_id uuid;
+begin
+  insert into analytics_events (event_name, distinct_id, properties)
+  values (p_event, p_distinct_id, coalesce(p_props,'{}')) returning id into v_id;
+  return v_id;
+end $fn$;
+revoke execute on function emit_analytics(text, uuid, jsonb) from public, authenticated;
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525123900_p2_analytics_events.sql supabase/tests/p2_analytics_events.sql
+git commit -m "P2/S2: analytics_events outbox table + emit_analytics (drain handler = P11/S12) (C11.8)"
+```
+
+---
+
+## Task 13: `can_enter_lock_flow(p_user)` gate (C3, band `123500`)
+
+**Files:**
+- Create: `supabase/migrations/20260525123500_p2_can_enter_lock_flow.sql`
+- Test: `supabase/tests/p2_can_enter_lock_flow.sql`
+
+> **Conformance:** C3 — defined here (S2) so S6/P5 can call it before S8 ships the standing ladder (per master plan §6). Reads `profiles.account_state` + `profiles.standing` + `rollover_frozen` (columns added in S1). Returns true iff `account_state='active' AND standing NOT IN ('cooldown','locked_ban','suspended') AND NOT rollover_frozen` (C3). P5's `match_make_offer`/`match_accept_offer` MUST call it (C2). A `paused` user returns false (C11.9 — cannot create/accept new offers). **Depends on:** S1 `profiles.account_state` (`account_lifecycle`), `profiles.standing` (`standing_state`), `profiles.rollover_frozen`.
+
+- [ ] **Step 1: Write the failing test** (active+good → true; paused → false; cooldown → false; suspended → false)
+
+```sql
+-- supabase/tests/p2_can_enter_lock_flow.sql
+\i 'supabase/tests/_fixtures.sql'
+DO $$
+DECLARE u uuid;
+BEGIN
+  u := mk_user('gate');
+  -- defaults (S1): account_state='active', standing='good', rollover_frozen=false
+  IF NOT can_enter_lock_flow(u) THEN RAISE EXCEPTION 'active+good should pass gate'; END IF;
+
+  update profiles set account_state='paused' where id=u;
+  IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'paused must fail gate (C11.9)'; END IF;
+
+  update profiles set account_state='active', standing='cooldown' where id=u;
+  IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'cooldown must fail gate'; END IF;
+
+  update profiles set standing='suspended' where id=u;
+  IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'suspended must fail gate'; END IF;
+
+  update profiles set standing='good', rollover_frozen=true where id=u;
+  IF can_enter_lock_flow(u) THEN RAISE EXCEPTION 'rollover_frozen must fail gate'; END IF;
+  RAISE NOTICE 'can_enter_lock_flow OK';
+  ROLLBACK;
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL.**
+
+- [ ] **Step 3: Write the migration**
+
+```sql
+-- supabase/migrations/20260525123500_p2_can_enter_lock_flow.sql
+-- P5 lock-flow gate (INTEGRATION-CONTRACT C3). Defined in S2 so S6/P5 can call it
+-- before S8 ships the standing ladder. Reads the two orthogonal C3 fields on
+-- profiles (account_state owner P9/S10; standing owner P7/S8) + rollover_frozen,
+-- all added in S1. P5's match_make_offer/match_accept_offer MUST call it (C2).
+
+create or replace function can_enter_lock_flow(p_user uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from profiles
+     where id = p_user
+       and account_state = 'active'
+       and standing not in ('cooldown','locked_ban','suspended')
+       and coalesce(rollover_frozen, false) = false
+  );
+$$;
+-- predicate read by P5 RPCs (SECURITY DEFINER); keep grant-revoked from direct callers.
+revoke execute on function can_enter_lock_flow(uuid) from public, authenticated;
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525123500_p2_can_enter_lock_flow.sql supabase/tests/p2_can_enter_lock_flow.sql
+git commit -m "P2/S2: can_enter_lock_flow gate reading account_state+standing+rollover_frozen (C3)"
+```
+
+---
+
+## Task 14: chat-core primitives (C11.7, band `124500`)
+
+**Files:**
+- Create: `supabase/migrations/20260525124500_p2_chat_core.sql`
+- Test: `supabase/tests/p2_chat_core.sql`
+
+> **Conformance:** C11.7 — the chat **thread table + `open_chat_thread`/`close_chat_thread`/`promote_chat_thread_to_lock`/`chat_lock_ready`** ship in this early **chat-core** slice at band `124500` (before P5's `126xxx`) so P5's tests can call them. **P6's rich messaging/retention/moderation stays in P6's band `127xxx` (S7)** — only the four primitives + the thread table are here. Signatures (C2/C9): `open_chat_thread(p_offer uuid)`, `chat_lock_ready(p_thread uuid) returns bool`, `promote_chat_thread_to_lock(p_offer uuid, p_lock uuid)`, `close_chat_thread(p_offer uuid)`. `match_reveal_allowed` (C2) is the reveal predicate — chat-core does NOT define a competing one (C9). FK/legal-hold posture (C9): threads survive profile delete (tombstone, not cascade) and carry `revoked_at`; held threads exempt from purge (P9/S10). **Depends on:** S1 `offers`/`locks` tables.
+
+- [ ] **Step 1: Write the failing test** (open creates thread; chat_lock_ready predicate; promote attaches lock; close marks closed)
+
+```sql
+-- supabase/tests/p2_chat_core.sql
+\i 'supabase/tests/_fixtures.sql'
+DO $$
+DECLARE thr uuid; ready boolean;
+BEGIN
+  -- the four primitives must exist with the C2/C9 signatures
+  PERFORM 1 FROM pg_proc WHERE proname='open_chat_thread';
+  IF NOT FOUND THEN RAISE EXCEPTION 'open_chat_thread missing'; END IF;
+  PERFORM 1 FROM pg_proc WHERE proname='close_chat_thread';
+  IF NOT FOUND THEN RAISE EXCEPTION 'close_chat_thread missing'; END IF;
+  PERFORM 1 FROM pg_proc WHERE proname='promote_chat_thread_to_lock';
+  IF NOT FOUND THEN RAISE EXCEPTION 'promote_chat_thread_to_lock missing'; END IF;
+  PERFORM 1 FROM pg_proc WHERE proname='chat_lock_ready';
+  IF NOT FOUND THEN RAISE EXCEPTION 'chat_lock_ready missing'; END IF;
+  -- thread table survives profile delete (tombstone) → has revoked_at, no cascade-only design
+  PERFORM 1 FROM information_schema.columns WHERE table_name='chat_threads' AND column_name='revoked_at';
+  IF NOT FOUND THEN RAISE EXCEPTION 'chat_threads.revoked_at missing (C9 legal-hold)'; END IF;
+  RAISE NOTICE 'chat-core primitives OK';
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL.**
+
+- [ ] **Step 3: Write the migration**
+
+```sql
+-- supabase/migrations/20260525124500_p2_chat_core.sql
+-- Chat-core slice (INTEGRATION-CONTRACT C11.7). Ships at band 124500 (before P5
+-- 126xxx) so P5's tests can call open_chat_thread/chat_lock_ready/promote/close.
+-- P6's rich messaging/retention/moderation lands later in S7 (band 127xxx) on top
+-- of this table. P5 calls these per C2. Reveal predicate is match_reveal_allowed
+-- (C2/C9) — chat-core does NOT define a competing reveal. Legal-hold posture (C9):
+-- thread survives profile delete (tombstone), carries revoked_at; held threads
+-- exempt from purge (P9/S10).
+
+create table chat_threads (
+  id uuid primary key default gen_random_uuid(),
+  offer_id uuid not null references offers(id) on delete cascade,
+  lock_id uuid references locks(id) on delete set null,
+  state text not null default 'open' check (state in ('open','promoted','closed')),
+  both_ready boolean not null default false,   -- rapport gate (S7 sets via real messaging)
+  legal_hold boolean not null default false,   -- P9/S10 sets; exempts from purge
+  revoked_at timestamptz,                      -- C9 tombstone marker
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index chat_threads_offer_uniq on chat_threads (offer_id);
+create index chat_threads_lock_idx on chat_threads (lock_id);
+
+create trigger set_chat_threads_updated_at before update on chat_threads
+  for each row execute function set_updated_at();
+
+alter table chat_threads enable row level security;
+-- Participant-read RLS is added by P6/S7 (it joins offer→participants). For S2,
+-- service-role only (P5 RPCs are SECURITY DEFINER). No anon/authenticated writes.
+
+-- open_chat_thread(p_offer): called by match_make_offer (C2). Idempotent.
+create or replace function open_chat_thread(p_offer uuid) returns uuid
+language plpgsql security definer set search_path = public as $fn$
+declare v_id uuid;
+begin
+  insert into chat_threads (offer_id) values (p_offer)
+  on conflict (offer_id) do update set updated_at = now()
+  returning id into v_id;
+  return v_id;
+end $fn$;
+
+-- chat_lock_ready(p_thread): the lock gate (C2). True iff both parties have built
+-- enough rapport (S7 messaging flips both_ready) OR a mutual override applies.
+create or replace function chat_lock_ready(p_thread uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select both_ready from chat_threads where id = p_thread), false);
+$$;
+
+-- promote_chat_thread_to_lock(p_offer, p_lock): on accept (C2).
+create or replace function promote_chat_thread_to_lock(p_offer uuid, p_lock uuid) returns void
+language plpgsql security definer set search_path = public as $fn$
+begin
+  update chat_threads set lock_id = p_lock, state = 'promoted', updated_at = now()
+   where offer_id = p_offer;
+end $fn$;
+
+-- close_chat_thread(p_offer): on pass/expire (C2). Held threads are NOT purged
+-- (P9/S10 honors legal_hold); closing just marks state.
+create or replace function close_chat_thread(p_offer uuid) returns void
+language plpgsql security definer set search_path = public as $fn$
+begin
+  update chat_threads set state = 'closed', revoked_at = coalesce(revoked_at, now()), updated_at = now()
+   where offer_id = p_offer and not legal_hold;
+end $fn$;
+
+revoke execute on function open_chat_thread(uuid) from public, authenticated;
+revoke execute on function chat_lock_ready(uuid) from public, authenticated;
+revoke execute on function promote_chat_thread_to_lock(uuid, uuid) from public, authenticated;
+revoke execute on function close_chat_thread(uuid) from public, authenticated;
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525124500_p2_chat_core.sql supabase/tests/p2_chat_core.sql
+git commit -m "P2/S2: chat-core primitives (open/close/promote/chat_lock_ready) at band 124500 (C11.7)"
+```
+
+---
+
+## Task 15: `process-jobs/index.ts` — the runner Edge Function
 
 **Files:**
 - Create: `supabase/functions/process-jobs/index.ts`
 - Modify: `supabase/config.toml` (register `[functions.process-jobs]`)
 
-**Design:** A `serve` handler that (1) authenticates the caller via a shared `JOBS_RUNNER_SECRET` header (the cron route holds the same secret — defense-in-depth on top of `verify_jwt=false`), (2) calls `requeue_stuck_jobs()`, (3) calls `claim_due_jobs(limit)`, (4) for each claimed job runs `HANDLERS[job.job_type]` and then `complete_job`/`fail_job`, (5) returns a JSON summary `{ claimed, done, failed }`. Service-role client (bypasses RLS). Bounded per-tick `limit` so a single invocation finishes well under the 150s Edge wall-clock; the every-minute cron drains the backlog across ticks.
+**Design:** A `serve` handler that (1) authenticates via a shared `JOBS_RUNNER_SECRET` header, (2) calls `requeue_stuck_jobs()`, (3) calls `claim_due_jobs(limit)`, (4) for each claimed job runs `HANDLERS[job.type]` then `complete_job`/`fail_job`, (5) returns `{ claimed, done, failed }`. Service-role client. Bounded per-tick limit so a single invocation finishes well under the 150s Edge wall-clock; the every-minute cron drains the backlog.
 
-- [ ] **Step 1: Write the migration/config + a structural test via the existing config**
+> **Conformance:** dispatch keys on `job.type` (the C1 column), and a failed job dead-letters at `attempts>=5` (C1, via `fail_job`). A dead-lettered **safety** job is not silent — `fail_job` failures of `safety_checkin` jobs are surfaced via `raise_admin_alert` in the runner's catch path (closes the audit "failed safety job dies quietly" gap).
 
-There is no failing-test harness for the Edge entrypoint's HTTP shell (it's network/orchestration glue covered by the handler/notify unit tests + the integration test in Task 13). Register the function and assert it boots.
+- [ ] **Step 1: Register the function + assert it boots** (no failing-test harness for the HTTP shell; covered by handler/notify unit tests + the e2e in Task 17).
 
 - [ ] **Step 2: Write the Edge Function**
 
 ```ts
 // supabase/functions/process-jobs/index.ts
-// The scheduler runner. Invoked every minute by /api/cron/process-jobs (Vercel
-// cron). Claims due jobs, runs handlers, completes/fails them. Service-role.
-//
-// Auth: requires header `x-jobs-secret: ${JOBS_RUNNER_SECRET}`. The cron route
-// holds the same secret. verify_jwt is false (config.toml) because this is an
-// internal service-to-service call, not a user request.
+// The scheduler runner (INTEGRATION-CONTRACT C1). Invoked every minute by
+// /api/cron/process-jobs. Claims due jobs, dispatches by job.type, completes/fails.
+// Service-role. Auth: header `x-jobs-secret: ${JOBS_RUNNER_SECRET}`. verify_jwt=false
+// (config.toml) because this is service-to-service.
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { HANDLERS, type Job } from './handlers.ts';
 
-const CLAIM_LIMIT = 50; // per tick; every-minute cron drains larger backlogs
+const CLAIM_LIMIT = 50;
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   const expected = Deno.env.get('JOBS_RUNNER_SECRET');
-  if (!expected || req.headers.get('x-jobs-secret') !== expected) {
-    return json({ error: 'unauthorized' }, 401);
-  }
+  if (!expected || req.headers.get('x-jobs-secret') !== expected) return json({ error: 'unauthorized' }, 401);
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  // 1. crash recovery: return long-stuck 'running' jobs to 'pending'
   await supabase.rpc('requeue_stuck_jobs', {});
-
-  // 2. claim a bounded batch of due jobs
   const { data: claimed, error: claimErr } = await supabase.rpc('claim_due_jobs', { p_limit: CLAIM_LIMIT });
   if (claimErr) return json({ error: 'claim_failed', details: claimErr.message }, 500);
   const jobs = (claimed ?? []) as Job[];
 
   let done = 0, failed = 0;
   for (const job of jobs) {
-    const handler = HANDLERS[job.job_type];
+    const handler = HANDLERS[job.type];
     try {
-      if (!handler) throw new Error(`no handler for ${job.job_type}`);
+      if (!handler) throw new Error(`no handler for ${job.type}`);
       await handler(supabase, job);
       await supabase.rpc('complete_job', { p_id: job.id });
       done++;
     } catch (e) {
       await supabase.rpc('fail_job', { p_id: job.id, p_error: String(e) });
+      // Safety jobs never fail silently — surface the failure to ops (C11.8).
+      if (job.type === 'safety_checkin') {
+        await supabase.rpc('raise_admin_alert', {
+          p_kind: 'safety_job_failed', p_payload: { job_id: job.id, error: String(e) },
+        });
+      }
       failed++;
     }
   }
-
   return json({ claimed: jobs.length, done, failed });
 });
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status, headers: { ...corsHeaders, 'content-type': 'application/json' },
-  });
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'content-type': 'application/json' } });
 }
 ```
 
-- [ ] **Step 3: Register the function in `supabase/config.toml`** (add near the existing `[functions.generate-plan]` block):
+- [ ] **Step 3: Register the function in `supabase/config.toml`** (near `[functions.generate-plan]`):
 
 ```toml
 [functions.process-jobs]
@@ -1305,29 +1702,31 @@ verify_jwt = false
 
 - [ ] **Step 4: Verify it boots locally**
 
-Run: `supabase functions serve process-jobs --no-verify-jwt` (in one shell), then in another:
+Run: `supabase functions serve process-jobs --no-verify-jwt`, then:
 `curl -s -X POST http://127.0.0.1:54321/functions/v1/process-jobs -H "x-jobs-secret: wrong"` → expect `401`.
-With the correct `JOBS_RUNNER_SECRET` env set: returns `{ "claimed": 0, "done": 0, "failed": 0 }` against an empty queue.
+With the correct `JOBS_RUNNER_SECRET`: `{ "claimed": 0, "done": 0, "failed": 0 }` against an empty queue.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add supabase/functions/process-jobs/index.ts supabase/config.toml
-git commit -m "P2: process-jobs runner Edge Function (claim/dispatch/complete) + config registration"
+git commit -m "P2/S2: process-jobs runner (claim/dispatch-by-type/complete; safety dead-letter alerts)"
 ```
 
 ---
 
-## Task 12: `/api/cron/process-jobs` Vercel cron route + every-minute schedule
+## Task 16: `/api/cron/process-jobs` Vercel cron route + every-minute schedule
 
 **Files:**
 - Create: `apps/web/app/api/cron/process-jobs/route.ts`
 - Create: `apps/web/app/api/cron/process-jobs/route.test.ts`
 - Modify: `apps/web/vercel.json` (add the cron entry)
 
-**Design:** Mirror the two existing cron routes' `CRON_SECRET` bearer auth, then invoke the `process-jobs` Edge Function with the `JOBS_RUNNER_SECRET` header. Thin proxy — the route does no DB work itself (keeps the every-minute Vercel invocation cheap; the Edge Function does the claiming under the 150s budget). `?dry_run=true` returns without invoking (parity with existing crons).
+**Design:** Mirror the existing cron routes' `CRON_SECRET` bearer auth, then invoke the `process-jobs` Edge Function with the `JOBS_RUNNER_SECRET` header. Thin proxy (route does no DB work; the Edge Function claims under the 150s budget). `?dry_run=true` returns without invoking.
 
-- [ ] **Step 1: Write the failing test** (vitest; assume P1 configured vitest in `apps/web`)
+> **Conformance (C10):** This test uses the **root** `vitest.config.ts` owned by P1/S3 (`pnpm test`). P2 does **not** create a local vitest config (DS4 — five duplicate configs collapsed to P1's root). If the root config does not yet exist when this stage runs, it is a P1/S3 prerequisite, not a P2 deliverable.
+
+- [ ] **Step 1: Write the failing test** (vitest; root config)
 
 ```ts
 // apps/web/app/api/cron/process-jobs/route.test.ts
@@ -1355,9 +1754,7 @@ describe('/api/cron/process-jobs', () => {
   it('invokes the process-jobs edge function with the runner secret', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ claimed: 2, done: 2, failed: 0 }), { status: 200 }));
     const { GET } = await import('./route');
-    const res = await GET(new Request('https://app/api/cron/process-jobs', {
-      headers: { authorization: 'Bearer cron-secret' },
-    }));
+    const res = await GET(new Request('https://app/api/cron/process-jobs', { headers: { authorization: 'Bearer cron-secret' } }));
     expect(res.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledOnce();
     const [, init] = fetchMock.mock.calls[0];
@@ -1366,10 +1763,7 @@ describe('/api/cron/process-jobs', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect FAIL**
-
-Run: `pnpm --filter @after5/web test app/api/cron/process-jobs/route.test.ts`
-Expected: FAIL — cannot resolve `./route`.
+- [ ] **Step 2: Run it, expect FAIL** — `pnpm test apps/web/app/api/cron/process-jobs/route.test.ts` cannot resolve `./route`.
 
 - [ ] **Step 3: Write the route**
 
@@ -1377,10 +1771,7 @@ Expected: FAIL — cannot resolve `./route`.
 // apps/web/app/api/cron/process-jobs/route.ts
 // /api/cron/process-jobs — fires from Vercel Cron every minute (see vercel.json).
 // Thin proxy: authenticates the cron call, then invokes the process-jobs Edge
-// Function (which claims & runs due jobs). Keeps the per-minute Vercel hit cheap.
-//
-// Auth: Authorization: Bearer ${CRON_SECRET} (Vercel sends automatically) OR
-// ?secret=... for manual trigger. ?dry_run=true returns without invoking.
+// Function. Auth: Authorization: Bearer ${CRON_SECRET} OR ?secret=. ?dry_run=true skips.
 
 import { NextResponse } from 'next/server';
 
@@ -1389,28 +1780,20 @@ export const maxDuration = 60;
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-  }
+  if (!expected) return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+
   const url = new URL(request.url);
   const authHeader = request.headers.get('authorization');
   const querySecret = url.searchParams.get('secret');
   const ok = authHeader === `Bearer ${expected}` || querySecret === expected;
-  if (!ok) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
+  if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  if (url.searchParams.get('dry_run') === 'true') {
-    return NextResponse.json({ dry_run: true, invoked: false });
-  }
+  if (url.searchParams.get('dry_run') === 'true') return NextResponse.json({ dry_run: true, invoked: false });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const runnerSecret = process.env.JOBS_RUNNER_SECRET;
   if (!supabaseUrl || !runnerSecret) {
-    return NextResponse.json(
-      { error: 'NEXT_PUBLIC_SUPABASE_URL or JOBS_RUNNER_SECRET missing' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'NEXT_PUBLIC_SUPABASE_URL or JOBS_RUNNER_SECRET missing' }, { status: 500 });
   }
 
   const res = await fetch(`${supabaseUrl}/functions/v1/process-jobs`, {
@@ -1440,103 +1823,85 @@ export async function GET(request: Request) {
 }
 ```
 
-> Note: every-minute crons require a Vercel Pro plan (Hobby caps cron frequency). State this as an assumption (see Self-Review). If only Hobby is available, fall back to `*/1` not being honored — the alternative is `pg_cron` calling the Edge Function via `net.http_post`; documented as the fallback, not the default.
+> **Assumption:** every-minute crons require Vercel Pro. Documented fallback: `pg_cron` + `net.http_post` invoking the same Edge Function. A cron-heartbeat alert (no tick in N minutes → `raise_admin_alert`) is a recommended follow-up (referenced; not in P2 scope unless S12 observability picks it up).
 
-- [ ] **Step 5: Run test, expect PASS**
-
-Run: `pnpm --filter @after5/web test app/api/cron/process-jobs/route.test.ts`
-Expected: both tests pass.
+- [ ] **Step 5: Run test, expect PASS** — `pnpm test apps/web/app/api/cron/process-jobs/route.test.ts`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add apps/web/app/api/cron/process-jobs/route.ts apps/web/app/api/cron/process-jobs/route.test.ts apps/web/vercel.json
-git commit -m "P2: every-minute Vercel cron route invoking process-jobs runner (CRON_SECRET auth)"
+git commit -m "P2/S2: every-minute Vercel cron route invoking process-jobs (root vitest config, C10)"
 ```
 
 ---
 
-## Task 13: End-to-end integration test (offer expiry → notification log)
+## Task 17: End-to-end integration test (jobs + dispatch compose; offer_expiry seam)
 
 **Files:**
-- Create: `supabase/tests/p2_e2e_offer_expiry.sql`
+- Create: `supabase/tests/p2_e2e_jobs_dispatch.sql`
 
-**Design:** A psql integration test that exercises the *DB-side* of the full path without the network: seed a profile + city + itinerary + date_instance + an `active` offer with `expires_at` in the past; enqueue an `offer_expiry` job due now; simulate the runner's DB calls (`claim_due_jobs`, then the SQL the `offer_expiry` handler performs: mark expired, `dispatch_notification`, `enqueue_job('standby_roll')`, `complete_job`); assert the offer is `expired`, a `notifications` row of type `offer_expired` exists, a `standby_roll` job was enqueued, and the original job is `done`. (The Deno handler test in Task 9 covers the JS dispatch logic; this proves the SQL contracts compose.)
+**Design:** A psql integration test that exercises the DB-side contracts without the network, using `mk_*` fixtures (C8): enqueue + claim + cancel; dispatch a safety notification with no device and assert the fail-loud `admin_alerts` row; assert the `offer_expiry` job is enqueued/claimable and that completing it via `complete_job` works.
+
+> **Conformance:** The `offer_expiry` handler body calls P5's `match_expire_offer` (C2), which does not exist until S6. So this e2e proves the **P2-owned** contracts (enqueue/claim/cancel/dispatch/fail-loud) compose; the full offer→expire→auto-roll path is proven in S6's tests once `match_expire_offer` lands. **Depends on:** S6 for the end-to-end offer-expiry behavior.
 
 - [ ] **Step 1: Write the test**
 
 ```sql
--- supabase/tests/p2_e2e_offer_expiry.sql
+-- supabase/tests/p2_e2e_jobs_dispatch.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
-DECLARE cre uuid; cand uuid; cid uuid; inst uuid; off uuid; j uuid;
-        claimed_id uuid; res json; n int;
+DECLARE u uuid; j uuid; claimed_id uuid; res json; n int; alerts int; cancelled int;
 BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(),'cre') returning id into cre;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'cand') returning id into cand;
-  insert into cities (slug,name,timezone,is_active) values ('e2e','e2e','UTC',true)
-    on conflict (slug) do nothing;
-  select id into cid from cities where slug='e2e';
-  insert into itineraries (id,user_id) values (gen_random_uuid(),cre);
-  insert into date_instances (itinerary_id,creator_id,city_id,starts_at)
-    select i.id,cre,cid, now()+interval '2 days' from itineraries i where i.user_id=cre limit 1
-    returning id into inst;
-  insert into offers (date_instance_id,candidate_id,creator_id,status,expires_at)
-    values (inst,cand,cre,'active', now()-interval '1 minute') returning id into off;
+  u := mk_user('e2e');
 
-  -- enqueue the timer (due now)
-  j := enqueue_job('offer_expiry', now()-interval '1 second', p_offer_id := off,
-                   p_dedup_key := 'offer_expiry:'||off::text);
-
-  -- runner: claim
+  -- enqueue an offer_expiry timer (entity ids in payload, C1)
+  j := enqueue_job('offer_expiry', now()-interval '1 second',
+                   jsonb_build_object('offer_id', gen_random_uuid()), 'offer_expiry:e2e');
   select id into claimed_id from claim_due_jobs(10) limit 1;
   IF claimed_id <> j THEN RAISE EXCEPTION 'claim returned wrong job'; END IF;
-
-  -- handler effect (mirrors handlers.ts offer_expiry):
-  update offers set status='expired', resolved_at=now() where id=off and status='active';
-  res := dispatch_notification(cand, 'offer_expired', 'Offer expired',
-           'Your lock offer expired.', json_build_object('offer_id', off)::jsonb,
-           p_dedup_key := 'offer_expired:'||off::text);
-  PERFORM enqueue_job('standby_roll', now(), p_date_instance_id := inst,
-                      p_dedup_key := 'standby_roll:'||inst::text);
   PERFORM complete_job(j);
-
-  -- assertions
-  PERFORM 1 FROM offers WHERE id=off AND status='expired';
-  IF NOT FOUND THEN RAISE EXCEPTION 'offer not expired'; END IF;
-  SELECT count(*) INTO n FROM notifications WHERE user_id=cand AND type='offer_expired';
-  IF n <> 1 THEN RAISE EXCEPTION 'expected 1 offer_expired notif, got %', n; END IF;
-  PERFORM 1 FROM jobs WHERE job_type='standby_roll' AND date_instance_id=inst AND status='pending';
-  IF NOT FOUND THEN RAISE EXCEPTION 'standby_roll not enqueued'; END IF;
   PERFORM 1 FROM jobs WHERE id=j AND status='done';
   IF NOT FOUND THEN RAISE EXCEPTION 'offer_expiry job not done'; END IF;
-  RAISE NOTICE 'p2 e2e offer_expiry OK';
+
+  -- cancel_jobs no-ops on an already-resolved key, cancels a fresh pending one
+  PERFORM enqueue_job('offer_expiry', now()+interval '1 hour', '{}'::jsonb, 'cancel:e2e');
+  cancelled := cancel_jobs('offer_expiry', 'cancel:e2e');
+  IF cancelled <> 1 THEN RAISE EXCEPTION 'cancel_jobs expected 1, got %', cancelled; END IF;
+
+  -- safety dispatch with NO device → fail loud (admin_alert + admin_alerts row)
+  SELECT count(*) INTO alerts FROM admin_alerts WHERE kind='safety_no_device';
+  res := dispatch_notification(u, 'safety_checkin',
+           json_build_object('title','Check in','body','You ok?','dedup_key','e2e:safe')::jsonb);
+  IF (res->>'channel') <> 'admin_alert' THEN RAISE EXCEPTION 'safety w/ no device not fail-loud: %', res->>'channel'; END IF;
+  SELECT count(*) INTO n FROM admin_alerts WHERE kind='safety_no_device';
+  IF n <> alerts + 1 THEN RAISE EXCEPTION 'fail-loud admin_alert not raised'; END IF;
+
+  RAISE NOTICE 'p2 e2e jobs+dispatch OK';
   ROLLBACK;
 END $$;
 ```
 
-- [ ] **Step 2: Run it, expect PASS** (after Tasks 1–10 migrations applied)
+- [ ] **Step 2: Run it, expect PASS** (after Tasks 1–14 migrations applied)
 
-Run: `supabase db reset && psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f supabase/tests/p2_e2e_offer_expiry.sql`
-Expected: prints `p2 e2e offer_expiry OK`.
+Run: `supabase db reset && psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f supabase/tests/p2_e2e_jobs_dispatch.sql`
+Expected: prints `p2 e2e jobs+dispatch OK`.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/tests/p2_e2e_offer_expiry.sql
-git commit -m "P2: e2e psql test — offer_expiry job drives expire + notif + standby_roll enqueue"
+git add supabase/tests/p2_e2e_jobs_dispatch.sql
+git commit -m "P2/S2: e2e psql — enqueue/claim/cancel + safety fail-loud compose"
 ```
 
 ---
 
-## Task 14: Full reset verification + regenerate types
+## Task 18: Full reset verification + regenerate types
 
 **Files:**
 - Modify: `packages/types/src/database.ts` (regenerated)
 
-- [ ] **Step 1: Full reset (applies every migration + seeds)**
-
-Run: `supabase db reset`
-Expected: completes with no error; all P0 + P2 migrations apply in order.
+- [ ] **Step 1: Full reset** — `supabase db reset`. Expected: all S1 + P2 migrations apply in band order (`123000`→`124500`).
 
 - [ ] **Step 2: Run all P2 psql tests**
 
@@ -1547,66 +1912,55 @@ done
 ```
 Expected: every file exits 0; notices print `… OK`.
 
-- [ ] **Step 3: Run all Deno unit tests**
+- [ ] **Step 3: Run all Deno unit tests** — `deno test --allow-env supabase/functions/_shared/notify_test.ts supabase/functions/process-jobs/handlers_test.ts`. Expected: pass.
 
-Run: `deno test --allow-env supabase/functions/_shared/notify_test.ts supabase/functions/process-jobs/handlers_test.ts`
-Expected: all tests pass.
+- [ ] **Step 4: Run the cron-route vitest** — `pnpm test apps/web/app/api/cron/process-jobs/route.test.ts` (root config). Expected: pass.
 
-- [ ] **Step 4: Run the cron-route vitest**
-
-Run: `pnpm --filter @after5/web test app/api/cron/process-jobs/route.test.ts`
-Expected: pass.
-
-- [ ] **Step 5: Regenerate TypeScript types**
-
-Run: `pnpm db:types`
-Expected: `packages/types/src/database.ts` now includes `jobs`, `devices`, `notification_preferences`, `notifications`, plus the new enums (`job_type`, `job_status`, `device_platform`, `notification_type`, `notification_channel`) and functions (`enqueue_job`, `claim_due_jobs`, `dispatch_notification`, `notification_rate_check`, `p5_promote_standby`, `p5_reap_pending`).
+- [ ] **Step 5: Regenerate TypeScript types** — `pnpm db:types`. Expected: `packages/types/src/database.ts` now includes `jobs`, `devices`, `notification_preferences`, `notifications`, `feature_config`, `analytics_events`, `admin_alerts`, `chat_threads`, the enums (`job_type`, `job_status`, `notification_type`, `notification_channel`), and functions (`enqueue_job`, `cancel_jobs`, `register_device`, `dispatch_notification`, `notification_rate_check`, `offer_expires_at`, `emit_analytics`, `raise_admin_alert`, `can_enter_lock_flow`, `open_chat_thread`, `close_chat_thread`, `promote_chat_thread_to_lock`, `chat_lock_ready`).
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add packages/types/src/database.ts
-git commit -m "P2: regenerate database types for scheduler + notification schema"
+git commit -m "P2/S2: regenerate database types for the async/config/notify/chat-core spine"
 ```
 
 ---
 
 ## Self-Review
 
-**Spec coverage (vs roadmap P2 'Delivers'/'Closes'):**
-- Job/worker layer driving every timer → Task 1 (`jobs` table) + Task 2 (claim/enqueue RPCs) + Task 11 (runner) + Task 12 (cron). The six concrete job types are a frozen enum (Task 1) with handlers (Task 9). ✅
-- offer_expiry → Task 9 handler + Task 13 e2e. ✅
-- standby_roll → Task 9 handler + Task 10 P5 hook. ✅
-- pending_expiry (~30 days) → Task 9 handler + Task 10 P5 hook (the 30-day `run_after` is set by P5 when it enqueues; P2 defines the type + handler). ✅
-- stale_date_close → Task 9 handler (closes unlocked instance). ✅
-- day_of_reconfirm → Task 9 handler (both parties). ✅
-- safety_check_in (~30 min after start) → Task 9 handler (both parties; the +30min `run_after` is set at lock time by P5). ✅
-- Push via Expo (native) + web fallback → Task 8 (`notify.ts` Expo + Web Push + email) + Task 3 (`devices` registry). ✅
-- Notification preferences/consent + opt-outs → Task 4 (`notification_preferences`) enforced in Task 7 (`dispatch_notification` consent gate). ✅
-- Rate limiting reusing `rate_limits` → Task 6 (`notification_rate_check` wraps the existing `rate_limit_check` RPC). ✅
-- Clean interface for P5 to enqueue jobs/notifications → `enqueue_job()` (Task 2) + `dispatch_notification()` (Task 7) + the `p5_promote_standby`/`p5_reap_pending` stubs (Task 10); P5 fills RPC bodies, never touches the runner. ✅
-- Closes "no scheduler / mechanic inert" → the runner + cron make every timer fire (Task 13 proves the path). ✅
-- Closes "no push/consent/rate-limit" → Tasks 3,4,6,7,8. ✅
-- Closes "mobile push dependency" → Expo path is the load-bearing channel; web push is explicit best-effort fallback; safety notifications never suppressed/throttled. ✅
+**Contract conformance (S2 spine, INTEGRATION-CONTRACT C1/C3/C6/C10/C11):**
+- Canonical `jobs` table + 13-value `job_type` + 5-value `job_status` + `enqueue_job`/`cancel_jobs` (C1) → Tasks 1–2. No `kind`/`run_at`/`dedupe_key`/`enqueue` variants. ✅
+- `notifications` + 11-value `notification_type` + `notification_preferences` + `devices` (C11.2) + `register_device` + `dispatch_notification` (consent→quiet→rate→channel; safety fail-loud) (C1, C11.8) → Tasks 3–9. ✅
+- `feature_config` + `offer_expires_at()` (C11.1, band `123800`) → Task 11. ✅
+- `analytics_events` outbox table (C11.8, band `123900`); drain handler = P11/S12 (referenced) → Task 12. ✅
+- `admin_alerts` + ops fail-loud sink (C11.8) → Task 7 + Task 9. ✅
+- `can_enter_lock_flow(p_user)` reading `account_state`+`standing`+`rollover_frozen` (C3) → Task 13. ✅
+- chat-core primitives `open/close/promote_chat_thread_to_lock/chat_lock_ready` at band `124500` (C11.7) → Task 14. ✅
+- Runner dispatches by `job.type`; `offer_expiry`→`match_expire_offer` (C2); **no `p5_*` stubs** → Tasks 10, 15. ✅
+- One anti-storm system (C10/DS1); root vitest config (C10/DS4) → Tasks 6, 16. ✅
+- Migration bands within P2's `123000–1239xx` + chat-core `124500` (C6/C11) → all tasks. ✅
+- Tests via `mk_user`/`mk_itinerary`/`mk_instance` (C8) → all psql tests `\i '_fixtures.sql'`. ✅
 
-**Scheduler mechanism decision:** `jobs` table + every-minute Vercel cron → `process-jobs` Edge Function (claim-and-dispatch). Chosen over Inngest because the timers are minute-granular DB-state transitions (not multi-step external-API workflows), the repo already ships the `/api/cron/*` + service-role pattern, and a Postgres-resident queue is testable with psql like every other invariant. Inngest stays reserved for the v2 content/ingestion pipelines.
+**What this plan deliberately does NOT do (boundary discipline):**
+- No loop transitions (offer/standby/lock state) — those are S6/P5 via the canonical `match_*` RPCs the handlers call.
+- No rich chat messaging/retention/moderation — S7/P6 (band `127xxx`), built on the chat-core thread table here.
+- No `analytics_relay` drain handler / PostHog client — S12/P11.
+- No standing ladder writes — S8/P7 (this stage only ships the gate that reads `standing`).
+- No second `jobs`/`browse_feed`/reveal/demand/vitest/state-model — references only (C10 rule 3).
 
-**Push provider decision:** Expo Push (single endpoint brokering APNs+FCM, matches the existing `apps/mobile` Expo scaffold; no certificate handling in P2 per v2's Phase-7.5 deferral) + Web Push (VAPID) best-effort fallback + Resend email as the final fallback for high-stakes types. Native is load-bearing; web is fallback only, consistent with spec §10.
+**Idempotency / concurrency:** `claim_due_jobs` uses `for update skip locked`; `enqueue_job` dedups on the C1 `(type, dedup_key)` active index; `cancel_jobs` is set-based; `dispatch_notification` dedups on `(type, dedup_key)`; `fail_job` dead-letters at `attempts>=5`; `requeue_stuck_jobs` recovers crashed runners. The audit's `Date.now()` standby dedup bug is gone (P2 no longer enqueues `standby_roll`; P5 owns auto-roll).
+
+**Safety fails loud (C1/C11.8):** a tokenless `safety_checkin`/`safety_alert` resolves to `channel='admin_alert'`, raises an `admin_alerts` row, and emails ops via `notify.ts`. Delivery failures of safety types escalate to `raise_admin_alert` + ops email. A dead-lettered safety job raises an `admin_alert` from the runner. No silent safety drop anywhere.
 
 **Key assumptions stated:**
-- **Vercel Pro for every-minute cron.** Hobby plan throttles cron frequency; `* * * * *` requires Pro. Documented fallback: `pg_cron` + `net.http_post` invoking the same Edge Function (Task 12 note). If Pro is unavailable, swap the trigger, not the runner.
-- **`JOBS_RUNNER_SECRET`, `CRON_SECRET`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`** are configured as env/secrets (cron route reads `CRON_SECRET` + `JOBS_RUNNER_SECRET`; Edge Function reads `JOBS_RUNNER_SECRET` + the standard `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`). `verify_jwt=false` on `process-jobs` is safe because the shared-secret header gates it.
-- **P1 configured vitest** in `apps/web` (per the prompt); the cron-route test uses it. If P1 did not, add `vitest` + a `test` script before Task 12 — not in P2 scope.
-- **P0 tables exist** (`profiles`, `cities`, `itineraries`, `date_instances`, `offers`, `locks`, `queue_entries`) and `set_updated_at()` is defined (confirmed in `20260419193959_initial_schema.sql`). P2 migrations are numbered `202605251300NN`, strictly after P0's `2026052512NNNN`.
-- **Email delivery is intentionally stubbed** (`email_not_wired`) in `notify.ts` for P2 — wiring the existing Resend sender from an Edge Function context is a small follow-up; the mechanic does not block on email (push is primary). Delivery failures are logged, never silently dropped.
+- **S1 prerequisites:** `_fixtures.sql` (`mk_user`/`mk_itinerary`/`mk_instance`), `profiles.account_state`/`standing`/`rollover_frozen`, `profiles.primary_city_id` + `cities.timezone`, base tables (`offers`, `locks`, `queue_entries`, `date_instances`), `set_updated_at()`, `rate_limits`+`rate_limit_check`.
+- **Later-stage callee RPCs** (`match_expire_offer`, `match_auto_roll`, `match_stale_date_close`, `match_expire_pending`, `match_reconfirm_timeout`, `match_bulk_withdraw`, `chat_purge_thread`, `rating_window_close`, `process_deletion`, `analytics_relay_drain`) are dispatched by canonical name; their bodies land in S6/S7/S8/S10/S12. If an owning stage finalizes a different name, update the single dispatch line — never re-add a P2-local stub.
+- **Root vitest config** owned by P1/S3 (C10); P2 ships no local config.
+- **Secrets/env:** `JOBS_RUNNER_SECRET`, `CRON_SECRET`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, `EXPO_ACCESS_TOKEN`, `OPS_ALERT_EMAIL` (Resend) — documented here per C11.8.
+- **Vercel Pro** for the every-minute cron; `pg_cron` + `net.http_post` is the documented fallback.
 
-**Boundary discipline (what P2 deliberately does NOT do):** P2 does not implement loop *transitions* — it does not promote standbys, reap pending entries, create offers, or write audit_log for state changes. Those are P5; P2 ships the `p5_*` no-op stubs (Task 10) so the seam is live and the runner is fully testable. The only state writes P2 performs are pure timer effects with no decision content (mark an already-expired offer `expired`; auto-close an unlocked, passed-time instance) — both idempotent and guarded by `eq('status', ...)` so a P5 implementation can override sequencing safely.
-
-**Idempotency / concurrency:** `claim_due_jobs` uses `FOR UPDATE SKIP LOCKED` (safe under concurrent runners / overlapping cron ticks); `enqueue_job` dedups on `(job_type, dedup_key)` while pending; `dispatch_notification` dedups on `(type, dedup_key)`; handlers guard state writes with status predicates; `requeue_stuck_jobs` recovers crashed runners. Re-running a tick cannot double-send or double-expire.
-
-**Placeholder scan:** none — every step has runnable SQL/TS and exact commands. The two `p5_*` functions are intentional documented stubs (return null), not placeholders for P2's own scope.
-
-**Type/name consistency:** enums declared once (`job_type`, `job_status`, `device_platform`, `notification_type`, `notification_channel`); table/column names consistent across migrations, handlers, notify module, and tests (`jobs.run_after`, `notifications.dedup_key`, `devices.token`, `dispatch_notification`/`enqueue_job`/`claim_due_jobs`). The `notification_type` TS union in `notify.ts` mirrors the SQL enum exactly.
+**Placeholder scan:** none — every step has runnable SQL/TS and exact commands. The later-stage callee RPC names are documented cross-stage dependencies (Depends on), not P2 placeholders.
 
 ---
 

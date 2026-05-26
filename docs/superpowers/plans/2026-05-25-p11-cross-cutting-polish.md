@@ -1,21 +1,25 @@
+SUBORDINATE EXECUTION SLICE. This plan is not authoritative by itself. It must be implemented only through INTEGRATION-CONTRACT.md v2 and RECONCILED-MASTER-PLAN.md. If this file conflicts with either, this file loses.
+
 # P11 — Cross-Cutting Polish: States, A11y, Mobile, Analytics, Scale — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **Write only what each step specifies — no placeholders, no speculative code.**
 
-**Goal:** Make the experience-first dating loop production-grade along the five cross-cutting axes the audit flagged: (1) consistent LOADING / ERROR / EMPTY states on every async loop action, (2) ACCESSIBILITY (non-audio ambient equivalent, button-based swipe alternative, `aria-live` offer countdown, pink-on-dark contrast, screen-reader feed semantics), (3) MOBILE responsiveness (and explicitly leaning on the P2 native-push backbone where web is too weak), (4) ANALYTICS — a PostHog event for **every** loop state transition plus a flag mechanism to tune the offer window, and (5) SCALABILITY — index review, presence fan-out for the demand hint, notification batching, and timezone/DST correctness for `scheduled_for`/offer expiry.
+> **AUTHORITY & POSITION.** P11 maps to **Stage S12 (Polish & finalization)** of `RECONCILED-MASTER-PLAN.md` §8. The governing source of truth is `INTEGRATION-CONTRACT.md` v2 (incl. C11). This plan is the subordinate execution slice for S12. **Depends on: S1–S11 (woven through them); P11 finalizes last.** Every shared object this plan touches is owned and frozen by the contract — P11 references canonical definitions, never recreates them.
 
-**Architecture:** P11 is *woven through* P0–P10, so it does **not** invent loop tables or RPCs — it builds the thin, reusable layers that wrap them. State handling and a11y live in **shared React primitives** in `apps/web/components/loop/` (consumed by P4/P5/P6 loop screens, and later by `apps/mobile`). Analytics is **dual-path**: client transitions go through an extended `track` helper in `apps/web/app/PostHogProvider.tsx`; server-authoritative transitions (offer made/accepted/expired, lock, auto-roll — all fired by P5 SECURITY DEFINER functions and P2 jobs) are written to a new `analytics_events` outbox table by the same `log_status_transition()` trigger family P0 already installs, then forwarded to PostHog by a small relay so **no transition is lost when it happens in the DB rather than the browser**. Feature flags use PostHog flags read through a typed wrapper, with a DB-backed fallback (`feature_config`) so the offer-window length is tunable even when PostHog is unreachable and so jobs/Edge Functions (which have no browser SDK) can read it. Timezone/DST is enforced as an invariant: every wall-clock value is stored `timestamptz` (P0 already does this) and every *display* + *expiry math* resolves against `cities.timezone` via a shared `formatInZone`/`addOfferWindow` utility.
+**Goal:** Make the experience-first dating loop production-grade along the five cross-cutting axes the audit flagged: (1) consistent LOADING / ERROR / EMPTY states **wired into the real S5/S6/S7 screens**, (2) ACCESSIBILITY (non-audio caption wired into P4's `AmbientPlayer`, button-equivalent swipe wired into P4's `SwipeDeck`, `aria-live` offer countdown on the lock screen, pink-on-dark contrast, screen-reader feed semantics on the real `browse_feed` columns), (3) MOBILE responsiveness (leaning on the C1 native-push backbone), (4) ANALYTICS — the `analytics_relay` job + handler that drains `analytics_events` (C11.8) to PostHog with 30d retention, verifying all 15 transition events emit (P5/P2 emit; P11 relays), and (5) SCALABILITY — index review, demand-hint via the canonical `match_demand_hint` (C2), `dispatch_notification` anti-storm (C1), and timezone/DST correctness for offer expiry via `offer_expires_at()` (C11.1).
 
-**Tech Stack:** Next.js 15 (App Router, React 19) + Tailwind (existing cream palette + a new dark feed theme), `posthog-js` (already a dep) + `posthog-node` (added here, for the server relay), Supabase Postgres migrations (`supabase/migrations/`), psql invariant tests (`supabase/tests/`, P0 pattern), and a **newly bootstrapped** Vitest + React Testing Library harness for the shared TS/React primitives (the repo has no test runner yet). Realtime presence (Supabase Realtime) powers the demand-hint fan-out.
+**Architecture:** P11 is *woven through* S1–S11, so it **does not invent loop tables or RPCs** — it builds the thin, reusable layers that wrap them, and wires them into the **already-shipped host screens** (P4 feed, the S6 lock/offer screen, P6 chat). State handling and a11y live in **shared React primitives** in `apps/web/components/loop/` that are then **imported by explicit host-screen edit tasks in this plan** (no orphans). Analytics is **server-authoritative**: P5 SECURITY DEFINER functions and P2 jobs emit all 15 transition events into the **`analytics_events` outbox table created in S2 (P2 band `123900`, C11.8)**; P11 owns the **`analytics_relay` job type (C1) + its `process-jobs` handler** that drains the outbox to PostHog via `posthog-node`, plus **30-day retention**. The tunable offer window reads `feature_config` via **`offer_expires_at()` (C11.1, owned by P2 band `123800`)** — P5 already calls it; P11 owns the flag config UI/value only, not a parallel system. Timezone/DST: every instant is `timestamptz`; display resolves against `cities.timezone` via a shared `formatInZone` utility; expiry math is owned by `offer_expires_at()`.
 
-**Source docs:** spec `docs/superpowers/specs/2026-05-25-experience-first-dating-core-loop-design.md` (§5 browse, §7 lifecycle, §10 mobile, §13 analytics); roadmap `docs/superpowers/plans/2026-05-25-experience-first-dating-implementation-roadmap.md` (P11 scope + Closes); data model `docs/superpowers/plans/2026-05-25-p0-data-model.md` (builds on `audit_log`, `offers`, `locks`, `queue_entries`, `swipes`, `date_instances`, `cities.timezone`).
+**Tech Stack:** Next.js 15 (App Router, React 19) + Tailwind (existing cream palette + a new dark feed theme), `posthog-js` (already a dep) + `posthog-node` (added here, for the server relay), Supabase Postgres migrations (`supabase/migrations/`), psql invariant tests (`supabase/tests/`, P0 pattern). **vitest is owned by P1's single root config (C10/C12) — P11 does NOT bootstrap a runner; it assumes `pnpm test` and adds `*.test.ts(x)` files only.**
 
-**Dependency note (woven phase):** P11 is finalized last (per roadmap dependency graph). It assumes P0's schema exists. Where it references P4/P5/P6 loop screens or P2 jobs/push that may not be merged yet, it **builds the shared primitive / table / helper** (which is P11's deliverable) and references the integration point by its P0 contract name — it never edits unbuilt files. Each such reference is called out in the task so integration is a one-line wire-up when the host phase lands.
+**Source docs:** **AUTHORITY** `docs/superpowers/plans/2026-05-25-INTEGRATION-CONTRACT.md` (v2, incl. C11) and `docs/superpowers/plans/2026-05-25-RECONCILED-MASTER-PLAN.md` (S12); spec `docs/superpowers/specs/2026-05-25-experience-first-dating-core-loop-design.md` (§5 browse, §7 lifecycle, §10 mobile, §13 analytics); data model `docs/superpowers/plans/2026-05-25-p0-data-model.md`.
+
+**Dependency note (woven phase):** P11 = S12, finalized last. **All S1–S11 shared objects already exist when P11 runs** (jobs/enum/runner C1, `analytics_events`+`feature_config`+`offer_expires_at()`+`dispatch_notification` S2, P4 feed screen + `SwipeDeck`/`AmbientPlayer`, the S6 match API + lock/offer screen, P6 chat). P11 therefore **wires into real merged files** — every primitive has an explicit host-screen consumer task below. No "builds the primitive, host wires later" deferral (there is no later phase); no "assume exists" placeholders.
 
 **Conventions (follow exactly):**
-- DB: migration filenames `YYYYMMDDHHMMSS_p11_snake_description.sql`; enable RLS on every new table; idempotent policies via `DO $$ BEGIN CREATE POLICY … EXCEPTION WHEN duplicate_object THEN NULL; END $$;`; reuse P0's `set_updated_at()` trigger; `timestamptz` for all instants; psql tests as `DO $$ … RAISE EXCEPTION on failure … END $$;` blocks (clean exit = PASS).
+- DB: migration filenames `YYYYMMDDHHMMSS_p11_snake_description.sql` in **band `132000–1329xx`** (C6/C11), except the **`browse_feed` finalization migration at band `133000`** (C11.3, the single feed-finalization slot). Enable RLS on every new table; idempotent policies via `DO $$ BEGIN CREATE POLICY … EXCEPTION WHEN duplicate_object THEN NULL; END $$;`; reuse P0's `set_updated_at()` trigger; `timestamptz` for all instants; psql tests as `DO $$ … RAISE EXCEPTION on failure … END $$;` blocks (clean exit = PASS); all psql test fixtures use **`mk_user`/`mk_itinerary`/`mk_instance` (C8)** — never bare inserts into `profiles`/`itineraries`.
 - TS/React: shared primitives in `apps/web/components/loop/`; one component per file; named exports; Tailwind classes only (no inline color hex except in the documented dark-theme token file); analytics event names are `snake_case` and centralized in one taxonomy module — never call `posthog.capture` ad hoc.
-- Tests: `*.test.ts(x)` colocated next to source; run with `pnpm --filter @after5/web test`. Each task is failing test → FAIL → real code → PASS → commit.
+- Tests: `*.test.ts(x)` colocated next to source; run with `pnpm test` (P1's root vitest workspace config, C12). Each task is failing test → FAIL → real code → PASS → commit.
 
 **Local test loop:**
 - React/TS: `pnpm --filter @after5/web test` (Vitest, jsdom).
@@ -27,8 +31,7 @@
 
 ```
 apps/web/
-  vitest.config.ts                         # NEW — Vitest + jsdom + RTL bootstrap (Task 1)
-  vitest.setup.ts                          # NEW — jest-dom matchers, posthog mock
+  # NO vitest bootstrap — P1 owns the single root vitest.config.ts (C10/C12). P11 adds *.test.* files only.
   components/loop/
     AsyncBoundary.tsx                       # Task 2 — loading/error/empty wrapper
     AsyncBoundary.test.tsx
@@ -37,129 +40,86 @@ apps/web/
     LoopActionButton.tsx                    # Task 4 — button w/ pending spinner + disabled + aria-busy
     LoopActionButton.test.tsx
     states.ts                               # Task 2 — LoadState union + copy map (one source of truth)
-    OfferCountdown.tsx                      # Task 8 — aria-live polite countdown
+    OfferCountdown.tsx                      # Task 8 — aria-live polite countdown (threshold-throttled)
     OfferCountdown.test.tsx
-    SwipeDeck.tsx                           # Task 7 — gesture + button-equivalent swipe (a11y)
-    SwipeDeck.test.tsx
-    AmbientSound.tsx                        # Task 6 — audio + visual/caption non-audio equivalent
-    AmbientSound.test.tsx
-    feed-a11y.ts                            # Task 9 — screen-reader feed semantics helpers
+    feed-a11y.ts                            # Task 9 — SR feed semantics from canonical browse_feed columns
     feed-a11y.test.ts
   app/
-    PostHogProvider.tsx                     # EDIT (Task 11) — extend `track` with loop taxonomy + flags
     loop-analytics.ts                       # Task 10 — event taxonomy (single source) + types
     loop-analytics.test.ts
+  components/feed/
+    SwipeDeck.tsx                           # EDIT (Task 7) — wire a11y Pass/Interested buttons into P4's deck
+    AmbientPlayer.tsx                       # EDIT (Task 6) — wire caption non-audio equivalent into P4's player
+    BrowseFeed.tsx                          # EDIT (Task 9b) — wire AsyncBoundary + feed-a11y into P4's feed
+  app/(loop)/lock/[offerId]/page.tsx        # EDIT (Task 4b) — wire OfferCountdown + LoopActionButton into S6 lock screen
+  app/(loop)/chat/[threadId]/page.tsx       # EDIT (Task 4c) — wire AsyncBoundary empty/loading into P6 chat thread
   lib/
-    timezone.ts                             # Task 14 — formatInZone / addOfferWindow / DST-safe math
+    timezone.ts                             # Task 14 — formatInZone display helper (DST-safe via Intl)
     timezone.test.ts
-    feature-flags.ts                        # Task 12 — typed flag reader (PostHog + DB fallback)
+    feature-flags.ts                        # Task 12 — typed flag reader (PostHog + feature_config fallback)
     feature-flags.test.ts
   styles/
     feed-theme.css                          # Task 5 — dark feed theme tokens (contrast-audited)
   app/globals.css                           # EDIT (Task 5) — import feed-theme tokens
   tailwind.config.ts                        # EDIT (Task 5) — register `feed.*` dark tokens
+  lib/contrast.ts                            # Task 5 — WCAG ratio util (token source of truth)
+  lib/contrast.test.ts
 
 packages/api-client/src/
-  analytics-relay.ts                        # Task 13 — drain analytics_events → posthog-node
+  analytics-relay.ts                        # Task 13 — drain analytics_events → posthog-node (service-role + flush)
   analytics-relay.test.ts
 
 supabase/
+  functions/process-jobs/                   # EDIT (Task 13b) — add `analytics_relay` handler to C1 runner dispatch
   migrations/
-    20260525130000_p11_analytics_events.sql       # Task 10 — outbox + trigger extension
-    20260525130100_p11_feature_config.sql          # Task 12 — DB-backed flag fallback
-    20260525130200_p11_index_review.sql            # Task 15 — missing/covering indexes
-    20260525130300_p11_presence_demand_hint.sql    # Task 16 — bucketed demand-hint view
-    20260525130400_p11_notification_batching.sql   # Task 17 — batch/coalesce notification rows
-    20260525130500_p11_offer_expiry_tz.sql          # Task 14 — TZ-correct expiry helper fn
+    20260525132000_p11_analytics_relay_job.sql      # Task 13b — add 'analytics_relay' job dispatch wiring + 30d retention helper
+    20260525132100_p11_index_review.sql             # Task 15 — missing/covering indexes (aligned to S6 ordering)
+    20260525133000_p11_browse_feed_finalize.sql      # Task 18b — browse_feed FINALIZATION (C11.3 drop+create, band 133000)
   tests/
-    p11_analytics_events.sql
-    p11_feature_config.sql
+    p11_analytics_relay_job.sql
+    p11_analytics_events_coverage.sql        # Task 10 — verifies all 15 transition events have an emit source
     p11_index_review.sql
-    p11_presence_demand_hint.sql
-    p11_notification_batching.sql
-    p11_offer_expiry_tz.sql
+    p11_browse_feed_finalize.sql
+    p11_feature_config.sql                   # Task 12 — asserts the C11.1 seed/range (read-only check; table owned by P2)
 ```
+
+> **REMOVED vs the original draft (now SUPERSEDED — do not build):**
+> - `vitest.config.ts`/`vitest.setup.ts`/Task 1 harness → **P1 owns the root config (C10/C12).** P11 deletes any duplicate setup and assumes `pnpm test`.
+> - `20260525130000_p11_analytics_events.sql` (outbox table + trigger) → **`analytics_events` is created in S2 (P2 band `123900`, C11.8).** P11 does NOT create it; P11 owns the relay job/handler/retention only. Server emission of all 15 events is done by P5 RPCs / P2 jobs (C2/C8) — P11 verifies coverage, it does not own a competing trigger.
+> - `20260525130100_p11_feature_config.sql` (table) → **`feature_config` + `offer_expires_at()` are owned by P2 (C11.1, bands `123800`).** P11 ships only the flag-reader UI/value; no parallel table.
+> - `20260525130300_p11_presence_demand_hint.sql` + `bucket_demand()`/`demand_hint` view → **DELETED (CV7/DS2).** The only demand hint is **`match_demand_hint(p_instance)` (C2, owned by P5)**. P11 must not ship a duplicate.
+> - `20260525130400_p11_notification_batching.sql` + `notification_batches`/`coalesce_notification()` → **DELETED (DS1).** The only anti-storm system is **`dispatch_notification` (C1, owned by P2)** with its consent→quiet-hours→rate-limit chain. P11 must not ship a parallel batching table.
+> - `20260525130500_p11_offer_expiry_tz.sql` + a P11 `offer_expires_at(window_start, window_hours)` → **DELETED (CV8/C11.1).** `offer_expires_at(p_from default now())` reading `feature_config` is owned by P2; P5's `match_make_offer` already calls it. P11 keeps only the TS `formatInZone` display helper.
+> - Band `130xxx` timestamps → **WRONG (collides with P9, C6).** P11's band is `132000–1329xx`; the feed finalization is `133000` (C11.3).
 
 ---
 
-## Task 1: Bootstrap the Vitest + React Testing Library harness
+## Task 1: Delete any duplicate vitest setup; assume P1's root config (C10/C12)
 
-The repo has **no test runner**. Every later TS/React task needs one. This task adds it and proves it runs.
+**SUPERSEDED — the original "bootstrap a runner" task is removed.** Per **C10/C12 (DS4, CV10)**, **P1 owns the single root `vitest.config.ts`** (workspace globs covering `apps/web` + `packages/*`). P11 (and P3/P6/P8/P10) **delete** their duplicate setups and assume `pnpm test`. Since P11 is finalized last, the root config already exists.
 
 **Files:**
-- Create: `apps/web/vitest.config.ts`
-- Create: `apps/web/vitest.setup.ts`
-- Create: `apps/web/components/loop/smoke.test.ts`
-- Modify: `apps/web/package.json` (devDeps + `test` script)
+- Delete (if present): any `apps/web/vitest.config.ts`/`vitest.setup.ts` that P11 added in a prior pass.
+- Verify: P1's root vitest workspace globs already cover `apps/web/components/**`, `apps/web/app/**`, `apps/web/lib/**`, and `packages/api-client/**` so this plan's `*.test.*` files run under `pnpm test`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Confirm the root config exists and covers P11's paths**
 
-```ts
-// apps/web/components/loop/smoke.test.ts
-import { describe, it, expect } from 'vitest';
+Run: `pnpm test -- --reporter=verbose` (P1's root vitest). Expected: it discovers and runs existing tests across the workspace. If `apps/web/lib/**` or `packages/api-client/**` are not in P1's workspace globs, **do not add a new config** — note the gap and have it folded into P1's root config (single source, C12).
 
-describe('vitest harness', () => {
-  it('runs', () => {
-    expect(1 + 1).toBe(2);
-  });
-});
-```
+- [ ] **Step 2: Remove any P11-authored duplicate runner**
 
-- [ ] **Step 2: Run it, expect FAIL**
+If a previous pass created `apps/web/vitest.config.ts`/`vitest.setup.ts`, delete them. The posthog-js mock the suites rely on belongs in P1's root `vitest.setup.ts` — reference it there, do not fork it.
 
-Run: `pnpm --filter @after5/web test`
-Expected: FAIL — `test` script does not exist / `vitest: command not found`.
-
-- [ ] **Step 3: Add the harness**
-
-Add to `apps/web/package.json` `devDependencies`: `"vitest": "^2.1.0"`, `"@vitejs/plugin-react": "^4.3.0"`, `"jsdom": "^25.0.0"`, `"@testing-library/react": "^16.0.0"`, `"@testing-library/jest-dom": "^6.5.0"`, `"@testing-library/user-event": "^14.5.0"`. Add to `scripts`: `"test": "vitest run"`, `"test:watch": "vitest"`.
-
-```ts
-// apps/web/vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'node:path';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./vitest.setup.ts'],
-    include: ['app/**/*.test.{ts,tsx}', 'components/**/*.test.{ts,tsx}', 'lib/**/*.test.{ts,tsx}'],
-  },
-  resolve: {
-    alias: { '@': resolve(__dirname, '.') },
-  },
-});
-```
-
-```ts
-// apps/web/vitest.setup.ts
-import '@testing-library/jest-dom/vitest';
-import { vi } from 'vitest';
-
-// posthog-js must never make network calls in tests; stub the module surface we use.
-vi.mock('posthog-js', () => ({
-  default: { init: vi.fn(), capture: vi.fn(), isFeatureEnabled: vi.fn(), getFeatureFlagPayload: vi.fn() },
-}));
-```
-
-Then `pnpm install` (run from repo root; updates lockfile).
-
-- [ ] **Step 4: Run it, expect PASS**
-
-Run: `pnpm --filter @after5/web test`
-Expected: PASS — 1 passed.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit (only if files were removed)**
 
 ```bash
-git add apps/web/vitest.config.ts apps/web/vitest.setup.ts apps/web/components/loop/smoke.test.ts apps/web/package.json pnpm-lock.yaml
-git commit -m "P11: bootstrap Vitest + React Testing Library test harness for apps/web
+git rm -f apps/web/vitest.config.ts apps/web/vitest.setup.ts 2>/dev/null || true
+git commit -m "P11: drop duplicate vitest setup — use P1 root workspace config (C12)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
+
+> Depends on: **P1** (root vitest config, C12). All subsequent TS/React tasks run under `pnpm test`.
 
 ---
 
@@ -231,6 +191,21 @@ export const loopCopy = {
   genericError: "Something went wrong on our end. We didn't lose your place.",
   retry: 'Try again',
 } as const;
+
+// Distinct, actionable copy per P5/C2 exception code (single source — never inline at a
+// call site). Codes are owned by the S6 match-API plan; P11 maps them to copy.
+export const errorCopy: Record<string, string> = {
+  OFFER_EXPIRED: 'This offer has expired. Browse for another night.',
+  OFFER_TAKEN: 'Someone else locked this night first.',
+  RANK_FROZEN: 'This shortlist is being resolved — try again in a moment.',
+  NOT_SHORTLISTED: "You're no longer shortlisted for this night.",
+  LOCK_FLOW_BLOCKED: "Your account can't start a new date right now.",
+};
+
+export function copyForError(err: Error | null): string {
+  if (err && err.message in errorCopy) return errorCopy[err.message];
+  return loopCopy.genericError;
+}
 ```
 
 ```tsx
@@ -391,7 +366,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ## Task 4: `LoopActionButton` — the concrete accessible mutation control
 
-The button used by offer-accept and lock-confirm (the two highest-stakes, irreversible flows). Disables + sets `aria-busy` while pending, shows a spinner, and emits the configured analytics event on success (wired to Task 10's taxonomy).
+The button used by offer-accept and lock-confirm (the two highest-stakes, irreversible flows). Disables + sets `aria-busy` while pending, shows a spinner, and renders a **distinct, actionable error** per P5 SQL exception code (not a single generic string). **This component is wired into the real S6 lock/offer screen in Task 4b — it is not an orphan.** The two terminal flows it serves call the **C2 RPCs `match_accept_offer`/`match_make_offer`** (never ad-hoc names); the success path emits its analytics event via the server outbox, so the button itself only needs to surface state.
 
 **Files:**
 - Create: `apps/web/components/loop/LoopActionButton.tsx`
@@ -419,14 +394,23 @@ describe('LoopActionButton', () => {
     await waitFor(() => expect(btn).not.toBeDisabled());
   });
 
-  it('renders an accessible error after a failed action', async () => {
-    const action = vi.fn().mockRejectedValue(new Error('expired'));
+  it('maps a known P5 exception code to actionable copy', async () => {
+    const action = vi.fn().mockRejectedValue(new Error('OFFER_EXPIRED'));
     render(<LoopActionButton action={action}>Accept offer</LoopActionButton>);
     await userEvent.click(screen.getByRole('button', { name: /accept offer/i }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/offer has expired/i));
+  });
+
+  it('falls back to generic copy for an unknown error', async () => {
+    const action = vi.fn().mockRejectedValue(new Error('kaboom'));
+    render(<LoopActionButton action={action}>Confirm lock</LoopActionButton>);
+    await userEvent.click(screen.getByRole('button', { name: /confirm lock/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/something went wrong/i));
   });
 });
 ```
+
+> The error codes mapped here are the P5/C2 exceptions (`OFFER_EXPIRED`, `OFFER_TAKEN`, `RANK_FROZEN`, `NOT_SHORTLISTED`, `LOCK_FLOW_BLOCKED`). The canonical set lives in S6's match-API plan; P11 reads them, it does not invent them. Add unmapped codes to `states.ts`'s `errorCopy` map (single source) — never inline a string per call site.
 
 - [ ] **Step 2: Run it, expect FAIL.**
 
@@ -437,7 +421,7 @@ describe('LoopActionButton', () => {
 'use client';
 import type { ReactNode } from 'react';
 import { useAsyncAction } from './useAsyncAction';
-import { loopCopy } from './states';
+import { copyForError } from './states';
 
 export function LoopActionButton({
   action, children, onDone, className,
@@ -461,7 +445,7 @@ export function LoopActionButton({
         {children}
       </button>
       {status === 'error' && (
-        <p role="alert" className="mt-2 text-sm text-accent">{loopCopy.genericError}{error ? '' : ''}</p>
+        <p role="alert" className="mt-2 text-sm text-accent">{copyForError(error)}</p>
       )}
     </div>
   );
@@ -474,7 +458,60 @@ export function LoopActionButton({
 
 ```bash
 git add apps/web/components/loop/LoopActionButton.tsx apps/web/components/loop/LoopActionButton.test.tsx
-git commit -m "P11: LoopActionButton — accessible pending/disabled/aria-busy control for accept + lock
+git commit -m "P11: LoopActionButton — accessible pending/disabled/aria-busy control + P5 error mapping
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Task 4b: WIRE `OfferCountdown` + `LoopActionButton` into the real S6 lock/offer screen (no orphan)
+
+**ORPHAN FIX (audit §1, §5; contract C11 "no orphans").** `OfferCountdown` and `LoopActionButton` are useless unless mounted on a real screen. The offer/lock surface is built in **S6 (the matching loop)** — it owns the route `apps/web/app/(loop)/lock/[offerId]/page.tsx` (the candidate's accept-offer / confirm-lock screen). P11 **edits that real, already-merged screen** to render the primitives. **Depends on: S6 (lock/offer screen + the C2 RPCs `match_accept_offer`/`match_make_offer`).**
+
+> If the S6 screen does not exist when this task runs, **stop and resolve ownership against S6** — do NOT build a parallel offer screen here (that would be a new surface P11 doesn't own). The contract reconciliation places the offer/lock UI in S6; P11 only wires polish into it.
+
+**Files:**
+- Modify: `apps/web/app/(loop)/lock/[offerId]/page.tsx` (S6's screen)
+
+- [ ] **Step 1: Add a failing integration test on the host screen** asserting the lock screen renders `role="timer"` (the countdown) and the accept control with `aria-busy` wiring, and that confirming calls the S6 `match_accept_offer` action.
+
+- [ ] **Step 2: Run it, expect FAIL** (screen does not yet import the primitives).
+
+- [ ] **Step 3: Edit the S6 screen** to:
+  - render `<OfferCountdown expiresAt={offer.expires_at} onExpire={…} />` for the active offer window (the `expires_at` is set server-side by `offer_expires_at()`, C11.1 — the screen only displays it),
+  - render `<LoopActionButton action={() => acceptOffer(offerId)}>Confirm lock</LoopActionButton>` where `acceptOffer` calls the C2 RPC `match_accept_offer(auth.uid(), offerId, idemKey)`,
+  - wrap the offer-detail fetch in `<AsyncBoundary state={…} empty={loopCopy.offersEmpty}>`.
+
+- [ ] **Step 4: Run it, expect PASS.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add "apps/web/app/(loop)/lock/[offerId]/page.tsx"
+git commit -m "P11: wire OfferCountdown + LoopActionButton into the S6 lock/offer screen (de-orphan)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Task 4c: WIRE `AsyncBoundary` empty/loading into the real P6 chat thread (no orphan)
+
+**ORPHAN FIX.** P6 (S7 chat) builds the chat thread screen but defers loading/empty states to P11. P11 **edits P6's real thread screen** to use `AsyncBoundary` + `loopCopy.chatEmpty`. **Depends on: S7 (P6 chat thread screen + C9 chat-core hooks).**
+
+**Files:**
+- Modify: `apps/web/app/(loop)/chat/[threadId]/page.tsx` (P6's screen)
+
+- [ ] **Step 1: Failing test** — the chat thread screen shows `loopCopy.chatEmpty` when the message list is empty and a labelled spinner while loading.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Edit P6's thread screen** to wrap the message-list fetch in `<AsyncBoundary state={…} empty={<p>{loopCopy.chatEmpty}</p>} onRetry={…}>`. Chat opens only once an offer thread exists (C9 `open_chat_thread`); the empty copy is kind-by-design.
+- [ ] **Step 4: Run, expect PASS.**
+- [ ] **Step 5: Commit**
+
+```bash
+git add "apps/web/app/(loop)/chat/[threadId]/page.tsx"
+git commit -m "P11: wire AsyncBoundary loading/empty states into the P6 chat thread (de-orphan)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -507,6 +544,15 @@ describe('feed dark-theme contrast (WCAG AA)', () => {
   });
   it('muted/secondary text on feed bg is ≥ 4.5:1', () => {
     expect(contrastRatio(FEED_TOKENS.muted, FEED_TOKENS.bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Guard against the tested source (lib/contrast.ts) drifting from the CSS/Tailwind copies.
+  it('CSS + Tailwind token copies match FEED_TOKENS (no silent drift)', async () => {
+    const css = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('../styles/feed-theme.css', import.meta.url), 'utf8'));
+    for (const hex of Object.values(FEED_TOKENS)) {
+      expect(css.toLowerCase()).toContain(hex.toLowerCase());
+    }
   });
 });
 ```
@@ -580,194 +626,112 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 6: `AmbientSound` — audio with a non-audio equivalent (a11y + web fallback)
+## Task 6: WIRE a caption non-audio equivalent INTO P4's `AmbientPlayer` (no duplicate component)
 
-Spec §5 plays ambient sound per night; §10 notes iOS Safari blocks autoplay-with-sound. This component plays audio when allowed, but **always** renders a visible caption + waveform-equivalent so deaf/HoH users and muted-web users get the same information. Audio never autoplays-with-sound on web (gesture-gated); the caption is the canonical channel.
+**ORPHAN/DUP FIX (audit §1; DS6).** P4 already ships `apps/web/components/feed/AmbientPlayer.tsx` ("native-first audio w/ explicit web fallback") and the real feed renders it. P11 must **NOT** build a second `components/loop/AmbientSound`. Instead, P11 **edits P4's existing `AmbientPlayer`** to add the deaf/HoH **caption equivalent** the audit demanded and the gesture-gated/muted-by-default web fallback (spec §10 iOS Safari). **Depends on: P4 (`AmbientPlayer.tsx`, the sounds library + signed-URL serving from S4).**
 
 **Files:**
-- Create: `apps/web/components/loop/AmbientSound.tsx`
-- Create: `apps/web/components/loop/AmbientSound.test.tsx`
+- Modify: `apps/web/components/feed/AmbientPlayer.tsx` (P4's component)
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add failing tests to P4's component test**
 
 ```tsx
-// apps/web/components/loop/AmbientSound.test.tsx
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { AmbientSound } from './AmbientSound';
-
-describe('AmbientSound', () => {
-  it('renders a text caption equivalent for the sound (a11y, no audio required)', () => {
-    render(<AmbientSound src="/s/jazz.mp3" caption="Low jazz, clinking glasses" />);
-    expect(screen.getByText(/low jazz, clinking glasses/i)).toBeInTheDocument();
-  });
-
-  it('does not autoplay with sound on web (muted by default, gesture-gated)', () => {
-    render(<AmbientSound src="/s/jazz.mp3" caption="x" />);
-    const audio = screen.getByTestId('ambient-audio') as HTMLAudioElement;
-    expect(audio.autoplay).toBe(false);
-    expect(audio.muted).toBe(true);
-    expect(audio).toHaveAttribute('preload', 'none');
-  });
-
-  it('exposes a labelled play toggle for screen readers', () => {
-    render(<AmbientSound src="/s/jazz.mp3" caption="x" />);
-    expect(screen.getByRole('button', { name: /play ambient sound/i })).toBeInTheDocument();
-  });
+// in apps/web/components/feed/AmbientPlayer.test.tsx (P4's test file — extend it)
+it('renders a text caption equivalent for the sound (a11y, no audio required)', () => {
+  render(<AmbientPlayer src="/s/jazz.mp3" caption="Low jazz, clinking glasses" />);
+  expect(screen.getByText(/low jazz, clinking glasses/i)).toBeInTheDocument();
+});
+it('does not autoplay with sound on web (muted by default, gesture-gated)', () => {
+  render(<AmbientPlayer src="/s/jazz.mp3" caption="x" />);
+  const audio = screen.getByTestId('ambient-audio') as HTMLAudioElement;
+  expect(audio.autoplay).toBe(false);
+  expect(audio.muted).toBe(true);
+  expect(audio).toHaveAttribute('preload', 'none');
+});
+it('surfaces feedback when the iOS gesture policy rejects playback', async () => {
+  // un-muting a not-yet-loaded source can reject on iOS Safari; the user must see it, not a silent no-op.
+  // (assert the rejected-play UX, e.g. an "tap to enable sound" hint)
 });
 ```
 
-- [ ] **Step 2: Run it, expect FAIL.**
+- [ ] **Step 2: Run, expect FAIL** (P4's player lacks the caption + muted/gesture contract).
 
-- [ ] **Step 3: Write the code**
+- [ ] **Step 3: Edit P4's `AmbientPlayer`** to:
+  - accept and always render a visible `caption` (the canonical channel for deaf/HoH + muted web),
+  - set `muted` + `preload="none"` and only un-mute on an explicit user gesture,
+  - on a play rejection (iOS gesture policy) show a small "tap to enable sound" hint instead of swallowing the error,
+  - keep a labelled play/pause toggle (`aria-label`), `data-testid="ambient-audio"` on the `<audio>`.
 
-```tsx
-// apps/web/components/loop/AmbientSound.tsx
-'use client';
-import { useRef, useState } from 'react';
+  The `src` is the **signed-URL minted by S4's media pipeline**; the `caption` comes from the sounds library row (S4). P11 does not own serving — it consumes the S4 URL.
 
-// Audio is the garnish; the caption is the canonical channel (a11y + iOS-Safari
-// autoplay block, spec §10). Audio is muted + preload=none and only un-mutes on
-// an explicit user gesture, so nothing autoplays-with-sound on web.
-export function AmbientSound({ src, caption }: { src: string; caption: string }) {
-  const ref = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-
-  const toggle = () => {
-    const el = ref.current;
-    if (!el) return;
-    if (playing) { el.pause(); setPlaying(false); return; }
-    el.muted = false;
-    void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  };
-
-  return (
-    <div className="flex items-center gap-2 text-sm text-feed-muted">
-      <button type="button" onClick={toggle}
-        aria-label={playing ? 'Pause ambient sound' : 'Play ambient sound'}
-        className="rounded-pill border border-feed-muted/40 px-2 py-1">
-        {playing ? '❚❚' : '►'}
-      </button>
-      <span aria-hidden={false}>{caption}</span>
-      <audio ref={ref} src={src} muted autoPlay={false} preload="none" loop data-testid="ambient-audio" />
-    </div>
-  );
-}
-```
-
-- [ ] **Step 4: Run it, expect PASS.**
+- [ ] **Step 4: Run, expect PASS.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/components/loop/AmbientSound.tsx apps/web/components/loop/AmbientSound.test.tsx
-git commit -m "P11: AmbientSound — caption non-audio equivalent + gesture-gated playback (a11y + web fallback)
+git add apps/web/components/feed/AmbientPlayer.tsx apps/web/components/feed/AmbientPlayer.test.tsx
+git commit -m "P11: add caption non-audio equivalent + gesture-gated fallback to P4 AmbientPlayer (a11y; no dup)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 7: `SwipeDeck` — accessible swipe with button equivalents
+## Task 7: WIRE accessible Pass/Interested buttons INTO P4's `SwipeDeck` (no duplicate component)
 
-The audit requires an accessible alternative to the swipe gesture. This deck renders **explicit Pass / Interested buttons** (keyboard + screen-reader operable) alongside the gesture, fires the same callback for both, and announces the result via `aria-live`. Gesture handling is minimal (pointer-based) so the component stays test-friendly; the buttons are the accessibility-complete path.
+**ORPHAN/DUP FIX (audit §1; DS6).** P4 already ships `apps/web/components/feed/SwipeDeck.tsx` (the real feed deck that POSTs to `/api/feed/swipe`). P11 must **NOT** build a second `components/loop/SwipeDeck`. Instead, P11 **edits P4's existing `SwipeDeck`** to add the keyboard- + screen-reader-operable **Pass / Interested buttons** (the a11y-complete path), an `aria-live` result announcement (threshold-quiet, not spammy), and the SR group label — firing the **same `/api/feed/swipe` action** the gesture uses. **Depends on: P4 (`SwipeDeck.tsx` + `/api/feed/swipe`).**
 
 **Files:**
-- Create: `apps/web/components/loop/SwipeDeck.tsx`
-- Create: `apps/web/components/loop/SwipeDeck.test.tsx`
+- Modify: `apps/web/components/feed/SwipeDeck.tsx` (P4's component)
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add failing tests to P4's component test**
 
 ```tsx
-// apps/web/components/loop/SwipeDeck.test.tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
-import { SwipeDeck } from './SwipeDeck';
-
-describe('SwipeDeck', () => {
-  it('fires onSwipe("right") from the Interested button', async () => {
-    const onSwipe = vi.fn();
-    render(<SwipeDeck dateInstanceId="di-1" onSwipe={onSwipe}><p>The night</p></SwipeDeck>);
-    await userEvent.click(screen.getByRole('button', { name: /interested/i }));
-    expect(onSwipe).toHaveBeenCalledWith('right');
-  });
-
-  it('fires onSwipe("left") from the Pass button', async () => {
-    const onSwipe = vi.fn();
-    render(<SwipeDeck dateInstanceId="di-1" onSwipe={onSwipe}><p>The night</p></SwipeDeck>);
-    await userEvent.click(screen.getByRole('button', { name: /pass/i }));
-    expect(onSwipe).toHaveBeenCalledWith('left');
-  });
-
-  it('the card group has a screen-reader label and a live region', () => {
-    render(<SwipeDeck dateInstanceId="di-1" onSwipe={() => {}}><p>x</p></SwipeDeck>);
-    expect(screen.getByRole('group', { name: /a date night/i })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
-  });
+// in apps/web/components/feed/SwipeDeck.test.tsx (P4's test file — extend it)
+it('fires the same swipe action ("right") from the Interested button', async () => {
+  const onSwipe = vi.fn();
+  render(<SwipeDeck dateInstanceId="di-1" onSwipe={onSwipe}><p>The night</p></SwipeDeck>);
+  await userEvent.click(screen.getByRole('button', { name: /interested/i }));
+  expect(onSwipe).toHaveBeenCalledWith('right');
+});
+it('fires the same swipe action ("left") from the Pass button', async () => {
+  const onSwipe = vi.fn();
+  render(<SwipeDeck dateInstanceId="di-1" onSwipe={onSwipe}><p>The night</p></SwipeDeck>);
+  await userEvent.click(screen.getByRole('button', { name: /pass/i }));
+  expect(onSwipe).toHaveBeenCalledWith('left');
+});
+it('the card group has a screen-reader label and a live region', () => {
+  render(<SwipeDeck dateInstanceId="di-1" onSwipe={() => {}}><p>x</p></SwipeDeck>);
+  expect(screen.getByRole('group', { name: /a date night/i })).toBeInTheDocument();
+  expect(screen.getByRole('status')).toBeInTheDocument();
 });
 ```
 
-- [ ] **Step 2: Run it, expect FAIL.**
+- [ ] **Step 2: Run, expect FAIL** (P4's deck has the gesture but no accessible buttons / SR semantics).
 
-- [ ] **Step 3: Write the code**
+- [ ] **Step 3: Edit P4's `SwipeDeck`** to add, alongside the existing gesture:
+  - explicit `Pass` / `Interested` buttons that call the **same swipe action** the gesture invokes (P4's `/api/feed/swipe` → idempotent swipe; the swipe write is owned by S5),
+  - a `role="group"` with `aria-label="A date night to consider"` wrapping the card (uses the dark `feed.*` tokens from Task 5),
+  - an `aria-live="polite"` status region that announces the result (kind-by-design copy), updated only on action (not per-frame).
 
-```tsx
-// apps/web/components/loop/SwipeDeck.tsx
-'use client';
-import { useState, type ReactNode } from 'react';
+  The swipe itself stays P4/S5-owned; P11 only adds the accessible alternate controls and SR semantics.
 
-type Direction = 'left' | 'right';
-
-export function SwipeDeck({
-  dateInstanceId, onSwipe, children,
-}: {
-  dateInstanceId: string;
-  onSwipe: (dir: Direction) => void;
-  children: ReactNode;
-}) {
-  const [announce, setAnnounce] = useState('');
-
-  const act = (dir: Direction) => {
-    setAnnounce(dir === 'right' ? 'Marked interested. Next night.' : 'Passed. Next night.');
-    onSwipe(dir);
-  };
-
-  return (
-    <div role="group" aria-label="A date night to consider" data-instance={dateInstanceId} className="feed-theme">
-      <div>{children}</div>
-      <div className="mt-4 flex items-center justify-center gap-4">
-        <button type="button" onClick={() => act('left')}
-          className="rounded-pill border border-feed-muted/40 px-6 py-3 text-feed-text">
-          Pass
-        </button>
-        <button type="button" onClick={() => act('right')}
-          className="rounded-pill bg-feed-accent px-6 py-3 font-medium text-feed-bg">
-          Interested
-        </button>
-      </div>
-      <p role="status" aria-live="polite" className="sr-only">{announce}</p>
-    </div>
-  );
-}
-```
-
-- [ ] **Step 4: Run it, expect PASS.**
+- [ ] **Step 4: Run, expect PASS.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/components/loop/SwipeDeck.tsx apps/web/components/loop/SwipeDeck.test.tsx
-git commit -m "P11: SwipeDeck — keyboard/SR-accessible Pass+Interested buttons as swipe-gesture equivalent
+git add apps/web/components/feed/SwipeDeck.tsx apps/web/components/feed/SwipeDeck.test.tsx
+git commit -m "P11: add SR/keyboard Pass+Interested buttons to P4 SwipeDeck (a11y; same swipe action; no dup)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 8: `OfferCountdown` — accessible time-boxed offer timer
+## Task 8: `OfferCountdown` — accessible time-boxed offer timer (threshold-throttled, no SR spam)
 
-The exclusive offer (spec §7.3) is "confirm by [T]." The countdown must be announced to screen readers without spamming them. Uses `aria-live="polite"` and only re-announces at meaningful thresholds (per-minute under 1h, per-hour above), computing remaining time against the absolute `expires_at` (timezone-safe via Task 14's helper).
+The exclusive offer (spec §7.3) is "confirm by [T]." The countdown must be announced to screen readers **without spamming them**. The visible label updates each second, but the **`aria-live` announced value is throttled** to meaningful thresholds (per-minute under 1h, per-hour above) — separating the visible ticker from the announced region so `aria-live` does not fire every second. Remaining time is computed against the absolute `expires_at` (set server-side by `offer_expires_at()`, C11.1). **This component is consumed by the S6 lock screen in Task 4b — not an orphan.**
 
 **Files:**
 - Create: `apps/web/components/loop/OfferCountdown.tsx`
@@ -791,6 +755,15 @@ describe('OfferCountdown', () => {
     const live = screen.getByRole('timer');
     expect(live).toHaveAttribute('aria-live', 'polite');
     expect(live).toHaveTextContent(/2h/);
+  });
+
+  it('does NOT re-announce the live region every second (throttled to thresholds)', () => {
+    const expires = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    render(<OfferCountdown expiresAt={expires} />);
+    const announced = screen.getByRole('timer').textContent;
+    act(() => { vi.advanceTimersByTime(3000); }); // 3 ticks
+    // above 1h, the announced value changes only per-hour → unchanged after 3s
+    expect(screen.getByRole('timer').textContent).toBe(announced);
   });
 
   it('shows the expired message once past expiry and calls onExpire', () => {
@@ -822,13 +795,19 @@ function remaining(expiresAt: string): { ms: number; label: string } {
 }
 
 export function OfferCountdown({ expiresAt, onExpire }: { expiresAt: string; onExpire?: () => void }) {
-  const [state, setState] = useState(() => remaining(expiresAt));
+  // The announced label only re-renders when it changes (threshold = whole minute under 1h,
+  // whole hour above), so aria-live does NOT fire every second.
+  const [label, setLabel] = useState(() => remaining(expiresAt).label);
   const fired = useRef(false);
+  const lastLabel = useRef(label);
 
   useEffect(() => {
     const tick = () => {
       const next = remaining(expiresAt);
-      setState(next);
+      if (next.label !== lastLabel.current) {   // only update on a threshold change
+        lastLabel.current = next.label;
+        setLabel(next.label);
+      }
       if (next.ms <= 0 && !fired.current) { fired.current = true; onExpire?.(); }
     };
     const id = setInterval(tick, 1000);
@@ -838,11 +817,13 @@ export function OfferCountdown({ expiresAt, onExpire }: { expiresAt: string; onE
 
   return (
     <span role="timer" aria-live="polite" aria-atomic="true" className="font-medium text-feed-accent">
-      {state.label}
+      {label}
     </span>
   );
 }
 ```
+
+> Throttling is real: `remaining()` returns a label at whole-minute granularity (under 1h) / whole-hour granularity (above), so `setLabel` is a no-op on most ticks and the live region announces only at threshold boundaries.
 
 - [ ] **Step 4: Run it, expect PASS.**
 
@@ -857,9 +838,11 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 9: Screen-reader feed semantics helpers
+## Task 9: Screen-reader feed semantics helpers (canonical `browse_feed` columns)
 
-The blind feed must read coherently to a screen reader: each night is a list item with a composed accessible name ("A Friday evening night in Downtown, 50-50, low jazz") that **never leaks creator identity** (spec §5/§7.2). This pure module composes that label from the `browse_feed` view fields (P0 Task 11), so feed markup and tests share one labelling rule.
+The blind feed must read coherently to a screen reader: each night is a list item with a composed accessible name ("A Friday evening night in Downtown, 50-50, low jazz") that **never leaks creator identity** (spec §5/§7.2). This pure module composes that label from the **canonical `browse_feed_for_viewer` projection (C4/C11.3)**, so feed markup and tests share one labelling rule.
+
+> **CONTRACT-CORRECT COLUMNS (C4).** The feed row exposes: `date_instance_id, city_id, time_window_start (hour-truncated), itinerary_id, pay_setting, vibe_tags, why_note, sound_title, sound_license, venue_neighborhood, is_seed` (+ `distance_m` from the RPC). There is **no `timezone` column on the feed row** — display zone comes from `cities.timezone` resolved via `city_id`; the helper takes `timeZone` as an explicit argument the caller supplies from that lookup. `pay_setting` enum values follow the canonical P10 labels (CC5).
 
 **Files:**
 - Create: `apps/web/components/loop/feed-a11y.ts`
@@ -873,29 +856,37 @@ import { describe, it, expect } from 'vitest';
 import { feedItemLabel, FEED_LIST_ROLE } from './feed-a11y';
 
 describe('feed-a11y', () => {
-  it('composes a label from blind feed fields only (no identity)', () => {
-    const label = feedItemLabel({
-      time_window_start: '2026-06-05T19:00:00Z',
-      venue_neighborhood: 'Downtown',
-      pay_setting: 'split',
-      vibe_tags: ['cozy', 'live music'],
-      timezone: 'America/Vancouver',
-    });
+  it('composes a label from canonical browse_feed columns only (no identity)', () => {
+    const label = feedItemLabel(
+      {
+        date_instance_id: 'di-1',
+        city_id: 'c-1',
+        time_window_start: '2026-06-05T19:00:00Z',
+        venue_neighborhood: 'Downtown',
+        pay_setting: 'split',
+        vibe_tags: ['cozy', 'live music'],
+      },
+      'America/Vancouver', // timeZone resolved from cities.timezone via city_id (not a feed column)
+    );
     expect(label).toMatch(/Downtown/);
     expect(label).toMatch(/cozy/);
     expect(label).toMatch(/split the bill|50-?50/i);
   });
 
-  it('never references a creator name or id', () => {
-    const label = feedItemLabel({
-      time_window_start: '2026-06-05T19:00:00Z',
-      venue_neighborhood: 'Pandosy',
-      pay_setting: 'i_pay',
-      vibe_tags: [],
-      timezone: 'America/Vancouver',
-      // @ts-expect-error — proving creator fields are not consumed even if present
-      creator_id: 'should-be-ignored', creator_name: 'Alex',
-    });
+  it('never references a creator name or id (structurally absent from browse_feed)', () => {
+    const label = feedItemLabel(
+      {
+        date_instance_id: 'di-2',
+        city_id: 'c-1',
+        time_window_start: '2026-06-05T19:00:00Z',
+        venue_neighborhood: 'Pandosy',
+        pay_setting: 'i_pay',
+        vibe_tags: [],
+        // @ts-expect-error — proving creator fields are not consumed even if present
+        creator_id: 'should-be-ignored', creator_name: 'Alex',
+      },
+      'America/Vancouver',
+    );
     expect(label.toLowerCase()).not.toContain('alex');
     expect(label).not.toContain('should-be-ignored');
   });
@@ -917,23 +908,28 @@ import { formatInZone } from '@/lib/timezone';
 // ARIA `feed` role gives SR users a paged, virtual-scroll-friendly reading model.
 export const FEED_LIST_ROLE = 'feed' as const;
 
-type FeedItem = {
-  time_window_start: string;        // ISO; coarse (hour-truncated) per browse_feed
+// Canonical browse_feed_for_viewer projection (C4/C11.3) — identity-stripped.
+// NOTE: there is NO `timezone` column on the feed row; the city zone is resolved
+// from cities.timezone via city_id and passed to feedItemLabel as an argument.
+export type FeedItem = {
+  date_instance_id: string;
+  city_id: string;
+  time_window_start: string;        // ISO; hour-truncated per browse_feed
   venue_neighborhood: string | null;
   pay_setting: 'i_pay' | 'they_pay' | 'split' | null;
   vibe_tags: string[];
-  timezone: string;                 // from cities.timezone
 };
 
+// Pay labels are the canonical P10 set (CC5) — applied consistently on every surface.
 const PAY_COPY: Record<NonNullable<FeedItem['pay_setting']>, string> = {
   i_pay: 'they treat',
   they_pay: 'you treat',
   split: '50-50, split the bill',
 };
 
-// Consumes ONLY blind fields — creator identity is structurally absent (browse_feed view).
-export function feedItemLabel(item: FeedItem): string {
-  const when = formatInZone(item.time_window_start, item.timezone, { weekday: 'long', hour: 'numeric' });
+// Consumes ONLY blind feed columns — creator identity is structurally absent (browse_feed).
+export function feedItemLabel(item: FeedItem, timeZone: string): string {
+  const when = formatInZone(item.time_window_start, timeZone, { weekday: 'long', hour: 'numeric' });
   const where = item.venue_neighborhood ?? 'a vetted spot';
   const vibe = item.vibe_tags.length ? `, ${item.vibe_tags.join(' and ')}` : '';
   const pay = item.pay_setting ? `, ${PAY_COPY[item.pay_setting]}` : '';
@@ -947,24 +943,53 @@ export function feedItemLabel(item: FeedItem): string {
 
 ```bash
 git add apps/web/components/loop/feed-a11y.ts apps/web/components/loop/feed-a11y.test.ts
-git commit -m "P11: feed-a11y — SR-safe feed item labels (blind fields only) + ARIA feed role
+git commit -m "P11: feed-a11y — SR-safe feed item labels (canonical browse_feed columns) + ARIA feed role
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 10: Analytics taxonomy + `analytics_events` outbox (every transition)
+## Task 9b: WIRE `AsyncBoundary` + `feed-a11y` + the canonical empty state INTO P4's `BrowseFeed` (no orphan)
 
-Spec §13 demands an event for **every** lifecycle transition. Two halves:
-1. **Client taxonomy** (`loop-analytics.ts`): one typed map of every event name + payload shape — `swipe_right`, `swipe_left`, `shortlist_added`, `rank_changed`, `offer_made`, `offer_accepted`, `offer_passed`, `offer_expired`, `standby_filled`, `lock_confirmed`, `lock_cancelled`, `reciprocal_chooser_shown`, `withdraw`, `rate_submitted`, `feed_empty_shown`, plus `time_to_lock`.
-2. **Server outbox** (`analytics_events` table + trigger): because the highest-value transitions (offer made/accepted/expired, lock, auto-roll) fire inside P5 SECURITY DEFINER functions / P2 jobs — *not* the browser — a DB trigger writes them to `analytics_events`, which Task 13's relay drains to PostHog. This guarantees server-authoritative transitions are never lost.
+**ORPHAN FIX (audit §1, §6).** The "consistent states on every loop screen" claim is empty unless a screen adopts `AsyncBoundary`. P4 ships the feed screen with its own `EmptyFeedState`. P11 **edits P4's real feed component** to wrap the `browse_feed_for_viewer` fetch in `AsyncBoundary` (loading/error/empty/ready) and to apply `feedItemLabel(...)` (with `cities.timezone` resolved via `city_id`) and the ARIA `feed` role to the list. Reuse P4's existing `EmptyFeedState` as the `empty` slot (do not introduce a second empty component). **Depends on: P4 (`BrowseFeed.tsx`, `browse_feed_for_viewer` RPC — finalized by Task 18b).**
+
+**Files:**
+- Modify: `apps/web/components/feed/BrowseFeed.tsx` (P4's component)
+
+- [ ] **Step 1: Failing test** — the feed renders a labelled spinner while loading, P4's `EmptyFeedState` when `browse_feed_for_viewer` returns no rows, an alert + retry on error, and the list carries `role="feed"` with each item labelled by `feedItemLabel`.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Edit P4's `BrowseFeed`** to wrap the fetch in `<AsyncBoundary state={…} label="nights" empty={<EmptyFeedState/>} onRetry={…}>`, set `role={FEED_LIST_ROLE}` on the list container, and set each card's accessible name from `feedItemLabel(row, cityTimezoneFor(row.city_id))`. The feed read continues through P4's `browse_feed_for_viewer` RPC (C4) — P11 adds no second data source.
+- [ ] **Step 4: Run, expect PASS.**
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/components/feed/BrowseFeed.tsx
+git commit -m "P11: wire AsyncBoundary + feed-a11y + ARIA feed role into P4 BrowseFeed (de-orphan states/a11y)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Task 10: Loop analytics taxonomy + transition-event coverage verification (`analytics_events` owned by S2)
+
+Spec §13 demands an event for **every** lifecycle transition (15 of them). **The `analytics_events` outbox TABLE is owned and created in S2 (P2 band `123900`, C11.8) — P11 does NOT create it and ships no competing trigger.** Per the contract, **P5/P2 EMIT** every transition event into `analytics_events` from their own SECURITY DEFINER functions / jobs (C2 line 82: "Every transition emits its analytics event into `analytics_events`"); **P11 VERIFIES coverage and RELAYS** (Task 13). This task ships:
+1. **Client taxonomy** (`loop-analytics.ts`): one typed map of all 15 event names + payload shape (the shared vocabulary; client-only transitions like `feed_empty_shown` go through `track.loop`, Task 11).
+2. **A coverage-verification psql test** proving the **7 previously lost/mislabeled events are emitted by the right S6/S2 source with the correct distinct name** — fixing the audit §3 gaps. P11 owns the *assertion*, not the emit code; if a coverage check fails, the fix lands in the **owning S6/S2 plan** (P11 flags it, the contract makes S6/S2 emit it).
+
+> **The 7 events the audit found lost/mislabeled — coverage requirements P11 verifies (fixed in S6/S2 per C2):**
+> - `swipe_right` / `swipe_left` — emitted at the swipe write (S5). Client `track.loop` is the primary path; server path optional.
+> - `rank_changed` — emitted by S6 `match_shortlist` rank change (NOT a `status` change — needs an explicit emit, not a status-trigger). Must be its own event, never folded into `offer_*`.
+> - `withdraw` — emitted **distinctly** by S6 `match_withdraw` / `match_autowithdraw_user_conflicts`; MUST NOT be mislabeled as `offer_passed`/`offer_expired`. (Audit §3 "WRONG LABEL + LOST".)
+> - `reciprocal_chooser_shown` — emitted by S6 `match_resolve_reciprocal` (C11.4) when the chooser is surfaced.
+> - `rate_submitted` — emitted on `match_ratings` insert (S8 rating window).
+> - `standby_filled` — emitted on the real promotion (`shortlisted → offer_active` via `match_auto_roll`/`match_next_standby`, C2), NOT a nonexistent `status='standby'` value.
 
 **Files:**
 - Create: `apps/web/app/loop-analytics.ts`
 - Create: `apps/web/app/loop-analytics.test.ts`
-- Create: `supabase/migrations/20260525130000_p11_analytics_events.sql`
-- Create: `supabase/tests/p11_analytics_events.sql`
+- Create: `supabase/tests/p11_analytics_events_coverage.sql`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -974,7 +999,7 @@ import { describe, it, expect } from 'vitest';
 import { LOOP_EVENTS, isLoopEvent } from './loop-analytics';
 
 describe('loop analytics taxonomy', () => {
-  it('enumerates every §7.1 / §13 transition', () => {
+  it('enumerates every §7.1 / §13 transition (all 15)', () => {
     for (const name of [
       'swipe_right', 'swipe_left', 'shortlist_added', 'rank_changed',
       'offer_made', 'offer_accepted', 'offer_passed', 'offer_expired',
@@ -983,6 +1008,7 @@ describe('loop analytics taxonomy', () => {
     ]) {
       expect(LOOP_EVENTS).toContain(name);
     }
+    expect(LOOP_EVENTS).toHaveLength(15);
   });
   it('isLoopEvent guards unknown names', () => {
     expect(isLoopEvent('offer_made')).toBe(true);
@@ -992,40 +1018,51 @@ describe('loop analytics taxonomy', () => {
 ```
 
 ```sql
--- supabase/tests/p11_analytics_events.sql
--- A status change on offers must enqueue an analytics_events row (server-authoritative transition).
+-- supabase/tests/p11_analytics_events_coverage.sql
+-- COVERAGE: each server-authoritative transition (driven by the C2 match_* RPCs / C1 jobs)
+-- must land a distinctly-named row in the S2-owned analytics_events outbox. Fixtures via C8.
+-- This asserts the contract emit (owned by S6/S2); if it fails, the fix is in the owning plan.
+\i 'supabase/tests/_fixtures.sql'
 DO $$
-DECLARE cre uuid; cand uuid; cid uuid; inst uuid; off uuid; n int;
+DECLARE cre uuid; cand uuid; itin uuid; inst uuid; off uuid; n int;
 BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(),'c') returning id into cre;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'a') returning id into cand;
-  insert into cities (slug,name,timezone,is_active) values ('p11a','p11a','America/Vancouver',true)
-    on conflict (slug) do nothing;
-  select id into cid from cities where slug='p11a';
-  insert into itineraries (id,user_id) values (gen_random_uuid(),cre);
-  insert into date_instances (itinerary_id,creator_id,city_id,starts_at)
-    select i.id,cre,cid, now()+interval '2 days' from itineraries i where i.user_id=cre limit 1
-    returning id into inst;
-  insert into offers (date_instance_id,candidate_id,creator_id,status,expires_at)
-    values (inst,cand,cre,'active', now()+interval '1 day') returning id into off;
-  update offers set status='accepted', resolved_at=now() where id=off;
-  select count(*) into n from analytics_events
-    where entity='offers' and entity_id=off and event='offer_accepted';
-  IF n < 1 THEN RAISE EXCEPTION 'analytics_events did not capture offer_accepted'; END IF;
-  RAISE NOTICE 'analytics_events OK (% rows)', n;
-  ROLLBACK;
+  cre  := mk_user('creator');
+  cand := mk_user('candidate');
+  itin := mk_itinerary(cre);
+  inst := mk_instance(itin, cre, now() + interval '2 days');
+
+  -- drive the real transitions through the C2 API (NOT bare status UPDATEs)
+  perform match_shortlist(cre, inst, cand, 1);
+  off := match_make_offer(cre, inst, cand, 'idem-1');
+  perform match_accept_offer(cand, off, 'idem-2');
+
+  -- distinct, correctly-named events landed in the S2 outbox:
+  perform 1 from analytics_events where event='offer_made'     and entity_id=off;
+  if not found then raise exception 'offer_made not emitted by match_make_offer'; end if;
+  perform 1 from analytics_events where event='offer_accepted'  and entity_id=off;
+  if not found then raise exception 'offer_accepted not emitted by match_accept_offer'; end if;
+  perform 1 from analytics_events where event='shortlist_added';
+  if not found then raise exception 'shortlist_added not emitted by match_shortlist'; end if;
+
+  -- withdraw must be its own event, NEVER relabeled as offer_passed/expired:
+  perform match_withdraw(cand, inst);
+  perform 1 from analytics_events where event='withdraw';
+  if not found then raise exception 'withdraw not emitted distinctly by match_withdraw'; end if;
+
+  raise notice 'analytics coverage OK';
+  rollback;
 END $$;
 ```
 
-- [ ] **Step 2: Run both, expect FAIL** (missing module; `relation "analytics_events" does not exist`).
+- [ ] **Step 2: Run both, expect FAIL** (missing taxonomy module; coverage rows absent until S6/S2 emit).
 
-- [ ] **Step 3: Write the code**
+- [ ] **Step 3: Write the client taxonomy** (the only DB object P11 owns for analytics is the relay job in Task 13b — the table + emits are S2/S6).
 
 ```ts
 // apps/web/app/loop-analytics.ts
 // Single source of truth for loop event names + payloads. NEVER call posthog.capture
-// with a string literal elsewhere — add it here so client + server taxonomies match
-// the DB `analytics_events.event` enum-of-text written by the trigger in migration p11.
+// with a string literal elsewhere. These names match the S2-owned `analytics_events.event`
+// values that P5/P2 write (C2/C11.8) and the relay (Task 13) forwards to PostHog.
 export const LOOP_EVENTS = [
   'swipe_right', 'swipe_left', 'shortlist_added', 'rank_changed',
   'offer_made', 'offer_accepted', 'offer_passed', 'offer_expired',
@@ -1048,83 +1085,13 @@ export interface LoopEventProps {
 }
 ```
 
-```sql
--- supabase/migrations/20260525130000_p11_analytics_events.sql
--- Outbox for server-authoritative loop transitions (offer/lock/queue/date_instance status
--- changes happen in SECURITY DEFINER fns + jobs, not the browser). Drained by the relay
--- (api-client/analytics-relay.ts) to PostHog. Keeps the §13 "every transition" guarantee
--- even when the transition never touches a client.
-create table if not exists analytics_events (
-  id bigint generated always as identity primary key,
-  event text not null,                 -- mirrors apps/web/app/loop-analytics.ts LOOP_EVENTS
-  entity text not null,                -- 'offers' | 'locks' | 'queue_entries' | 'date_instances'
-  entity_id uuid not null,
-  distinct_id uuid,                    -- subject user for PostHog identity
-  props jsonb not null default '{}',
-  forwarded_at timestamptz,            -- null = not yet sent to PostHog
-  created_at timestamptz not null default now()
-);
-create index if not exists analytics_events_unforwarded_idx
-  on analytics_events (created_at) where forwarded_at is null;
-
--- Map a (table, old_status, new_status) transition to a LOOP_EVENT name.
-create or replace function loop_event_for(tbl text, old_s text, new_s text) returns text
-language sql immutable as $fn$
-  select case
-    when tbl='offers' and new_s='active'   then 'offer_made'
-    when tbl='offers' and new_s='accepted' then 'offer_accepted'
-    when tbl='offers' and new_s='passed'   then 'offer_passed'
-    when tbl='offers' and new_s='expired'  then 'offer_expired'
-    when tbl='locks'  and new_s='active'   then 'lock_confirmed'
-    when tbl='locks'  and new_s='cancelled' then 'lock_cancelled'
-    when tbl='queue_entries' and new_s='shortlisted' then 'shortlist_added'
-    when tbl='queue_entries' and new_s='standby'     then 'standby_filled'
-    else null
-  end;
-$fn$;
-
-create or replace function enqueue_analytics_event() returns trigger
-language plpgsql security definer set search_path = public as $fn$
-declare ev text; subj uuid;
-begin
-  if (tg_op='INSERT') then
-    ev := loop_event_for(tg_table_name, null, new.status::text);
-  elsif (tg_op='UPDATE' and new.status is distinct from old.status) then
-    ev := loop_event_for(tg_table_name, old.status::text, new.status::text);
-  else
-    return new;
-  end if;
-  if ev is null then return new; end if;
-  -- subject = the candidate/matched user where present, else creator
-  subj := coalesce(
-    case when tg_table_name='offers' then new.candidate_id
-         when tg_table_name='locks' then new.matched_user_id
-         when tg_table_name='queue_entries' then new.candidate_id
-         else null end,
-    new.creator_id);
-  insert into analytics_events(event, entity, entity_id, distinct_id, props)
-  values (ev, tg_table_name, new.id, subj,
-          jsonb_build_object('date_instance_id', new.date_instance_id));
-  return new;
-end $fn$;
-
-create trigger analytics_offers after insert or update on offers
-  for each row execute function enqueue_analytics_event();
-create trigger analytics_locks after insert or update on locks
-  for each row execute function enqueue_analytics_event();
-create trigger analytics_queue after insert or update on queue_entries
-  for each row execute function enqueue_analytics_event();
-
-alter table analytics_events enable row level security;  -- service-role read/drain only; no policies = deny.
-```
-
-- [ ] **Step 4: Apply + run both tests, expect PASS** (`supabase db reset && psql … -f supabase/tests/p11_analytics_events.sql`; `pnpm --filter @after5/web test`).
+- [ ] **Step 4: Run both, expect PASS** (the coverage psql test passes once S6/S2 emit per contract; until then it is the executable proof of the gap — do not skip it).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/app/loop-analytics.ts apps/web/app/loop-analytics.test.ts supabase/migrations/20260525130000_p11_analytics_events.sql supabase/tests/p11_analytics_events.sql
-git commit -m "P11: loop analytics taxonomy + analytics_events outbox trigger (every server transition)
+git add apps/web/app/loop-analytics.ts apps/web/app/loop-analytics.test.ts supabase/tests/p11_analytics_events_coverage.sql
+git commit -m "P11: loop analytics taxonomy (15 events) + outbox coverage test (table owned by S2; emits by S6/S2)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -1191,15 +1158,16 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 12: Feature flags + `feature_config` (tune the offer window)
+## Task 12: Offer-window flag config UI/value (reads the P2-owned `feature_config`; no parallel table)
 
-Open question §11.1: the lock-offer window length (default 24–48h) must be tunable via experiment. PostHog feature flags drive client experiments, but **jobs and Edge Functions (offer-expiry) have no browser SDK**, so the source of truth for the window length is a DB row in `feature_config`; PostHog is the experiment-assignment layer that *writes* the chosen value, and the client reader prefers the PostHog flag and falls back to the DB value.
+The lock-offer window length must be tunable. **The `feature_config` table + the `offer_window_hours` row + `offer_expires_at()` are owned by P2 (C11.1, band `123800`) — P11 does NOT create them.** P5's `match_make_offer` already sets `expires_at := offer_expires_at()` (C2/C11.1) — the window is **already load-bearing**; the audit's "decorative flag" seam is closed by the contract. P11 owns **only the flag-reader UI/value layer**: a typed client reader that prefers a PostHog flag and falls back to the DB value, plus the admin path that writes the chosen value back into the P2-owned `feature_config` row.
+
+> **No parallel system.** P11 must not `create table feature_config`, must not define a second `offer_expires_at(...)`, and the schema P11 reads is the **C11.1 schema**: `feature_config(key text pk, value jsonb, updated_at)` with the seed `('offer_window_hours','24'::jsonb)`. The value is a bare JSON scalar (`'24'`), read via `value#>>'{}'` — **not** `value->>'hours'`. `offer_expires_at()` clamps to 12–72h server-side (C11.1).
 
 **Files:**
 - Create: `apps/web/lib/feature-flags.ts`
 - Create: `apps/web/lib/feature-flags.test.ts`
-- Create: `supabase/migrations/20260525130100_p11_feature_config.sql`
-- Create: `supabase/tests/p11_feature_config.sql`
+- Create: `supabase/tests/p11_feature_config.sql` (read-only assertion against the P2-owned table)
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1212,35 +1180,37 @@ import { offerWindowHours } from './feature-flags';
 describe('offerWindowHours', () => {
   it('uses the PostHog flag payload when present', () => {
     (posthog.getFeatureFlagPayload as ReturnType<typeof vi.fn>).mockReturnValue({ hours: 36 });
-    expect(offerWindowHours(48)).toBe(36);
+    expect(offerWindowHours(24)).toBe(36);
   });
-  it('falls back to the provided DB default when no flag', () => {
+  it('falls back to the provided feature_config default when no flag', () => {
     (posthog.getFeatureFlagPayload as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
-    expect(offerWindowHours(48)).toBe(48);
+    expect(offerWindowHours(24)).toBe(24);
   });
-  it('clamps to the safe 12–72h range', () => {
+  it('clamps to the C11.1 safe 12–72h range (same clamp as offer_expires_at())', () => {
     (posthog.getFeatureFlagPayload as ReturnType<typeof vi.fn>).mockReturnValue({ hours: 999 });
-    expect(offerWindowHours(48)).toBe(72);
+    expect(offerWindowHours(24)).toBe(72);
   });
 });
 ```
 
 ```sql
 -- supabase/tests/p11_feature_config.sql
+-- READ-ONLY check against the P2-owned (C11.1) feature_config row. P11 does not create it.
 DO $$
 DECLARE v int;
 BEGIN
   PERFORM 1 FROM feature_config WHERE key='offer_window_hours';
-  IF NOT FOUND THEN RAISE EXCEPTION 'offer_window_hours seed missing'; END IF;
-  SELECT (value->>'hours')::int INTO v FROM feature_config WHERE key='offer_window_hours';
-  IF v < 12 OR v > 72 THEN RAISE EXCEPTION 'offer_window_hours out of safe range: %', v; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'offer_window_hours seed missing (owned by P2/C11.1)'; END IF;
+  -- C11.1 stores a bare JSON scalar: value = '24'::jsonb, read via #>>'{}'
+  SELECT (value#>>'{}')::int INTO v FROM feature_config WHERE key='offer_window_hours';
+  IF v < 12 OR v > 72 THEN RAISE EXCEPTION 'offer_window_hours out of C11.1 safe range: %', v; END IF;
   RAISE NOTICE 'feature_config OK (offer window = % h)', v;
 END $$;
 ```
 
-- [ ] **Step 2: Run both, expect FAIL.**
+- [ ] **Step 2: Run both, expect FAIL** (missing reader module; `feature_config` exists from P2).
 
-- [ ] **Step 3: Write the code**
+- [ ] **Step 3: Write the code** (client reader only — clamp mirrors `offer_expires_at()`'s 12–72h, C11.1).
 
 ```ts
 // apps/web/lib/feature-flags.ts
@@ -1250,8 +1220,9 @@ import posthog from 'posthog-js';
 const MIN_HOURS = 12;
 const MAX_HOURS = 72;
 
-// Offer-window length (spec §11.1). PostHog flag payload is the experiment layer;
-// the dbDefault arg is the feature_config fallback the server/jobs also read.
+// Offer-window length. PostHog flag payload is the experiment-assignment layer;
+// dbDefault is the value read from the P2-owned feature_config row (C11.1) for SSR/jobs.
+// The clamp matches offer_expires_at()'s server-side clamp so client + server agree.
 export function offerWindowHours(dbDefault: number): number {
   const payload = posthog.getFeatureFlagPayload?.('offer_window') as { hours?: number } | undefined;
   const raw = typeof payload?.hours === 'number' ? payload.hours : dbDefault;
@@ -1259,46 +1230,27 @@ export function offerWindowHours(dbDefault: number): number {
 }
 ```
 
-```sql
--- supabase/migrations/20260525130100_p11_feature_config.sql
--- DB-backed flag/config fallback. Jobs + Edge Functions (no browser SDK) read here;
--- PostHog experiments may overwrite the value when an experiment concludes.
-create table if not exists feature_config (
-  key text primary key,
-  value jsonb not null,
-  description text,
-  updated_at timestamptz not null default now()
-);
-create trigger set_feature_config_updated_at before update on feature_config
-  for each row execute function set_updated_at();
-
-insert into feature_config (key, value, description) values
-  ('offer_window_hours', '{"hours": 36}', 'Lock-offer expiry window in hours (spec §11.1; safe range 12-72).')
-on conflict (key) do nothing;
-
-alter table feature_config enable row level security;
-do $$ begin
-  create policy "feature_config_public_read" on feature_config for select using (true);
-exception when duplicate_object then null; end $$;
--- writes are service-role/admin only (no insert/update policy).
-```
+> **Write path (admin UI).** The experiment's chosen value is written back to `feature_config` by an admin-only RPC/route (admin gated by `admin_has_role()`, C10) that updates the C11.1 row's `value` (bare JSON scalar). P11 wires this admin control into the existing S9 admin console (`apps/web/app/admin/*`); it does not add a public write policy. The server-side window math stays in `offer_expires_at()` — P11 never recomputes expiry in TS.
 
 - [ ] **Step 4: Apply + run both, expect PASS.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/lib/feature-flags.ts apps/web/lib/feature-flags.test.ts supabase/migrations/20260525130100_p11_feature_config.sql supabase/tests/p11_feature_config.sql
-git commit -m "P11: feature flags (offer-window experiment) + feature_config DB fallback for jobs
+git add apps/web/lib/feature-flags.ts apps/web/lib/feature-flags.test.ts supabase/tests/p11_feature_config.sql
+git commit -m "P11: offer-window flag reader + admin write into P2-owned feature_config (C11.1; no parallel table)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 13: Analytics relay — drain `analytics_events` to PostHog (server-side)
+## Task 13: Analytics relay — drain the S2 `analytics_events` outbox to PostHog (service-role + flush)
 
-Forward the outbox to PostHog from the server (jobs/Edge Functions have no browser SDK). Adds `posthog-node` and a pure-ish `drainAnalyticsEvents` that selects unforwarded rows, captures them, and marks them forwarded — idempotent and batched.
+Forward the **S2-owned** `analytics_events` outbox to PostHog from the server (jobs have no browser SDK). Adds `posthog-node` and `drainAnalyticsEvents` that selects unforwarded rows, captures them, **`flush()`es (at-least-once)**, then marks them forwarded — idempotent and batched. The drain runs **only** under the `analytics_relay` job handler wired in Task 13b (C1 job type).
+
+> **Auth (audit §5).** The relay MUST be constructed with the **service-role** Supabase client (RLS on `analytics_events` = no policies = deny; the relay bypasses RLS via service role). If it ran with a user JWT, `SELECT` returns 0 rows and the drain silently no-ops. The handler injects the service-role client.
+> **At-least-once (audit §4).** `posthog-node.capture` is buffered fire-and-forget; the relay calls `await ph.flush()` **before** marking rows `forwarded_at`, so a crash re-drains rather than silently dropping. Re-delivery is acceptable (PostHog dedups on event id if supplied; otherwise at-least-once is the documented guarantee).
 
 **Files:**
 - Create: `packages/api-client/src/analytics-relay.ts`
@@ -1327,23 +1279,34 @@ function fakeClient(rows: Array<{ id: number; event: string; distinct_id: string
 }
 
 describe('drainAnalyticsEvents', () => {
-  it('captures each unforwarded row and marks them forwarded', async () => {
+  it('captures each unforwarded row, flushes, THEN marks them forwarded (at-least-once)', async () => {
     const capture = vi.fn();
+    const flush = vi.fn().mockResolvedValue(undefined);
     const client = fakeClient([
       { id: 1, event: 'offer_made', distinct_id: 'u1', props: { date_instance_id: 'd1' } },
       { id: 2, event: 'lock_confirmed', distinct_id: 'u2', props: {} },
     ]);
-    const n = await drainAnalyticsEvents(client as never, { capture } as never);
+    const n = await drainAnalyticsEvents(client as never, { capture, flush } as never);
     expect(capture).toHaveBeenCalledTimes(2);
     expect(capture).toHaveBeenCalledWith({ distinctId: 'u1', event: 'offer_made', properties: { date_instance_id: 'd1' } });
+    expect(flush).toHaveBeenCalledTimes(1);            // flush BEFORE marking forwarded
     expect(client.updated.flat()).toEqual([1, 2]);
     expect(n).toBe(2);
   });
 
-  it('returns 0 and skips update when nothing is pending', async () => {
+  it('does NOT mark forwarded if flush rejects (rows re-drain next run)', async () => {
     const capture = vi.fn();
+    const flush = vi.fn().mockRejectedValue(new Error('network'));
+    const client = fakeClient([{ id: 1, event: 'offer_made', distinct_id: 'u1', props: {} }]);
+    await expect(drainAnalyticsEvents(client as never, { capture, flush } as never)).rejects.toThrow();
+    expect(client.updated).toEqual([]);               // never marked forwarded on flush failure
+  });
+
+  it('returns 0 and skips capture/flush when nothing is pending', async () => {
+    const capture = vi.fn();
+    const flush = vi.fn();
     const client = fakeClient([]);
-    const n = await drainAnalyticsEvents(client as never, { capture } as never);
+    const n = await drainAnalyticsEvents(client as never, { capture, flush } as never);
     expect(n).toBe(0);
     expect(capture).not.toHaveBeenCalled();
     expect(client.updated).toEqual([]);
@@ -1362,12 +1325,15 @@ import type { After5Client } from './index';
 // Minimal surface of posthog-node we depend on (keeps tests decoupled).
 export interface PostHogLike {
   capture(args: { distinctId: string; event: string; properties?: Record<string, unknown> }): void;
+  flush(): Promise<void>;
 }
 
-// Drain the analytics_events outbox to PostHog. Idempotent: only forwarded_at IS NULL
-// rows are sent, then marked. Call from a P2 scheduled job (e.g. every minute).
+// Drain the S2-owned analytics_events outbox to PostHog. MUST be called with a
+// SERVICE-ROLE client (RLS denies otherwise). Idempotent: only forwarded_at IS NULL rows
+// are sent; flush() (at-least-once) runs BEFORE marking forwarded so a crash re-drains.
+// Invoked only by the `analytics_relay` job handler (Task 13b).
 export async function drainAnalyticsEvents(
-  client: After5Client,
+  client: After5Client,            // service-role client
   ph: PostHogLike,
   batch = 500,
 ): Promise<number> {
@@ -1388,6 +1354,7 @@ export async function drainAnalyticsEvents(
       properties: (r as { props: Record<string, unknown> }).props,
     });
   }
+  await ph.flush();                // at-least-once: ensure delivery BEFORE marking forwarded
   const ids = rows.map((r) => (r as { id: number }).id);
   const { error: upErr } = await client
     .from('analytics_events')
@@ -1400,35 +1367,120 @@ export async function drainAnalyticsEvents(
 
 Re-export from `packages/api-client/src/index.ts`: `export { drainAnalyticsEvents, type PostHogLike } from './analytics-relay';`
 
-- [ ] **Step 4: Run it, expect PASS.** (Run via the web test command if api-client has no own runner: add a sibling `vitest.config.ts` to `packages/api-client`, or import-test it through web — prefer adding the package's own `vitest run` script mirroring Task 1. Keep it minimal: `"test": "vitest run"` + `vitest` devDep.)
+- [ ] **Step 4: Run it, expect PASS** via `pnpm test` (P1's root vitest workspace already covers `packages/api-client/**`, C12 — do NOT add a sibling config).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add packages/api-client/src/analytics-relay.ts packages/api-client/src/analytics-relay.test.ts packages/api-client/src/index.ts packages/api-client/package.json pnpm-lock.yaml
-git commit -m "P11: analytics relay — drain analytics_events outbox to PostHog (server-side, batched, idempotent)
+git commit -m "P11: analytics relay — drain S2 analytics_events outbox to PostHog (service-role, flush, idempotent)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 14: Timezone/DST correctness for display + offer expiry
+## Task 13b: `analytics_relay` job type + `process-jobs` handler + 30-day retention (C1/C11.8)
 
-The audit flags timezone/DST. P0 already stores everything `timestamptz` (instants are correct), so the risk is in (a) **display** — a "Friday evening" window must render in the city's zone, and (b) **expiry math** — adding the offer window across a DST boundary. Two halves: a TS display helper, and a DB helper that computes `expires_at` from `feature_config` + `cities.timezone` so jobs and the offer RPC share one rule.
+**SEAM FIX (audit §2; C1; C11.8).** The relay (Task 13) is inert without a job to run it. P11 **owns the `analytics_relay` JOB TYPE + its handler** (the `job_type` enum already includes `'analytics_relay'` per C1 — P11 does NOT `ALTER TYPE`; the value is in the canonical C1 enum). P11 adds the **handler branch in the C1 `process-jobs` runner** that drains the outbox with a service-role client, plus a **self-rescheduling enqueue** (so it runs continuously) and **30-day retention** (C11.8: purge `analytics_events` after 30d). **Depends on: S2 (C1 `jobs`/`job_type`/`enqueue_job`/`process-jobs` runner; `analytics_events` table).**
+
+> P11 must use the C1 names exactly: `enqueue_job(p_type job_type, …)`, the runner's per-`type` dispatch, dead-letter at `attempts>=5`. No local `jobs`/shim.
 
 **Files:**
-- Create: `apps/web/lib/timezone.ts`
-- Create: `apps/web/lib/timezone.test.ts`
-- Create: `supabase/migrations/20260525130500_p11_offer_expiry_tz.sql`
-- Create: `supabase/tests/p11_offer_expiry_tz.sql`
+- Modify: `supabase/functions/process-jobs/` (add the `analytics_relay` dispatch branch in the C1 runner)
+- Create: `supabase/migrations/20260525132000_p11_analytics_relay_job.sql` (retention purge fn + initial self-rescheduling enqueue)
+- Create: `supabase/tests/p11_analytics_relay_job.sql`
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the failing test**
+
+```sql
+-- supabase/tests/p11_analytics_relay_job.sql
+\i 'supabase/tests/_fixtures.sql'
+DO $$
+DECLARE n int;
+BEGIN
+  -- the job type exists in the C1 enum (P11 did not add it; it is canonical)
+  PERFORM 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid
+   WHERE t.typname='job_type' AND e.enumlabel='analytics_relay';
+  IF NOT FOUND THEN RAISE EXCEPTION 'analytics_relay missing from C1 job_type enum'; END IF;
+
+  -- a recurring analytics_relay job is enqueued (self-reschedule keeps the drain live)
+  PERFORM 1 FROM jobs WHERE type='analytics_relay' AND status='pending';
+  IF NOT FOUND THEN RAISE EXCEPTION 'no pending analytics_relay job enqueued'; END IF;
+
+  -- 30d retention helper exists and prunes forwarded rows older than 30d
+  PERFORM 1 FROM pg_proc WHERE proname='purge_analytics_events';
+  IF NOT FOUND THEN RAISE EXCEPTION 'purge_analytics_events() missing (C11.8 retention)'; END IF;
+  INSERT INTO analytics_events(event, entity, entity_id, distinct_id, forwarded_at, created_at)
+    VALUES ('offer_made','offers',gen_random_uuid(),gen_random_uuid(), now()-interval '31 days', now()-interval '31 days');
+  PERFORM purge_analytics_events();
+  SELECT count(*) INTO n FROM analytics_events WHERE created_at < now()-interval '30 days';
+  IF n <> 0 THEN RAISE EXCEPTION 'purge_analytics_events left % stale rows', n; END IF;
+  RAISE NOTICE 'analytics_relay job + retention OK';
+  ROLLBACK;
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL.**
+
+- [ ] **Step 3: Write the migration + handler**
+
+```sql
+-- supabase/migrations/20260525132000_p11_analytics_relay_job.sql
+-- C11.8 retention: drop forwarded (and any) analytics_events older than 30 days.
+create or replace function purge_analytics_events() returns int
+language sql security definer set search_path = public as $fn$
+  with del as (
+    delete from analytics_events where created_at < now() - interval '30 days' returning 1
+  ) select count(*)::int from del;
+$fn$;
+revoke execute on function purge_analytics_events() from public, authenticated;
+
+-- Seed a recurring drain: enqueue the first analytics_relay job (the handler re-enqueues
+-- itself each run via enqueue_job with a dedup_key so exactly one is ever pending, C1).
+select enqueue_job('analytics_relay', now(), '{}'::jsonb, 'analytics_relay_singleton');
+```
+
+In `supabase/functions/process-jobs/` add to the C1 runner's per-`type` dispatch:
+```ts
+// case 'analytics_relay':
+//   1. build a SERVICE-ROLE supabase client (not the user JWT)
+//   2. const ph = new PostHog(POSTHOG_KEY, { host });
+//   3. await drainAnalyticsEvents(serviceClient, ph);   // flush()es internally
+//   4. await ph.shutdown();                              // flush + close
+//   5. await serviceClient.rpc('purge_analytics_events'); // C11.8 retention each run
+//   6. re-enqueue: enqueue_job('analytics_relay', now()+interval '1 minute', '{}', 'analytics_relay_singleton')
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525132000_p11_analytics_relay_job.sql supabase/tests/p11_analytics_relay_job.sql supabase/functions/process-jobs
+git commit -m "P11: analytics_relay job handler in C1 runner + 30d retention (C11.8); closes the drain seam
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Task 14: Timezone/DST correctness for display (offer expiry math owned by `offer_expires_at()`)
+
+The audit flags timezone/DST. P0 already stores everything `timestamptz` (instants are correct), so the only risk P11 owns is **display** — a "Friday evening" window must render in the **city's zone** (`cities.timezone`), not the runner's. **Expiry math is NOT P11's: `offer_expires_at()` (C11.1, owned by P2) is the single DST-safe rule, and P5's `match_make_offer` already calls it.** P11 must NOT define a second `offer_expires_at(...)` (CV8/C11.1). This task ships only the TS `formatInZone` display helper.
+
+> **REMOVED:** the original `addOfferWindow` TS helper and the `20260525130500_p11_offer_expiry_tz.sql` migration defining a 2-arg `offer_expires_at(window_start, window_hours)` — both **DELETED**. There is one expiry rule (`offer_expires_at(p_from default now())` reading `feature_config`, C11.1) and it lives in P2. The TS layer never recomputes expiry; it only displays the server-provided `expires_at`.
+
+**Files:**
+- Create: `apps/web/lib/timezone.ts` (display only)
+- Create: `apps/web/lib/timezone.test.ts`
+
+- [ ] **Step 1: Write the failing test**
 
 ```ts
 // apps/web/lib/timezone.test.ts
 import { describe, it, expect } from 'vitest';
-import { formatInZone, addOfferWindow } from './timezone';
+import { formatInZone } from './timezone';
 
 describe('timezone', () => {
   it('formats an instant in the city zone, not the runner zone', () => {
@@ -1437,39 +1489,18 @@ describe('timezone', () => {
     expect(out).toMatch(/Thursday/);
     expect(out).toMatch(/7/);
   });
-
-  it('adds the offer window as a real-duration (DST-agnostic instant math)', () => {
-    const base = '2026-03-08T08:00:00Z'; // around US/CA spring-forward
-    const out = addOfferWindow(base, 36);
-    expect(out).toBe(new Date(Date.parse(base) + 36 * 3600_000).toISOString());
-  });
 });
 ```
 
-```sql
--- supabase/tests/p11_offer_expiry_tz.sql
--- offer_expires_at(starts_at, hours) = starts_at + interval (real duration; instants are tz-safe).
-DO $$
-DECLARE got timestamptz; want timestamptz;
-BEGIN
-  PERFORM 1 FROM pg_proc WHERE proname='offer_expires_at';
-  IF NOT FOUND THEN RAISE EXCEPTION 'offer_expires_at() missing'; END IF;
-  got  := offer_expires_at(timestamptz '2026-03-08 08:00:00Z', 36);
-  want := timestamptz '2026-03-08 08:00:00Z' + make_interval(hours => 36);
-  IF got <> want THEN RAISE EXCEPTION 'offer_expires_at off: got % want %', got, want; END IF;
-  RAISE NOTICE 'offer_expires_at OK';
-END $$;
-```
+- [ ] **Step 2: Run it, expect FAIL.**
 
-- [ ] **Step 2: Run both, expect FAIL.**
-
-- [ ] **Step 3: Write the code**
+- [ ] **Step 3: Write the code** (display helper only — no expiry math in TS)
 
 ```ts
 // apps/web/lib/timezone.ts
-// All instants are timestamptz/ISO (correct by storage). These helpers ensure
-// DISPLAY resolves in the city zone and offer-window math is a real-duration add,
-// so a DST boundary never shifts an offer's wall-clock deadline incorrectly.
+// All instants are timestamptz/ISO (correct by storage). This helper ensures DISPLAY
+// resolves in the city zone (cities.timezone). Offer-window EXPIRY math is owned by the
+// DB function offer_expires_at() (C11.1, P2) — never recomputed in TypeScript.
 export function formatInZone(
   iso: string,
   timeZone: string,
@@ -1477,87 +1508,76 @@ export function formatInZone(
 ): string {
   return new Intl.DateTimeFormat('en-CA', { ...options, timeZone }).format(new Date(iso));
 }
-
-// Offer windows are durations of elapsed time, not calendar hours — adding to the
-// epoch instant is inherently DST-safe.
-export function addOfferWindow(baseIso: string, hours: number): string {
-  return new Date(Date.parse(baseIso) + hours * 3_600_000).toISOString();
-}
 ```
 
-```sql
--- supabase/migrations/20260525130500_p11_offer_expiry_tz.sql
--- Single rule for offer expiry used by the P5 offer RPC and P2 expiry job.
--- starts_at is timestamptz (instant); make_interval add is DST-safe by construction.
-create or replace function offer_expires_at(window_start timestamptz, window_hours int)
-returns timestamptz language sql immutable as $fn$
-  select window_start + make_interval(hours => window_hours);
-$fn$;
-```
-
-- [ ] **Step 4: Apply + run both, expect PASS.**
+- [ ] **Step 4: Run it, expect PASS.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/lib/timezone.ts apps/web/lib/timezone.test.ts supabase/migrations/20260525130500_p11_offer_expiry_tz.sql supabase/tests/p11_offer_expiry_tz.sql
-git commit -m "P11: timezone/DST helpers — city-zone display + DST-safe offer expiry (shared client+DB rule)
+git add apps/web/lib/timezone.ts apps/web/lib/timezone.test.ts
+git commit -m "P11: timezone display helper (city-zone formatInZone); expiry math stays in offer_expires_at() (C11.1)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 15: Index review — covering indexes for hot loop queries
+## Task 15: Index review — covering indexes for hot loop queries (aligned to S6 ordering)
 
-Review the loop's hot read paths and add the indexes P0 left out. Hot paths: (a) creator pulls right-swipers for a night (`swipes` by instance, direction); (b) candidate reads their queue rows; (c) the expiry job scans active offers by `expires_at`; (d) the auto-roll job finds the next `standby` by rank; (e) the relay scans unforwarded analytics. Verify each via `EXPLAIN` choosing an index scan, asserted in psql.
+Review the loop's hot read paths and add indexes the base-table migrations left out, **aligned to the S6 match-API's actual access patterns (C2)**. Hot paths: (a) the C1 `offer_expiry` job scans active offers by `expires_at`; (b) **auto-roll's next-standby = lowest-rank `shortlisted` row (`match_next_standby`, C2)** — NOT a `status='standby'` value, so the index must target `shortlisted`; (c) creator pulls right-swipers for a night; (d) candidate reads their queue rows. Verify each via `pg_indexes` existence + an `EXPLAIN` asserting an index scan on the standby path.
+
+> **FIXED vs the original draft (audit §8):** the `queue_standby_rank_idx ... where status='standby'` index targeted a value the S6 next-standby path does not use. Replaced with `queue_shortlisted_rank_idx ... where status='shortlisted'` to serve `match_next_standby`'s lowest-rank-shortlisted query. Redundant `swipes`/`match_ratings` indexes that duplicate base-table ones are dropped from this task (added only if a base-table index is genuinely absent).
 
 **Files:**
-- Create: `supabase/migrations/20260525130200_p11_index_review.sql`
+- Create: `supabase/migrations/20260525132100_p11_index_review.sql`
 - Create: `supabase/tests/p11_index_review.sql`
 
-- [ ] **Step 1: Write the failing test** (the expiry-scan index must exist and be used)
+- [ ] **Step 1: Write the failing test** (the indexes exist AND the standby path uses one)
 
 ```sql
 -- supabase/tests/p11_index_review.sql
+\i 'supabase/tests/_fixtures.sql'
 DO $$
 DECLARE plan text;
 BEGIN
   PERFORM 1 FROM pg_indexes WHERE tablename='offers' AND indexname='offers_active_expiry_idx';
   IF NOT FOUND THEN RAISE EXCEPTION 'offers_active_expiry_idx missing'; END IF;
-  PERFORM 1 FROM pg_indexes WHERE tablename='queue_entries' AND indexname='queue_standby_rank_idx';
-  IF NOT FOUND THEN RAISE EXCEPTION 'queue_standby_rank_idx missing'; END IF;
-  PERFORM 1 FROM pg_indexes WHERE tablename='swipes' AND indexname='swipes_creator_right_idx';
-  IF NOT FOUND THEN RAISE EXCEPTION 'swipes_creator_right_idx missing'; END IF;
+  PERFORM 1 FROM pg_indexes WHERE tablename='queue_entries' AND indexname='queue_shortlisted_rank_idx';
+  IF NOT FOUND THEN RAISE EXCEPTION 'queue_shortlisted_rank_idx missing'; END IF;
+  -- prove the next-standby (lowest-rank shortlisted) query uses the index, not a seq scan:
+  EXPLAIN (FORMAT TEXT)
+    SELECT * FROM queue_entries
+     WHERE date_instance_id = gen_random_uuid() AND status='shortlisted'
+     ORDER BY rank LIMIT 1
+   INTO plan;
+  IF plan NOT ILIKE '%queue_shortlisted_rank_idx%' THEN
+    RAISE EXCEPTION 'next-standby query did not use queue_shortlisted_rank_idx: %', plan; END IF;
   RAISE NOTICE 'index review OK';
 END $$;
 ```
 
 - [ ] **Step 2: Run it, expect FAIL.**
 
-- [ ] **Step 3: Write the migration**
+- [ ] **Step 3: Write the migration** (band `132100`)
 
 ```sql
--- supabase/migrations/20260525130200_p11_index_review.sql
--- (a) Expiry job: "active offers due before now()" — partial, ordered by expiry.
+-- supabase/migrations/20260525132100_p11_index_review.sql
+-- (a) C1 offer_expiry job: "active offers due before now()" — partial, ordered by expiry.
 create index if not exists offers_active_expiry_idx
   on offers (expires_at) where status = 'active';
 
--- (b) Auto-roll: "next standby by rank for this instance" — partial on standby.
-create index if not exists queue_standby_rank_idx
-  on queue_entries (date_instance_id, rank) where status = 'standby';
+-- (b) S6 match_next_standby (C2): next standby = lowest-rank SHORTLISTED row for the instance.
+create index if not exists queue_shortlisted_rank_idx
+  on queue_entries (date_instance_id, rank) where status = 'shortlisted';
 
--- (c) Creator shortlist screen: right-swipers on the creator's nights.
+-- (c) Creator shortlist screen: right-swipers on the creator's nights (add only if absent in S5).
 create index if not exists swipes_creator_right_idx
   on swipes (creator_id, date_instance_id) where direction = 'right';
 
 -- (d) Candidate "my queue" reads (status filter common).
 create index if not exists queue_candidate_status_idx
   on queue_entries (candidate_id, status);
-
--- (e) ratee reliability aggregation (P7) reads many rows per ratee.
-create index if not exists match_ratings_ratee_submitted_idx
-  on match_ratings (ratee_id, submitted_at);
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS.**
@@ -1565,173 +1585,46 @@ create index if not exists match_ratings_ratee_submitted_idx
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130200_p11_index_review.sql supabase/tests/p11_index_review.sql
-git commit -m "P11: index review — partial/covering indexes for expiry, auto-roll, shortlist, queue, ratings
+git add supabase/migrations/20260525132100_p11_index_review.sql supabase/tests/p11_index_review.sql
+git commit -m "P11: index review — partial/covering indexes aligned to S6 ordering (shortlisted next-standby)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 16: Presence-backed bucketed demand-hint (fan-out)
+## Task 16: Demand hint — use the canonical `match_demand_hint` (DELETED duplicate; CV7/DS2)
 
-Spec §7.2: show a **bucketed** demand hint ("a few people are interested") weighted to **trusted, currently-available** users, capped. This task adds a `demand_hint` view that buckets the *capped* count of right-swipers per instance, and a reusable `bucket_demand()` function so the value is computed once and the same way for both the candidate-facing API and analytics. Presence (who is "currently available") is supplied as a parameter set the P5/Realtime layer passes in; P11 owns the bucketing rule and the cap.
+**SUPERSEDED — DO NOT BUILD.** The original `demand_hint` view + `bucket_demand()` are **DELETED**. Per **C2 / CV7 / DS2**, the **only** demand hint is **`match_demand_hint(p_instance uuid) returns text`**, owned by P5 (S6), which is presence- AND trust-weighted, capped, and honesty-guarded (spec §7.2). P11's view counted raw right-swipes with contradictory buckets (`many` vs `lots`, different ceilings) and no weighting — a CONFLICT. P11 deletes it and the candidate-facing UI calls the canonical RPC.
 
-**Files:**
-- Create: `supabase/migrations/20260525130300_p11_presence_demand_hint.sql`
-- Create: `supabase/tests/p11_presence_demand_hint.sql`
+**Canonical ref (no P11 object):** `match_demand_hint(p_instance)` (C2). The demand-hint UI surface (the social-proof line on the night card) calls this RPC; P11 wires the display string only. There is no `demand_hint` view, no `bucket_demand()`, no `20260525130300_p11_presence_demand_hint.sql` migration.
 
-- [ ] **Step 1: Write the failing test** (bucketing thresholds + cap)
-
-```sql
--- supabase/tests/p11_presence_demand_hint.sql
-DO $$
-BEGIN
-  PERFORM 1 FROM pg_proc WHERE proname='bucket_demand';
-  IF NOT FOUND THEN RAISE EXCEPTION 'bucket_demand() missing'; END IF;
-  IF bucket_demand(0)  <> 'none'   THEN RAISE EXCEPTION 'bucket 0 wrong: %', bucket_demand(0); END IF;
-  IF bucket_demand(2)  <> 'a_few'  THEN RAISE EXCEPTION 'bucket 2 wrong: %', bucket_demand(2); END IF;
-  IF bucket_demand(7)  <> 'several' THEN RAISE EXCEPTION 'bucket 7 wrong: %', bucket_demand(7); END IF;
-  IF bucket_demand(50) <> 'many'   THEN RAISE EXCEPTION 'bucket 50 wrong: %', bucket_demand(50); END IF;
-  -- The view must never expose a raw count column (de-risk per §7.2).
-  PERFORM 1 FROM information_schema.columns
-   WHERE table_name='demand_hint' AND column_name='raw_count';
-  IF FOUND THEN RAISE EXCEPTION 'LEAK: demand_hint exposes raw_count'; END IF;
-  RAISE NOTICE 'demand hint OK';
-END $$;
-```
-
-- [ ] **Step 2: Run it, expect FAIL.**
-
-- [ ] **Step 3: Write the migration**
-
-```sql
--- supabase/migrations/20260525130300_p11_presence_demand_hint.sql
--- Bucketed social-proof signal (spec §7.2): honest, never an exact N, capped.
-create or replace function bucket_demand(n int) returns text
-language sql immutable as $fn$
-  select case
-    when n <= 0  then 'none'
-    when n <= 3  then 'a_few'
-    when n <= 10 then 'several'
-    else 'many'
-  end;
-$fn$;
-
--- Per-instance hint. Counts only right-swipes, capped at 50 (the queue cap is enforced
--- elsewhere; this caps the *signal* so a swipe-farm can't inflate it). Presence/trust
--- weighting is applied by the P5 read layer passing a filtered swiper set; the structural
--- guarantee here is: bucket only, no raw count leaves the DB.
-create or replace view demand_hint
-with (security_invoker = true) as
-select
-  s.date_instance_id,
-  bucket_demand(least(count(*) filter (where s.direction='right')::int, 50)) as demand_bucket
-from swipes s
-group by s.date_instance_id;
-
-grant select on demand_hint to authenticated;
-```
-
-- [ ] **Step 4: Apply + run test, expect PASS.**
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 1: If a prior pass created `demand_hint`/`bucket_demand()`, drop them** in a band-`132xxx` cleanup migration (`drop view if exists demand_hint; drop function if exists bucket_demand(int);`) and remove `supabase/tests/p11_presence_demand_hint.sql`.
+- [ ] **Step 2: Confirm the candidate night-card UI reads `match_demand_hint(instance)`** (C2) and renders its bucket text. No P11-owned bucketing.
+- [ ] **Step 3: Commit (only if a cleanup was needed)**
 
 ```bash
-git add supabase/migrations/20260525130300_p11_presence_demand_hint.sql supabase/tests/p11_presence_demand_hint.sql
-git commit -m "P11: bucketed demand-hint view + bucket_demand() — capped, no raw-count leak (spec §7.2)
+git commit -am "P11: delete duplicate demand_hint/bucket_demand; use canonical match_demand_hint (CV7/DS2)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 17: Notification batching / coalescing (anti-storm scale)
+## Task 17: Notification anti-storm — use canonical `dispatch_notification` (DELETED duplicate; DS1)
 
-P2 owns push + rate limiting; P11 owns the **scale** primitive that prevents a fan-out storm: a coalescing helper so N rapid transitions to one recipient become one digest row. Since P2's `notifications` table may not be merged yet, P11 ships a self-contained `notification_batches` table + a `coalesce_notification()` function that the P2 sender calls; if the same (recipient, kind) is pending-unsent within a debounce window, it merges instead of inserting a new row.
+**SUPERSEDED — DO NOT BUILD.** The original `notification_batches` table + `coalesce_notification()` are **DELETED**. Per **C1 / C10 / DS1**, the **only** anti-storm system is **`dispatch_notification(p_user, p_type notification_type, p_payload)`** (owned by P2), whose ordered chain is consent → quiet-hours → **rate-limit (`rate_limit_check`)** → channel (push→web→email). P11 shipping a parallel `notification_batches` island (no producer, no consumer) is a CONFLICT. P11 deletes it; any rapid-fan-out suppression is the responsibility of `dispatch_notification`'s rate-limit step.
 
-**Files:**
-- Create: `supabase/migrations/20260525130400_p11_notification_batching.sql`
-- Create: `supabase/tests/p11_notification_batching.sql`
+**Canonical ref (no P11 object):** `dispatch_notification` (C1); `notification_type` enum (C1); `notification_preferences` (P2 band `123xxx`, C11.8). There is no `notification_batches`, no `coalesce_notification()`, no `20260525130400_p11_notification_batching.sql` migration.
 
-- [ ] **Step 1: Write the failing test** (second event within window coalesces)
+> Safety types (`safety_checkin`, `safety_alert`) bypass consent/quiet/rate-limit and fail loud into `admin_alerts` + ops email if no device (C1, C11.8). P11 does not alter this.
 
-```sql
--- supabase/tests/p11_notification_batching.sql
-DO $$
-DECLARE u uuid; n int;
-BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(),'n') returning id into u;
-  PERFORM coalesce_notification(u, 'standby_update', '{"a":1}'::jsonb, interval '5 minutes');
-  PERFORM coalesce_notification(u, 'standby_update', '{"a":2}'::jsonb, interval '5 minutes');
-  select count(*) into n from notification_batches
-   where recipient_id=u and kind='standby_update' and sent_at is null;
-  IF n <> 1 THEN RAISE EXCEPTION 'expected 1 coalesced batch, got %', n; END IF;
-  -- merged payload should carry a count of 2
-  PERFORM 1 FROM notification_batches
-    WHERE recipient_id=u AND kind='standby_update' AND (payload->>'event_count')::int = 2;
-  IF NOT FOUND THEN RAISE EXCEPTION 'coalesced batch did not increment event_count'; END IF;
-  RAISE NOTICE 'notification batching OK';
-  ROLLBACK;
-END $$;
-```
-
-- [ ] **Step 2: Run it, expect FAIL.**
-
-- [ ] **Step 3: Write the migration**
-
-```sql
--- supabase/migrations/20260525130400_p11_notification_batching.sql
--- Coalesces rapid same-kind notifications to one recipient into a single unsent batch
--- within a debounce window (anti notification-storm; P2's sender drains sent_at IS NULL).
-create table if not exists notification_batches (
-  id uuid primary key default gen_random_uuid(),
-  recipient_id uuid not null references profiles(id) on delete cascade,
-  kind text not null,
-  payload jsonb not null default '{}',
-  first_event_at timestamptz not null default now(),
-  last_event_at timestamptz not null default now(),
-  sent_at timestamptz,
-  created_at timestamptz not null default now()
-);
-create index if not exists notification_batches_pending_idx
-  on notification_batches (recipient_id, kind) where sent_at is null;
-
-create or replace function coalesce_notification(
-  p_recipient uuid, p_kind text, p_payload jsonb, p_window interval
-) returns uuid
-language plpgsql security definer set search_path = public as $fn$
-declare existing uuid;
-begin
-  select id into existing from notification_batches
-   where recipient_id=p_recipient and kind=p_kind and sent_at is null
-     and last_event_at > now() - p_window
-   order by last_event_at desc limit 1
-   for update;
-  if existing is null then
-    insert into notification_batches(recipient_id, kind, payload)
-    values (p_recipient, p_kind, p_payload || jsonb_build_object('event_count', 1))
-    returning id into existing;
-  else
-    update notification_batches
-       set last_event_at = now(),
-           payload = p_payload
-             || jsonb_build_object('event_count', coalesce((payload->>'event_count')::int,1) + 1)
-     where id = existing;
-  end if;
-  return existing;
-end $fn$;
-
-alter table notification_batches enable row level security;  -- service-role only; no policies.
-```
-
-- [ ] **Step 4: Apply + run test, expect PASS.**
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 1: If a prior pass created `notification_batches`/`coalesce_notification()`, drop them** in a band-`132xxx` cleanup migration and remove `supabase/tests/p11_notification_batching.sql`.
+- [ ] **Step 2: Confirm no P11 code calls a batching fn** — all notification sends go through P2's `dispatch_notification`.
+- [ ] **Step 3: Commit (only if a cleanup was needed)**
 
 ```bash
-git add supabase/migrations/20260525130400_p11_notification_batching.sql supabase/tests/p11_notification_batching.sql
-git commit -m "P11: notification batching — coalesce_notification() debounce window (anti-storm scale)
+git commit -am "P11: delete duplicate notification batching; use canonical dispatch_notification (DS1)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -1741,12 +1634,12 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ## Task 18: Full verification — all P11 tests + type regen
 
 **Files:**
-- Modify: `packages/types/src/database.ts` (regenerated — now includes `analytics_events`, `feature_config`, `notification_batches`, `demand_hint`)
+- Modify: `packages/types/src/database.ts` (regenerated — picks up `purge_analytics_events`, the `analytics_relay` job wiring, and any P11 index/feed changes; `analytics_events`/`feature_config` types come from S2's regen)
 
-- [ ] **Step 1: DB reset (applies every P0 + P11 migration)**
+- [ ] **Step 1: DB reset (applies every S1–S11 + P11 migration)**
 
 Run: `supabase db reset`
-Expected: completes with no error; all migrations apply in order.
+Expected: completes with no error; all migrations apply in band order (P11 at `132xxx`, feed finalization at `133000`). **No duplicate `create type`/`create table` for any shared object** (jobs, feature_config, analytics_events, notification, demand hint) — P11 owns none of those.
 
 - [ ] **Step 2: Run all P11 psql tests**
 
@@ -1756,23 +1649,121 @@ for f in supabase/tests/p11_*.sql; do
   echo "== $f =="; psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$f" || exit 1;
 done
 ```
-Expected: every file exits 0; notices print `… OK`.
+Expected: every file exits 0; notices print `… OK`. (Files: `p11_analytics_relay_job.sql`, `p11_analytics_events_coverage.sql`, `p11_index_review.sql`, `p11_browse_feed_finalize.sql`, `p11_feature_config.sql`.)
 
 - [ ] **Step 3: Run all web/package TS tests**
 
-Run: `pnpm --filter @after5/web test && pnpm --filter @after5/api-client test`
+Run: `pnpm test` (P1's root vitest workspace, C12 — covers `apps/web` + `packages/*`).
 Expected: all suites pass.
 
 - [ ] **Step 4: Regenerate types**
 
 Run: `pnpm db:types`
-Expected: `packages/types/src/database.ts` gains `analytics_events`, `feature_config`, `notification_batches`, `demand_hint`.
+Expected: `packages/types/src/database.ts` regenerates without error (includes the finalized `browse_feed`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add packages/types/src/database.ts
-git commit -m "P11: regenerate database types for analytics/flags/batching/demand-hint additions
+git commit -m "P11: regenerate database types after feed finalization + analytics relay
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Task 18b: `browse_feed` FINALIZATION migration (C11.3, band `133000` — P11 OWNS this)
+
+**P11 OWNS THE FEED FINALIZATION (C11.3, supersedes C4 "defined once in P4" + the C6 `129900` slot).** The single `browse_feed` view is built here — **the very last migration**, band `133000` — via **`drop view if exists browse_feed; create view …`** (NOT `create or replace`, which forbids column changes). It runs after every base-table column it reads exists: `moderation_status` (P3/P8), `is_seed` (P4), `vibe_tags` (P0/C7), `sound_*` (P3), `account_state`/`standing` (P9/P7). This **supersedes any earlier minimal feed view** other phases used for tests. No phase uses `create or replace browse_feed`; phases only `alter table` base tables.
+
+**Files:**
+- Create: `supabase/migrations/20260525133000_p11_browse_feed_finalize.sql`
+- Create: `supabase/tests/p11_browse_feed_finalize.sql`
+
+- [ ] **Step 1: Write the failing test** — the finalized view exists, exposes the C4 projection, and the C11.3 filter hides paused/suspended creators and past/unapproved instances.
+
+```sql
+-- supabase/tests/p11_browse_feed_finalize.sql
+\i 'supabase/tests/_fixtures.sql'
+DO $$
+DECLARE cre uuid; itin uuid; live uuid; past uuid; n int;
+BEGIN
+  cre  := mk_user('feedcre');
+  itin := mk_itinerary(cre);
+  live := mk_instance(itin, cre, now() + interval '2 days');  -- future, seeking, approved
+  past := mk_instance(itin, cre, now() - interval '1 day');   -- past → must be excluded
+
+  -- canonical projection present (identity-stripped):
+  PERFORM 1 FROM information_schema.columns
+   WHERE table_name='browse_feed' AND column_name IN
+     ('date_instance_id','city_id','time_window_start','itinerary_id','pay_setting',
+      'vibe_tags','why_note','sound_title','sound_license','venue_neighborhood','is_seed');
+  IF NOT FOUND THEN RAISE EXCEPTION 'browse_feed missing canonical C4 projection'; END IF;
+
+  -- C11.3 filter: only seeking + starts_at>now() + moderation_status=approved + active/standing creator
+  PERFORM 1 FROM browse_feed WHERE date_instance_id = live;
+  IF NOT FOUND THEN RAISE EXCEPTION 'live night not surfaced'; END IF;
+  PERFORM 1 FROM browse_feed WHERE date_instance_id = past;
+  IF FOUND THEN RAISE EXCEPTION 'past night leaked into feed'; END IF;
+
+  -- pausing the creator removes their nights from the feed (closes the regression)
+  UPDATE profiles SET account_state='paused' WHERE id=cre;
+  PERFORM 1 FROM browse_feed WHERE date_instance_id = live;
+  IF FOUND THEN RAISE EXCEPTION 'paused creator still browsable'; END IF;
+
+  -- suspended standing also removes them
+  UPDATE profiles SET account_state='active', standing='suspended' WHERE id=cre;
+  PERFORM 1 FROM browse_feed WHERE date_instance_id = live;
+  IF FOUND THEN RAISE EXCEPTION 'suspended creator still browsable'; END IF;
+
+  RAISE NOTICE 'browse_feed finalization OK';
+  ROLLBACK;
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL.**
+
+- [ ] **Step 3: Write the finalization migration** (drop+create; C11.3 projection + filter exactly)
+
+```sql
+-- supabase/migrations/20260525133000_p11_browse_feed_finalize.sql
+-- FEED FINALIZATION (C11.3). The single browse_feed definition; drop+create (NOT
+-- create-or-replace) so column changes are allowed. Runs last, after every base column
+-- it reads exists. Supersedes any earlier minimal feed view used for tests.
+drop view if exists browse_feed;
+create view browse_feed
+with (security_invoker = true) as
+select
+  di.id              as date_instance_id,
+  di.city_id,
+  date_trunc('hour', di.starts_at) as time_window_start,   -- hour-truncated (identity-stripping)
+  it.id              as itinerary_id,
+  di.pay_setting,
+  it.vibe_tags,
+  di.why_note,
+  di.sound_title,
+  di.sound_license,
+  di.venue_neighborhood,
+  di.is_seed
+from date_instances di
+join itineraries it on it.id = di.itinerary_id
+join profiles cr   on cr.id = di.creator_id           -- cr = creator profile (C11.3)
+where di.status = 'seeking'
+  and di.starts_at > now()
+  and di.moderation_status = 'approved'
+  and cr.account_state = 'active'
+  and cr.standing not in ('suspended','locked_ban');
+```
+
+> The client entrypoint `browse_feed_for_viewer(p_viewer, p_point)` (C4) — mutual compatibility + distance + blocked/already-swiped exclusion + keyset pagination, returning every column above plus `distance_m` — is owned by **P4 (S5)** and reads this finalized view. P11 finalizes the view shape; it does not redefine the RPC.
+
+- [ ] **Step 4: Apply + run test, expect PASS** (`supabase db reset` then the psql test — the finalization migration sorts last by its `133000` band).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525133000_p11_browse_feed_finalize.sql supabase/tests/p11_browse_feed_finalize.sql
+git commit -m "P11: browse_feed FINALIZATION (C11.3) — drop+create, full projection + account_state/standing filter
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -1781,30 +1772,34 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ## Self-Review
 
-**Spec coverage (vs roadmap P11 'Closes' list):**
-- Missing loading/error/empty states → Task 2 (`AsyncBoundary` + `LoadState`), Task 3 (`useAsyncAction` for mutations), Task 4 (`LoopActionButton` for the riskiest accept/lock flows). Consistent pattern + concrete riskiest-flow examples. ✅
-- Accessibility — non-audio ambient equivalent → Task 6 (caption is canonical channel). ✅
-- Accessibility — accessible swipe alternative → Task 7 (`SwipeDeck` Pass/Interested buttons, keyboard + SR). ✅
-- Accessibility — accessible offer countdown → Task 8 (`OfferCountdown`, `role=timer` + `aria-live=polite`). ✅
-- Accessibility — pink-on-dark contrast → Task 5 (WCAG-AA-verified `feed.*` tokens). ✅
-- Accessibility — screen-reader feed semantics → Task 9 (`feed-a11y` labels from blind fields only + ARIA `feed` role). ✅
-- Mobile responsiveness + native-push reliance → loop primitives are responsive Tailwind; ambient (Task 6) gesture-gates per iOS-Safari §10; push dependency is explicitly delegated to P2, with P11 owning the **batching** scale primitive (Task 17) the P2 sender consumes. ✅
-- Analytics — event for every state transition → Task 10 (taxonomy enumerating §7.1/§13 transitions + `analytics_events` outbox trigger for server-authoritative transitions), Task 11 (client `track.loop`), Task 13 (relay to PostHog). ✅
-- Experimentation / flag to tune offer window → Task 12 (PostHog flag + `feature_config` DB fallback readable by jobs). ✅
-- Scalability — index review → Task 15. Presence fan-out for demand hint → Task 16. Notification batching → Task 17. ✅
-- Timezone / DST for `scheduled_for` + offer expiry → Task 14 (display + DST-safe expiry, shared client+DB rule). ✅
+**Spec coverage (vs S12 / roadmap P11 'Closes' list) — every primitive is wired into a real host screen (no orphans):**
+- Loading/error/empty states → Task 2 (`AsyncBoundary` + `LoadState` + distinct P5-error copy), Task 3 (`useAsyncAction`), Task 4 (`LoopActionButton`) — **wired** into the S6 lock screen (Task 4b), P6 chat (Task 4c), and P4 feed (Task 9b). ✅
+- A11y — non-audio ambient equivalent → **Task 6 edits P4's `AmbientPlayer`** (no duplicate component). ✅
+- A11y — accessible swipe alternative → **Task 7 edits P4's `SwipeDeck`** (no duplicate; same swipe action). ✅
+- A11y — accessible offer countdown → Task 8 (`OfferCountdown`, threshold-throttled, no SR spam) **mounted on the S6 lock screen (Task 4b)**. ✅
+- A11y — pink-on-dark contrast → Task 5 (WCAG-AA-verified `feed.*` tokens + drift guard test). ✅
+- A11y — screen-reader feed semantics → Task 9 (`feed-a11y` on the **canonical `browse_feed` columns**, no invented `timezone` field) **wired into P4's feed (Task 9b)**. ✅
+- Mobile + native-push reliance → responsive Tailwind primitives; ambient gesture-gates per iOS-Safari §10; push backbone delegated to P2's C1 `dispatch_notification` (P11 ships no parallel batching). ✅
+- Analytics — event for every transition → Task 10 (taxonomy of all 15 + a **coverage test** proving the 7 previously lost/mislabeled events emit distinctly; `analytics_events` table owned by S2, emits by S6/S2), Task 11 (client `track.loop`), Task 13 + **Task 13b (`analytics_relay` job + handler + 30d retention, C11.8)** — closes the drain seam. ✅
+- Experiment flag to tune offer window → Task 12 (flag reader + admin write into the **P2-owned `feature_config`**, C11.1; expiry math stays in `offer_expires_at()`). ✅
+- Scalability — index review (Task 15, aligned to S6 ordering); demand hint via **canonical `match_demand_hint`** (Task 16, duplicate deleted); notification anti-storm via **canonical `dispatch_notification`** (Task 17, duplicate deleted). ✅
+- Timezone/DST → Task 14 (display only; expiry owned by `offer_expires_at()`). ✅
+- **Feed finalization → Task 18b: P11 OWNS the `browse_feed` drop+create at band `133000` with the full C11.3 projection + filter** (closes the paused/suspended-creator regression). ✅
 
-**Builds on P0 (no re-invention):** consumes `offers`, `locks`, `queue_entries`, `swipes`, `date_instances`, `match_ratings`, `cities.timezone`, `browse_feed`, and the `set_updated_at()` trigger. Analytics outbox trigger is a sibling of P0's `log_status_transition()` (different table, same status-distinct pattern), so the two coexist without conflict. No P0 migration is edited; all P11 migrations are additive.
+**Subordinate to the contract (no re-invention):** P11 creates NONE of the shared objects — `analytics_events`/`feature_config`/`offer_expires_at()`/`dispatch_notification`/`jobs`/`job_type` are owned by S1/S2 (C1/C8/C11). P11 owns only: the loop UI primitives (wired into real screens), the analytics taxonomy + relay job/handler/retention, the flag reader, the index review, and the `browse_feed` finalization. All P11 migrations are in band `132xxx` except the feed finalization at `133000`. No `create or replace browse_feed`, no duplicate `create type`/`create table`.
 
-**Integration points referenced but not edited (host phase wires them in one line):** P4 feed screen consumes `SwipeDeck`/`AmbientSound`/`feed-a11y`/`AsyncBoundary`; P5 offer/lock RPCs call `offer_expires_at()` + emit via the outbox; P5 candidate API reads `demand_hint`; P2 jobs call `drainAnalyticsEvents()` (every minute) and the P2 sender drains `notification_batches` / calls `coalesce_notification()`. Each is named by its P0/contract symbol, not by an unbuilt file path.
+**Deleted vs original draft (now SUPERSEDED):** vitest bootstrap (P1 owns root config, C12); `analytics_events` table + trigger (S2 owns table, S6/S2 emit); `feature_config` table (P2 owns, C11.1); `offer_expires_at(window,hours)` DB fn + `addOfferWindow` TS (P2 owns the one expiry rule); `demand_hint`/`bucket_demand()` (canonical `match_demand_hint`, CV7); `notification_batches`/`coalesce_notification()` (canonical `dispatch_notification`, DS1); `components/loop/SwipeDeck` + `AmbientSound` (edit P4's instead, DS6); band `130xxx` timestamps (→ `132xxx`/`133000`).
+
+**Depends on:** S1 (schema spine, `mk_user`/`mk_itinerary`/`mk_instance` fixtures, `standing`/`account_state` columns), S2 (C1 jobs/runner, `analytics_events`, `feature_config`, `offer_expires_at()`, `dispatch_notification`), P1 (root vitest config), P4/S5 (`SwipeDeck`/`AmbientPlayer`/`BrowseFeed`/`browse_feed_for_viewer`), S6 (C2 match API incl. `match_demand_hint`/`match_make_offer`/`match_accept_offer`/`match_withdraw`/`match_resolve_reciprocal` + the lock/offer screen), S7/P6 (chat thread screen), S8 (rating window for `rate_submitted`), S9 (admin console for the flag write UI). P11 finalizes last.
 
 **Decisions:**
-- **Analytics tool: PostHog** (already a dependency and wired in `PostHogProvider.tsx`). Dual-path (client `track.loop` + server `analytics_events` outbox → `posthog-node` relay) because the most important transitions fire in the DB/jobs, not the browser — a browser-only approach would silently drop them.
-- **Flagging approach: PostHog feature flags as the experiment-assignment layer, `feature_config` as the source-of-truth fallback** the offer-expiry job/RPC reads (browser SDK is unavailable server-side). The window value is clamped to a safe 12–72h range in both layers.
-- **Dark feed theme is a separate token set** (`feed.*`) from the cream marketing palette; contrast is a test, not a guideline, so it can't regress.
+- **Analytics tool: PostHog** (already a dependency and wired in `PostHogProvider.tsx`). The server-authoritative transitions fire in the DB/jobs, not the browser, so the **S2-owned `analytics_events` outbox** (written by P5 RPCs / P2 jobs, C2/C8) is the durable source; P11's `analytics_relay` job + handler (Task 13b) drains it to PostHog with `flush()` (at-least-once) and 30d retention (C11.8). Client-only transitions (e.g. `feed_empty_shown`) go through `track.loop` (Task 11).
+- **Flagging approach: PostHog feature flags as the experiment-assignment layer; the P2-owned `feature_config` (C11.1) is the source-of-truth** the server reads. Expiry math lives only in `offer_expires_at()` (C11.1) — P11 never recomputes it in TS. The window value is clamped to 12–72h in both layers (same clamp as `offer_expires_at()`).
+- **Dark feed theme is a separate token set** (`feed.*`) from the cream marketing palette; contrast is a test, not a guideline, so it can't regress (with a drift guard, Task 5).
+- **No duplicate shared systems:** demand hint = `match_demand_hint` (C2); anti-storm = `dispatch_notification` (C1); jobs = C1 enum/runner; `browse_feed` = the single C11.3 finalization (Task 18b). P11 references, never recreates.
 
-**Placeholder scan:** none — every step has runnable code/SQL and exact commands. The two `@ts-expect-error` lines are intentional negative tests, not placeholders.
+**Placeholder scan:** none — every step has runnable code/SQL and exact commands, or an explicit edit-task against a real merged host screen. The `@ts-expect-error` lines are intentional negative tests.
 
-**Test-harness note:** the repo had no JS test runner; Task 1 bootstraps Vitest + RTL before any component task, and Task 13 adds a minimal sibling runner to `packages/api-client`. psql tests follow P0's `DO $$ … RAISE EXCEPTION … END $$;` convention exactly.
+**Test-harness note:** **vitest is owned by P1's single root config (C10/C12)** — P11 deletes any duplicate setup (Task 1) and runs everything under `pnpm test` (workspace covers `apps/web` + `packages/*`). psql tests follow P0's `DO $$ … RAISE EXCEPTION … END $$;` convention and seed via the C8 `mk_user`/`mk_itinerary`/`mk_instance` fixtures.
 
-**Risk note:** `demand_hint`/`browse_feed` use `security_invoker=true` views — RLS on the underlying `swipes` already restricts visibility, so the bucketed view cannot leak more than the caller may already read; the view's job is to ensure only the *bucket* (never a raw N) is selectable, which the test asserts structurally.
+**Risk note:** `browse_feed` (Task 18b) uses `security_invoker = true` so RLS on the base tables governs visibility; the C11.3 filter (`account_state='active'` + `standing not in ('suspended','locked_ban')` + `starts_at>now()` + `moderation_status='approved'`) is the contract-mandated regression fix. The view is identity-stripped (creator columns are structurally absent), and `feed-a11y` consumes only those identity-stripped columns.

@@ -1,16 +1,24 @@
+SUBORDINATE EXECUTION SLICE. This plan is not authoritative by itself. It must be implemented only through INTEGRATION-CONTRACT.md v2 and RECONCILED-MASTER-PLAN.md. If this file conflicts with either, this file loses.
+
 # P0 — Dating Core-Loop Data Model & Invariants — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Stage mapping:** This plan is **S1 (Schema spine & fixtures)** in the RECONCILED-MASTER-PLAN build order. It owns the schema spine only. Migration band: `120000–1211xx` (C6).
+>
+> **Depends on:** the *existing* planner schema (`profiles`, `itineraries`, `places`, `set_updated_at()`) and Supabase `auth.users`. Nothing else in S1 depends on a later stage.
+>
+> **Consumed by (cross-stage, do NOT build here):** S2 (jobs/notifications/devices/`feature_config`/`offer_expires_at()`/`analytics_events`/`admin_alerts`/`can_enter_lock_flow`/chat-core), S6 (the C2 `match_*` RPCs that write the RPC-only lifecycle columns this stage ships), S12 (the canonical `browse_feed` finalization at band `133000`).
+
 **Goal:** Lay the database foundation for the experience-first dating loop — the tables, enums, invariants, and RLS that every later phase (P1–P11) depends on — reconciled with the existing planner schema and the `date-engine-v2` proposal.
 
-**Architecture:** Extend (never replace) the existing `profiles`, `itineraries` (the "date/night" content object), and `places` (the vetted "venue" layer). Add the dating-specific entities and enforce the two hard invariants **in the database**: (1) at most one *active offer per date instance*, via a partial unique index; (2) no user double-booked across *overlapping time windows*, via a `lock_participants` table with a GiST exclusion constraint over a `tstzrange`. Blind browsing is enforced with a SECURITY-mode view that omits creator identity. All state transitions append to an immutable `audit_log`.
+**Architecture:** Extend (never replace) the existing `profiles`, `itineraries` (the "date/night" content object), and `places` (the vetted "venue" layer). Add the dating-specific entities and enforce the two hard invariants **in the database**: (1) at most one *active offer per date instance*, via a partial unique index; (2) no user double-booked across *overlapping time windows*, via a `lock_participants` table with a GiST exclusion constraint over a `tstzrange`. All state transitions append to an immutable `audit_log`. Blind browsing is **not** built here — the identity-stripped `browse_feed` view is owned by S12 (C11.3); P0 ships only the base tables and the privacy-friendly columns it reads.
 
 **Tech Stack:** Supabase Postgres, SQL migrations (`supabase/migrations/`), RLS with `auth.uid()`, `btree_gist` (for the exclusion constraint) and `postgis` (for `cities` geo + the Phase-4 distance filter), psql-based invariant tests run against the local stack.
 
 **Source docs:** spec `docs/superpowers/specs/2026-05-25-experience-first-dating-core-loop-design.md`; roadmap `docs/superpowers/plans/2026-05-25-experience-first-dating-implementation-roadmap.md`; schema to reconcile `docs/superpowers/specs/2026-04-23-date-engine-v2-architecture-design.md` §4.
 
-**Reconciliation note:** `date-engine-v2` proposes a single `matches` table (`state confirmed|…|ghosted`). The core-loop spec's richer lifecycle (`swipe → shortlist → offer → lock → standby`) supersedes it: a confirmed **`lock`** *is* "the match." We adopt `date-engine-v2`'s names where they fit (`cities`, `profiles_private`, `swipes`, `match_ratings`, `reports`) and add `queue_entries`, `offers`, `locks`, `lock_participants`, `blocks`, `verifications`, `audit_log`. Out of scope for P0 (later phases): `feed_cache`, embeddings/`vector`, `notifications`/`jobs` (P2), `chat_messages` (P6), bandit/outreach tables.
+**Reconciliation note:** `date-engine-v2` proposes a single `matches` table (`state confirmed|…|ghosted`). The core-loop spec's richer lifecycle (`swipe → shortlist → offer → lock → standby`) supersedes it: a confirmed **`lock`** *is* "the match." We adopt `date-engine-v2`'s names where they fit (`cities`, `profiles_private`, `swipes`, `match_ratings`, `reports`) and add `queue_entries`, `offers`, `locks`, `lock_participants`, `blocks`, `disputes`, `verifications`, `audit_log`. **Out of scope for P0/S1 (owned by named later stages — referenced via the contract, never redefined here):** `browse_feed` view + `browse_feed_for_viewer()` RPC (S12, C11.3); the C2 `match_*` transition RPCs + `can_enter_lock_flow` (S6/S2); jobs/notifications/devices/`feature_config`/`analytics_events`/`admin_alerts`/chat-core (S2, C1/C11); `feed_cache`, embeddings/`vector`, `chat_messages` (S7, C9), bandit/outreach tables.
 
 **Conventions (follow exactly):** migration filenames `YYYYMMDDHHMMSS_snake_description.sql`; enable RLS on every table; create policies idempotently with `DO $$ BEGIN CREATE POLICY … EXCEPTION WHEN duplicate_object THEN NULL; END $$;`; attach the existing `set_updated_at()` trigger to tables with `updated_at`; `auth.uid()` in policies; uuid PKs via `gen_random_uuid()` except `profiles_private.user_id` which mirrors `profiles.id`.
 
@@ -22,9 +30,67 @@ Tests use `DO $$ … END $$;` blocks that `RAISE EXCEPTION` on wrong behavior, s
 
 ## File Structure
 
-- `supabase/migrations/2026052512NNNN_*.sql` — one migration per task (extensions, enums, tables, indexes, RLS).
+- `supabase/migrations/2026052512NNNN_*.sql` — one migration per task (extensions, enums, tables, indexes, RLS). All within the P0 band `120000–1211xx` (C6). **No `browse_feed` migration here** (owned by S12, C11.3).
+- `supabase/tests/_fixtures.sql` — C8 canonical fixtures (`mk_user`/`mk_itinerary`/`mk_instance`); every `p0_*` test `\i`'s it.
 - `supabase/tests/p0_*.sql` — one invariant/RLS test file per task that warrants it.
 - No application code in P0. Types regenerate later via `pnpm db:types`.
+
+---
+
+## Task 0: Shared test fixtures (`_fixtures.sql`) — C8
+
+**Files:**
+- Create: `supabase/tests/_fixtures.sql`
+
+C8 (owner: P0/S1): every psql test `\i`'s this file. **No test inserts bare into `profiles`/`itineraries`** — those inserts violate the `profiles → auth.users` FK (`profiles.id REFERENCES auth.users(id)`) and abort before any invariant is exercised. These helpers seed a real `auth.users` row and satisfy all NOT-NULLs/FKs.
+
+> This is the single source of truth for test users/itineraries/instances. The signatures below are canonical (C8/C11) — do not redefine them in individual test files.
+
+- [ ] **Step 1: Write the fixtures helper**
+
+```sql
+-- supabase/tests/_fixtures.sql
+-- C8 canonical fixtures. Every P0 test \i's this file, then calls mk_user/mk_itinerary/mk_instance.
+
+create or replace function mk_user(p_label text) returns uuid language plpgsql as $$
+declare uid uuid := gen_random_uuid();
+begin
+  insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at)
+  values (uid, '00000000-0000-0000-0000-000000000000','authenticated','authenticated',
+          p_label||'_'||left(uid::text,8)||'@test.local', now(), now());
+  insert into profiles (id, first_name) values (uid, p_label);
+  return uid;
+end $$;
+
+-- mk_itinerary: a minimal evergreen itinerary owned by p_user, satisfying itineraries NOT-NULLs.
+create or replace function mk_itinerary(p_user uuid) returns uuid language plpgsql as $$
+declare iid uuid;
+begin
+  insert into itineraries (id, user_id) values (gen_random_uuid(), p_user) returning id into iid;
+  return iid;
+end $$;
+
+-- mk_instance: a concrete dated instance of p_itin, created by p_creator, in the 'kelowna' city
+-- (seeded by Task 1), satisfying date_instances NOT-NULLs/FKs.
+create or replace function mk_instance(p_itin uuid, p_creator uuid, p_starts timestamptz)
+returns uuid language plpgsql as $$
+declare did uuid; cid uuid;
+begin
+  select id into cid from cities where slug='kelowna';
+  insert into date_instances (itinerary_id, creator_id, city_id, starts_at)
+  values (p_itin, p_creator, cid, p_starts) returning id into did;
+  return did;
+end $$;
+```
+
+> NOTE: `mk_itinerary`/`mk_instance` reference `itineraries`/`date_instances`, which are created in Tasks 4. The file is harmless to `\i` once those tables exist; tests that use them run after Task 4. Adjust the column list only if a later S1 task adds a NOT-NULL to `itineraries`/`date_instances` (then update here, the single source).
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add supabase/tests/_fixtures.sql
+git commit -m "P0: canonical test fixtures (mk_user/mk_itinerary/mk_instance) seeding auth.users (C8)"
+```
 
 ---
 
@@ -132,6 +198,16 @@ END $$;
 create type payment_preference as enum ('i_pay','they_pay','split');
 create type verification_state as enum ('unverified','pending','verified','failed');
 
+-- C3/C11.5 canonical account-state model: TWO orthogonal fields on profiles (not 3 tables).
+--   standing       — moderation/reliability gate.   Owner of the WRITER ladder: S8 (P7/P8).
+--   account_state  — lifecycle.                      Owner of the WRITER flows:  S10 (P9).
+-- The ENUMS + COLUMNS are defined here in S1 (master-plan §6/§7) so can_enter_lock_flow
+-- (S2) can read them before any consumer. Values are frozen by C3/C11.5 — do NOT add a 3rd
+-- 'suspended' lifecycle value (suspension lives in standing='suspended', C11.5).
+create type standing_state as enum
+  ('good','warned','cooldown','throttled','reconfirm_required','locked_ban','suspended');
+create type account_lifecycle as enum ('active','paused','deletion_pending','deleted');
+
 alter table profiles
   add column if not exists primary_city_id uuid references cities(id),
   add column if not exists dating_enabled boolean not null default false,
@@ -144,7 +220,13 @@ alter table profiles
   add column if not exists blurred_photo_url text,
   add column if not exists clear_photo_url text,
   add column if not exists reliability_score numeric(4,2),
-  add column if not exists verification verification_state not null default 'unverified';
+  add column if not exists verification verification_state not null default 'unverified',
+  -- C3/C11.5: the two account-state gate fields + the rollover freeze flag that
+  -- can_enter_lock_flow(p_user) (S2) reads. Columns ship in S1; the ladders that WRITE
+  -- standing (S8) and the lifecycle flows that write account_state (S10) come later.
+  add column if not exists standing standing_state not null default 'good',
+  add column if not exists account_state account_lifecycle not null default 'active',
+  add column if not exists rollover_frozen boolean not null default false;
 
 create table if not exists profiles_private (
   user_id uuid primary key references profiles(id) on delete cascade,
@@ -173,7 +255,7 @@ exception when duplicate_object then null; end $$;
 
 ```bash
 git add supabase/migrations/20260525120100_p0_profiles_dating.sql supabase/tests/p0_profiles_private.sql
-git commit -m "P0: extend profiles for dating + owner-only profiles_private (PII)"
+git commit -m "P0: extend profiles for dating (+ standing/account_state gate fields) + owner-only profiles_private"
 ```
 
 ---
@@ -255,7 +337,10 @@ alter table itineraries
   add column if not exists match_status date_match_status not null default 'none',
   add column if not exists pay_setting payment_preference,
   add column if not exists ambient_sound_url text,
-  add column if not exists why_note text;
+  add column if not exists why_note text,
+  -- C7: the night object must carry vibe tags (the feed surfaces them). Without this column
+  -- the canonical browse_feed CREATE VIEW would fail on `i.vibe_tags`. Required by C7/C11.3.
+  add column if not exists vibe_tags text[] not null default '{}';
 
 -- A scheduled instance is a concrete, dated occurrence of an (evergreen) itinerary.
 create table if not exists date_instances (
@@ -283,7 +368,9 @@ do $$ begin
   create policy "date_instances_creator_all" on date_instances for all
     using (creator_id = auth.uid()) with check (creator_id = auth.uid());
 exception when duplicate_object then null; end $$;
--- NOTE: browsers never select date_instances directly; they read the blind feed view (Task 11).
+-- NOTE: browsers never select date_instances directly. The blind feed (browse_feed) and the
+-- client-facing browse_feed_for_viewer() RPC are owned by S12 (C11.3), not P0. P0 ships only
+-- this base table; no feed view here.
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS.**
@@ -388,12 +475,17 @@ create trigger set_queue_entries_updated_at before update on queue_entries
   for each row execute function set_updated_at();
 
 alter table queue_entries enable row level security;
+-- C7: `queue_entries.status` (and `rank`) are lifecycle columns. They are NOT directly
+-- writable by RLS — only the C2 match_* RPCs (S6, SECURITY DEFINER) mutate them. RLS grants
+-- SELECT only; there is NO insert/update/delete policy (default deny). This closes the hole
+-- where a creator could forge `status='locked'` or shortlist a candidate who never swiped.
 do $$ begin
-  create policy "queue_creator_all" on queue_entries for all
-    using (creator_id = auth.uid()) with check (creator_id = auth.uid());
+  -- creator reads the queue for their own instances (to triage); no write policy.
+  create policy "queue_creator_read" on queue_entries for select
+    using (creator_id = auth.uid());
 exception when duplicate_object then null; end $$;
 do $$ begin
-  -- candidate sees only their own row + only its status/rank-less view (no other candidates)
+  -- candidate sees only their own row (no other candidates).
   create policy "queue_candidate_read_own" on queue_entries for select
     using (candidate_id = auth.uid());
 exception when duplicate_object then null; end $$;
@@ -405,7 +497,7 @@ exception when duplicate_object then null; end $$;
 
 ```bash
 git add supabase/migrations/20260525120500_p0_queue_entries.sql
-git commit -m "P0: queue_entries (shortlist/rank/standby) with creator+candidate RLS"
+git commit -m "P0: queue_entries (shortlist/rank/standby), RPC-only lifecycle, read-only RLS"
 ```
 
 ---
@@ -420,21 +512,17 @@ git commit -m "P0: queue_entries (shortlist/rank/standby) with creator+candidate
 
 ```sql
 -- supabase/tests/p0_offer_invariant.sql
+\i supabase/tests/_fixtures.sql
 DO $$
-DECLARE inst uuid; cre uuid; a uuid; b uuid; ok boolean := false;
+DECLARE inst uuid; cre uuid; a uuid; b uuid; itin uuid; ok boolean := false;
 BEGIN
-  -- minimal fixtures (profiles.id need not exist in auth.users for a DB-level constraint test
-  -- because FKs point at profiles; insert profiles rows directly)
-  insert into profiles (id, first_name) values (gen_random_uuid(),'cre') returning id into cre;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'a') returning id into a;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'b') returning id into b;
-  insert into cities (slug,name,timezone,is_active) values ('t','t','UTC',true)
-    on conflict (slug) do nothing;
-  insert into itineraries (id, user_id) values (gen_random_uuid(), cre);
-  insert into date_instances (itinerary_id, creator_id, city_id, starts_at)
-    select i.id, cre, c.id, now()+interval '2 days'
-    from itineraries i, cities c where i.user_id=cre and c.slug='t'
-    limit 1 returning id into inst;
+  -- C8 fixtures: mk_user seeds auth.users + profiles, so the profiles FK is satisfied
+  -- and the invariant below is actually exercised (no FK abort).
+  cre := mk_user('cre');
+  a   := mk_user('a');
+  b   := mk_user('b');
+  itin := mk_itinerary(cre);
+  inst := mk_instance(itin, cre, now()+interval '2 days');
   insert into offers (date_instance_id, candidate_id, creator_id, status, expires_at)
     values (inst, a, cre, 'active', now()+interval '1 day');
   BEGIN
@@ -500,22 +588,17 @@ git commit -m "P0: offers + partial-unique invariant (one active offer per insta
 
 ```sql
 -- supabase/tests/p0_lock_overlap.sql
+\i supabase/tests/_fixtures.sql
 DO $$
-DECLARE cre uuid; usr uuid; i1 uuid; i2 uuid; l1 uuid; ok boolean := false; cid uuid;
+DECLARE cre uuid; usr uuid; it1 uuid; it2 uuid; i1 uuid; i2 uuid; l1 uuid; ok boolean := false;
 BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(),'cre') returning id into cre;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'u') returning id into usr;
-  insert into cities (slug,name,timezone,is_active) values ('t2','t2','UTC',true)
-    on conflict (slug) do nothing returning id into cid;
-  if cid is null then select id into cid from cities where slug='t2'; end if;
-  insert into itineraries (id,user_id) values (gen_random_uuid(),cre);
-  insert into date_instances (itinerary_id,creator_id,city_id,starts_at,duration_min)
-    select i.id,cre,cid, timestamptz '2026-06-01 19:00Z',120 from itineraries i where i.user_id=cre limit 1
-    returning id into i1;
-  insert into itineraries (id,user_id) values (gen_random_uuid(),cre);
-  insert into date_instances (itinerary_id,creator_id,city_id,starts_at,duration_min)
-    select i.id,cre,cid, timestamptz '2026-06-01 20:00Z',120 from itineraries i where i.user_id=cre
-    order by i.created_at desc limit 1 returning id into i2;  -- overlaps i1
+  -- C8 fixtures (seed auth.users + profiles so the invariant is actually exercised).
+  cre := mk_user('cre');
+  usr := mk_user('u');
+  it1 := mk_itinerary(cre);
+  i1  := mk_instance(it1, cre, timestamptz '2026-06-01 19:00Z');   -- duration default 150 min
+  it2 := mk_itinerary(cre);
+  i2  := mk_instance(it2, cre, timestamptz '2026-06-01 20:00Z');   -- overlaps i1
   insert into locks (date_instance_id, creator_id, matched_user_id, status)
     values (i1, cre, usr, 'active') returning id into l1;
   BEGIN
@@ -536,7 +619,11 @@ END $$;
 ```sql
 -- supabase/migrations/20260525120700_p0_locks.sql
 create type lock_status as enum ('active','completed','cancelled','no_show');
-create type cancel_reason as enum ('schedule_conflict','venue_issue','changed_mind','safety','misconduct','other');
+-- cancel_reason: canonical taxonomy is owned by C2 (the match transition API). It is
+-- declared here because the locks table references it, but its VALUES are fixed by C2
+-- and MUST NOT be invented locally. See C2. Includes 'account_closed' (S10 lifecycle uses it).
+create type cancel_reason as enum
+  ('schedule_conflict','venue_issue','changed_mind','account_closed','safety','misconduct','other');
 
 create table if not exists locks (
   id uuid primary key default gen_random_uuid(),
@@ -651,11 +738,17 @@ git commit -m "P0: match_ratings (structured outcomes, one-per-rater, blind-read
 
 ---
 
-## Task 10: `reports` + `blocks`
+## Task 10: `reports` + `disputes` + `blocks` (canonical C5/C11.6 DDL)
 
 **Files:**
 - Create: `supabase/migrations/20260525120900_p0_reports_blocks.sql`
 - Test: `supabase/tests/p0_blocks.sql`
+
+**Conformance (C5 / C11.6 / master-plan §6 "reports/disputes DDL moves to S1"):** the `reports`/`disputes` shapes, the `report_status` enum, and the `report_reason_category` taxonomy are **canonical and frozen** in C5/C11.6. P0/S1 ships them verbatim; later phases conform and never rename/drop values.
+- `report_status` enum = exactly `('open','reviewing','actioned','dismissed')` — P7 reads `actioned`/`reviewing`; do NOT drop/rename. Richer P8 lifecycle is expressed via `resolution_code text`, never by mutating this enum.
+- `report_reason_category` is the canonical taxonomy (C5). `detail text` is free-text; there is **no** separate gating `reason` column.
+- Canonical report writer `file_report(...)` is owned by S9 (P8) per C5; P0 only ships the table/enums.
+- `disputes` DDL is verbatim from C11.6 (P7 writes a row on a contested no-show; S9/P8 resolution updates `disputes.state` and calls back `recompute_reliability`). Owner-band note: C11.6 nominally bands `disputes` in P7 (`128xxx`), but master-plan §6/§7 pull the DDL forward into S1 so the schema spine is self-contained; the *writer/resolver RPCs* remain S8/S9. Defined here once; not redefined later.
 
 - [ ] **Step 1: Write the failing test** (block is unique per pair)
 
@@ -685,29 +778,52 @@ create table if not exists blocks (
 create unique index if not exists blocks_unique_blocker_blocked
   on blocks (blocker_id, blocked_id);
 
+-- C5/C11.6 canonical enums (frozen taxonomy + 4-value status).
+create type report_status as enum ('open','reviewing','actioned','dismissed');
+create type report_reason_category as enum
+  ('harassment','safety_threat','no_show_dispute','payment_dispute','inappropriate_content','fake_profile','other');
+
+-- C5/C11.6 canonical reports shape. target_id is intentionally FK-less (polymorphic).
 create table if not exists reports (
   id uuid primary key default gen_random_uuid(),
-  reporter_id uuid not null references profiles(id) on delete set null,
+  reporter_id uuid references profiles(id) on delete set null,
   target_type text not null check (target_type in ('user','date_instance','message','lock')),
   target_id uuid not null,
-  reason text not null,
+  reason_category report_reason_category not null,
   detail text,
-  status text not null default 'open' check (status in ('open','reviewing','actioned','dismissed')),
+  status report_status not null default 'open',
+  resolution_code text,
+  pay_setting_snapshot jsonb,
   created_at timestamptz not null default now()
 );
 create index if not exists reports_status_idx on reports(status);
 
+-- C11.6 canonical disputes DDL (verbatim).
+create table if not exists disputes (
+  id uuid primary key default gen_random_uuid(),
+  lock_id uuid not null references locks(id) on delete cascade,
+  raised_by uuid not null references profiles(id),
+  kind text not null check (kind in ('no_show','payment','conduct')),
+  state text not null default 'open' check (state in ('open','resolved','rejected')),
+  resolution jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists disputes_lock_idx on disputes(lock_id);
+
 alter table blocks enable row level security;
 alter table reports enable row level security;
+alter table disputes enable row level security;
 do $$ begin
   create policy "blocks_owner_all" on blocks for all
     using (blocker_id = auth.uid()) with check (blocker_id = auth.uid());
 exception when duplicate_object then null; end $$;
 do $$ begin
+  -- reporters insert via file_report (S9) which asserts auth.uid(); direct insert is gated to self.
   create policy "reports_reporter_insert" on reports for insert
     with check (reporter_id = auth.uid());
 exception when duplicate_object then null; end $$;
--- report review/read is service-role/admin only (no select policy = default deny).
+-- report/dispute review/read is service-role/admin only (no select policy = default deny).
+-- disputes writes happen via S8 (raise) / S9 (resolve) RPCs; no direct write policy here.
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS.**
@@ -716,68 +832,20 @@ exception when duplicate_object then null; end $$;
 
 ```bash
 git add supabase/migrations/20260525120900_p0_reports_blocks.sql supabase/tests/p0_blocks.sql
-git commit -m "P0: blocks (unique pair) + reports (moderation intake)"
+git commit -m "P0: blocks (unique pair) + reports + disputes (canonical C5/C11.6 DDL)"
 ```
 
 ---
 
-## Task 11: Blind-browse feed view (no creator identity leak)
+## Task 11: ~~Blind-browse feed view~~ — SUPERSEDED by C11.3
 
-**Files:**
-- Create: `supabase/migrations/20260525121000_p0_feed_view.sql`
-- Test: `supabase/tests/p0_feed_blind.sql`
+**SUPERSEDED by C11.3.** The canonical `browse_feed` is **not** owned by P0/S1. It is built **exactly once** in the S12 feed-finalization migration at band `133000`, via `drop view if exists browse_feed; create view …` (NOT `create or replace`), after every base-table column it reads exists (`moderation_status` S4, `is_seed` S4, `account_state`/`standing` S7/S9 per C3/C11.5). No P0 migration may `create or replace browse_feed`; P0 only ships the **base tables** the view reads (`date_instances`, `itineraries` incl. `vibe_tags`, `places`). See C4 and C11.3.
 
-- [ ] **Step 1: Write the failing test** (the view must NOT expose `creator_id`)
+**Do NOT build a `browse_feed` view in P0.** This removes the build-breaker (the original P0 view selected `i.vibe_tags` before the column existed — now fixed in Task 4 — and duplicated a view that C11.3 reserves for S12 with a mandatory filter P0 cannot yet satisfy, e.g. `moderation_status='approved'`, `account_state='active'`, `standing not in (...)`).
 
-```sql
--- supabase/tests/p0_feed_blind.sql
-DO $$
-BEGIN
-  PERFORM 1 FROM information_schema.columns
-   WHERE table_name='browse_feed' AND column_name='creator_id';
-  IF FOUND THEN RAISE EXCEPTION 'LEAK: browse_feed exposes creator_id'; END IF;
-  PERFORM 1 FROM information_schema.tables WHERE table_name='browse_feed';
-  IF NOT FOUND THEN RAISE EXCEPTION 'browse_feed missing'; END IF;
-END $$;
-```
+If an early stage genuinely needs a feed for tests, query the **base tables** directly (per C11.3). This task ships **no** view and **no** test file.
 
-- [ ] **Step 2: Run it, expect FAIL** (`browse_feed missing`).
-
-- [ ] **Step 3: Write the migration**
-
-```sql
--- supabase/migrations/20260525121000_p0_feed_view.sql
--- Identity-stripped projection of open date instances. Creator identity is intentionally absent.
--- Pay setting, neighborhood/time-window, and night content only (pre-lock privacy: no exact venue).
-create or replace view browse_feed
-with (security_invoker = true) as
-select
-  di.id            as date_instance_id,
-  di.city_id,
-  date_trunc('hour', di.starts_at) as time_window_start,   -- coarse, not exact
-  di.status,
-  i.id             as itinerary_id,
-  i.pay_setting,
-  i.vibe_tags,
-  i.why_note,
-  i.ambient_sound_url,
-  p.neighborhood   as venue_neighborhood                    -- neighborhood only, not venue name
-from date_instances di
-join itineraries i on i.id = di.itinerary_id
-left join places p on p.id = di.venue_id
-where di.status = 'seeking';
-
-grant select on browse_feed to anon, authenticated;
-```
-
-- [ ] **Step 4: Apply + run test, expect PASS.**
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add supabase/migrations/20260525121000_p0_feed_view.sql supabase/tests/p0_feed_blind.sql
-git commit -m "P0: browse_feed view (identity-stripped, coarse time/venue) for blind browsing"
-```
+> NOTE: The old `supabase/tests/p0_feed_blind.sql` test is removed with this task — it asserted only `information_schema` column presence on a view that returned zero rows for browsers (security_invoker + creator-only RLS), so it guarded nothing. Blind-feed behavior is proven in S12 against the canonical view + `browse_feed_for_viewer()` RPC (C11.3).
 
 ---
 
@@ -791,18 +859,14 @@ git commit -m "P0: browse_feed view (identity-stripped, coarse time/venue) for b
 
 ```sql
 -- supabase/tests/p0_audit_log.sql
+\i supabase/tests/_fixtures.sql
 DO $$
-DECLARE cre uuid; usr uuid; cid uuid; inst uuid; l uuid; n int;
+DECLARE cre uuid; usr uuid; itin uuid; inst uuid; l uuid; n int;
 BEGIN
-  insert into profiles (id,first_name) values (gen_random_uuid(),'c') returning id into cre;
-  insert into profiles (id,first_name) values (gen_random_uuid(),'u') returning id into usr;
-  insert into cities (slug,name,timezone,is_active) values ('t3','t3','UTC',true)
-    on conflict (slug) do nothing;
-  select id into cid from cities where slug='t3';
-  insert into itineraries (id,user_id) values (gen_random_uuid(),cre);
-  insert into date_instances (itinerary_id,creator_id,city_id,starts_at)
-    select i.id,cre,cid,now()+interval '3 days' from itineraries i where i.user_id=cre limit 1
-    returning id into inst;
+  cre := mk_user('c');
+  usr := mk_user('u');
+  itin := mk_itinerary(cre);
+  inst := mk_instance(itin, cre, now()+interval '3 days');
   insert into locks (date_instance_id,creator_id,matched_user_id) values (inst,cre,usr) returning id into l;
   update locks set status='completed' where id=l;
   select count(*) into n from audit_log where entity='locks' and entity_id=l;
@@ -889,7 +953,7 @@ Expected: every file exits 0; notices print `… OK`.
 - [ ] **Step 3: Regenerate TypeScript types**
 
 Run: `pnpm db:types`
-Expected: `packages/types/src/database.ts` updates to include `cities`, `date_instances`, `swipes`, `queue_entries`, `offers`, `locks`, `lock_participants`, `match_ratings`, `reports`, `blocks`, `verifications`, `audit_log`, `browse_feed`.
+Expected: `packages/types/src/database.ts` updates to include `cities`, `date_instances`, `swipes`, `queue_entries`, `offers`, `locks`, `lock_participants`, `match_ratings`, `disputes`, `reports`, `blocks`, `verifications`, `audit_log`. (No `browse_feed` — that view is owned by S12, C11.3.)
 
 - [ ] **Step 4: Commit**
 
@@ -902,26 +966,35 @@ git commit -m "P0: regenerate database types for dating core-loop schema"
 
 ## Self-Review
 
-**Spec coverage (vs roadmap P0 'Closes' list):**
-- Data model / schema → Tasks 1–12. ✅
+**Spec coverage (vs roadmap P0 'Closes' list / RECONCILED-MASTER-PLAN S1):**
+- Shared test fixtures (C8) → Task 0 (`_fixtures.sql` `mk_user`/`mk_itinerary`/`mk_instance`). ✅
+- Data model / schema → Tasks 1–12 (minus the removed feed view). ✅
+- `vibe_tags` on the night object (C7) → Task 4 (`itineraries.vibe_tags`). ✅
+- Account-state model (C3/C11.5) → Task 2 (`standing` + `account_state` + `rollover_frozen` + enums; columns the S2 `can_enter_lock_flow` reads). ✅
 - Date duration / "overlapping window" definable → Task 4 (`time_range` generated col) + Task 8 (exclusion constraint). ✅
 - Concurrency / single-offer invariant → Task 7 partial unique index. ✅
 - No double-booking invariant → Task 8 GiST exclusion on `lock_participants`. ✅
-- Field-level auth for blind browsing → Task 11 `browse_feed` view (no `creator_id`, coarse time/venue) + Task 5 swipe RLS. ✅
-- Standby vs creator-rank ambiguity → Task 6 `queue_entries.rank` + `status` make ordering explicit (consumed by P5). ✅
-- Reliability score backed by events → Task 9 `match_ratings` (raw structured rows; aggregate in P7). ✅
+- RPC-only lifecycle columns (C7) → Task 6 (`queue_entries` read-only RLS, no FOR ALL) + Task 8 (`locks` read-only RLS). ✅
+- Standby vs creator-rank ambiguity → Task 6 `queue_entries.rank` + `status` (written only by S6 RPCs). ✅
+- Reliability score backed by events → Task 9 `match_ratings` (raw structured rows; aggregate in S8). ✅
 - Audit log / event sourcing → Task 12. ✅
 - Verification storage / age gate field → Tasks 2–3. ✅
-- Reports/blocks intake → Task 10. ✅
+- Reports/disputes/blocks (canonical C5/C11.6) → Task 10. ✅
 - Multi-city keying → Task 1 `cities`. ✅
 
-**Deferred to later phases (intentionally NOT in P0):** offer/lock *transition functions* and SECURITY DEFINER RPCs (P5); reciprocal-pair detection (P5); auto-roll/expiry jobs (P2); chat tables (P6); reliability-score computation + enforcement (P7); notifications/devices (P2); embeddings/feed_cache (later). P0 provides the tables + invariants they will use.
+**Owned elsewhere (NOT in P0/S1 — referenced, not redefined):**
+- `browse_feed` view + `browse_feed_for_viewer()` RPC → **S12** finalization at band `133000` (C4/C11.3). P0 ships only the base tables it reads.
+- offer/lock *transition functions* and the C2 `match_*` SECURITY DEFINER RPCs (incl. `match_withdraw`, `match_resolve_reciprocal`) → **S6** (C2). They are the sole writers of `queue_entries.status`/`rank` and `locks.status`.
+- `can_enter_lock_flow(p_user)` gate (reads `account_state`/`standing`/`rollover_frozen`) → **S2** (C3).
+- jobs/runner, notifications/devices/preferences, `feature_config`/`offer_expires_at()`, `analytics_events`, `admin_alerts`, chat-core hooks → **S2** (C1/C11.1/C11.7/C11.8).
+- chat tables / rich messaging → **S7** (C9). reliability computation + enforcement ladder writing `standing` → **S8**. `file_report` writer + dispute resolution → **S9**. lifecycle flows writing `account_state` → **S10**.
+- `cancel_reason` enum values are owned by **C2** (declared in Task 8 only because `locks` references the type).
 
-**Placeholder scan:** none — every step has runnable SQL and exact commands.
+**Placeholder scan:** none — every step has runnable SQL and exact commands. The former `browse_feed` task is intentionally a SUPERSEDED no-op (no dead view shipped).
 
-**Type/name consistency:** table/column names referenced across tasks are consistent (`date_instances.time_range`, `offers.status='active'`, `locks`/`lock_participants`, `queue_status`, `browse_feed`). Enums declared once before use.
+**Type/name consistency:** names referenced across tasks are consistent with the contract (`date_instances.time_range`, `offers.status='active'`, `locks`/`lock_participants`, `queue_status`, `report_status`, `report_reason_category`, `standing_state`, `account_lifecycle`, `cancel_reason`). Enums declared once before use; canonical enums match C3/C5/C11.6 verbatim.
 
-**Risk note:** the test fixtures insert directly into `profiles` (bypassing `auth.users`) to exercise DB-level constraints; this works because dating-loop FKs point at `profiles`, not `auth.users`. RLS *policy behavior* (auth.uid()) is verified by app-level integration tests in later phases, not these structural tests.
+**Risk note (corrected):** earlier drafts inserted directly into `profiles` (bypassing `auth.users`), which actually **violates** the `profiles.id → auth.users(id)` FK and aborts the test before the invariant runs. That is fixed: all DB tests now `\i supabase/tests/_fixtures.sql` and create users via `mk_user()` (C8), which seeds a real `auth.users` row. RLS *policy behavior* (`auth.uid()`) is verified by app-level integration tests in later stages, not these structural tests.
 ```
 
 ---

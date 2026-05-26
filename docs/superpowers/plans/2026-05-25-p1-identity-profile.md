@@ -1,10 +1,22 @@
+SUBORDINATE EXECUTION SLICE. This plan is not authoritative by itself. It must be implemented only through INTEGRATION-CONTRACT.md v2 and RECONCILED-MASTER-PLAN.md. If this file conflicts with either, this file loses.
+
 # P1 — Identity, Profile & Onboarding Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Build **on top of** the P0 tables (`profiles`, `profiles_private`, `verifications`, `cities`) — reference them, never recreate them.
+> **Position in the build:** this is the **S3** slice of the Reconciled Master Plan (RECONCILED-MASTER-PLAN.md §8, S3 — "Identity, verification, onboarding"). It is subordinate to `INTEGRATION-CONTRACT.md` (v2, incl. C11). The contract reconciliation items for this slice are the master checklist line "P1:" (INTEGRATION-CONTRACT.md, Reconciliation checklist) — every item there is implemented below.
+>
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Build **on top of** the P0/S1 tables (`profiles`, `profiles_private`, `verifications`, `cities`) — reference them, never recreate them.
+>
+> **Depends on (must already exist before this slice runs):**
+> - **S1 (P0):** `profiles`, `profiles_private` (incl. `birthdate`, `full_name`, `bio`), `verifications` (`kind in ('phone','selfie','age')`, `state verification_state`, `provider`, `provider_ref`, `failure_reason`, `verified_at`), `cities`, `verification_state` enum, `_fixtures.sql` `mk_user`/`mk_itinerary`/`mk_instance` (INTEGRATION-CONTRACT.md C8). **All psql tests below `\i` `supabase/tests/_fixtures.sql` and seed users via `mk_user()` — never bare-insert into `profiles` (C8/CV11).**
+> - **S2 (P2):** `register_device(p_token text, p_platform text, p_web_push jsonb default null)`, `devices`, `notifications`/`notification_type`, `notification_preferences`, `dispatch_notification` (INTEGRATION-CONTRACT.md C1, C11.2). **This slice CALLS `register_device`; it does NOT define `devices`/`notifications`/`register_device`.** Verification-failure / appeal user notifications use `dispatch_notification` with `notification_type='account'` (the C1 enum has no verification-specific type; do not invent one without a contract amendment — see "Required contract amendments").
+>
+> **Reveal predicate:** this slice does **NOT** define a reveal function. The single canonical reveal predicate is `match_reveal_allowed(p_viewer uuid, p_instance uuid) returns bool` (INTEGRATION-CONTRACT.md C2), owned by S6 (P5). P1's former `offer_reveal`/`offer_reveal_for` are **DELETED** (CV6 / DS3). The clear-photo signed URL is minted by S6's offer RPC, not here.
+>
+> **Migration band (C6):** P1 owns **`122000–1229xx`** on 2026-05-25. All P1 migrations below are renumbered into that band (the old `1301xx`–`1307xx` numbers collided with P2/P5 — STATE#1 in the audit). No P1 migration may use any other band.
 
-**Goal:** Make the user a real, accountable, revealable person. Define the **profile** object that is revealed at offer (photos incl. blurred + clear, name, age, bio, prompts); capture **preferences** (orientation, age range, distance, dealbreakers) that feed the Phase-4 compatibility pre-filter; build identity **verification** (phone OTP + a selfie/liveness vendor) writing to P0's `verifications` + `profiles.verification`; enforce a real **18+ age gate**; and light up the **"Verified · New"** badge with a derivation that is true at launch.
+**Goal:** Make the user a real, accountable, revealable person. Define the **profile** object that is revealed at offer (photos incl. blurred + clear, age, bio, prompts — **no name in the pre-offer card**, spec §5/§7.2); capture **preferences** (orientation, age range, distance, dealbreakers) that feed the S5 (P4) compatibility pre-filter; build identity **verification** with a real **front door** (start a Persona Inquiry + write the `phone` verification row server-side) writing to S1's `verifications` + `profiles.verification`; enforce a real **18+ age gate from Persona's parsed DOB**; advance onboarding to `done`; produce the **blurred photo** the blind feed needs; register the device for notifications; and light up the **"Verified · New"** badge with a derivation that is true at launch.
 
-**Architecture:** Backend-first on Supabase. Verification is a state machine `pending → verified | failed | appeal` persisted in P0's `verifications` rows; the aggregate is rolled up into `profiles.verification` by a trigger so the feed pre-filter and badge can read one column. The selfie/liveness step is delegated to **Persona** (justified in Task 6) and reconciled into the DB **only** via a service-role webhook Edge Function (`persona-webhook`) — the client never writes `verification='verified'`. Phone OTP rides Supabase Auth's native phone provider (Twilio). The age gate is computed from `profiles_private.birthdate` (private, owner-only) and gates `profiles.dating_enabled` via a DB trigger so a minor can never flip dating on. All reveal/eligibility logic lives in shared packages (`@after5/validators`, `@after5/business`, `@after5/api-client`) so the native client reuses it (spec §10).
+**Architecture:** Backend-first on Supabase. Verification is a state machine `pending → verified | failed | appeal` persisted in S1's `verifications` rows; the aggregate is rolled up into `profiles.verification` by a trigger so the feed pre-filter and badge can read one column. The selfie/liveness + government-ID step is delegated to **Persona** (justified in Task 6). **A `start-verification` Edge Function (the FRONT DOOR)** creates/embeds the Persona Inquiry with `reference-id = profiles.id` and seeds `verifications(kind='age', state='pending')`; the verdict is reconciled into the DB **only** via the service-role webhook Edge Function (`persona-webhook`) — the client never writes `verification='verified'`. **Persona's parsed government-ID DOB is the age source of truth:** the webhook writes it (service-role) into `profiles_private.birthdate`, and the 18+ gate computes age from that birthdate (not self-reported). Phone OTP rides Supabase Auth's native phone provider (Twilio); a service-role `confirm-phone` Edge Function writes `verifications(kind='phone', state='verified')` on successful `auth.verifyOtp` (the client cannot write it — S1 RLS makes `verifications` writes service-role only). The age gate gates `profiles.dating_enabled` via a DB trigger so a minor can never flip dating on. `register_device` (INTEGRATION-CONTRACT.md C1/C11.2, owned by S2) is called at the end of onboarding. The reveal predicate is **not** defined here — it is canonical `match_reveal_allowed` (C2, owned by S6). All eligibility logic lives in shared packages (`@after5/validators`, `@after5/business`, `@after5/api-client`) so the native client reuses it (spec §10).
 
 **Tech Stack:** Supabase Postgres + RLS + SQL migrations (`supabase/migrations/`); Supabase Auth phone OTP (Twilio provider, already configured in `config.toml`); Persona (hosted Inquiry flow + webhook) for selfie/liveness + government-ID age verification; Supabase Edge Functions in Deno (`Deno.test` for tests); **vitest** for all JS/TS packages (P1 establishes the harness the whole monorepo will use); Zod schemas in `@after5/validators`; Supabase Storage private bucket `profile-photos` for blurred/clear photos; psql `DO $$ … END $$` invariant tests in `supabase/tests/`.
 
@@ -14,13 +26,13 @@
 - Schema to reconcile: `docs/superpowers/specs/2026-04-23-date-engine-v2-architecture-design.md` §4.3 (`profiles`, `profiles_private`, payment/age/preference fields, trust_level)
 - Phase the schema lands in: `docs/superpowers/plans/2026-05-25-p0-data-model.md` (Tasks 2–3 create `profiles` dating columns, `profiles_private`, `verifications`, the `verification_state` enum)
 
-**Depends on:** **P0** (must be applied first). P1 assumes P0 Task 2 added `profiles.{dating_enabled, age, age_pref int4range, gender, gender_preferences text[], distance_pref_km, blurred_photo_url, clear_photo_url, reliability_score, primary_city_id, verification verification_state, vibe_tags}`, P0 Task 2 created `profiles_private` (with `birthdate`, `full_name`, `bio`, `emergency_contact`), and P0 Task 3 created `verifications(kind in ('phone','selfie','age'), state verification_state, provider, provider_ref, failure_reason, verified_at)`.
+**Depends on:** **S1 (P0)** and **S2 (P2)** — both must be applied first (RECONCILED-MASTER-PLAN.md §6 build order S1→S2→S3). P1 assumes S1 added `profiles.{dating_enabled, age, age_pref int4range, gender, gender_preferences text[], distance_pref_km, blurred_photo_url, clear_photo_url, reliability_score, primary_city_id, verification verification_state, vibe_tags}`, created `profiles_private` (with `birthdate`, `full_name`, `bio`, `emergency_contact`), and created `verifications(kind in ('phone','selfie','age'), state verification_state, provider, provider_ref, failure_reason, verified_at)`. P1 assumes S2 shipped `register_device`, `devices`, `notifications`/`notification_type`/`notification_preferences`, and `dispatch_notification` (INTEGRATION-CONTRACT.md C1/C11.2).
 
 **Reconciliation notes (read before writing code):**
-- P0's `verification_state` enum is `('unverified','pending','verified','failed')`. The spec's verify flow needs an **`appeal`** state. P1 **extends** that enum with `ADD VALUE 'appeal'` (Task 2) rather than redefining it.
-- `date-engine-v2` §4.3 calls the orientation field `gender_preferences text[]` and the age field `age_preferences int4range`. **P0 actually shipped `gender_preferences text[]` and `age_pref int4range`.** P1 uses the **P0 names** (`age_pref`, `gender_preferences`) everywhere — they are the source of truth. Dealbreakers are net-new (Task 4 adds `profiles.dealbreakers text[]`).
+- S1's `verification_state` enum is `('unverified','pending','verified','failed')`. The spec's verify flow needs an **`appeal`** state. P1 **extends** that enum with `ADD VALUE 'appeal'` (Task 2) rather than redefining it.
+- `date-engine-v2` §4.3 calls the orientation field `gender_preferences text[]` and the age field `age_preferences int4range`. **S1 actually shipped `gender_preferences text[]` and `age_pref int4range`.** P1 uses the **S1 names** (`age_pref`, `gender_preferences`) everywhere — they are the source of truth. Dealbreakers are net-new (Task 4 adds `profiles.dealbreakers text[]`).
 - "Verified · New" (spec §8): a profile is **Verified** when `profiles.verification='verified'` and **New** when it has fewer than `MIN_RATINGS_FOR_ESTABLISHED` (=3) completed ratings (`profiles.reliability_score IS NULL`). At launch every verified user is "New" — the badge is true, not dead.
-- P1 does **not** build the feed query (P4), the offer/reveal RPC (P5), or notifications (P2). P1 provides the data + eligibility predicates those phases consume.
+- P1 does **not** build the feed query (S5/P4), the reveal predicate (`match_reveal_allowed`, S6/P5 — C2), the clear-photo signed-URL minting (S6/P5), notifications infra (S2/P2 — C1), or `devices`/`register_device` (S2/P2 — C1/C11.2). P1 **calls** `register_device` and `dispatch_notification`; it **consumes** them, it does not define them. P1 provides the profile data, the verification front door, the age gate, the onboarding step machine, the blurred photo, and the eligibility predicates those phases consume.
 
 ---
 
@@ -28,23 +40,28 @@
 
 ```
 supabase/
-  migrations/
-    20260525130000_p1_test_harness_marker.sql          # (no-op marker; harness task is JS — see Task 0)
-    20260525130100_p1_verification_appeal_state.sql     # extend verification_state enum
-    20260525130200_p1_profile_prompts.sql               # profile_prompts table + profile fields (bio/prompts/dealbreakers/onboarding)
-    20260525130300_p1_preferences_constraints.sql        # preference columns CHECKs + onboarding_completed
-    20260525130400_p1_age_gate_trigger.sql               # 18+ gate trigger on profiles.dating_enabled
-    20260525130500_p1_verification_rollup_trigger.sql    # verifications → profiles.verification rollup
-    20260525130600_p1_profile_photos_bucket.sql          # private storage bucket + RLS for blurred/clear photos
-    20260525130700_p1_badge_and_reveal_views.sql         # public_profile_card (badge) + offer_reveal (full reveal) views/fn
+  migrations/                                            # P1 band: 122000–1229xx (C6). Old 1301xx–1307xx collided with P2/P5.
+    20260525122000_p1_verification_appeal_state.sql      # extend verification_state enum (ADD VALUE 'appeal')
+    20260525122100_p1_profile_prompts.sql                # profile_prompts table + profile fields (prompts/dealbreakers/onboarding)
+    20260525122200_p1_preferences_constraints.sql        # preference columns CHECKs
+    20260525122300_p1_age_gate_trigger.sql               # 18+ gate trigger on profiles.dating_enabled (Persona-DOB-derived)
+    20260525122400_p1_verification_rollup_trigger.sql    # verifications → profiles.verification rollup
+    20260525122500_p1_verifications_user_kind_unique.sql # (user_id,kind) unique the webhook/front-door upsert relies on
+    20260525122600_p1_profile_photos_bucket.sql          # private storage bucket + RLS for blurred/clear photos
+    20260525122700_p1_badge_view.sql                     # public_profile_card (badge) view — NO reveal fn (reveal = C2 match_reveal_allowed)
+    20260525122800_p1_onboarding_advance_rpc.sql         # advance_onboarding_step() RPC → reaches 'done'; sets onboarding_completed_at
   tests/
+    _fixtures.sql                                        # (from S1/C8 — \i'd by every test; NOT created here)
     p1_appeal_state.sql
     p1_age_gate.sql
     p1_verification_rollup.sql
-    p1_reveal_rls.sql
     p1_badge_view.sql
+    p1_onboarding_advance.sql
   functions/
-    persona-webhook/index.ts                             # service-role webhook: Persona → verifications + profiles
+    start-verification/index.ts                          # FRONT DOOR: create Persona Inquiry + seed verifications(age,pending)
+    confirm-phone/index.ts                               # service-role: write verifications(phone,verified) after auth.verifyOtp
+    persona-webhook/index.ts                             # service-role webhook: Persona → verifications + DOB→profiles_private.birthdate
+    generate-blur/index.ts                               # service-role: produce blurred_photo_url derivative from clear upload
     _shared/
       cors.ts                                            # (exists — reuse)
 
@@ -58,26 +75,29 @@ packages/
     eligibility.ts                                       # canEnableDating(), badgeFor(), compatibilityPrefilterInputs()
     index.ts                                             # re-export
   api-client/src/
-    profile.ts                                           # getMyProfile, upsertProfile, savePreferences, startVerification
+    profile.ts                                           # getMyProfile, upsertProfile, savePreferences, startVerification,
+                                                         #   confirmPhone, advanceOnboarding, registerDevice (calls S2 register_device), getMyBadge
     index.ts                                             # re-export
 
-vitest.config.ts                                         # repo-root vitest (workspace projects)
+vitest.config.ts                                         # repo-root vitest (workspace projects) — P1 OWNS the single root config (C10/C12)
 package.json                                             # + "test": "vitest run", + devDeps
 packages/validators/package.json                         # + test script
 packages/business/package.json                           # + test script
 packages/api-client/package.json                         # + test script
 ```
 
-Test-loop conventions (inherited from P0):
-- **SQL:** `supabase db reset` then `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f <test.sql>`. A `DO $$ … RAISE EXCEPTION … END $$;` block = clean exit is PASS, any raise is FAIL.
+> **Removed vs the original P1 plan (do not build these):** `offer_reveal`/`offer_reveal_for` and `supabase/tests/p1_reveal_rls.sql` — the reveal predicate is canonical `match_reveal_allowed` (C2, S6). The `20260525130000_p1_test_harness_marker.sql` no-op marker is dropped (the harness is JS — Task 0). All migration filenames are rebased into the `122xxx` band.
+
+Test-loop conventions (inherited from S1/P0):
+- **SQL:** `supabase db reset` then `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f <test.sql>`. A `DO $$ … RAISE EXCEPTION … END $$;` block = clean exit is PASS, any raise is FAIL. **Every P1 SQL test begins with `\i supabase/tests/_fixtures.sql` and seeds users via `mk_user('label')` — never bare-insert into `profiles` (C8/CV11).**
 - **JS/TS:** `pnpm test` (vitest) from repo root, or `pnpm --filter @after5/business test` per package.
-- **Deno (Edge Function):** `deno test --allow-env --allow-net supabase/functions/persona-webhook/`.
+- **Deno (Edge Function):** `deno test --allow-env --allow-net supabase/functions/<fn>/`.
 
 ---
 
-## Task 0: Establish the vitest test harness (repo-wide)
+## Task 0: Establish the single root vitest test harness (repo-wide)
 
-**P1 owns the JS/TS test runner. The repo currently has no JS test runner; later phases assume vitest exists.** This task adds vitest at the workspace root, wires a `test` script, and proves it with one passing sample test.
+**P1 OWNS the single root `vitest.config.ts` (INTEGRATION-CONTRACT.md C10/C12). The repo currently has no JS test runner; all later phases assume `pnpm test` works and P3/P6/P8/P10/P11 DELETE any duplicate vitest setup (CV10/DS4) — they do not add their own.** This task adds vitest at the workspace root with workspace globs covering `apps/web` + `packages/*`, wires a `test` script, and proves it with one passing sample test. No other phase may create a second vitest config.
 
 **Files:**
 - Create: `vitest.config.ts`
@@ -405,8 +425,8 @@ git commit -m "P1: profile/preferences/verification Zod schemas in @after5/valid
 Extend P0's `verification_state` enum with `appeal`, add the prompts table, and add the profile columns P0 did not (bio is on `profiles_private` in P0; prompts/dealbreakers/onboarding are net-new).
 
 **Files:**
-- Create: `supabase/migrations/20260525130100_p1_verification_appeal_state.sql`
-- Create: `supabase/migrations/20260525130200_p1_profile_prompts.sql`
+- Create: `supabase/migrations/20260525122000_p1_verification_appeal_state.sql`
+- Create: `supabase/migrations/20260525122100_p1_profile_prompts.sql`
 - Test: `supabase/tests/p1_appeal_state.sql`
 
 - [ ] **Step 1: Write the failing test**
@@ -443,8 +463,8 @@ Expected: FAIL — enum missing `appeal` (or `relation "profile_prompts" does no
 - [ ] **Step 3: Write the migrations**
 
 ```sql
--- supabase/migrations/20260525130100_p1_verification_appeal_state.sql
--- Extend P0's verification_state enum with the spec's appeal state (§8).
+-- supabase/migrations/20260525122000_p1_verification_appeal_state.sql
+-- Extend S1's verification_state enum with the spec's appeal state (§8).
 -- ALTER TYPE ... ADD VALUE cannot run inside a txn block that also uses the new
 -- value, so it lives alone in its own migration (Supabase wraps each file in its
 -- own transaction; ADD VALUE IF NOT EXISTS is committed before any later file uses it).
@@ -452,7 +472,7 @@ alter type verification_state add value if not exists 'appeal';
 ```
 
 ```sql
--- supabase/migrations/20260525130200_p1_profile_prompts.sql
+-- supabase/migrations/20260525122100_p1_profile_prompts.sql
 -- The library of profile prompts a creator can answer (revealed at offer).
 create table if not exists profile_prompts (
   id          text primary key,         -- matches validators PROMPT_IDS
@@ -495,33 +515,37 @@ Expected: PASS (no output, exit 0).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130100_p1_verification_appeal_state.sql \
-  supabase/migrations/20260525130200_p1_profile_prompts.sql supabase/tests/p1_appeal_state.sql
+git add supabase/migrations/20260525122000_p1_verification_appeal_state.sql \
+  supabase/migrations/20260525122100_p1_profile_prompts.sql supabase/tests/p1_appeal_state.sql
 git commit -m "P1: verification 'appeal' state + profile_prompts + dealbreakers/onboarding columns"
 ```
 
 ---
 
-## Task 3: Migration — real 18+ age gate (DB trigger)
+## Task 3: Migration — real 18+ age gate (DB trigger, Persona-DOB-derived)
 
-A minor must never be able to enable dating. Compute age from `profiles_private.birthdate` and **reject** any attempt to set `profiles.dating_enabled=true` unless the user is ≥18.
+A minor must never be able to enable dating. Compute age from `profiles_private.birthdate` — **which is written service-role from Persona's parsed government-ID DOB by the webhook (Task 6), NOT self-reported** — and **reject** any attempt to set `profiles.dating_enabled=true` unless the user is ≥18. The trigger also re-fires on a `birthdate` change so an edited DOB cannot defeat the gate.
 
 **Files:**
-- Create: `supabase/migrations/20260525130400_p1_age_gate_trigger.sql`
+- Create: `supabase/migrations/20260525122300_p1_age_gate_trigger.sql`
 - Test: `supabase/tests/p1_age_gate.sql`
 
 - [ ] **Step 1: Write the failing test**
 
 ```sql
 -- supabase/tests/p1_age_gate.sql
+\i supabase/tests/_fixtures.sql
 DO $$
 DECLARE minor uuid; adult uuid; blocked boolean := false;
 BEGIN
-  -- Direct profile inserts (FKs point at profiles; constraint test bypasses auth.users).
-  insert into profiles (id, first_name) values (gen_random_uuid(),'minor') returning id into minor;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'adult') returning id into adult;
-  insert into profiles_private (user_id, birthdate) values (minor, current_date - interval '16 years');
-  insert into profiles_private (user_id, birthdate) values (adult, current_date - interval '25 years');
+  -- Seed via the C8 fixture (auth.users + profiles), never bare-insert into profiles.
+  minor := mk_user('minor');
+  adult := mk_user('adult');
+  -- birthdate here stands in for the Persona-DOB the webhook writes (Task 6).
+  insert into profiles_private (user_id, birthdate) values (minor, current_date - interval '16 years')
+    on conflict (user_id) do update set birthdate = excluded.birthdate;
+  insert into profiles_private (user_id, birthdate) values (adult, current_date - interval '25 years')
+    on conflict (user_id) do update set birthdate = excluded.birthdate;
 
   -- Minor flipping dating_enabled on must be rejected.
   BEGIN
@@ -548,10 +572,12 @@ Expected: FAIL — `AGE GATE FAILED: a 16-year-old enabled dating` (no gate yet)
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130400_p1_age_gate_trigger.sql
--- Hard 18+ gate. profiles.age (cached) AND profiles_private.birthdate (source)
--- are both consulted; birthdate wins because it cannot be self-set to a lie
--- without also lying to verification (Task 6 cross-checks the ID DOB).
+-- supabase/migrations/20260525122300_p1_age_gate_trigger.sql
+-- Hard 18+ gate. The source of truth is profiles_private.birthdate, which the
+-- Persona webhook (Task 6) writes service-role from the parsed government-ID DOB.
+-- The user CANNOT set it via RLS (profiles_private.birthdate is service-role-write
+-- per S1 RLS), so the gate runs on real ID data, closing the
+-- "selfie != age verification" gap.
 
 create or replace function enforce_age_gate() returns trigger
 language plpgsql security definer set search_path = public as $fn$
@@ -576,6 +602,28 @@ end $fn$;
 create trigger profiles_age_gate
   before insert or update on profiles
   for each row execute function enforce_age_gate();
+
+-- Re-fire on a birthdate change: if a dating-enabled user's birthdate is later
+-- corrected to a minor DOB (or below 18), revoke dating and resync the cached age.
+-- (birthdate is service-role-write only, but this guarantees the gate cannot be
+-- defeated by a post-gate birthdate edit — audit MISSING-EDGE #3.)
+create or replace function resync_age_on_birthdate() returns trigger
+language plpgsql security definer set search_path = public as $fn$
+declare yrs numeric;
+begin
+  if new.birthdate is distinct from old.birthdate and new.birthdate is not null then
+    yrs := extract(year from age(new.birthdate));
+    update profiles
+       set age = floor(yrs)::int,
+           dating_enabled = case when yrs < 18 then false else dating_enabled end
+     where id = new.user_id;
+  end if;
+  return new;
+end $fn$;
+
+create trigger profiles_private_birthdate_resync
+  after update of birthdate on profiles_private
+  for each row execute function resync_age_on_birthdate();
 ```
 
 - [ ] **Step 4: Apply + run test, expect PASS**
@@ -586,8 +634,8 @@ Expected: PASS (prints `age gate OK`).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130400_p1_age_gate_trigger.sql supabase/tests/p1_age_gate.sql
-git commit -m "P1: hard 18+ age gate trigger on profiles.dating_enabled (birthdate-derived)"
+git add supabase/migrations/20260525122300_p1_age_gate_trigger.sql supabase/tests/p1_age_gate.sql
+git commit -m "P1: hard 18+ age gate trigger on profiles.dating_enabled (Persona-DOB-derived, re-fires on birthdate change)"
 ```
 
 ---
@@ -597,17 +645,18 @@ git commit -m "P1: hard 18+ age gate trigger on profiles.dating_enabled (birthda
 The Phase-4 pre-filter reads `gender`, `gender_preferences`, `age_pref`, `distance_pref_km`, `dealbreakers`. P0 created these columns loosely; P1 adds the CHECKs that make the inputs trustworthy so an out-of-range preference can never poison the feed filter.
 
 **Files:**
-- Create: `supabase/migrations/20260525130300_p1_preferences_constraints.sql`
+- Create: `supabase/migrations/20260525122200_p1_preferences_constraints.sql`
 - Test: `supabase/tests/p1_preferences.sql`
 
 - [ ] **Step 1: Write the failing test**
 
 ```sql
 -- supabase/tests/p1_preferences.sql
+\i supabase/tests/_fixtures.sql
 DO $$
 DECLARE u uuid; bad boolean := false;
 BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(),'p') returning id into u;
+  u := mk_user('p');
 
   -- age_pref must be bounded to 18..99; a lower bound < 18 must be rejected.
   BEGIN
@@ -644,9 +693,13 @@ Expected: FAIL — `PREF CHECK FAILED: age_pref accepted lower bound 17` (no con
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130300_p1_preferences_constraints.sql
--- Pre-filter input integrity. These bound the values the Phase-4 feed query
+-- supabase/migrations/20260525122200_p1_preferences_constraints.sql
+-- Pre-filter input integrity. These bound the values the S5/P4 feed query
 -- reads, so a malformed preference can never silently widen or empty a feed.
+-- NOTE on int4range canonicalization: a client '[25,40]' literal is stored
+-- canonical as [25,41) so upper(age_pref)=41. The S5/P4 pre-filter and the
+-- business helper (compatibilityPrefilterInputs) must read the canonical upper
+-- as inclusive-1 (ageMax = upper(age_pref) - 1) — flagged for S5 (Depends on).
 
 -- gender is a constrained text value (text[] preferences mirror it).
 alter table profiles
@@ -692,7 +745,7 @@ Expected: PASS (prints `preferences OK`).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130300_p1_preferences_constraints.sql supabase/tests/p1_preferences.sql
+git add supabase/migrations/20260525122200_p1_preferences_constraints.sql supabase/tests/p1_preferences.sql
 git commit -m "P1: preference CHECK constraints (well-defined pre-filter inputs)"
 ```
 
@@ -703,17 +756,18 @@ git commit -m "P1: preference CHECK constraints (well-defined pre-filter inputs)
 The feed pre-filter and badge read **one** column (`profiles.verification`). A trigger rolls the per-kind `verifications` rows up into that aggregate: a user is `verified` only when **both** `phone` AND `age` are verified (selfie is part of the `age` Inquiry — see Task 6 — so age-verified implies a passed liveness selfie). `failed`/`appeal` on any required kind propagates.
 
 **Files:**
-- Create: `supabase/migrations/20260525130500_p1_verification_rollup_trigger.sql`
+- Create: `supabase/migrations/20260525122400_p1_verification_rollup_trigger.sql`
 - Test: `supabase/tests/p1_verification_rollup.sql`
 
 - [ ] **Step 1: Write the failing test**
 
 ```sql
 -- supabase/tests/p1_verification_rollup.sql
+\i supabase/tests/_fixtures.sql
 DO $$
 DECLARE u uuid; v text;
 BEGIN
-  insert into profiles (id, first_name) values (gen_random_uuid(),'v') returning id into u;
+  u := mk_user('v');
 
   -- phone verified alone → still pending (age not done).
   insert into verifications (user_id, kind, state, verified_at)
@@ -746,7 +800,7 @@ Expected: FAIL — `rollup wrong after phone-only` (no rollup trigger; `profiles
 - [ ] **Step 3: Write the migration**
 
 ```sql
--- supabase/migrations/20260525130500_p1_verification_rollup_trigger.sql
+-- supabase/migrations/20260525122400_p1_verification_rollup_trigger.sql
 -- Roll per-kind verifications up into profiles.verification so feed + badge read
 -- a single column. Required kinds for a "verified" profile: phone AND age.
 -- (The age Inquiry includes the liveness selfie; selfie rows are informational.)
@@ -803,32 +857,40 @@ Expected: PASS (prints `verification rollup OK`).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130500_p1_verification_rollup_trigger.sql supabase/tests/p1_verification_rollup.sql
+git add supabase/migrations/20260525122400_p1_verification_rollup_trigger.sql supabase/tests/p1_verification_rollup.sql
 git commit -m "P1: verification rollup trigger (verifications -> profiles.verification: phone+age)"
 ```
 
 ---
 
-## Task 6: Persona webhook Edge Function (selfie/liveness + government-ID age verification)
+## Task 6: Verification front door + Persona webhook + phone-row writer (Edge Functions)
+
+This task builds the **verification FRONT DOOR** the audit found missing (audit Critical #1/#2; RECONCILED-MASTER-PLAN.md MD3; contract checklist "P1: verification front door (start inquiry + write `phone` row)"). Without it nothing ever starts verification and no user can reach `verified`. Three Edge Functions:
+1. **`start-verification`** (authenticated): creates/embeds a Persona Inquiry with `reference-id = auth.uid()`, seeds `verifications(kind='age', state='pending')` (service-role via the inner service client), returns the embed/session token to the client.
+2. **`persona-webhook`** (service-role, no JWT): receives the Persona verdict, verifies the HMAC, upserts `verifications` rows for `age`/`selfie`, **and writes Persona's parsed government-ID DOB into `profiles_private.birthdate`** (the age-gate source of truth — Task 3).
+3. **`confirm-phone`** (authenticated): after `auth.verifyOtp` succeeds on the client, writes `verifications(kind='phone', state='verified')` service-role (the client cannot — S1 RLS makes `verifications` writes service-role only). This closes the phone half of the AND-gate.
 
 **Vendor choice — Persona (decision locked).** The spec needs (a) a selfie matched to the profile with liveness, and (b) a *real* age check (the roadmap explicitly flags "selfie ≠ age verification / minors"). A pure-selfie vendor cannot prove ≥18. **Persona** is chosen over Stripe Identity because:
 1. **One Inquiry does both jobs** — Persona's Government ID + Selfie template returns a parsed `birthdate` (real age proof) *and* a liveness selfie-to-ID match, closing the "selfie isn't age verification" gap in a single flow. Stripe Identity verifies ID + selfie but is positioned as identity, and its DOB/age extraction is less first-class for a standalone age gate.
 2. **Hosted flow + native SDK** — Persona ships a hosted web flow (web today) and iOS/Android SDKs (native later, spec §10) behind the same Inquiry/Template model, so the verify flow we design now is reused on native without rework.
 3. **Reference-ID + webhook model** fits our hub-and-spoke exactly: we pass `profiles.id` as the Inquiry `reference-id`; Persona calls our webhook with the verdict; the webhook (and only the webhook, with service-role) writes the result. The client never self-certifies.
 
-The client opens a Persona-hosted Inquiry (config/embed handled in the web onboarding UI, Task 8) with `reference-id = <profiles.id>`. Persona posts `inquiry.approved | inquiry.declined | inquiry.marked-for-review` to this function. The function verifies the HMAC signature, then upserts `verifications` rows for kinds `age` and `selfie` and lets the Task-5 rollup update `profiles.verification`.
+`start-verification` opens the Inquiry with `reference-id = auth.uid()`. Persona posts `inquiry.approved | inquiry.declined | inquiry.marked-for-review` to `persona-webhook`. The webhook verifies the HMAC signature, upserts `verifications` rows for kinds `age` and `selfie`, writes the parsed DOB, and lets the Task-5 rollup update `profiles.verification`. On `failed`/`appeal` the webhook fires `dispatch_notification(user, 'account', …)` (S2/C1) so the user gets a failure/appeal notification — there is no verification-specific `notification_type` in the C1 enum (see "Required contract amendments").
 
 **Files:**
+- Create: `supabase/functions/start-verification/index.ts`        # FRONT DOOR
+- Create: `supabase/functions/confirm-phone/index.ts`             # phone-row writer
 - Create: `supabase/functions/persona-webhook/index.ts`
-- Modify: `supabase/config.toml` (register the function, `verify_jwt = false`)
-- Test: `supabase/functions/persona-webhook/index_test.ts`
+- Create: `supabase/migrations/20260525122500_p1_verifications_user_kind_unique.sql`
+- Modify: `supabase/config.toml` (register all three functions; `verify_jwt=false` only for `persona-webhook`)
+- Test: `supabase/functions/persona-webhook/index_test.ts`, `supabase/functions/start-verification/index_test.ts`, `supabase/functions/confirm-phone/index_test.ts`
 
 - [ ] **Step 1: Write the failing test (Deno)**
 
 ```ts
 // supabase/functions/persona-webhook/index_test.ts
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { mapInquiryToVerification, verifyPersonaSignature } from './index.ts';
+import { mapInquiryToVerification, verifyPersonaSignature, extractPersonaDob } from './index.ts';
 
 Deno.test('maps inquiry.approved → verified for age+selfie', () => {
   const rows = mapInquiryToVerification('inquiry.approved', 'inq_1', 'user-uuid');
@@ -845,6 +907,12 @@ Deno.test('maps inquiry.declined → failed', () => {
 Deno.test('maps inquiry.marked-for-review → pending', () => {
   const rows = mapInquiryToVerification('inquiry.marked-for-review', 'inq_3', 'user-uuid');
   assertEquals(rows.every((r) => r.state === 'pending'), true);
+});
+
+Deno.test('extractPersonaDob pulls birthdate from inquiry attributes', () => {
+  const dob = extractPersonaDob({ 'birthdate': '2000-01-15' });
+  assertEquals(dob, '2000-01-15');
+  assertEquals(extractPersonaDob({}), null);
 });
 
 Deno.test('HMAC signature verification accepts a correct signature', async () => {
@@ -918,6 +986,14 @@ export function mapInquiryToVerification(
     { ...base, kind: 'age' },
     { ...base, kind: 'selfie' },
   ];
+}
+
+// Pure: pull the parsed government-ID DOB out of the Persona inquiry attributes.
+// Persona returns a parsed `birthdate` (YYYY-MM-DD) on an approved ID+Selfie inquiry.
+// This is the age-gate source of truth (Task 3) — NEVER the self-reported value.
+export function extractPersonaDob(inquiryAttributes: Record<string, unknown>): string | null {
+  const bd = inquiryAttributes?.['birthdate'];
+  return typeof bd === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : null;
 }
 
 // Verify Persona's HMAC-SHA256 signature header: `t=<ts>,v1=<hexdigest>`.
@@ -997,38 +1073,92 @@ serve(async (req: Request) => {
     }
   }
 
+  // Write Persona's parsed government-ID DOB into profiles_private.birthdate
+  // (service-role) on an approved inquiry. THIS is the age-gate source of truth
+  // (Task 3) — closes the "selfie != age verification" gap (audit MISSING-EDGE #4).
+  if (name === 'inquiry.approved') {
+    const dob = extractPersonaDob((inquiry?.attributes ?? {}) as Record<string, unknown>);
+    if (dob) {
+      const { error: dobErr } = await supabase
+        .from('profiles_private').update({ birthdate: dob }).eq('user_id', refId);
+      if (dobErr) console.error('persona-webhook DOB write error', dobErr.message);
+    }
+  }
+
+  // On a failed/appeal verdict, notify the user via S2's dispatch_notification
+  // (C1). The C1 notification_type enum has no verification-specific value, so we
+  // use 'account' (see "Required contract amendments" for the proposed addition).
+  if (rows[0].state === 'failed' || rows[0].state === 'appeal') {
+    await supabase.rpc('dispatch_notification', {
+      p_user: refId, p_type: 'account',
+      p_payload: { topic: 'verification', state: rows[0].state, reason: rows[0].failure_reason },
+    });
+  }
+
   return new Response(JSON.stringify({ ok: true, mapped: rows.length }), {
     status: 200, headers: { ...corsHeaders, 'content-type': 'application/json' },
   });
 });
 ```
 
-Add a unique constraint the upsert relies on (the webhook upserts on `(user_id, kind)`), appended in this task's migration partner:
+**`start-verification` (front door)** — authenticated. Resolves `auth.uid()` from the caller's JWT, creates a Persona Inquiry via the Persona API with `reference-id = auth.uid()` (or returns an embed/session token for the hosted flow), then seeds the pending age row service-role and returns the session token:
+
+```ts
+// supabase/functions/start-verification/index.ts  (sketch — verify_jwt = true)
+// 1. const uid = (await supabase.auth.getUser(jwt)).data.user.id
+// 2. POST https://api.withpersona.com/api/v1/inquiries with reference-id=uid,
+//    template-id = Deno.env.get('PERSONA_TEMPLATE_ID'), Authorization: PERSONA_API_KEY
+// 3. service-role upsert verifications {user_id: uid, kind:'age', state:'pending',
+//    provider:'persona', provider_ref: <inquiry id>} onConflict 'user_id,kind'
+// 4. return { inquiryId, sessionToken } for the web/native client to embed
+// The pure inquiry-request builder (buildInquiryRequest(uid, templateId)) is unit-tested.
+```
+
+**`confirm-phone` (phone-row writer)** — authenticated. The client first calls Supabase Auth `verifyOtp` (Twilio provider); on success it calls this function, which re-checks the caller is phone-confirmed (`auth.getUser().phone_confirmed_at` is set) and writes the verified phone row service-role:
+
+```ts
+// supabase/functions/confirm-phone/index.ts  (sketch — verify_jwt = true)
+// 1. const { user } = (await supabase.auth.getUser(jwt)).data
+// 2. if (!user.phone_confirmed_at) return 400 'phone_not_confirmed'
+// 3. service-role upsert verifications {user_id:user.id, kind:'phone',
+//    state:'verified', provider:'supabase_auth', verified_at: now} onConflict 'user_id,kind'
+// The rollup trigger (Task 5) then promotes profiles.verification once age is also verified.
+```
+
+The unique index these upserts rely on ships as its own migration in P1's band:
 
 ```sql
--- supabase/migrations/20260525130550_p1_verifications_user_kind_unique.sql
--- The Persona webhook upserts on (user_id, kind); enforce one row per user per kind.
+-- supabase/migrations/20260525122500_p1_verifications_user_kind_unique.sql
+-- The webhook / start-verification / confirm-phone upsert on (user_id, kind);
+-- enforce one row per user per kind.
 create unique index if not exists verifications_user_kind_ukey on verifications (user_id, kind);
 ```
 
-Register the function in `config.toml` (append near the existing `[functions.generate-plan]` block):
+Register all three functions in `config.toml` (append near the existing `[functions.generate-plan]` block). Only the webhook disables JWT (Persona is not a Supabase user); the front door and phone writer require a logged-in caller:
 
 ```toml
 [functions.persona-webhook]
 verify_jwt = false
+
+[functions.start-verification]
+verify_jwt = true
+
+[functions.confirm-phone]
+verify_jwt = true
 ```
 
 - [ ] **Step 4: Run it, expect PASS**
 
-Run: `deno test --allow-env --allow-net supabase/functions/persona-webhook/`
-Expected: PASS (all four `Deno.test` cases). Then `supabase db reset` to apply the unique-index migration (expect clean).
+Run: `deno test --allow-env --allow-net supabase/functions/persona-webhook/ supabase/functions/start-verification/ supabase/functions/confirm-phone/`
+Expected: PASS (webhook mapping/DOB/HMAC cases; `buildInquiryRequest` case; phone-row shape case). Then `supabase db reset` to apply the unique-index migration (expect clean).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add supabase/functions/persona-webhook/index.ts supabase/functions/persona-webhook/index_test.ts \
-  supabase/migrations/20260525130550_p1_verifications_user_kind_unique.sql supabase/config.toml
-git commit -m "P1: persona-webhook Edge Function (HMAC-verified) + (user,kind) unique on verifications"
+  supabase/functions/start-verification/ supabase/functions/confirm-phone/ \
+  supabase/migrations/20260525122500_p1_verifications_user_kind_unique.sql supabase/config.toml
+git commit -m "P1: verification front door (start-verification) + confirm-phone writer + persona-webhook (HMAC + DOB->birthdate) + (user,kind) unique"
 ```
 
 ---
@@ -1198,26 +1328,37 @@ git commit -m "P1: business logic — age gate, dating eligibility, Verified·Ne
 
 ---
 
-## Task 8: Migration — profile-photos storage bucket + reveal/badge views (RLS)
+## Task 8: Migration — profile-photos storage bucket + blurred-photo generation + badge view (RLS)
 
-The profile object that gets revealed at offer. `blurred_photo_url` is visible to anyone browsing; `clear_photo_url` (+ full name) is revealed **only** at offer (spec §7.2). P5 owns the offer state, so P1 ships: (a) a **private** `profile-photos` bucket where the blurred derivative is world-readable and the clear original is owner-only, and (b) a `public_profile_card` view (badge + blurred + first name + age + prompts — what a browser/shortlist sees) and an `offer_reveal(target uuid)` SECURITY DEFINER function that returns the full reveal **only if the caller currently holds an active offer** against the target (joins P0's `offers`).
+The profile object that gets revealed at offer. `blurred_photo_url` is visible to anyone browsing; `clear_photo_url` (+ full name) is revealed **only** at offer (spec §7.2) **via the canonical `match_reveal_allowed` predicate (C2, owned by S6/P5) — P1 does NOT define a reveal function**. P1 ships: (a) a **private** `profile-photos` bucket where the blurred derivative is authenticated-readable and the clear original is owner-only; (b) a **blurred-photo generation** Edge Function (`generate-blur`) that produces `<uid>/blurred.jpg` from a clear upload and writes `profiles.blurred_photo_url` — so the blind feed actually has an image (audit DEAD-UI #2); and (c) a `public_profile_card` view (badge + blurred photo + age + prompts — **NO `first_name`, NO name of any kind**, spec §5/§7.2 "no name"; audit UX #4) for what a browser/shortlist sees.
+
+> **Reveal is NOT here.** The former `offer_reveal`/`offer_reveal_for` functions and `supabase/tests/p1_reveal_rls.sql` are **DELETED** (CV6 / DS3). The full at-offer reveal is gated by `match_reveal_allowed(p_viewer, p_instance)` (C2, S6) and the clear-photo signed URL is minted by S6's offer RPC. P1 stores the photos and the badge; S6 owns the reveal predicate and the signed URL.
 
 **Files:**
-- Create: `supabase/migrations/20260525130600_p1_profile_photos_bucket.sql`
-- Create: `supabase/migrations/20260525130700_p1_badge_and_reveal_views.sql`
-- Test: `supabase/tests/p1_reveal_rls.sql`
+- Create: `supabase/migrations/20260525122600_p1_profile_photos_bucket.sql`
+- Create: `supabase/migrations/20260525122700_p1_badge_view.sql`
+- Create: `supabase/functions/generate-blur/index.ts`  (+ `index_test.ts`)
+- Modify: `supabase/config.toml` (register `generate-blur`, `verify_jwt = true`)
 - Test: `supabase/tests/p1_badge_view.sql`
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the failing test**
 
 ```sql
 -- supabase/tests/p1_badge_view.sql
+\i supabase/tests/_fixtures.sql
 DO $$
 BEGIN
-  -- public_profile_card must NOT expose clear_photo_url or full name (no reveal leak).
+  -- public_profile_card must NOT expose clear_photo_url, full name, OR first_name
+  -- (blind feed shows no name — spec §5/§7.2; audit UX #4).
   PERFORM 1 FROM information_schema.columns
    WHERE table_name='public_profile_card' AND column_name='clear_photo_url';
   IF FOUND THEN RAISE EXCEPTION 'LEAK: public_profile_card exposes clear_photo_url'; END IF;
+  PERFORM 1 FROM information_schema.columns
+   WHERE table_name='public_profile_card' AND column_name='first_name';
+  IF FOUND THEN RAISE EXCEPTION 'LEAK: public_profile_card exposes first_name (spec: no name)'; END IF;
+  PERFORM 1 FROM information_schema.columns
+   WHERE table_name='public_profile_card' AND column_name='full_name';
+  IF FOUND THEN RAISE EXCEPTION 'LEAK: public_profile_card exposes full_name'; END IF;
 
   PERFORM 1 FROM information_schema.columns
    WHERE table_name='public_profile_card' AND column_name='badge_verified';
@@ -1228,58 +1369,22 @@ BEGIN
 END $$;
 ```
 
-```sql
--- supabase/tests/p1_reveal_rls.sql
--- offer_reveal(target) returns full reveal ONLY when caller holds an active offer
--- against target. We exercise the SQL predicate directly (auth.uid() is simulated
--- via the function's caller filter using a passed-in viewer for the test path).
-DO $$
-DECLARE creator uuid; candidate uuid; cid uuid; inst uuid; rows int;
-BEGIN
-  insert into profiles (id, first_name, clear_photo_url, verification)
-    values (gen_random_uuid(),'Creator','https://x/clear.jpg','verified') returning id into creator;
-  insert into profiles (id, first_name) values (gen_random_uuid(),'Candidate') returning id into candidate;
-  insert into profiles_private (user_id, full_name, bio) values (creator,'Creator Full','my bio');
-  insert into cities (slug,name,timezone,is_active) values ('rv','rv','UTC',true)
-    on conflict (slug) do nothing;
-  select id into cid from cities where slug='rv';
-  insert into itineraries (id,user_id) values (gen_random_uuid(),creator);
-  insert into date_instances (itinerary_id,creator_id,city_id,starts_at)
-    select i.id,creator,cid,now()+interval '2 days' from itineraries i where i.user_id=creator limit 1
-    returning id into inst;
+- [ ] **Step 2: Run it, expect FAIL**
 
-  -- No active offer yet → reveal must return 0 rows.
-  select count(*) into rows from offer_reveal_for(candidate, creator);
-  IF rows <> 0 THEN RAISE EXCEPTION 'REVEAL LEAK: revealed without an active offer'; END IF;
+Run: `psql … -f supabase/tests/p1_badge_view.sql`
+Expected: FAIL — `relation "public_profile_card" does not exist`.
 
-  -- Create an active offer for the candidate → reveal returns the full row.
-  insert into offers (date_instance_id, candidate_id, creator_id, status, expires_at)
-    values (inst, candidate, creator, 'active', now()+interval '1 day');
-  select count(*) into rows from offer_reveal_for(candidate, creator);
-  IF rows <> 1 THEN RAISE EXCEPTION 'REVEAL FAILED: active offer did not reveal'; END IF;
-
-  RAISE NOTICE 'reveal RLS OK';
-  ROLLBACK;
-END $$;
-```
-
-> Note: the production function is `offer_reveal(target uuid)` keyed on `auth.uid()`. For DB-level testing without an auth session, we also expose an internal `offer_reveal_for(viewer uuid, target uuid)` with the same predicate; `offer_reveal` is a thin wrapper passing `auth.uid()`. This keeps the predicate testable in psql.
-
-- [ ] **Step 2: Run them, expect FAIL**
-
-Run: `psql … -f supabase/tests/p1_badge_view.sql` then `psql … -f supabase/tests/p1_reveal_rls.sql`
-Expected: FAIL — `relation "public_profile_card" does not exist` / `function offer_reveal_for(...) does not exist`.
-
-- [ ] **Step 3: Write the migrations**
+- [ ] **Step 3: Write the migrations + blur function**
 
 ```sql
--- supabase/migrations/20260525130600_p1_profile_photos_bucket.sql
+-- supabase/migrations/20260525122600_p1_profile_photos_bucket.sql
 -- Private bucket for profile photos. Two object-name conventions:
 --   <user_id>/blurred.jpg  → readable by any authenticated user (browse/shortlist)
 --   <user_id>/clear.jpg    → readable ONLY by the owner via storage RLS; the
 --                            clear photo is surfaced to an offer-holder through a
---                            signed URL minted server-side by P5 (the offer RPC),
---                            never via a blanket storage policy.
+--                            signed URL minted server-side by S6/P5's offer RPC
+--                            (gated by match_reveal_allowed, C2), never via a
+--                            blanket storage policy.
 insert into storage.buckets (id, name, public)
   values ('profile-photos', 'profile-photos', false)
 on conflict (id) do nothing;
@@ -1304,15 +1409,16 @@ exception when duplicate_object then null; end $$;
 ```
 
 ```sql
--- supabase/migrations/20260525130700_p1_badge_and_reveal_views.sql
+-- supabase/migrations/20260525122700_p1_badge_view.sql
 -- public_profile_card: what a browser / shortlisted candidate sees about a
--- creator BEFORE an offer — blurred photo, first name, age, prompts, badge.
--- NO clear photo, NO full name, NO PII. (Pre-lock reveal privacy, spec §7.2.)
+-- creator BEFORE an offer — blurred photo, age, prompts, vibe tags, badge.
+-- NO clear photo, NO full name, NO first_name, NO PII. The blind feed shows
+-- NO NAME (spec §5/§7.2; audit UX #4). The full reveal (clear photo + name)
+-- is gated by match_reveal_allowed (C2, S6) — NOT defined here.
 create or replace view public_profile_card
 with (security_invoker = true) as
 select
   p.id                                            as profile_id,
-  p.first_name,
   p.age,
   p.vibe_tags,
   p.prompt_answers,
@@ -1324,71 +1430,150 @@ from profiles p
 where p.dating_enabled = true;
 
 grant select on public_profile_card to authenticated;
-
--- Internal predicate: full reveal IFF viewer holds an active offer vs target.
-create or replace function offer_reveal_for(p_viewer uuid, p_target uuid)
-returns table (
-  profile_id uuid, first_name text, full_name text, age int, bio text,
-  clear_photo_url text, blurred_photo_url text, vibe_tags text[], prompt_answers jsonb,
-  badge_verified boolean, badge_is_new boolean
-)
-language sql security definer set search_path = public stable as $fn$
-  select
-    p.id, p.first_name, pp.full_name, p.age, pp.bio,
-    p.clear_photo_url, p.blurred_photo_url, p.vibe_tags, p.prompt_answers,
-    (p.verification = 'verified'),
-    (p.verification = 'verified' and p.reliability_score is null)
-  from profiles p
-  left join profiles_private pp on pp.user_id = p.id
-  where p.id = p_target
-    and exists (
-      select 1 from offers o
-       where o.creator_id = p_target
-         and o.candidate_id = p_viewer
-         and o.status = 'active'
-    );
-$fn$;
-
--- Public wrapper: the candidate (auth.uid()) reveals the creator they have an
--- active offer from. P5's offer RPC also mints a signed clear-photo URL; this
--- function returns the structured reveal fields.
-create or replace function offer_reveal(p_target uuid)
-returns table (
-  profile_id uuid, first_name text, full_name text, age int, bio text,
-  clear_photo_url text, blurred_photo_url text, vibe_tags text[], prompt_answers jsonb,
-  badge_verified boolean, badge_is_new boolean
-)
-language sql security definer set search_path = public stable as $fn$
-  select * from offer_reveal_for(auth.uid(), p_target);
-$fn$;
-
-grant execute on function offer_reveal(uuid) to authenticated;
 ```
 
-- [ ] **Step 4: Apply + run tests, expect PASS**
+**`generate-blur` Edge Function** — authenticated. On clear-photo upload the client calls this with the clear object path; the function downloads `<uid>/clear.jpg`, produces a blurred derivative (Gaussian blur / heavy downscale, e.g. via an ImageMagick/Sharp-equivalent available in the Deno runtime or an image service), uploads `<uid>/blurred.jpg`, and writes `profiles.blurred_photo_url` (service-role). This produces the image the blind feed renders (audit DEAD-UI #2):
+
+```ts
+// supabase/functions/generate-blur/index.ts  (sketch — verify_jwt = true)
+// 1. const uid = (await supabase.auth.getUser(jwt)).data.user.id
+// 2. download `${uid}/clear.jpg` from the private profile-photos bucket
+// 3. blur it (downscale + Gaussian); upload `${uid}/blurred.jpg` (upsert)
+// 4. service-role update profiles set blurred_photo_url = <signed-or-path> where id = uid
+// The pure blur-config builder (blurParams(width,height)) is unit-tested; the
+// image bytes path is integration-tested against the local storage emulator.
+```
+
+Register it in `config.toml`:
+```toml
+[functions.generate-blur]
+verify_jwt = true
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS**
 
 Run:
 ```bash
 supabase db reset \
  && psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f supabase/tests/p1_badge_view.sql \
- && psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f supabase/tests/p1_reveal_rls.sql
+ && deno test --allow-env --allow-net supabase/functions/generate-blur/
 ```
-Expected: PASS (`reveal RLS OK`).
+Expected: PASS (badge view present; no name columns; blur-config test green).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260525130600_p1_profile_photos_bucket.sql \
-  supabase/migrations/20260525130700_p1_badge_and_reveal_views.sql \
-  supabase/tests/p1_reveal_rls.sql supabase/tests/p1_badge_view.sql
-git commit -m "P1: profile-photos bucket + public_profile_card (badge) + offer_reveal (at-offer-only) RLS"
+git add supabase/migrations/20260525122600_p1_profile_photos_bucket.sql \
+  supabase/migrations/20260525122700_p1_badge_view.sql \
+  supabase/functions/generate-blur/ supabase/config.toml \
+  supabase/tests/p1_badge_view.sql
+git commit -m "P1: profile-photos bucket + blurred-photo generation + public_profile_card badge view (no name); reveal deferred to C2 match_reveal_allowed"
 ```
 
 ---
 
-## Task 9: api-client — typed profile/preferences/verification helpers
+## Task 8b: Migration — onboarding step machine advances to `done`
 
-Thin, typed wrappers so the web app (and later native) call one shared API surface rather than hand-rolling Supabase queries. Mirrors the existing `@after5/api-client` style.
+The audit found `onboarding_step` is written by nothing, so `canEnableDating` is a permanent dead-end (audit DEAD-UI #3). This task adds an `advance_onboarding_step(p_to_step text)` SECURITY DEFINER RPC, authorized via `auth.uid()` (INTEGRATION-CONTRACT.md C10), that moves the caller's `onboarding_step` **forward only** through the linear sequence and stamps `onboarding_completed_at` when it reaches `done`.
+
+**Files:**
+- Create: `supabase/migrations/20260525122800_p1_onboarding_advance_rpc.sql`
+- Test: `supabase/tests/p1_onboarding_advance.sql`
+
+- [ ] **Step 1: Write the failing test**
+
+```sql
+-- supabase/tests/p1_onboarding_advance.sql
+\i supabase/tests/_fixtures.sql
+DO $$
+DECLARE u uuid; step text; ts timestamptz; bad boolean := false;
+BEGIN
+  u := mk_user('ob');
+  -- Make auth.uid() resolve to u inside the SECURITY DEFINER RPC by setting the
+  -- JWT sub claim for this transaction (auth.uid() reads request.jwt.claim.sub).
+  perform set_config('request.jwt.claim.sub', u::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', u::text)::text, true);
+
+  -- Default is 'age_gate'. Advance forward step by step to 'done'.
+  perform advance_onboarding_step('basics');
+  perform advance_onboarding_step('photos');
+  perform advance_onboarding_step('preferences');
+  perform advance_onboarding_step('phone_verify');
+  perform advance_onboarding_step('selfie_verify');
+  perform advance_onboarding_step('done');
+
+  select onboarding_step, onboarding_completed_at into step, ts from profiles where id = u;
+  IF step <> 'done' THEN RAISE EXCEPTION 'onboarding did not reach done: got %', step; END IF;
+  IF ts IS NULL THEN RAISE EXCEPTION 'onboarding_completed_at not stamped at done'; END IF;
+
+  -- Going backwards must be rejected (forward-only).
+  BEGIN
+    perform advance_onboarding_step('basics');
+  EXCEPTION WHEN others THEN bad := true;
+  END;
+  IF NOT bad THEN RAISE EXCEPTION 'onboarding allowed a backward step'; END IF;
+
+  RAISE NOTICE 'onboarding advance OK';
+  ROLLBACK;
+END $$;
+```
+
+- [ ] **Step 2: Run it, expect FAIL**
+
+Run: `psql … -f supabase/tests/p1_onboarding_advance.sql`
+Expected: FAIL — `function advance_onboarding_step(...) does not exist`.
+
+- [ ] **Step 3: Write the migration**
+
+```sql
+-- supabase/migrations/20260525122800_p1_onboarding_advance_rpc.sql
+-- Advance the caller's onboarding_step forward through the linear sequence.
+-- auth.uid() is the actor (C10). Forward-only; stamps onboarding_completed_at at 'done'.
+create or replace function advance_onboarding_step(p_to_step text)
+returns text
+language plpgsql security definer set search_path = public as $fn$
+declare
+  steps text[] := array['age_gate','basics','photos','preferences','phone_verify','selfie_verify','done'];
+  cur text; cur_ix int; new_ix int; uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'advance_onboarding_step: not authenticated'; end if;
+  new_ix := array_position(steps, p_to_step);
+  if new_ix is null then raise exception 'advance_onboarding_step: invalid step %', p_to_step; end if;
+
+  select onboarding_step into cur from profiles where id = uid;
+  cur_ix := array_position(steps, cur);
+  if new_ix <= cur_ix then
+    raise exception 'advance_onboarding_step: cannot move backward (% -> %)', cur, p_to_step;
+  end if;
+
+  update profiles
+     set onboarding_step = p_to_step,
+         onboarding_completed_at = case when p_to_step = 'done' then now() else onboarding_completed_at end
+   where id = uid;
+  return p_to_step;
+end $fn$;
+
+revoke execute on function advance_onboarding_step(text) from public;
+grant execute on function advance_onboarding_step(text) to authenticated;
+```
+
+- [ ] **Step 4: Apply + run test, expect PASS**
+
+Run: `supabase db reset && psql … -f supabase/tests/p1_onboarding_advance.sql`
+Expected: PASS (prints `onboarding advance OK`).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20260525122800_p1_onboarding_advance_rpc.sql supabase/tests/p1_onboarding_advance.sql
+git commit -m "P1: advance_onboarding_step RPC (forward-only; reaches 'done', stamps completed_at)"
+```
+
+---
+
+## Task 9: api-client — typed profile/preferences/verification/onboarding/device helpers
+
+Thin, typed wrappers so the web app (and later native) call one shared API surface rather than hand-rolling Supabase queries. Mirrors the existing `@after5/api-client` style. Exports: `getMyProfile`, `upsertProfile`, `savePreferences`, `getMyBadge`, `startVerification` (front door), `confirmPhone`, `advanceOnboarding`, `registerDevice` (wraps S2's `register_device`). **No `revealCreator` — reveal is `match_reveal_allowed` (C2, S6).**
 
 **Files:**
 - Create: `packages/api-client/src/profile.ts`
@@ -1478,6 +1663,17 @@ export async function upsertProfile(client: After5Client, userId: string, input:
   if (bioErr) throw bioErr;
 }
 
+// Read the caller's full profile to hydrate the onboarding/edit form.
+export async function getMyProfile(client: After5Client, userId: string) {
+  const { data, error } = await client
+    .from('profiles')
+    .select('id, first_name, age, vibe_tags, prompt_answers, dealbreakers, gender, gender_preferences, age_pref, distance_pref_km, verification, reliability_score, onboarding_step, dating_enabled, blurred_photo_url')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // Read the caller's badge state for the "Verified · New" chip.
 export async function getMyBadge(client: After5Client, userId: string): Promise<{ verified: boolean; isNew: boolean }> {
   const { data, error } = await client
@@ -1489,13 +1685,42 @@ export async function getMyBadge(client: After5Client, userId: string): Promise<
   return badgeFor({ verification: data.verification, reliability_score: data.reliability_score });
 }
 
-// Reveal a creator's full profile — succeeds only if the caller holds an active
-// offer (DB enforces via offer_reveal SECURITY DEFINER fn).
-export async function revealCreator(client: After5Client, creatorId: string) {
-  const { data, error } = await client.rpc('offer_reveal', { p_target: creatorId });
+// FRONT DOOR: start identity verification (invokes the start-verification Edge
+// Function which creates the Persona Inquiry + seeds verifications(age,pending)).
+export async function startVerification(client: After5Client): Promise<{ inquiryId: string; sessionToken: string }> {
+  const { data, error } = await client.functions.invoke('start-verification', { body: {} });
   if (error) throw error;
-  return data;
+  return data as { inquiryId: string; sessionToken: string };
 }
+
+// After Supabase Auth verifyOtp succeeds, write the verified phone row (server-side).
+export async function confirmPhone(client: After5Client): Promise<void> {
+  const { error } = await client.functions.invoke('confirm-phone', { body: {} });
+  if (error) throw error;
+}
+
+// Advance the onboarding step machine (DB RPC; only forward, validated server-side).
+export async function advanceOnboarding(client: After5Client, toStep: string): Promise<string> {
+  const { data, error } = await client.rpc('advance_onboarding_step', { p_to_step: toStep });
+  if (error) throw error;
+  return data as string;
+}
+
+// Register this device for push notifications. Calls S2/P2's canonical
+// register_device RPC (INTEGRATION-CONTRACT.md C1/C11.2) — P1 does NOT define it.
+export async function registerDevice(
+  client: After5Client,
+  token: string, platform: string, webPush: unknown = null,
+): Promise<void> {
+  const { error } = await client.rpc('register_device', {
+    p_token: token, p_platform: platform, p_web_push: webPush,
+  });
+  if (error) throw error;
+}
+
+// NOTE: there is NO revealCreator here. The full at-offer reveal is gated by the
+// canonical match_reveal_allowed predicate (C2) and exposed by S6/P5's offer RPC
+// (which also mints the clear-photo signed URL). P1 does not wrap a reveal call.
 ```
 
 ```ts
@@ -1513,7 +1738,7 @@ Expected: PASS.
 ```bash
 git add packages/api-client/src/profile.ts packages/api-client/src/index.ts \
   packages/api-client/src/__tests__/profile.test.ts
-git commit -m "P1: api-client profile/preferences helpers + offer_reveal RPC wrapper"
+git commit -m "P1: api-client profile/preferences/verification/onboarding/register_device helpers (no reveal wrapper)"
 ```
 
 ---
@@ -1525,10 +1750,10 @@ End-to-end check that every P1 migration applies cleanly, all SQL invariant test
 **Files:**
 - Modify: `packages/types/src/database.ts` (regenerated)
 
-- [ ] **Step 1: Full DB reset (applies P0 + every P1 migration in order)**
+- [ ] **Step 1: Full DB reset (applies S1/P0 + S2/P2 + every P1 migration in order)**
 
 Run: `supabase db reset`
-Expected: completes with no error; P0 migrations apply first, then `20260525130100…130700` P1 migrations.
+Expected: completes with no error; S1/S2 migrations apply first (so `register_device`/`dispatch_notification`/`_fixtures.sql` exist), then `20260525122000…122800` P1 migrations apply in their band.
 
 - [ ] **Step 2: Run all P1 SQL tests**
 
@@ -1538,21 +1763,22 @@ for f in supabase/tests/p1_*.sql; do
   echo "== $f =="; psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$f" || exit 1;
 done
 ```
-Expected: every file exits 0; notices print `… OK`.
+Expected: every file exits 0; notices print `… OK`. (Each test `\i`'s `_fixtures.sql` and seeds via `mk_user` — C8.)
 
 - [ ] **Step 3: Run all JS + Deno tests**
 
 Run:
 ```bash
 pnpm test
-deno test --allow-env --allow-net supabase/functions/persona-webhook/
+deno test --allow-env --allow-net supabase/functions/persona-webhook/ \
+  supabase/functions/start-verification/ supabase/functions/confirm-phone/ supabase/functions/generate-blur/
 ```
-Expected: vitest `passed` across `validators`, `business`, `api-client`, and the harness smoke test; Deno `ok` across the four webhook tests.
+Expected: vitest `passed` across `validators`, `business`, `api-client`, and the harness smoke test; Deno `ok` across the webhook/front-door/phone-writer/blur tests.
 
 - [ ] **Step 4: Regenerate TypeScript types**
 
 Run: `pnpm db:types`
-Expected: `packages/types/src/database.ts` updates to include the new `profiles` columns (`dealbreakers`, `prompt_answers`, `onboarding_step`, `onboarding_completed_at`), `profile_prompts`, the `appeal` enum value on `verification_state`, the `public_profile_card` view, and the `offer_reveal`/`offer_reveal_for` functions.
+Expected: `packages/types/src/database.ts` updates to include the new `profiles` columns (`dealbreakers`, `prompt_answers`, `onboarding_step`, `onboarding_completed_at`), `profile_prompts`, the `appeal` enum value on `verification_state`, the `public_profile_card` view (no name columns), and the `advance_onboarding_step` function. (There is NO `offer_reveal` function — reveal is `match_reveal_allowed`, C2/S6.)
 
 - [ ] **Step 5: Commit**
 
@@ -1565,30 +1791,52 @@ git commit -m "P1: regenerate database types for identity/profile/onboarding sch
 
 ## Self-Review
 
+**Coverage vs the contract's "P1:" reconciliation checklist (INTEGRATION-CONTRACT.md):**
+- **verification front door (start inquiry + write `phone` row)** → Task 6 (`start-verification` creates the Persona Inquiry + seeds `verifications(age,pending)`; `confirm-phone` writes `verifications(phone,verified)` service-role). A user can now actually reach `verified`. ✅
+- **DOB age gate** → Task 3 + Task 6: the webhook writes Persona's parsed government-ID DOB into `profiles_private.birthdate` (service-role); the 18+ trigger computes age from that birthdate (never self-reported) and re-fires on birthdate change. ✅
+- **advance `onboarding_step`** → Task 8b (`advance_onboarding_step` RPC reaches `done`, stamps `onboarding_completed_at`). `canEnableDating` is no longer a dead-end. ✅
+- **blurred photo** → Task 8 (`generate-blur` Edge Function produces `<uid>/blurred.jpg` + writes `profiles.blurred_photo_url`). The blind feed has an image. ✅
+- **drop `first_name` from public card** → Task 8 (`public_profile_card` no longer selects any name; test asserts absence of `first_name`/`full_name`). Spec "no name" honored. ✅
+- **drop `offer_reveal`** → DELETED (CV6/DS3); reveal is canonical `match_reveal_allowed` (C2, S6). No reveal function or wrapper remains in P1. ✅
+- **own root vitest** → Task 0 (single root `vitest.config.ts`; other phases delete duplicates — C10/C12). ✅
+- **`register_device`** → Task 9 `registerDevice` wraps S2's `register_device` RPC (C1/C11.2); called at onboarding. P1 does not redefine `devices`/`notifications`. ✅
+
 **Coverage vs this phase's `Closes` list (roadmap Phase 1):**
-- **Critical #4 — profile black hole** → Task 2 (prompts table + `prompt_answers`/`vibe_tags`), Task 8 (`public_profile_card` browse view + `offer_reveal` full reveal), Task 9 (`upsertProfile`). The profile object — blurred + clear photos, first name, age, bio, prompts — is now defined, stored, and revealed at the right moment. ✅
-- **Critical #6 — verification named-not-built** → Task 6 (Persona webhook actually writes `verifications`), Task 5 (rollup → `profiles.verification`), Task 1/7 (`VerificationState` incl. `appeal`; eligibility). States `pending/verified/failed/appeal` exist and transition. ✅
-- **"selfie ≠ age verification / minors"** → Persona's Government-ID+Selfie Inquiry yields a real DOB (kind `age`), and the rollup requires `age='verified'`; Task 3's birthdate-derived 18+ trigger blocks `dating_enabled` regardless of client claims. ✅
-- **No age gate** → Task 3 (DB trigger, birthdate source of truth) + Task 1 (`MIN_AGE` in Zod) + Task 7 (`isAdult`/`canEnableDating`). Defence in depth: type boundary, business logic, and hard DB constraint. ✅
-- **Pre-filter inputs undefined** → Task 4 (CHECK constraints bounding `gender`/`gender_preferences`/`age_pref`/`distance_pref_km`/`dealbreakers`) + Task 7 (`compatibilityPrefilterInputs` reshapes the row into the exact vocabulary the Phase-4 feed consumes). Orientation, age range, distance, dealbreakers are now well-defined and validated. ✅
-- **Dead "Verified · New" badge** → Task 7 (`badgeFor`) + Task 8 (`public_profile_card.badge_verified`/`badge_is_new`). The badge is derived from real columns and is true at launch (every verified user is "New" until `reliability_score` exists in P7). ✅
-- **Required: establish vitest harness** → Task 0 (root `vitest.config.ts`, `test` scripts, turbo task, passing smoke test). Later phases can assume `pnpm test` works. ✅
+- **Critical #4 — profile black hole** → Task 2 (prompts table + `prompt_answers`/`vibe_tags`), Task 8 (`public_profile_card` browse view, no name), Task 9 (`upsertProfile`). The pre-offer profile object — blurred photo, age, prompts, vibe tags, badge — is defined, stored, and surfaced; the full at-offer reveal is owned by S6 (`match_reveal_allowed`). ✅
+- **Critical #6 — verification named-not-built** → Task 6 (front door + webhook actually write `verifications`), Task 5 (rollup → `profiles.verification`), Task 1/7 (`VerificationState` incl. `appeal`; eligibility). ✅
+- **"selfie ≠ age verification / minors"** → Persona's Government-ID+Selfie Inquiry yields a real DOB written to `profiles_private.birthdate`; the rollup requires `age='verified'`; Task 3's DOB-derived 18+ trigger blocks `dating_enabled` regardless of client claims. ✅
+- **No age gate** → Task 3 (DB trigger, Persona-DOB source) + Task 1 (`MIN_AGE` in Zod) + Task 7 (`isAdult`/`canEnableDating`). Defence in depth: type boundary, business logic, hard DB constraint. ✅
+- **Pre-filter inputs undefined** → Task 4 (CHECK constraints) + Task 7 (`compatibilityPrefilterInputs`). ✅
+- **Dead "Verified · New" badge** → Task 7 (`badgeFor`) + Task 8 (`public_profile_card.badge_verified`/`badge_is_new`). True at launch. ✅
+- **Required: establish single root vitest harness** → Task 0. ✅
 
-**Builds on P0 (does not recreate):** references `profiles` (extends with `dealbreakers`/`prompt_answers`/`onboarding_*`), `profiles_private` (writes `bio`/reads `birthdate`), `verifications` (adds `appeal` enum value, `(user_id,kind)` unique, rollup trigger), `cities`/`itineraries`/`date_instances`/`offers` (read-only joins in tests + `offer_reveal`). No P0 table is redefined.
+**Builds on S1/S2 (does not recreate):** references `profiles` (extends with `dealbreakers`/`prompt_answers`/`onboarding_*`), `profiles_private` (writes `bio`; webhook writes `birthdate`; reads `birthdate`), `verifications` (adds `appeal` enum value, `(user_id,kind)` unique, rollup trigger), `cities`/`itineraries`/`date_instances` (read-only test joins via `mk_*` fixtures). **Consumes (does not define):** S2's `register_device`, `dispatch_notification`, `devices`, `notifications`, `notification_type` (C1/C11.2); S6's `match_reveal_allowed` (C2). No S1/S2 object is redefined.
 
-**Placeholder scan:** none — every step has runnable SQL/TS/Deno and exact commands. The Persona Inquiry **embed/config** (template id, environment keys) is intentionally handled in the web onboarding UI layer (a later UI task) and is not faked here; the backend contract (webhook → `verifications`) is fully implemented and tested.
+**Placeholder scan:** every step has runnable SQL/TS/Deno + exact commands. The Persona Inquiry **template id / environment keys** are env/secrets (documented for the web onboarding UI), not faked; the front-door function, webhook, phone writer, blur function, onboarding RPC, and badge view are fully specified and tested. No dead UI: every api-client helper maps to a real RPC/Edge Function/table; there is no orphaned reveal call.
 
 **Type/name consistency:**
 - Verification states identical across layers: DB `verification_state ('unverified','pending','verified','failed','appeal')` = `VerificationStateSchema` = `VState` in the Edge Function = `VerificationState` in business.
-- Preference column names match P0 exactly (`age_pref int4range`, `gender_preferences text[]`, `distance_pref_km`) — not the `date-engine-v2` draft names (`age_preferences`); reconciliation noted in the header.
+- Preference column names match S1 exactly (`age_pref int4range`, `gender_preferences text[]`, `distance_pref_km`).
 - Badge fields (`badge_verified`/`badge_is_new`) match `badgeFor()`'s `{verified, isNew}` output.
-- `offer_reveal`/`offer_reveal_for` predicate keys on P0's `offers (creator_id, candidate_id, status='active')` — consistent with P0 Task 7.
+- Reveal predicate = `match_reveal_allowed(p_viewer uuid, p_instance uuid)` (C2) — owned by S6, NOT defined here.
+- `register_device(p_token text, p_platform text, p_web_push jsonb)` signature matches C1/C11.2.
 - Prompt ids identical in `PROMPT_IDS` (validators) and the `profile_prompts` seed (Task 2).
+- Migration filenames all in P1's `122xxx` band (C6).
 
 **Assumptions locked:**
 1. **Vendor = Persona** (single Inquiry does liveness selfie + real government-ID DOB; hosted web + native SDK; reference-id/webhook fits hub-and-spoke). Stripe Identity rejected for weaker standalone age/DOB positioning.
-2. **Required verification kinds for a "verified" profile = phone + age** (age Inquiry subsumes the selfie/liveness match). Phone rides Supabase Auth's existing Twilio provider; no new phone-OTP table needed (P0 `verifications` kind `phone` records the outcome; a small web/edge step writes it on successful `auth.verifyOtp` — that thin write lives in the onboarding UI task, contract already in place via the `(user_id,kind)` upsert).
-3. **Photos:** private `profile-photos` bucket; `blurred.jpg` authenticated-readable, `clear.jpg` owner-only + signed URL minted by P5's offer RPC. Blur derivative generation (Sharp) happens at upload time in the web/edge layer (a later UI/media task); P1 owns the storage + RLS contract.
-4. **"New" threshold:** `reliability_score IS NULL` ⇒ New (P7 populates the score after `MIN_RATINGS_FOR_ESTABLISHED=3` ratings).
-5. **Deferred to later phases (intentionally NOT in P1):** the onboarding UI screens + Persona embed (web UI task), phone-OTP write-back glue (web UI task), blur image generation (media task, P3-adjacent), the feed query that *consumes* `compatibilityPrefilterInputs` (P4), the offer state + signed-clear-photo URL minting (P5), reliability score computation (P7).
-```
+2. **Required verification kinds for a "verified" profile = phone + age** (age Inquiry subsumes the selfie/liveness match). Phone rides Supabase Auth's Twilio provider; `confirm-phone` (Task 6) writes the `phone` row server-side after `verifyOtp` (the client cannot — S1 RLS makes `verifications` service-role-write).
+3. **Photos:** private `profile-photos` bucket; `blurred.jpg` authenticated-readable (produced by `generate-blur`, Task 8), `clear.jpg` owner-only + signed URL minted by S6/P5's offer RPC under `match_reveal_allowed`.
+4. **"New" threshold:** `reliability_score IS NULL` ⇒ New (P7/S8 populates the score after `MIN_RATINGS_FOR_ESTABLISHED=3` ratings).
+5. **Verification-failure / appeal notifications** ride `dispatch_notification(user,'account',…)` (the C1 enum has no verification type). A dedicated `notification_type` value (`verification_passed`/`verification_failed`/`appeal_resolved`) would be cleaner — see "Required contract amendments"; until amended, `'account'` is the canonical value.
+6. **Deferred to named later phases (intentionally NOT in P1):** the onboarding UI screens + Persona embed component (web UI, S3-adjacent UI layer); the feed query that *consumes* `compatibilityPrefilterInputs` (S5/P4); the reveal predicate + signed-clear-photo URL minting (S6/P5 — `match_reveal_allowed`); reliability score computation (S8/P7); the appeal **review** console (S9/P8). The `int4range` inclusive-vs-canonical upper boundary is flagged for S5 (Task 4 note).
+
+---
+
+## Required contract amendments (raise before executing this slice)
+
+These are the only places where P1's needs are not fully covered by INTEGRATION-CONTRACT.md v2; per Build Rule 1 ("update the contract in the same change"), raise these before coding:
+
+1. **Verification notification types.** The C1 `notification_type` enum has no verification-specific value, so verification-failed/appeal notifications currently use `'account'`. Recommend adding `verification_passed`, `verification_failed`, `appeal_resolved` to the C1 enum (owner P2/S2). Until then this slice uses `'account'` (no fabricated enum value).
+2. **Appeal flow ownership.** P1 ships the `appeal` *state* (enum value + rollup propagation) but the **appeal submission RPC and review surface** are not owned by any contract section. Recommend the contract assign appeal submission to S3 (here) or S9, and appeal review to S9/P8 (which already owns moderation). This slice does not invent an appeal flow; it only carries the state.
+3. **DOB write to `profiles_private.birthdate` from the webhook.** The contract should note that the Persona webhook (S3) is an authorized service-role writer of `profiles_private.birthdate` (S1 owns the column/RLS) — confirm S1's RLS leaves `birthdate` service-role-writable so Task 6 can set it.

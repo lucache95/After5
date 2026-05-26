@@ -1,7 +1,7 @@
 # Dating Plans — Integration Contract (authoritative)
 
 **Date:** 2026-05-25
-**Status:** Authoritative — **v2**. Where any phase plan (P0–P11) conflicts with this document, **this document wins.** It freezes the shared contracts the parallel-authored plans each guessed independently (see `audits/2026-05-25-CONSOLIDATED-INTEGRATION-AUDIT.md`, defects I1–I13). Each phase's conforming tasks must be reconciled to the names/types/signatures below before execution.
+**Status:** Authoritative — **v2.1**. Where any phase plan (P0–P11) conflicts with this document, **this document wins.** (v2.1 adds C11.10–C11.13 from the 12-file rewrite wave: the `job_type`→callee map, `notification_type` additions, frozen `analytics_events` columns, and appeal/DOB/auth-sibling ownership.) It freezes the shared contracts the parallel-authored plans each guessed independently (see `audits/2026-05-25-CONSOLIDATED-INTEGRATION-AUDIT.md`, defects I1–I13). Each phase's conforming tasks must be reconciled to the names/types/signatures below before execution.
 
 > **v2 amendments — see §C11 at the end.** C11 closes the gaps found by `audits/2026-05-25-INTEGRATION-CONTRACT-audit.md` (unowned objects, compile-breakers, the browse_feed/account-state regression, P9 duplicate-type collision, reports/disputes DDL, chat-core ordering). **Where C11 conflicts with C1–C10 above, C11 wins.**
 
@@ -255,3 +255,20 @@ P7 writes a `disputes` row on a contested no-show; P8 resolution updates `disput
 - **Admin-alert channel** (the "fail loud" terminus for I7): `admin_alerts(id, kind, payload, created_at, resolved_at)` table + an always-on out-of-band sink (ops email via Resend **and** a row insert). A safety notification with no device inserts an `admin_alerts` row AND emails ops — it never dead-ends in an empty channel. (owner: P2 table; P7/P8 consume.)
 
 **C11.9 — paused-user servicing.** A `paused` user with an **active lock** still owes that date: pause suppresses feed/offers/new swipes but does **not** cancel existing locks; reconfirm/check-in jobs still fire; resume restores feed visibility. A `paused` user cannot create/accept new offers (`can_enter_lock_flow` returns false for non-`active` `account_state`).
+
+---
+
+## C11 — v2.1 amendments (resolves the rewrite-wave seams; override C1–C10 + earlier C11 on conflict)
+
+**C11.10 — `job_type` → callee-RPC map (freezes the last naming ambiguity).** The S2 runner dispatches each `job_type` to exactly this callee (consumers expose these names):
+`offer_expiry`→`match_expire_offer(p_offer)`; `standby_roll`→`match_auto_roll(p_instance)`; `pending_expiry`→`match_expire_pending(p_instance)`; `stale_date_close`→`match_stale_date_close(p_instance)`; `day_of_reconfirm`→`match_request_reconfirm(p_lock)`; `reconfirm_timeout`→`match_reconfirm_timeout(p_lock)`; `bulk_withdraw`→`match_bulk_withdraw(p_user)`; `safety_checkin`→`safety_checkin_fire(p_lock)` (P7); `rating_window`→`close_rating_window(p_lock)` (P7); `chat_purge`→`chat_purge_thread(p_thread)` (P6); `deletion_process`→`process_deletion(p_request)` (P9); `analytics_relay`→`analytics_relay_drain()` (P11); `notify`→internal `dispatch_notification`. Any phase exposing a differently-named callee conforms to this map.
+
+**C11.11 — `notification_type` additions.** Extend the C1 enum with: `verification_passed`, `verification_failed`, `appeal_resolved`, `offer_withdrawn` (the "candidate withdrew" signal). No phase emits a free-text notification kind.
+
+**C11.12 — `analytics_events` frozen columns** (owner P2, band `123900`): `id bigint generated always as identity pk, event_type text not null, actor_id uuid, subject_type text, subject_id uuid, payload jsonb not null default '{}', created_at timestamptz not null default now()`. P5/P2 emit via `emit_analytics(event_type, actor_id, subject_type, subject_id, payload)`; P11's `analytics_relay_drain()` consumes + purges >30d.
+
+**C11.13 — small ownership clarifications.**
+- **Appeal flow** is owned by **P8/S9** (`appeals` table + `resolve_appeal` RPC + admin appeals route); **P1/S3** owns only the `appeal` *verification state*. No conflict.
+- **`profiles_private.birthdate`** is **service-role-writable** (the Persona webhook writes the parsed DOB); owner is its own (no `with check` for `authenticated`). The age-gate trigger reads it.
+- **Internal auth-skipping RPC siblings** (e.g., `_match_make_offer`/`_match_accept_offer`) are permitted **only** as `revoke execute from public, authenticated` service-role functions called by the S2 job-runner/chooser; the public `match_*` RPCs keep the `auth.uid()` gate (C10).
+- **Open (non-blocking) future amendments to decide before S10/S12:** authoritative GDPR-export scope (chat bodies + `auth` identity ownership); explicit confirmation that `match_cancel_lock(account_closed)` emits the counterparty `dispatch_notification`. Neither blocks S1–S9.
