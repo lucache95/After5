@@ -29,7 +29,10 @@ export function extractPersonaDob(inquiryAttributes: Record<string, unknown>): s
   return typeof bd === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : null;
 }
 export async function verifyPersonaSignature(rawBody: string, header: string | null, secret: string): Promise<boolean> {
-  if (!header) return false;
+  // Fail closed: a missing/empty secret must never validate. Without this an unset
+  // PERSONA_WEBHOOK_SECRET would HMAC with an empty key, which an attacker can
+  // reproduce (the scheme is public) to forge any verdict for any user.
+  if (!header || !secret) return false;
   const parts = Object.fromEntries(header.split(',').map((kv) => kv.trim().split('=')));
   const t = parts['t']; const v1 = parts['v1'];
   if (!t || !v1) return false;

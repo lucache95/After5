@@ -30,4 +30,6 @@ Deno.test('HMAC signature verification accepts a correct signature', async () =>
   const header = `t=${t},v1=${hex}`;
   assertEquals(await verifyPersonaSignature(body, header, secret), true);
   assertEquals(await verifyPersonaSignature(body, `t=${t},v1=deadbeef`, secret), false);
+  // fail closed: a missing/empty secret must never validate (forgery guard).
+  assertEquals(await verifyPersonaSignature(body, header, ''), false);
 });
