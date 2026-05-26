@@ -33,7 +33,12 @@ create table if not exists reports (
 );
 create index if not exists reports_status_idx on reports(status);
 
--- C11.6 canonical disputes DDL (verbatim).
+-- C11.6 canonical disputes DDL (verbatim — this shape is FROZEN by the contract; do not alter here).
+-- NOTE: raised_by has no ON DELETE clause (default RESTRICT), unlike reports.reporter_id
+-- (ON DELETE SET NULL). This is deliberate per the frozen DDL: a dispute is a safety/evidence
+-- record that must survive for resolution. S10 (account deletion, MD8) must reassign/anonymize
+-- or resolve open disputes before deleting auth.users; any change to this FK is a contract
+-- amendment (C11.6), not an S1 edit.
 create table if not exists disputes (
   id uuid primary key default gen_random_uuid(),
   lock_id uuid not null references locks(id) on delete cascade,
