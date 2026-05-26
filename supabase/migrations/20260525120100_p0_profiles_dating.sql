@@ -60,3 +60,17 @@ do $$ begin
   create policy "profiles_private_owner_all" on profiles_private for all
     using (user_id = auth.uid()) with check (user_id = auth.uid());
 exception when duplicate_object then null; end $$;
+
+-- C11.13: birthdate is the age-gate source of truth and must NOT be self-settable, or a user
+-- could bypass the S3 age gate by writing any DOB. RLS is row-level (can't gate one column),
+-- and a column-level REVOKE alone is ineffective because the client roles hold a TABLE-level
+-- INSERT/UPDATE grant that implicitly covers every column. So: revoke the table-level write
+-- grant, then re-grant write only on the user-editable columns — birthdate is intentionally
+-- excluded. Only service-role (the Persona webhook, which writes the parsed/verified DOB) can
+-- write it; the S3 age-gate trigger reads it. SELECT is left intact (owner reads own birthdate).
+-- NOTE: any NEW user-writable column added to profiles_private must be added to these GRANTs.
+revoke insert, update on profiles_private from authenticated, anon;
+grant insert (user_id, full_name, phone, bio, instagram_handle, emergency_contact)
+  on profiles_private to authenticated, anon;
+grant update (full_name, phone, bio, instagram_handle, emergency_contact)
+  on profiles_private to authenticated, anon;

@@ -25,7 +25,11 @@ create table if not exists locks (
   -- "record new has no field updated_at". Matches the updated_at convention on all
   -- other loop tables.
   updated_at timestamptz not null default now(),
-  unique (date_instance_id),        -- a given night locks to exactly one pair
+  -- a given night locks to exactly one pair. NOTE (S6): this is a hard unique, so a night
+  -- whose lock is later cancelled cannot form a NEW lock row. S6's match_cancel_lock must
+  -- decide whether a benign cancellation re-opens the night (transition date_instance back
+  -- to 'seeking' for a fresh lock) or closes it permanently. Acceptable for the S1 spine.
+  unique (date_instance_id),
   -- A creator cannot lock a date with themselves. Without this, a self-lock makes the
   -- sync trigger insert two lock_participants rows with the same (lock_id,user_id) and
   -- fails on the PK — surfacing a confusing unique_violation instead of a clear domain error.
@@ -68,6 +72,9 @@ begin
 end $fn$;
 create or replace trigger locks_sync_participants after insert or update on locks
   for each row execute function sync_lock_participants();
+-- C10: internal trigger helper — not a callable RPC. Revoking execute is defense-in-depth
+-- (it returns trigger so it can't be invoked directly anyway; triggers still fire normally).
+revoke execute on function sync_lock_participants() from public, authenticated, anon;
 
 alter table locks enable row level security;
 alter table lock_participants enable row level security;

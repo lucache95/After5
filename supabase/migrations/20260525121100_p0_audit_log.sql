@@ -32,5 +32,8 @@ create or replace trigger audit_queue after insert or update on queue_entries
   for each row execute function log_status_transition();
 create or replace trigger audit_date_instances after insert or update on date_instances
   for each row execute function log_status_transition();
+-- C10: internal trigger helper — not a callable RPC. Defense-in-depth revoke (returns trigger,
+-- so it can't be invoked directly; the triggers above still fire normally).
+revoke execute on function log_status_transition() from public, authenticated, anon;
 
 alter table audit_log enable row level security;  -- no policies: admin/service-role read only.
