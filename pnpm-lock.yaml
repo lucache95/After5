@@ -105,6 +105,9 @@ importers:
 
   packages/api-client:
     dependencies:
+      '@after5/business':
+        specifier: workspace:*
+        version: link:../business
       '@after5/types':
         specifier: workspace:*
         version: link:../types
