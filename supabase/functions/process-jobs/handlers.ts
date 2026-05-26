@@ -3,10 +3,14 @@
 // (INTEGRATION-CONTRACT C2 + owners) — P2 never writes loop state itself and ships
 // no p5_* stubs. payload carries entity ids ({offer_id}, {instance_id}, {lock_id}, …).
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { dispatchNotification, type NotificationType } from '../_shared/notify.ts';
 
-type Db = ReturnType<typeof createClient>;
+// Bare SupabaseClient (default generics) so a real createClient(url, key) result
+// — SupabaseClient<any, 'public', any> — is assignable here. (ReturnType<typeof
+// createClient> resolves the schema generic to `never`, which a concrete 'public'
+// client is NOT assignable to; this matches the existing generate-plan convention.)
+type Db = SupabaseClient;
 export interface Job {
   id: string;
   type: string;

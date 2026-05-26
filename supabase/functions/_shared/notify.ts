@@ -4,9 +4,13 @@
 // sends over the chosen channel. channel='admin_alert' (safety fail-loud, C11.8)
 // emails ops. Providers are injected so unit tests mock the network.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-type DbClient = ReturnType<typeof createClient> | { rpc: (n: string, a: unknown) => Promise<{ data: unknown; error: unknown }> };
+// Bare SupabaseClient (default generics) so a concrete createClient(url, key)
+// result — SupabaseClient<any, 'public', any> — is assignable. ReturnType<typeof
+// createClient> would pin the schema generic to `never`, which a real 'public'
+// client is NOT assignable to. The {rpc} member keeps the unit-test fake valid.
+type DbClient = SupabaseClient | { rpc: (n: string, a: unknown) => Promise<{ data: unknown; error: unknown }> };
 
 // Mirrors the SQL notification_type enum (C1 + C11.11) exactly — 15 values.
 export type NotificationType =
