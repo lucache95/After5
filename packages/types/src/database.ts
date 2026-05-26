@@ -391,6 +391,129 @@ export type Database = {
           },
         ]
       }
+      insider_applications: {
+        Row: {
+          best_date_spot: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          instagram: string | null
+          motivation: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          best_date_spot: string
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          instagram?: string | null
+          motivation: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          best_date_spot?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          instagram?: string | null
+          motivation?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insider_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insider_tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          itinerary_id: string | null
+          points_reward: number
+          status: string
+          submission_notes: string | null
+          submission_photo_url: string | null
+          submitted_at: string | null
+          task_type: string
+          title: string
+          venue_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          itinerary_id?: string | null
+          points_reward?: number
+          status?: string
+          submission_notes?: string | null
+          submission_photo_url?: string | null
+          submitted_at?: string | null
+          task_type: string
+          title: string
+          venue_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          itinerary_id?: string | null
+          points_reward?: number
+          status?: string
+          submission_notes?: string | null
+          submission_photo_url?: string | null
+          submitted_at?: string | null
+          task_type?: string
+          title?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insider_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insider_tasks_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insider_tasks_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itineraries: {
         Row: {
           ambient_sound_url: string | null
@@ -408,6 +531,7 @@ export type Database = {
           inputs: Json
           intent: string | null
           is_evergreen: boolean
+          is_featured: boolean
           is_public: boolean
           loved_count: number
           match_status: Database["public"]["Enums"]["date_match_status"]
@@ -443,6 +567,7 @@ export type Database = {
           inputs: Json
           intent?: string | null
           is_evergreen?: boolean
+          is_featured?: boolean
           is_public?: boolean
           loved_count?: number
           match_status?: Database["public"]["Enums"]["date_match_status"]
@@ -478,6 +603,7 @@ export type Database = {
           inputs?: Json
           intent?: string | null
           is_evergreen?: boolean
+          is_featured?: boolean
           is_public?: boolean
           loved_count?: number
           match_status?: Database["public"]["Enums"]["date_match_status"]
@@ -1275,6 +1401,9 @@ export type Database = {
           gender: string | null
           gender_preferences: string[]
           id: string
+          insider_approved_at: string | null
+          insider_points: number
+          insider_role: string | null
           neighborhood: string | null
           primary_city_id: string | null
           reliability_score: number | null
@@ -1299,6 +1428,9 @@ export type Database = {
           gender?: string | null
           gender_preferences?: string[]
           id: string
+          insider_approved_at?: string | null
+          insider_points?: number
+          insider_role?: string | null
           neighborhood?: string | null
           primary_city_id?: string | null
           reliability_score?: number | null
@@ -1323,6 +1455,9 @@ export type Database = {
           gender?: string | null
           gender_preferences?: string[]
           id?: string
+          insider_approved_at?: string | null
+          insider_points?: number
+          insider_role?: string | null
           neighborhood?: string | null
           primary_city_id?: string | null
           reliability_score?: number | null
