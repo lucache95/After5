@@ -12,6 +12,15 @@ verify_jwt = false
 [functions.process-jobs]
 verify_jwt = false
 
+[functions.persona-webhook]
+verify_jwt = false
+
+[functions.start-verification]
+verify_jwt = true
+
+[functions.confirm-phone]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.
