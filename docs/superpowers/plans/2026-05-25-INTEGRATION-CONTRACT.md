@@ -1,7 +1,9 @@
 # Dating Plans — Integration Contract (authoritative)
 
 **Date:** 2026-05-25
-**Status:** Authoritative. Where any phase plan (P0–P11) conflicts with this document, **this document wins.** It freezes the shared contracts the parallel-authored plans each guessed independently (see `audits/2026-05-25-CONSOLIDATED-INTEGRATION-AUDIT.md`, defects I1–I13). Each phase's conforming tasks must be reconciled to the names/types/signatures below before execution.
+**Status:** Authoritative — **v2**. Where any phase plan (P0–P11) conflicts with this document, **this document wins.** It freezes the shared contracts the parallel-authored plans each guessed independently (see `audits/2026-05-25-CONSOLIDATED-INTEGRATION-AUDIT.md`, defects I1–I13). Each phase's conforming tasks must be reconciled to the names/types/signatures below before execution.
+
+> **v2 amendments — see §C11 at the end.** C11 closes the gaps found by `audits/2026-05-25-INTEGRATION-CONTRACT-audit.md` (unowned objects, compile-breakers, the browse_feed/account-state regression, P9 duplicate-type collision, reports/disputes DDL, chat-core ordering). **Where C11 conflicts with C1–C10 above, C11 wins.**
 
 **Conventions:** Supabase Postgres; migrations `YYYYMMDDHHMMSS_snake.sql`; RLS on; idempotent policies; `auth.uid()` authz; `set_updated_at()`. All transition/admin logic is `SECURITY DEFINER`; internal helpers `revoke execute from public, authenticated`.
 
@@ -190,3 +192,66 @@ P6's **stateful threads win** (reveal + retention + reporting need state). P5 ca
 - [ ] P9: `account_state` field (not a 3rd suspended); `match_cancel_lock(account_closed)`/`match_expire_offer`/`match_withdraw`; delete `auth.users` + re-signup defense; C1 job names.
 - [ ] P10: disclaimer on all pay surfaces; `file_report` threads `reason_category`; fix P4 contradictory labels; delete vitest dup.
 - [ ] P11: `analytics_relay` job + handler; P5 emits all 15 events; read `feature_config`; delete duplicate demand hint + batching; wire `AsyncBoundary`/primitives into the real P4/P5/P6 screens (no orphans); fix a11y feed shape.
+
+---
+
+## C11 — v2 amendments (resolves the contract-audit gaps; overrides C1–C10 on conflict)
+
+**C11.1 — `feature_config` + `offer_expires_at()` (owner: P2, band `123800`).** P5 (band 126xxx) depends on these, so they ship in P2 (earlier).
+```sql
+create table feature_config (
+  key text primary key, value jsonb not null,
+  updated_at timestamptz not null default now() );
+insert into feature_config(key,value) values ('offer_window_hours','24'::jsonb) on conflict do nothing;
+-- DST-safe expiry helper (clamped 12–72h):
+create or replace function offer_expires_at(p_from timestamptz default now()) returns timestamptz
+language sql stable as $$
+  select p_from + make_interval(hours =>
+    greatest(12, least(72, (select (value#>>'{}')::int from feature_config where key='offer_window_hours'))) ) $$;
+```
+P5's `match_make_offer` sets `expires_at := offer_expires_at()`. No hardcoded 24h.
+
+**C11.2 — `devices` PK fix (compile-breaker in C1).** Replace the C1 `devices` DDL with:
+```sql
+create table devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  expo_push_token text, web_push_sub jsonb, platform text,
+  last_seen timestamptz not null default now(),
+  unique nulls not distinct (user_id, expo_push_token) );
+```
+
+**C11.3 — `browse_feed` finalization (supersedes C4 "defined once in P4" + the C6 `129900` slot).** The view is built with **`drop view if exists browse_feed; create view …`** (NOT `create or replace`, which forbids column changes) in a single **feed-finalization migration at band `133000`** — after every base-table column it reads exists (`moderation_status` P3/P8, `is_seed` P4, `account_state`/`standing` P7/P9). Earlier phases that need a feed for tests query base tables or a minimal early view that this migration drops. **Filter (mandatory):**
+```sql
+where di.status='seeking' and di.starts_at > now()
+  and di.moderation_status='approved'
+  and cr.account_state='active' and cr.standing not in ('suspended','locked_ban')
+```
+(`cr` = creator profile join.) Closes the regression where paused/suspended creators stayed browsable. No phase uses `create or replace browse_feed`; phases only `alter table` base tables.
+
+**C11.4 — `match_resolve_reciprocal` is part of the C2 API** (creator-facing chooser resolution): `match_resolve_reciprocal(p_actor uuid, p_pair_id uuid, p_chosen_instance uuid)`. Add to C2.
+
+**C11.5 — P9 must NOT redefine shared types.** P9 uses C1's `jobs`/`job_status`/`enqueue_job` (no local copies — duplicate `create type` hard-fails `db reset`). `account_lifecycle` enum is exactly `('active','paused','deletion_pending','deleted')` — **`suspended` is NOT in it** (suspension lives in `profiles.standing`, C3). P8's `suspensions` table is an **audit log only**, never a gate.
+
+**C11.6 — `reports` + `disputes` frozen DDL (completes I5).** `reason_category` (C5 enum) is the **canonical taxonomy**; `detail text` is free-text; there is no separate gating `reason` column. `report_status` stays 4 values (`open,reviewing,actioned,dismissed`); any richer P8 lifecycle is expressed via `resolution_code text`, never by adding/removing enum values P7 reads.
+```sql
+create table disputes (
+  id uuid primary key default gen_random_uuid(),
+  lock_id uuid not null references locks(id) on delete cascade,
+  raised_by uuid not null references profiles(id),
+  kind text not null check (kind in ('no_show','payment','conduct')),
+  state text not null default 'open' check (state in ('open','resolved','rejected')),
+  resolution jsonb, created_at timestamptz not null default now() );
+```
+P7 writes a `disputes` row on a contested no-show; P8 resolution updates `disputes.state` **and** calls back `recompute_reliability(user)` + clears `match_ratings.disputed`. (owner: `disputes` table = P7 band `128xxx`; resolution RPC = P8.)
+
+**C11.7 — chat-core is a P5 prerequisite (fixes the band-order test break).** The chat **thread table + `open_chat_thread`/`close_chat_thread`/`promote_chat_thread_to_lock`/`chat_lock_ready`** ship in an early **chat-core** slice at band `124500` (before P5 `126xxx`) so P5's tests can call them. P6's rich messaging/retention/moderation stays in P6's band `127xxx`. (Note: plpgsql resolves callee names at runtime, so creation order is fine, but P5's *tests* need the functions to exist — hence the earlier band.)
+
+**C11.8 — owned objects (no orphans).** Ownership + band:
+- `analytics_events` table (append-only outbox) — **created in P2 band `123900`** (so P5/P2 can emit); `analytics_relay` job handler + retention (purge after 30d) — **P11**.
+- `moderation_status` enum + column on `date_instances` (`'pending'|'approved'|'rejected'`, default `'approved'` for non-UGC, `'pending'` when UGC attached) — **P3 band `124xxx`**.
+- `notification_preferences` (consent + quiet-hours) — **P2 band `123xxx`** (`dispatch_notification` reads it).
+- Web-push **VAPID keys** + `EXPO_ACCESS_TOKEN` — env/secrets, documented in **P2**.
+- **Admin-alert channel** (the "fail loud" terminus for I7): `admin_alerts(id, kind, payload, created_at, resolved_at)` table + an always-on out-of-band sink (ops email via Resend **and** a row insert). A safety notification with no device inserts an `admin_alerts` row AND emails ops — it never dead-ends in an empty channel. (owner: P2 table; P7/P8 consume.)
+
+**C11.9 — paused-user servicing.** A `paused` user with an **active lock** still owes that date: pause suppresses feed/offers/new swipes but does **not** cancel existing locks; reconfirm/check-in jobs still fire; resume restores feed visibility. A `paused` user cannot create/accept new offers (`can_enter_lock_flow` returns false for non-`active` `account_state`).
