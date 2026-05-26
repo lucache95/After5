@@ -31,6 +31,11 @@ begin
      where type = p_type and dedup_key = p_dedup_key and status in ('pending','running')
      limit 1;
   end if;
+  -- An unkeyed insert always returns an id; a null here means the insert silently
+  -- produced no row (e.g. a future trigger) — fail loud rather than hand back null.
+  if v_id is null and p_dedup_key is null then
+    raise exception 'enqueue_job: insert returned no id for type %', p_type;
+  end if;
   return v_id;
 end $fn$;
 
@@ -48,11 +53,15 @@ begin
 end $fn$;
 
 -- Atomically claim up to N due jobs (pending→running, stamp locked_at, +attempts).
--- SKIP LOCKED makes concurrent runners / overlapping ticks safe.
+-- SKIP LOCKED makes concurrent runners / overlapping ticks safe. NOTE: order is a
+-- best-effort priority, not a strict FIFO guarantee — SKIP LOCKED skips per-row as
+-- encountered, so under concurrent runners a later row may be claimed before an
+-- earlier locked one. Acceptable for a minute-granular timer queue.
 create or replace function claim_due_jobs(p_limit int default 50)
 returns setof jobs
 language plpgsql security definer set search_path = public as $fn$
 begin
+  if p_limit <= 0 then raise exception 'claim_due_jobs: p_limit must be > 0'; end if;
   return query
   with due as (
     select id from jobs
@@ -67,18 +76,23 @@ begin
   returning j.*;
 end $fn$;
 
+-- Only a *running* job can complete. The status guard prevents a job that was
+-- cancelled mid-flight (cancel_jobs races the runner) from being clobbered back to 'done'.
 create or replace function complete_job(p_id uuid) returns void
 language plpgsql security definer set search_path = public as $fn$
 begin
-  update jobs set status='done', last_error=null where id=p_id;
+  update jobs set status='done', last_error=null where id=p_id and status='running';
 end $fn$;
 
--- Retry with exponential backoff; dead-letter at attempts>=5 (C1).
+-- Retry with exponential backoff; dead-letter at attempts>=5 (C1's frozen threshold —
+-- attempts is incremented at claim time, so this is up to 5 attempts then dead-letter).
+-- Guarded on status='running' so a job cancelled mid-flight is not resurrected.
 create or replace function fail_job(p_id uuid, p_error text) returns void
 language plpgsql security definer set search_path = public as $fn$
 declare a int;
 begin
-  select attempts into a from jobs where id=p_id;
+  select attempts into a from jobs where id=p_id and status='running';
+  if not found then return; end if;   -- already cancelled/done/failed — no-op
   if a >= 5 then
     update jobs set status='failed', last_error=p_error where id=p_id;
   else
@@ -90,12 +104,14 @@ begin
 end $fn$;
 
 -- Recover crashed runners: jobs stuck 'running' past a grace window → 'pending'.
+-- `locked_at is null` is included so a running row that never got stamped (a future
+-- bug) is still recoverable rather than invisible (NULL < ts is NULL → never matches).
 create or replace function requeue_stuck_jobs(p_grace interval default interval '5 minutes')
 returns int language plpgsql security definer set search_path = public as $fn$
 declare n int;
 begin
   update jobs set status='pending', locked_at=null
-   where status='running' and locked_at < now() - p_grace;
+   where status='running' and (locked_at is null or locked_at < now() - p_grace);
   get diagnostics n = row_count;
   return n;
 end $fn$;
