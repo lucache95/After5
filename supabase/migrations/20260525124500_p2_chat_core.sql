@@ -26,6 +26,23 @@ do $$ begin
     for each row execute function set_updated_at();
 exception when duplicate_object then null; end $$;
 
+-- C9 legal-hold survival: offer_id cascades from offers (which cascade from profiles),
+-- so a profile delete would otherwise silently destroy a held thread. Block deletion of a
+-- legal_hold thread — S10 must clear the hold (tombstone) before the cascade can remove it.
+-- Non-held threads delete normally (ordinary cleanup / chat_purge).
+create or replace function chat_threads_block_held_delete() returns trigger
+language plpgsql as $fn$
+begin
+  if old.legal_hold then
+    raise exception 'chat_thread % is under legal hold and cannot be deleted', old.id;
+  end if;
+  return old;
+end $fn$;
+do $$ begin
+  create trigger chat_threads_no_delete_when_held before delete on chat_threads
+    for each row execute function chat_threads_block_held_delete();
+exception when duplicate_object then null; end $$;
+
 alter table chat_threads enable row level security;
 -- Participant-read RLS is added by P6/S7 (it joins offer→participants). For S2,
 -- service-role only (P5 RPCs are SECURITY DEFINER). No anon/authenticated writes.
@@ -51,9 +68,13 @@ $$;
 -- promote_chat_thread_to_lock(p_offer, p_lock): on accept (C2).
 create or replace function promote_chat_thread_to_lock(p_offer uuid, p_lock uuid) returns void
 language plpgsql security definer set search_path = public as $fn$
+declare v_n int;
 begin
   update chat_threads set lock_id = p_lock, state = 'promoted', updated_at = now()
    where offer_id = p_offer;
+  get diagnostics v_n = row_count;
+  -- Fail loud: P5's accept path must not believe a non-existent thread was promoted.
+  if v_n = 0 then raise exception 'promote_chat_thread_to_lock: no chat thread for offer %', p_offer; end if;
 end $fn$;
 
 -- close_chat_thread(p_offer): on pass/expire (C2). Held threads are NOT purged
@@ -61,8 +82,10 @@ end $fn$;
 create or replace function close_chat_thread(p_offer uuid) returns void
 language plpgsql security definer set search_path = public as $fn$
 begin
+  -- Only an OPEN thread closes on pass/expire. A promoted thread (offer was accepted →
+  -- lock) must not be reverted to 'closed'. Held threads keep their state (no purge).
   update chat_threads set state = 'closed', revoked_at = coalesce(revoked_at, now()), updated_at = now()
-   where offer_id = p_offer and not legal_hold;
+   where offer_id = p_offer and state = 'open' and not legal_hold;
 end $fn$;
 
 revoke execute on function open_chat_thread(uuid) from public, authenticated;
