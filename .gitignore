@@ -27,6 +27,7 @@ yarn-debug.log*
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
 # Turborepo
 .turbo/
