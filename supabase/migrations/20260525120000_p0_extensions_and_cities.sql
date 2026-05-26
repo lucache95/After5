@@ -15,7 +15,7 @@ create table if not exists cities (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create trigger set_cities_updated_at before update on cities
+create or replace trigger set_cities_updated_at before update on cities
   for each row execute function set_updated_at();
 
 alter table cities enable row level security;

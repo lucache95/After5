@@ -1,6 +1,11 @@
 -- supabase/migrations/20260525120100_p0_profiles_dating.sql
-create type payment_preference as enum ('i_pay','they_pay','split');
-create type verification_state as enum ('unverified','pending','verified','failed');
+-- payment_preference: first consumed by itineraries.pay_setting (Task 4, band 120300).
+do $$ begin
+  create type payment_preference as enum ('i_pay','they_pay','split');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create type verification_state as enum ('unverified','pending','verified','failed');
+exception when duplicate_object then null; end $$;
 
 -- C3/C11.5 canonical account-state model: TWO orthogonal fields on profiles (not 3 tables).
 --   standing       — moderation/reliability gate.   Owner of the WRITER ladder: S8 (P7/P8).
@@ -8,9 +13,13 @@ create type verification_state as enum ('unverified','pending','verified','faile
 -- The ENUMS + COLUMNS are defined here in S1 (master-plan §6/§7) so can_enter_lock_flow
 -- (S2) can read them before any consumer. Values are frozen by C3/C11.5 — do NOT add a 3rd
 -- 'suspended' lifecycle value (suspension lives in standing='suspended', C11.5).
-create type standing_state as enum
-  ('good','warned','cooldown','throttled','reconfirm_required','locked_ban','suspended');
-create type account_lifecycle as enum ('active','paused','deletion_pending','deleted');
+do $$ begin
+  create type standing_state as enum
+    ('good','warned','cooldown','throttled','reconfirm_required','locked_ban','suspended');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create type account_lifecycle as enum ('active','paused','deletion_pending','deleted');
+exception when duplicate_object then null; end $$;
 
 alter table profiles
   add column if not exists primary_city_id uuid references cities(id),
@@ -43,7 +52,7 @@ create table if not exists profiles_private (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create trigger set_profiles_private_updated_at before update on profiles_private
+create or replace trigger set_profiles_private_updated_at before update on profiles_private
   for each row execute function set_updated_at();
 
 alter table profiles_private enable row level security;

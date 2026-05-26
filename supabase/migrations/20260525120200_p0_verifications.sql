@@ -12,7 +12,7 @@ create table if not exists verifications (
   updated_at timestamptz not null default now()
 );
 create index if not exists verifications_user_idx on verifications(user_id);
-create trigger set_verifications_updated_at before update on verifications
+create or replace trigger set_verifications_updated_at before update on verifications
   for each row execute function set_updated_at();
 
 alter table verifications enable row level security;
