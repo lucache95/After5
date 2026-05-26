@@ -16,10 +16,20 @@ create unique index if not exists swipes_unique_swiper_instance
 create index if not exists swipes_instance_idx on swipes(date_instance_id) where direction='right';
 
 alter table swipes enable row level security;
+-- Insert: the swiper may only insert their own swipe, AND the denormalized creator_id
+-- MUST equal the date instance's real creator. Without the creator_id check, a user could
+-- forge creator_id=self on any instance and then use swipes_visible (below) to read every
+-- right-swiper's identity on instances they don't own — defeating blind browse. Validating
+-- against date_instances closes that leak (date_instances.creator_id is indexed).
 do $$ begin
   create policy "swipes_swiper_insert" on swipes for insert
-    with check (swiper_id = auth.uid());
+    with check (
+      swiper_id = auth.uid()
+      and creator_id = (select di.creator_id from date_instances di where di.id = date_instance_id)
+    );
 exception when duplicate_object then null; end $$;
+-- No UPDATE/DELETE policy: swipes are an immutable interest ledger. Swipe retraction (if ever
+-- offered) is deferred to S5/S6, which must define its semantics before adding a write policy.
 do $$ begin
   -- a swiper may read their own swipes; the creator may read right-swipes on THEIR instances
   create policy "swipes_visible" on swipes for select using (
