@@ -19,6 +19,12 @@ create table if not exists locks (
   locked_at timestamptz not null default now(),
   cancelled_by uuid references profiles(id),
   cancel_reason cancel_reason,
+  -- Required by the set_locks_updated_at trigger below: set_updated_at() assigns
+  -- new.updated_at, so this column MUST exist or every UPDATE to locks (status change
+  -- on completion/cancellation in S6/S8, and the S1 audit_log test) throws
+  -- "record new has no field updated_at". Matches the updated_at convention on all
+  -- other loop tables.
+  updated_at timestamptz not null default now(),
   unique (date_instance_id)         -- a given night locks to exactly one pair
 );
 create or replace trigger set_locks_updated_at before update on locks

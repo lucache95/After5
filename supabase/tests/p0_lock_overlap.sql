@@ -19,5 +19,13 @@ BEGIN
   END;
   IF NOT ok THEN RAISE EXCEPTION 'INVARIANT FAILED: overlapping double-booking allowed'; END IF;
   RAISE NOTICE 'lock overlap invariant OK';
+
+  -- Regression guard: a lock status UPDATE must succeed. The set_locks_updated_at trigger
+  -- calls set_updated_at() which assigns new.updated_at, so locks MUST have an updated_at
+  -- column. Completion/cancellation (S6/S8) and the audit_log test depend on this working.
+  update locks set status='completed' where id=l1;
+  IF (select status from locks where id=l1) <> 'completed'
+    THEN RAISE EXCEPTION 'lock status UPDATE failed'; END IF;
+  RAISE NOTICE 'lock UPDATE (updated_at trigger) OK';
   ROLLBACK;
 END $$;
