@@ -8,17 +8,6 @@ import { SafeCoverImage } from '@/components/SafeCoverImage';
 // image-first cards. Surfaces the SEO catalog at /dates/[slug] without making
 // a first-time visitor navigate through to find them. Server-rendered.
 
-interface Row {
-  id: string;
-  slug: string | null;
-  title: string | null;
-  hook: string | null;
-  total_cost_pp: number | null;
-  total_duration_min: number | null;
-  stops: unknown;
-  cover_image_url: string | null;
-}
-
 interface StopLite {
   place_type?: string;
   photo_url?: string | null;
@@ -26,25 +15,8 @@ interface StopLite {
 
 export async function ExploreDatesStrip() {
   const supabase = await createClient();
-  // Cast `from` through unknown — generated DB types are stale (haven't been
-  // regenerated since is_featured was added). Column exists in prod.
-  const { data } = await (
-    supabase.from('itineraries') as unknown as {
-      select: (cols: string) => {
-        eq: (col: string, val: unknown) => {
-          eq: (col: string, val: unknown) => {
-            not: (col: string, op: string, val: unknown) => {
-              not: (col: string, op: string, val: unknown) => {
-                order: (col: string, opts: { ascending: boolean }) => {
-                  limit: (n: number) => Promise<{ data: Row[] | null }>;
-                };
-              };
-            };
-          };
-        };
-      };
-    }
-  )
+  const { data } = await supabase
+    .from('itineraries')
     .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
     .eq('is_public', true)
     .eq('is_featured', true)

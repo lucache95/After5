@@ -18,6 +18,7 @@
     "db:diff": "supabase db diff -f",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --local > packages/types/src/database.ts",
+    "db:test": "for f in supabase/tests/*.sql; do echo \"== $f ==\"; psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f \"$f\" || exit 1; done",
     "functions:serve": "supabase functions serve",
     "functions:deploy": "supabase functions deploy"
   },
