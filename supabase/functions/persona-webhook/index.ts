@@ -68,7 +68,10 @@ export async function handler(req: Request): Promise<Response> {
     const dob = extractPersonaDob((inquiry?.attributes ?? {}) as Record<string, unknown>);
     if (dob) {
       const { error: dobErr } = await supabase.from('profiles_private').upsert({ user_id: refId, birthdate: dob }, { onConflict: 'user_id' });
-      if (dobErr) console.error('persona-webhook DOB write error', dobErr.message);
+      // Fail loud: a lost DOB leaves the user age-verified but with no birthdate, so the
+      // age gate would block them forever with no recovery. Return 500 so Persona retries
+      // the (idempotent) webhook rather than silently dropping the age source of truth.
+      if (dobErr) { console.error('persona-webhook DOB write error', dobErr.message); return json({ error: dobErr.message }, 500); }
     }
   }
   if (rows[0].state === 'failed') {
