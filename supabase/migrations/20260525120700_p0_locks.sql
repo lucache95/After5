@@ -25,7 +25,11 @@ create table if not exists locks (
   -- "record new has no field updated_at". Matches the updated_at convention on all
   -- other loop tables.
   updated_at timestamptz not null default now(),
-  unique (date_instance_id)         -- a given night locks to exactly one pair
+  unique (date_instance_id),        -- a given night locks to exactly one pair
+  -- A creator cannot lock a date with themselves. Without this, a self-lock makes the
+  -- sync trigger insert two lock_participants rows with the same (lock_id,user_id) and
+  -- fails on the PK — surfacing a confusing unique_violation instead of a clear domain error.
+  check (creator_id <> matched_user_id)
 );
 create or replace trigger set_locks_updated_at before update on locks
   for each row execute function set_updated_at();
@@ -47,6 +51,12 @@ language plpgsql security definer set search_path = public as $fn$
 declare rng tstzrange;
 begin
   select time_range into rng from date_instances where id = new.date_instance_id;
+  -- Defensive: the FK guarantees the instance exists and time_range is generated from
+  -- NOT NULL columns, so this should never trip — but a clear error here beats a confusing
+  -- NOT NULL violation on lock_participants if the instance is ever missing/orphaned.
+  if rng is null then
+    raise exception 'sync_lock_participants: no time_range for date_instance %', new.date_instance_id;
+  end if;
   if (tg_op = 'INSERT') then
     insert into lock_participants(lock_id,user_id,time_range,active)
     values (new.id,new.creator_id,rng,new.status='active'),

@@ -27,5 +27,13 @@ BEGIN
   IF (select status from locks where id=l1) <> 'completed'
     THEN RAISE EXCEPTION 'lock status UPDATE failed'; END IF;
   RAISE NOTICE 'lock UPDATE (updated_at trigger) OK';
+
+  -- Slot-freeing: completing l1 set its participants active=false (sync trigger UPDATE branch),
+  -- so the previously-blocked overlapping lock on i2 must now be allowed. This proves the
+  -- exclusion's `where (active)` predicate + the trigger's active-flip work together. S6 relies
+  -- on this (a cancelled/completed lock frees the user's time window).
+  insert into locks (date_instance_id, creator_id, matched_user_id, status)
+    values (i2, cre, usr, 'active');
+  RAISE NOTICE 'slot-freeing after completion OK';
   ROLLBACK;
 END $$;

@@ -23,4 +23,4 @@ do $$ begin
   create policy "offers_party_read" on offers for select
     using (candidate_id = auth.uid() or creator_id = auth.uid());
 exception when duplicate_object then null; end $$;
--- offers are created/resolved by SECURITY DEFINER functions (Phase 5); no direct write policy.
+-- offers are created/resolved by the C2 match_* SECURITY DEFINER RPCs (S6); no direct write policy.
