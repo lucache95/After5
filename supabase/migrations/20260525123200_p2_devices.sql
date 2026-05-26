@@ -11,6 +11,10 @@ create table if not exists devices (
   web_push_sub jsonb,
   platform text,
   last_seen timestamptz not null default now(),
+  -- NULLS NOT DISTINCT: one row per (user, expo_push_token); a null token (web-only)
+  -- collapses to a single slot per user, so a 2nd browser's web_push_sub upserts over
+  -- the first. Intentional — native push is load-bearing, web push is best-effort (no
+  -- multi-browser web delivery). Each native device has a distinct token => its own row.
   unique nulls not distinct (user_id, expo_push_token)
 );
 create index if not exists devices_user_idx on devices (user_id);

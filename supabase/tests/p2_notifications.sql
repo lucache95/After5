@@ -24,3 +24,24 @@ BEGIN
     THEN RAISE EXCEPTION 'notification_type should have 15 values, got %',
       array_length(enum_range(null::notification_type), 1); END IF;
 END $$;
+
+-- Recipient may mark-read ONLY: authenticated can update read_at but NOT type/delivered/payload.
+DO $$
+DECLARE u uuid; nid uuid; ok boolean := false;
+BEGIN
+  u := mk_user('notif');
+  insert into notifications (user_id, type, payload) values (u, 'new_match', '{}') returning id into nid;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
+  EXECUTE 'set local role authenticated';
+  -- allowed: mark read
+  update notifications set read_at = now() where id = nid;
+  -- denied: mutate a protected column (no column-grant) -> insufficient_privilege
+  BEGIN
+    update notifications set type = 'safety_alert' where id = nid;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  EXECUTE 'reset role';
+  IF NOT ok THEN RAISE EXCEPTION 'recipient was able to mutate notifications.type (should be read_at-only)'; END IF;
+  RAISE NOTICE 'notifications mark-read column lock OK';
+  ROLLBACK;
+END $$;

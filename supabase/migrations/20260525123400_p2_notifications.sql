@@ -44,3 +44,11 @@ do $$ begin
   create policy "notifications_recipient_mark_read" on notifications for update
     using (user_id = auth.uid()) with check (user_id = auth.uid());
 exception when duplicate_object then null; end $$;
+
+-- The recipient may ONLY mark-read, not mutate delivery/type/payload. RLS is row-level,
+-- so restrict the writable surface at the column-grant layer: a table-level UPDATE grant
+-- implicitly covers every column, so revoke it and re-grant only read_at. Without this a
+-- user could flip their own delivered/channel (corrupt metrics) or type (game any future
+-- query keyed on notifications.type). Service-role (dispatch) bypasses grants + RLS.
+revoke update on notifications from authenticated, anon;
+grant update (read_at) on notifications to authenticated;
