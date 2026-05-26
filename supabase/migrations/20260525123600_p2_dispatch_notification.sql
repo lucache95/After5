@@ -2,9 +2,10 @@
 -- Decision + log + fail-loud half of dispatch (network delivery is in notify.ts).
 -- C1 signature: dispatch_notification(p_user, p_type, p_payload). Order:
 -- consent → quiet-hours → rate-limit → channel (push→web→email). Safety types
--- bypass all gates; with no device they FAIL LOUD (channel='admin_alert' +
--- raise_admin_alert) — never silent (C1, C11.8). p_payload carries
--- {title, body, data, dedup_key}.
+-- bypass all gates. Escalation hierarchy: push → web → email → admin_alert. Email
+-- is a valid safety channel, so a safety notification FAILS LOUD (channel='admin_alert'
+-- + raise_admin_alert) only when NO REACHABLE CHANNEL exists (no push/web device AND
+-- email disabled) — never silent (C1, C11.8). p_payload carries {title, body, data, dedup_key}.
 --
 -- RECONCILIATION (C11.11): notification_type has 15 values (S2-2 added
 -- verification_passed, verification_failed, appeal_resolved, offer_withdrawn).

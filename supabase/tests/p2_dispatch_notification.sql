@@ -28,7 +28,8 @@ BEGIN
   ch := res->>'channel';
   IF ch <> 'suppressed' THEN RAISE EXCEPTION 'opted-out verification_passed not suppressed: %', ch; END IF;
 
-  -- safety notification, NO device → must fail loud to admin_alert (never suppressed)
+  -- safety notification, NO reachable channel (no device + email disabled above) →
+  -- must fail loud to admin_alert (never suppressed); email-enabled would route to 'email'
   SELECT count(*) INTO alerts_before FROM admin_alerts WHERE kind='safety_no_device';
   res := dispatch_notification(u, 'safety_checkin',
            json_build_object('title','Check in','body','You ok?','dedup_key','d2')::jsonb);

@@ -49,7 +49,7 @@ create table devices (
   primary key (user_id, coalesce(expo_push_token, '')) );
 ```
 - `register_device(p_token text, p_platform text, p_web_push jsonb default null)` — called from P1 onboarding + native bootstrap.
-- `dispatch_notification(p_user uuid, p_type notification_type, p_payload jsonb)` — order: consent → quiet-hours → rate-limit (reuse `rate_limit_check`) → channel (push→web→email). **Safety types (`safety_checkin`,`safety_alert`) bypass consent/quiet/rate-limit, and if no device exists they MUST fail loud (log + enqueue `moderation_action`/admin alert), never silent.**
+- `dispatch_notification(p_user uuid, p_type notification_type, p_payload jsonb)` — order: consent → quiet-hours → rate-limit (reuse `rate_limit_check`) → channel (push→web→email). **Safety types (`safety_checkin`,`safety_alert`) bypass consent/quiet/rate-limit, and if NO REACHABLE CHANNEL exists they MUST fail loud (log + admin alert), never silent.** _Amendment (2026-05-26): "no reachable channel" supersedes the earlier "no device" wording. Email is a legitimate reachable safety channel, so the safety escalation hierarchy is **push → web → email → admin_alert**: a device-less but email-enabled user still receives a safety ping (via email); fail-loud (`channel='admin_alert'` + `raise_admin_alert('safety_no_device', …)` + ops email) fires only when there is no push/web device AND email is disabled. Safety never resolves to `suppressed`._
 
 **Analytics relay:** the `analytics_relay` job type drains P11's `analytics_events` outbox to PostHog via `posthog-node` (P11 ships the handler).
 
@@ -252,7 +252,7 @@ P7 writes a `disputes` row on a contested no-show; P8 resolution updates `disput
 - `moderation_status` enum + column on `date_instances` (`'pending'|'approved'|'rejected'`, default `'approved'` for non-UGC, `'pending'` when UGC attached) — **P3 band `124xxx`**.
 - `notification_preferences` (consent + quiet-hours) — **P2 band `123xxx`** (`dispatch_notification` reads it).
 - Web-push **VAPID keys** + `EXPO_ACCESS_TOKEN` — env/secrets, documented in **P2**.
-- **Admin-alert channel** (the "fail loud" terminus for I7): `admin_alerts(id, kind, payload, created_at, resolved_at)` table + an always-on out-of-band sink (ops email via Resend **and** a row insert). A safety notification with no device inserts an `admin_alerts` row AND emails ops — it never dead-ends in an empty channel. (owner: P2 table; P7/P8 consume.)
+- **Admin-alert channel** (the "fail loud" terminus for I7): `admin_alerts(id, kind, payload, created_at, resolved_at)` table + an always-on out-of-band sink (ops email via Resend **and** a row insert). A safety notification with **no reachable channel** (no push/web device AND email disabled — see the escalation hierarchy in the `dispatch_notification` amendment above) inserts an `admin_alerts` row AND emails ops — it never dead-ends in an empty channel. (owner: P2 table; P7/P8 consume.)
 
 **C11.9 — paused-user servicing.** A `paused` user with an **active lock** still owes that date: pause suppresses feed/offers/new swipes but does **not** cancel existing locks; reconfirm/check-in jobs still fire; resume restores feed visibility. A `paused` user cannot create/accept new offers (`can_enter_lock_flow` returns false for non-`active` `account_state`).
 
