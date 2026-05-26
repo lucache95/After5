@@ -5,7 +5,7 @@ import type { After5Client } from '../index';
 function fakeClient(rows: unknown) {
   const single = vi.fn().mockResolvedValue({ data: rows, error: null });
   const eq = vi.fn(() => ({ single, maybeSingle: single }));
-  const update = vi.fn(() => ({ eq }));
+  const update = vi.fn((_patch: Record<string, unknown>) => ({ eq }));
   const select = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ update, select }));
   return { client: { from } as unknown as After5Client, from, update };
@@ -18,7 +18,7 @@ describe('savePreferences', () => {
       age_min: 25, age_max: 40, distance_pref_km: 35, dealbreakers: ['smoking'],
     });
     expect(from).toHaveBeenCalledWith('profiles');
-    const patch = update.mock.calls[0][0];
+    const patch = update.mock.calls[0]![0];
     expect(patch.gender).toBe('woman');
     expect(patch.distance_pref_km).toBe(35);
     expect(patch.age_pref).toBe('[25,40]');
