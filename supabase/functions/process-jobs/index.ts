@@ -35,12 +35,19 @@ serve(async (req: Request) => {
       await supabase.rpc('complete_job', { p_id: job.id });
       done++;
     } catch (e) {
-      await supabase.rpc('fail_job', { p_id: job.id, p_error: String(e) });
-      // Safety jobs never fail silently — surface the failure to ops (C11.8).
-      if (job.type === 'safety_checkin') {
-        await supabase.rpc('raise_admin_alert', {
-          p_kind: 'safety_job_failed', p_payload: { job_id: job.id, error: String(e) },
-        });
+      // Isolate one job's recovery from the rest of the tick: if fail_job /
+      // raise_admin_alert themselves throw (DB blip), don't abort the loop and
+      // strand sibling jobs in 'running' for a full requeue grace window.
+      try {
+        await supabase.rpc('fail_job', { p_id: job.id, p_error: String(e) });
+        // Safety jobs never fail silently — surface the failure to ops (C11.8).
+        if (job.type === 'safety_checkin') {
+          await supabase.rpc('raise_admin_alert', {
+            p_kind: 'safety_job_failed', p_payload: { job_id: job.id, error: String(e) },
+          });
+        }
+      } catch (_recoveryErr) {
+        // Swallowed: requeue_stuck_jobs reclaims this job on a later tick.
       }
       failed++;
     }
