@@ -27,3 +27,7 @@ import type { PlanInputs } from '@after5/types';
 // Implemented in: src/prompt.ts
 
 export type Stub = { phase: 'placeholder'; inputs: PlanInputs };
+
+// ─── Phase 1: identity / dating eligibility ────────────────────────────
+export * from './age';
+export * from './eligibility';

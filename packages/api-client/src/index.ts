@@ -62,3 +62,6 @@ export async function listPublicItineraries(client: After5Client, limit = 20) {
   if (error) throw error;
   return data ?? [];
 }
+
+// ─── Phase 1: identity / profile helpers ───────────────────────────────
+export * from './profile';
