@@ -34,3 +34,6 @@ export * from './eligibility';
 
 // ─── Phase 5a: feed cold-start tier ────────────────────────────────────
 export { feedColdStartTier, type FeedTier, type FeedCounts } from './feedColdStart';
+
+// ─── Phase 5a: vibe-tag → Tier-2 mood palette ──────────────────────────
+export { vibePalette, type VibePalette } from './vibePalette';
