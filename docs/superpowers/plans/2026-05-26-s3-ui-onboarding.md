@@ -2877,3 +2877,24 @@ If Steps 1–3 surfaced fixes, commit them with `git commit -m "S3-UI: integrati
 1. **Persona embedded API surface.** The plan targets the Persona **v5 web `Client`** (`new window.Persona.Client({ inquiryId, sessionToken, onComplete, onCancel, onError })`). The exact CDN minor version (`persona-v5.1.2.js`) and the `Client` constructor field names should be confirmed against Persona's current embedded docs at implementation time; if Persona's current embedded entry differs (e.g. `Persona.Client` vs `persona-react`), only `PersonaEmbed.tsx` changes — the rest of the flow (front door, status, webhook) is unaffected.
 2. **`registerDevice` web-push payload.** S2 owns push token wiring; this slice registers a `web` platform marker so the device row exists (best-effort). A real web-push subscription (service worker + `p_web_push`) is layered later by the notifications UI slice — noted as out-of-scope per §8.
 3. **Resume-guard "wrong step" hard-redirect.** The deterministic "land on the correct step" redirect lives in `app/onboarding/page.tsx` (index), and step pages re-read server state on entry (idempotent). The layout only force-redirects the `done → /home` case. If product later wants a strict "you cannot deep-link to a future step" guard on every step route, add the per-step server assertion — not built now to avoid over-constraining the resume UX.
+
+---
+
+## Future Work / Backlog
+
+### Vibe tags → curated chip selector (replace the free-text input)
+
+**Current:** `BasicsStep` collects vibe tags as a free-text, comma-separated input (`tagsRaw` → split on commas → `profiles.vibe_tags text[]`). Fast to ship and maximally expressive, but it produces **unmatchable data** — "coffee" / "third-wave coffee" / "cafés" never align, so vibe can't be clustered or matched on later.
+
+**Proposed:** a curated, categorized chip selector with typeahead.
+- ~6–8 tappable chips grouped by category (outdoors, food/drink, nightlife, culture, …).
+- Typeahead search over the taxonomy; capped selection (keep the existing max of 8).
+- Small "add your own" escape hatch for the long tail.
+
+**Why it fits After5:** the product matches people around real plans, so clean, matchable vibe data is load-bearing, not cosmetic. Tapping also beats typing for completion rate.
+
+**References:** Hinge and Bumble (curated, categorized interest chips with typeahead) are the closest dating analogues; Feeld for a richer taxonomy. Outside dating, Spotify/Pinterest onboarding (tap-the-bubbles) and Stack Overflow's tag input (type → autocomplete → create) are the canonical interaction patterns.
+
+**Tradeoff:** requires a vibe taxonomy to build and maintain, and slightly constrains expression — net positive given matchability is the whole point.
+
+**Touch points:** `apps/web/app/onboarding/steps/BasicsStep.tsx` (the `vibe_tags` input + `tagsRaw` parsing), `apps/web/app/onboarding/basics/page.tsx` (hydration), `profiles.vibe_tags` (text[], unchanged). If matching needs to join on vibe, seed the taxonomy as a table/enum rather than free strings.
