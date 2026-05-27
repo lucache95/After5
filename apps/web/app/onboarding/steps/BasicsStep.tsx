@@ -1,7 +1,7 @@
 'use client';
 // Step 2 (basics): first name, bio, vibe tags. Validates with ProfileInputSchema,
-// persists via upsertProfile (profiles columns) plus an upsert of bio to
-// profiles_private (no row is auto-created, so upsert not update), then
+// persists via upsertProfile (profiles columns) plus a write of bio to
+// profiles_private (insert the row, or update it if it already exists), then
 // advanceOnboarding('photos'). Idempotent: the server page hydrates `initial`.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -43,14 +43,29 @@ export function BasicsStep({ userId, initial }: { userId: string; initial: Basic
         vibe_tags: parsed.data.vibe_tags,
         prompt_answers: parsed.data.prompts,
       });
-      const { error } = await client
+      // profiles_private holds the bio. Its write grants are column-level so
+      // birthdate stays non-self-settable (the age-gate integrity rule), and
+      // PostgREST's upsert needs table-level INSERT+UPDATE — so an upsert 403s
+      // here. Insert the row; if it already exists (revisiting the step), update.
+      const { error: insertError } = await client
         .from('profiles_private')
-        .upsert({ user_id: userId, bio: parsed.data.bio }, { onConflict: 'user_id' });
-      if (error) throw error;
+        .insert({ user_id: userId, bio: parsed.data.bio });
+      if (insertError && insertError.code === '23505') {
+        const { error: updateError } = await client
+          .from('profiles_private')
+          .update({ bio: parsed.data.bio })
+          .eq('user_id', userId);
+        if (updateError) throw updateError;
+      } else if (insertError) {
+        throw insertError;
+      }
       await advanceOnboarding(client, 'photos');
       router.push('/onboarding/photo');
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Something went wrong.');
+      // Log the real error (Supabase PostgrestError isn't an Error instance, so
+      // its detail is lost if we only read .message) and show a friendly note.
+      console.error('[BasicsStep] save failed', e);
+      setErrorMsg(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
       setPhase('error');
     }
   }
@@ -72,7 +87,8 @@ export function BasicsStep({ userId, initial }: { userId: string; initial: Basic
           <label htmlFor="bio" className="mb-1.5 block text-sm font-medium text-text">Short bio</label>
           <textarea
             id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={4}
-            className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-[3px] focus:ring-accent/15"
+            placeholder="Grew up on the lake, still finding new trails. Pitch me a patio at sunset and I'm in."
+            className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] outline-none placeholder:text-muted focus:border-accent focus:ring-[3px] focus:ring-accent/15"
           />
         </div>
         <div>
