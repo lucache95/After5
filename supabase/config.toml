@@ -167,9 +167,13 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Allow BOTH dev hosts with a path wildcard so GoTrue honors the app's
+# `${origin}/auth/callback?next=...` redirect instead of dropping it back to
+# site_url. Mismatch here splits the PKCE code-verifier cookie across
+# localhost vs 127.0.0.1 and breaks magic-link login.
+additional_redirect_urls = ["http://localhost:3000/**", "http://127.0.0.1:3000/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -257,15 +261,23 @@ otp_expiry = 3600
 # Allow/disallow new user signups via SMS to your project.
 enable_signup = false
 # If enabled, users need to confirm their phone number before signing in.
-enable_confirmations = false
+# Must stay TRUE so phone-change requires an OTP step (the onboarding phone
+# verify is a send-code → enter-code flow). With autoconfirm on, updateUser
+# confirms instantly and the later verifyOtp has nothing to verify. Paired with
+# [auth.sms.test_otp] above so it works locally without a real SMS provider.
+enable_confirmations = true
 # Template for sending OTP to users
 template = "Your code is {{ .Code }}"
 # Controls the minimum amount of time that must pass before sending another sms otp.
 max_frequency = "5s"
 
-# Use pre-defined map of phone number to OTP for testing.
+# Use pre-defined map of phone number to OTP for testing. LOCAL DEV ONLY — a
+# fixed OTP must NEVER reach production auth (it would let anyone verify any
+# number). Do NOT commit an active mapping and do NOT `supabase config push`
+# this. Add your test number locally (uncommitted) to exercise the phone step
+# without a real SMS provider; numbers match GoTrue's normalized form (digits):
 # [auth.sms.test_otp]
-# 4152127777 = "123456"
+# 3065719041 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
