@@ -31,3 +31,6 @@ export type Stub = { phase: 'placeholder'; inputs: PlanInputs };
 // ─── Phase 1: identity / dating eligibility ────────────────────────────
 export * from './age';
 export * from './eligibility';
+
+// ─── Phase 5a: feed cold-start tier ────────────────────────────────────
+export { feedColdStartTier, type FeedTier, type FeedCounts } from './feedColdStart';
