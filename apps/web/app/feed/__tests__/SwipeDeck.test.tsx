@@ -10,9 +10,10 @@ const night = (id: string) => ({ date_instance_id: id, city_id: 'c', time_window
 beforeEach(() => recordSwipe.mockClear());
 
 describe('SwipeDeck', () => {
-  it('empty: shows the cold-start message when no nights', () => {
+  it('empty: shows the dry end-of-deck copy when no nights', () => {
     render(<SwipeDeck initial={[]} />);
-    expect(screen.getByText(/lining up/i)).toBeInTheDocument();
+    expect(screen.getByText(/that.s everyone for now/i)).toBeInTheDocument();
+    expect(screen.getByText(/touch grass/i)).toBeInTheDocument();
   });
   it('swipe right records and advances to the next card', async () => {
     render(<SwipeDeck initial={[night('a'), night('b')]} />);
