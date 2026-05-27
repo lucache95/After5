@@ -55,6 +55,14 @@ describe('PhotoStep', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/preferences'));
   });
 
+  it('rejects an unsupported format (HEIC) with a clear message and keeps upload disabled', async () => {
+    render(<PhotoStep userId="u1" />);
+    const heic = new File(['x'], 'me.heic', { type: 'image/heic' });
+    await userEvent.upload(screen.getByLabelText(/choose a photo/i), heic, { applyAccept: false });
+    expect(screen.getByRole('alert')).toHaveTextContent(/not supported|jpeg|png/i);
+    expect(screen.getByRole('button', { name: /try again/i })).toBeDisabled();
+  });
+
   it('cancel/replace: picking a new file clears a prior error', async () => {
     upload.mockResolvedValueOnce({ error: { message: 'fail' } });
     render(<PhotoStep userId="u1" />);

@@ -8,6 +8,8 @@ import { ImageUp } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, advanceOnboarding } from '@/lib/after5/client';
 
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png'];
+
 export function PhotoStep({ userId }: { userId: string }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -16,6 +18,19 @@ export function PhotoStep({ userId }: { userId: string }) {
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
+    if (f) {
+      const name = f.name.toLowerCase();
+      const looksHeic = /image\/hei[cf]/.test(f.type) || name.endsWith('.heic') || name.endsWith('.heif');
+      // Allow JPEG/PNG; allow empty MIME (some browsers omit it) unless the name is HEIC.
+      const ok = !looksHeic && (ACCEPTED_TYPES.includes(f.type) || f.type === '');
+      if (!ok) {
+        setFile(null);
+        setErrorMsg('That photo format is not supported. Please choose a JPEG or PNG.');
+        setPhase('error');
+        e.target.value = '';
+        return;
+      }
+    }
     setFile(f);
     setPhase('idle');
     setErrorMsg('');
@@ -51,7 +66,7 @@ export function PhotoStep({ userId }: { userId: string }) {
       <label htmlFor="photo" className="mt-7 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-border bg-white/60 px-6 py-10 text-center text-sm text-secondary hover:border-accent">
         <ImageUp className="h-6 w-6 text-muted" />
         <span>{file ? file.name : 'Choose a photo'}</span>
-        <input id="photo" type="file" accept="image/*" onChange={onPick} className="sr-only" aria-label="Choose a photo" />
+        <input id="photo" type="file" accept="image/jpeg,image/png" onChange={onPick} className="sr-only" aria-label="Choose a photo" />
       </label>
 
       {phase === 'error' && (

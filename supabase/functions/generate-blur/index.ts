@@ -31,7 +31,12 @@ export async function handler(req: Request): Promise<Response> {
   const { data: file, error: dlErr } = await svc.storage.from('profile-photos').download(clearPath);
   if (dlErr || !file) return json({ error: 'clear_photo_not_found' }, 404);
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const img = await Image.decode(bytes);
+  let img;
+  try {
+    img = await Image.decode(bytes);
+  } catch {
+    return json({ error: 'unsupported_image_format' }, 400);
+  }
   const p = blurParams(img.width, img.height);
   // imagescript has no gaussianBlur; we soften by downscaling to a tiny
   // intermediate (size driven by blurRadius) then scaling back up to the
