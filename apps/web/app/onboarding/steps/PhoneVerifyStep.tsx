@@ -1,6 +1,9 @@
 'use client';
-// Step 5 (phone_verify): Supabase Auth phone OTP. signInWithOtp then verifyOtp then
-// confirmPhone (server writes the verified phone row) then advanceOnboarding('selfie_verify').
+// Step 5 (phone_verify): attach + verify the user's phone on their EXISTING account.
+// Uses updateUser({phone}) then verifyOtp({type:'phone_change'}) (NOT signInWithOtp /
+// type:'sms', which is a sign-in primitive that can swap the session to another
+// identity). Then confirmPhone (server writes the verified phone row) then
+// advanceOnboarding('selfie_verify').
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -23,7 +26,8 @@ export function PhoneVerifyStep() {
   async function sendCode() {
     setPhase('sending');
     setErrorMsg('');
-    const { error } = await browserAfter5Client().auth.signInWithOtp({ phone });
+    // Attach the phone to the CURRENT user (phone-change), never a sign-in.
+    const { error } = await browserAfter5Client().auth.updateUser({ phone });
     if (error) { setErrorMsg(friendly(error.message)); setPhase('error'); return; }
     setStage('enter_code');
     setPhase('idle');
@@ -33,8 +37,15 @@ export function PhoneVerifyStep() {
     setPhase('verifying');
     setErrorMsg('');
     const client = browserAfter5Client();
-    const { data, error } = await client.auth.verifyOtp({ phone, token: code, type: 'sms' });
+    const { data: { session: pre } } = await client.auth.getSession();
+    const { data, error } = await client.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
     if (error || !data?.session) { setErrorMsg(friendly(error?.message ?? 'That code did not work.')); setPhase('error'); return; }
+    // Belt-and-braces: phone_change updates the current user; the uid must not change.
+    if (pre?.user?.id && data.user?.id && data.user.id !== pre.user.id) {
+      setErrorMsg('We could not verify your number on this account. Please sign in again.');
+      setPhase('error');
+      return;
+    }
     try {
       await confirmPhone(client);
       await advanceOnboarding(client, 'selfie_verify');
