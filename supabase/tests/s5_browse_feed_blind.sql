@@ -19,8 +19,13 @@ BEGIN
   CREATE TEMP TABLE _feed AS SELECT * FROM browse_feed_for_viewer(usr, null, null, null, 20);
   reset role;
   PERFORM 1 from information_schema.columns
-    where table_name='_feed' and column_name in ('creator_id','creator','first_name','email');
+    where table_name='_feed' and column_name in ('creator_id','creator','first_name','email','itinerary_id');
   IF FOUND THEN RAISE EXCEPTION 'feed leaks creator identity column'; END IF;
+  -- Verify content columns are present
+  PERFORM 1 from information_schema.columns where table_name='_feed' and column_name='title';
+  IF NOT FOUND THEN RAISE EXCEPTION 'feed missing title column'; END IF;
+  PERFORM 1 from information_schema.columns where table_name='_feed' and column_name='why_note';
+  IF NOT FOUND THEN RAISE EXCEPTION 'feed missing why_note column'; END IF;
   PERFORM 1 from _feed where date_instance_id=inst;
   IF NOT FOUND THEN RAISE EXCEPTION 'compatible night missing from feed'; END IF;
   DROP TABLE _feed;

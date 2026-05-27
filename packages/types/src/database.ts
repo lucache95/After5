@@ -2724,7 +2724,6 @@ export type Database = {
           date_instance_id: string
           distance_m: number
           is_seed: boolean
-          itinerary_id: string
           pay_setting: string
           time_window_start: string
           title: string

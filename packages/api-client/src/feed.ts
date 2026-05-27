@@ -2,7 +2,7 @@ import type { After5Client } from './index';
 
 export interface FeedNight {
   date_instance_id: string; city_id: string; time_window_start: string;
-  itinerary_id: string; pay_setting: string | null; vibe_tags: string[] | null;
+  pay_setting: string | null; vibe_tags: string[] | null;
   why_note: string | null; cover_image_url: string | null; title: string | null;
   venue_neighborhood: string | null; is_seed: boolean; distance_m: number | null;
 }

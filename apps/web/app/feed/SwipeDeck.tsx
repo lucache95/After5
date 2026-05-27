@@ -1,10 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { browserAfter5Client, recordSwipe, type FeedNight } from '@/lib/after5/client';
+import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
 import { cn } from '@/lib/cn';
 
-export function SwipeDeck({ initial }: { initial: FeedNight[] }) {
+export function SwipeDeck({ initial, tier }: { initial: FeedNight[]; tier: FeedTier }) {
+  // Keyset pagination (browseFeed afterStarts/afterId args) is intentionally deferred —
+  // 5a loads one page of 20 (ample for cold-start) and pagination-on-exhaustion is a fast follow.
   const [deck] = useState(initial);
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -25,7 +28,10 @@ export function SwipeDeck({ initial }: { initial: FeedNight[] }) {
   if (deck.length === 0 || i >= deck.length) {
     return <main className="mx-auto max-w-md px-6 py-20 text-center">
       <p className="font-display text-xl font-semibold text-text">We&apos;re lining up Kelowna nights.</p>
-      <p className="mt-2 text-secondary">Check back soon, or <a className="underline" href="/nights/new">post your own night</a>.</p>
+      {tier === 'thin'
+        ? <p className="mt-2 text-secondary">More Kelowna nights are coming — or <a className="underline" href="/nights/new">post your own</a>.</p>
+        : <p className="mt-2 text-secondary">Check back soon, or <a className="underline" href="/nights/new">post your own night</a>.</p>
+      }
     </main>;
   }
 
