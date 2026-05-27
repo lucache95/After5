@@ -61,7 +61,7 @@ export default async function FirstSessionHome() {
             Welcome to After5, <span className="italic text-accent">{firstName}</span>.
           </h1>
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-secondary md:text-base">
-            We&apos;re warming up your first Kelowna nights. We&apos;ll text you the moment matches are ready.
+            We&apos;re warming up your first Kelowna nights. Check back here as your matches open up.
           </p>
 
           <div className="mt-7">

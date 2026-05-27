@@ -17,7 +17,7 @@ export function HomeStateBanner({ state, gate }: { state: HomeState; gate?: { ok
         <Clock className="h-5 w-5 shrink-0 text-amber-700" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-amber-900">We&apos;re checking your ID, usually about a minute.</p>
-          <p className="text-[13px] text-amber-800">Look around while you wait. We&apos;ll notify you the second you&apos;re cleared.</p>
+          <p className="text-[13px] text-amber-800">Look around while you wait. Check back here to see when you&apos;re cleared.</p>
         </div>
         <button type="button" onClick={() => router.push('/dates')}
           className="shrink-0 rounded-pill bg-amber-700 px-4 py-2 text-[13px] font-medium text-white hover:opacity-90">

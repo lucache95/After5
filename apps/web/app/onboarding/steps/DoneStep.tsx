@@ -47,7 +47,7 @@ export function DoneStep({
 
       <div className="mt-8 flex flex-col items-center gap-3">
         {datingOn ? (
-          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll text you the moment matches are ready.</p>
+          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll start lining up your first Kelowna nights.</p>
         ) : gate.ok ? (
           <button type="button" onClick={enableDating} disabled={phase === 'enabling'}
             className={cn('inline-flex items-center justify-center rounded-pill px-8 py-3.5 text-[15px] font-medium transition-all',

@@ -76,7 +76,7 @@ export function VerificationStatus() {
       <Loader2 className="mx-auto h-6 w-6 animate-spin text-accent" />
       <h1 className="mt-4 font-display text-2xl font-bold text-text">We&apos;re checking your ID…</h1>
       <p className="mt-3 text-[15px] leading-relaxed text-secondary">
-        Usually about a minute. You can close this. We&apos;ll notify you the second you&apos;re cleared.
+        Usually about a minute. Keep this open and it updates the moment you&apos;re cleared.
       </p>
       <div className="mt-7 flex flex-col items-center gap-3">
         <button type="button" onClick={() => { setState('loading'); check(); }}
