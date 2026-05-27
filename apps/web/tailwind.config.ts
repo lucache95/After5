@@ -27,7 +27,9 @@ const config: Config = {
         // Tier 1 (shell): app chrome + primary nav. Tier 3 (profile): neutral card surfaces.
         // Tier 2 per-experience mood surfaces are themed at runtime via inline CSS vars
         // --exp-bg / --exp-accent / --exp-ink, consumed as bg-[var(--exp-bg)] etc. (no static token needed).
-        shell: { base: '#FFE5F1', accent: '#E0218A', ink: '#3D0F2E' },
+        // Warm-filmic base + hot-pink ACCENT (pink is energy, not wallpaper).
+        // shell.pink is a soft tint for occasional washes only.
+        shell: { base: '#FAF4EC', accent: '#E0218A', ink: '#3D0F2E', pink: '#FFE5F1' },
         profile: { base: '#FAFAF8', ink: '#141414', tag: '#E5E5E0' },
       },
       fontFamily: {

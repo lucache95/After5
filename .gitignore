@@ -39,3 +39,7 @@ deno.lock
 
 # Brainstorming visual-companion session files
 .superpowers/
+
+# Reference mood-board photos (copyrighted Pinterest saves) — local-only for now,
+# used in dev; swap to ship-safe (Unsplash/licensed/AI-gen) before deploy.
+apps/web/public/gallery/

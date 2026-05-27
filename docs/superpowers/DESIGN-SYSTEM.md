@@ -12,10 +12,10 @@
 ## 0. Anti-slop / anti-cringe — never ship
 No purple→blue gradients on white. No Space Grotesk / generic system fonts as display. No hover on static cards/text. No "Welcome!" / "Get Started" / "Continue your journey" / motivational or startup-speak copy. No sentence-case headlines. No corporate stock photography. No generic Material/Bootstrap shapes. No "lorem ipsum" — believable real-sounding names + real cover imagery (no Kelowna hardcoding; product is multi-city). If you reach for a default, stop and choose with intent.
 
-## 1. Palette — three-tier (Barbiecore), re-themable tokens only
-The app is NOT one global theme. Three tiers reinforce "experiences are heroes, people are personal." Use semantic Tailwind tokens; never hardcode hex or `gray-*`/`blue-*` in components.
-- **Tier 1 — App shell** (splash, bottom nav, dashboards, settings): **Barbiecore pink.** base `#FFE5F1`, accent `#E0218A`, ink `#3D0F2E`.
-- **Tier 2 — Experience surfaces** (swipe cards, experience detail, match screen): each date carries its **own micro-palette** by vibe (jazz bar = midnight blue bg + amber; beach picnic = peachy; pottery = warm craft). Cards/detail/match inherit the experience's bg/accent/text dynamically.
+## 1. Palette — warm-filmic base + hot-pink ACCENT, three-tier, re-themable tokens only
+**Photography is the hero; pink is the energy, not the wallpaper** (CONFIRMED 2026-05-27 from the reference mood-board — see §Imagery). The app is NOT one global theme. Three tiers reinforce "experiences are heroes, people are personal." Use semantic Tailwind tokens; never hardcode hex or `gray-*`/`blue-*` in components.
+- **Tier 1 — App shell** (splash, bottom nav, dashboards, settings): **warm filmic base** `shell.base` `#FAF4EC` (a warm cream — NOT a pink flood; this also shares a foundation with the legacy planner so the brand seam stays soft); **hot-pink accent** `shell.accent` `#E0218A` reserved for the LOGO, primary CTAs, sticker chips, active/selected states, key highlights; **deep-plum ink** `shell.ink` `#3D0F2E`. `shell.pink` `#FFE5F1` is a soft-pink tint for occasional washes only. Pink should read as punchy punctuation against warm + photography, never as the dominant background.
+- **Tier 2 — Experience surfaces** (swipe cards, experience detail, match screen): the **photograph leads** (warm film-grain, often polaroid-framed — see §Imagery). Each date also carries its **own micro-palette** by vibe (jazz bar = midnight blue + amber; beach picnic = peachy; pottery = warm craft) for chrome/accents around the photo. Cards/detail/match inherit the experience's bg/accent/text dynamically via `vibePalette`.
 - **Tier 3 — Person/profile surfaces**: **strip all branding** — neutral off-white `#FAFAF8`, near-black `#141414`, subtle gray tags. Humans read un-branded.
 
 ## 2. Typography
@@ -33,10 +33,16 @@ The app is NOT one global theme. Three tiers reinforce "experiences are heroes, 
 ## 4. Mobile-first = crafted mobile
 - Design at 375px first; on desktop, center in a phone-style container (~`max-w-[420px]`), never a stretched desktop layout. Bottom sheets (`vaul`) + full-screen modals, not desktop dialogs. Tap targets ≥44px, generous padding, `rounded-3xl` primary surfaces, soft **warm** shadows (`shadow-warm`), never hard grey. Bottom-tab shell: Discover / Dates / Messages / Profile.
 
-## 5. Decoration — stickers, sparkles, Y2K (intentional imperfection)
-- **Sticker chips:** vibe/tag chips look slapped-on — deterministic rotation **-3° to +3°** (hash from label) + `shadow-md`. Not flat, not aligned.
-- **Background flourishes:** floating SVG stars/sparkles/hearts/blobs, gentle looping y-float (framer-motion), staggered delays, low opacity 30–60%, behind content (e.g., splash).
-- **Photo treatments:** tape / tilt / overlap collages, not clean grids, where it fits.
+## 5. Imagery & photography — warm-filmic + polaroid (the emotional core)
+Imagery does the emotional work; pink + type are the energy around it. Driven by the reference mood-board (2026-05-27).
+- **Look:** warm **35mm film-grain / flash** candid photography — golden-hour, candlelit, slightly blown-out, grainy, *imperfect on purpose*. Real people mid-moment (never posed/stocky): dinners + wine, pasta/ramen/pizza, pottery, bouldering, arcades, board games, beach, road trips, rooftops, stargazing. **The experience is the hero, the people are real.** Composition: through-windows, over-the-shoulder, hands/rings details, silhouettes, POV.
+- **Polaroid framing (brand motif — KEEP):** present hero/date photos as **polaroids** — thick white border (heavier at the bottom), slight tilt (deterministic **-3°..+3°**), soft drop shadow, optional tape corner; optional **handwritten caption** (Caveat) in the bottom margin. Tape / tilt / overlap collages over clean grids where it fits. Ties to the existing "welcome polaroid" email motif.
+- **Sourcing (legal):** the Pinterest references are DIRECTION ONLY — never ship them (copyright). Ship-safe assets only: Unsplash (`images.unsplash.com` is allowlisted), licensed, or AI-generated, chosen to match this warm-filmic vibe. Real itinerary covers (Supabase storage) are the production source for date photos.
+- **Treatment in code:** a warm grain/contrast overlay + the polaroid frame are reusable components; `next/image` for all photos with proper `alt`.
+
+## 5b. Decoration — stickers, sparkles, Y2K (intentional imperfection)
+- **Sticker chips:** vibe/tag chips look slapped-on — deterministic rotation **-3° to +3°** (`stickerRotation` in `apps/web/lib/sticker.ts`) + `shadow-md`. Not flat, not aligned.
+- **Background flourishes:** floating SVG stars/sparkles/hearts/blobs, gentle looping y-float (framer-motion), staggered delays, low opacity 30–60%, behind content (e.g., splash). Use sparingly so they don't fight the photography.
 
 ## 6. Motion (framer-motion — everything that moves)
 - **Swipe stack:** drag rotates + tints the card by distance (green right / black-red left); spring physics on release; snap-back on cancel. (Buttons are a fallback, not the primary interaction.)
