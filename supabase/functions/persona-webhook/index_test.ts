@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { mapInquiryToVerification, verifyPersonaSignature, extractPersonaDob } from './index.ts';
+import { mapInquiryToVerification, verifyPersonaSignature, extractPersonaDob, notificationTypeFor } from './index.ts';
 
 Deno.test('maps inquiry.approved → verified for age+selfie', () => {
   const rows = mapInquiryToVerification('inquiry.approved', 'inq_1', 'user-uuid');
@@ -32,4 +32,13 @@ Deno.test('HMAC signature verification accepts a correct signature', async () =>
   assertEquals(await verifyPersonaSignature(body, `t=${t},v1=deadbeef`, secret), false);
   // fail closed: a missing/empty secret must never validate (forgery guard).
   assertEquals(await verifyPersonaSignature(body, header, ''), false);
+});
+Deno.test('inquiry.approved maps to a verification_passed notification', () => {
+  assertEquals(notificationTypeFor('inquiry.approved'), 'verification_passed');
+});
+Deno.test('inquiry.declined maps to a verification_failed notification', () => {
+  assertEquals(notificationTypeFor('inquiry.declined'), 'verification_failed');
+});
+Deno.test('inquiry.marked-for-review maps to no notification (still pending)', () => {
+  assertEquals(notificationTypeFor('inquiry.marked-for-review'), null);
 });

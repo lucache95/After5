@@ -24,6 +24,16 @@ export function mapInquiryToVerification(eventName: string, inquiryId: string, u
   const base = { user_id: userId, provider: 'persona' as const, provider_ref: inquiryId, failure_reason: failure, verified_at: verifiedAt, state };
   return [{ ...base, kind: 'age' }, { ...base, kind: 'selfie' }];
 }
+// Which user notification (if any) a verdict should dispatch. approved -> passed,
+// declined -> failed, marked-for-review -> none (still pending). Mirrors the
+// notification_type enum values that already exist.
+export function notificationTypeFor(eventName: string): 'verification_passed' | 'verification_failed' | null {
+  switch (eventName) {
+    case 'inquiry.approved': return 'verification_passed';
+    case 'inquiry.declined': return 'verification_failed';
+    default: return null;
+  }
+}
 export function extractPersonaDob(inquiryAttributes: Record<string, unknown>): string | null {
   const bd = inquiryAttributes?.['birthdate'];
   return typeof bd === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : null;
@@ -74,8 +84,13 @@ export async function handler(req: Request): Promise<Response> {
       if (dobErr) { console.error('persona-webhook DOB write error', dobErr.message); return json({ error: dobErr.message }, 500); }
     }
   }
-  if (rows[0].state === 'failed') {
-    await supabase.rpc('dispatch_notification', { p_user: refId, p_type: 'verification_failed', p_payload: { topic: 'verification', state: rows[0].state, reason: rows[0].failure_reason } });
+  const notifType = notificationTypeFor(name);
+  if (notifType) {
+    await supabase.rpc('dispatch_notification', {
+      p_user: refId,
+      p_type: notifType,
+      p_payload: { topic: 'verification', state: rows[0].state, reason: rows[0].failure_reason },
+    });
   }
   return json({ ok: true, mapped: rows.length }, 200);
 }
