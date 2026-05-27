@@ -1,4 +1,4 @@
-// Read-only gallery of curated Kelowna nights (reuses existing itineraries content).
+// Read-only gallery of curated nights near you (reuses existing itineraries content).
 // The desire engine while the live match loop (S5/S6) is not built. Server component.
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ export function TeaserGallery({ cards }: { cards: TeaserCard[] }) {
   if (cards.length === 0) {
     return (
       <section className="mt-14">
-        <p className="text-sm text-secondary">We&apos;re curating Kelowna nights. Check back soon.</p>
+        <p className="text-sm text-secondary">We&apos;re curating nights near you. Check back soon.</p>
       </section>
     );
   }

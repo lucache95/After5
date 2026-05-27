@@ -47,7 +47,7 @@ export function HomeStateBanner({ state, gate }: { state: HomeState; gate?: { ok
     <div className="mb-8 flex items-center gap-3 rounded-card border border-border bg-surface px-5 py-4">
       <div className="flex-1">
         <p className="text-sm font-semibold text-text">You&apos;re verified. Flip dating on to get matched.</p>
-        <p className="text-[13px] text-secondary">We&apos;ll start warming up your first Kelowna nights.</p>
+        <p className="text-[13px] text-secondary">We&apos;ll start warming up your first nights near you.</p>
       </div>
       <EnableDatingButton gate={gate} />
     </div>

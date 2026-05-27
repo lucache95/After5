@@ -2,7 +2,7 @@
 // before it's live). Server component (static).
 export function MechanicExplainer() {
   const beats = [
-    { n: '1', t: 'Pick the night', d: 'We match you around a real Kelowna experience, not a profile.' },
+    { n: '1', t: 'Pick the night', d: 'We match you around a real experience, not a profile.' },
     { n: '2', t: 'Match blind', d: 'Photos are blurred until you both say yes to the same night.' },
     { n: '3', t: 'Go out', d: 'Meet over something you already wanted to do. Less pressure, more spark.' },
   ];

@@ -2,13 +2,15 @@
 
 **This governs ALL frontend work** for the **dating vertical**. Every UI spec, plan, and implementer must follow it; the final UI review runs the §Before-shipping check. It internalizes a senior-product-designer + Gen-Z posture so we build crafted, culturally-sharp mobile experiences natively (no external design tool as a dependency). If a screen would feel at home as a scaled-down desktop SaaS page, or as earnest startup copy, it's wrong.
 
-> **Scope decision (confirm with the user):** this Barbiecore/Gen-Z system is the brand for the **dating vertical** (`/onboarding`, `/home`, `/feed`, `/nights/new`, profiles, match/lock). The **legacy date-planner** (`/`, `/plan`, `/account`, `/dates`) keeps its existing warm-cream brand unless we decide to rebrand the whole app. Default assumption: dating = Barbiecore, planner = unchanged.
+> **Scope decision (CONFIRMED 2026-05-27):** this Barbiecore/Gen-Z system is the brand for the **dating vertical** (`/onboarding`, `/home`, `/feed`, `/nights/new`, profiles, match/lock). The **legacy date-planner** (`/`, `/plan`, `/account`, `/dates`) keeps its existing warm-cream brand. Implementation is **additive**: new Barbiecore color + font tokens live alongside the existing warm-cream tokens; dating surfaces opt into them; the planner's tokens are untouched (it uses 492 live prod itineraries — don't break it). A future whole-app rebrand is a token flip, not a rewrite.
+>
+> **Audience (CONFIRMED 2026-05-27):** target is **younger** users, and the product is **no longer geo-limited to Kelowna** — copy must not hardcode Kelowna; use generic/local-agnostic phrasing.
 
 ## Brand voice (one sentence)
 **The dating app that's actually fun — experiences are the heroes, people are personal.** Anti-Tinder, low-pressure, self-aware. Lowercase, dry, a little chaotic. Never earnest, never corporate.
 
 ## 0. Anti-slop / anti-cringe — never ship
-No purple→blue gradients on white. No Space Grotesk / generic system fonts as display. No hover on static cards/text. No "Welcome!" / "Get Started" / "Continue your journey" / motivational or startup-speak copy. No sentence-case headlines. No corporate stock photography. No generic Material/Bootstrap shapes. No "lorem ipsum" — believable Kelowna names + real cover imagery. If you reach for a default, stop and choose with intent.
+No purple→blue gradients on white. No Space Grotesk / generic system fonts as display. No hover on static cards/text. No "Welcome!" / "Get Started" / "Continue your journey" / motivational or startup-speak copy. No sentence-case headlines. No corporate stock photography. No generic Material/Bootstrap shapes. No "lorem ipsum" — believable real-sounding names + real cover imagery (no Kelowna hardcoding; product is multi-city). If you reach for a default, stop and choose with intent.
 
 ## 1. Palette — three-tier (Barbiecore), re-themable tokens only
 The app is NOT one global theme. Three tiers reinforce "experiences are heroes, people are personal." Use semantic Tailwind tokens; never hardcode hex or `gray-*`/`blue-*` in components.
@@ -17,9 +19,9 @@ The app is NOT one global theme. Three tiers reinforce "experiences are heroes, 
 - **Tier 3 — Person/profile surfaces**: **strip all branding** — neutral off-white `#FAFAF8`, near-black `#141414`, subtle gray tags. Humans read un-branded.
 
 ## 2. Typography
-- **Display/headlines:** **Caprasimo** (chunky, retro, playful serif). *(Foundation note: Step 1 installed Fraunces — swap it to Caprasimo.)*
-- **Body:** **Fredoka** (round, friendly sans). *(Replaces Inter for dating surfaces.)*
-- Load both via `next/font/google`, wire to the `--font-inter-display` (display) + body slots in `tailwind.config.ts`.
+- **Display/headlines:** **Caprasimo** (chunky, retro, playful serif). Tailwind token `font-heading` (CSS var `--font-display`). *Additive:* Fraunces (`font-display`, `--font-inter-display`) stays for the planner — don't remove it.
+- **Body:** **Fredoka** (round, friendly sans). Tailwind token `font-body` (CSS var `--font-body`). Dating surfaces use `font-body`; the planner keeps Inter (`font-sans`).
+- Load Caprasimo + Fredoka via `next/font/google` alongside the existing Inter + Fraunces; add their `.variable` classes to `<html>` and the two new `fontFamily` tokens to `tailwind.config.ts`.
 - **Lowercase** all headlines, subheads, CTAs. Mix sizes aggressively (one huge word, rest tiny). Optional 3rd accent face later (handwritten Caveat for "★ host's pick", monospace for metadata).
 
 ## 3. Voice & copy (lowercase, dry, Gen-Z)
@@ -65,6 +67,6 @@ If any "no" → iterate before shipping.
 Brainstorm/spec: declare the register + which tier a surface lives in. Plan: first UI plan adds foundation setup (fonts/tokens); each UI task references this file. Execute: every UI implementer gets these rules; final UI review runs the §Before-shipping check.
 
 ## Open foundation tasks (from this revision)
-- Swap **Fraunces → Caprasimo** (display) and add **Fredoka** (body) in `apps/web/app/layout.tsx` + `tailwind.config.ts`.
-- Add **Barbiecore pink** Tier-1 tokens + a mechanism for Tier-2 per-experience mood palettes + Tier-3 neutral.
-- Confirm the **scope** (dating-vertical-only vs whole-app rebrand) with the user.
+- **Additively** add **Caprasimo** (`font-heading`) + **Fredoka** (`font-body`) in `apps/web/app/layout.tsx` + `tailwind.config.ts` — keep Inter + Fraunces for the planner.
+- Add **Barbiecore pink** Tier-1 tokens (`shell.base/accent/ink`) + Tier-3 neutral (`profile.base/ink/tag`) + a Tier-2 per-experience convention (inline CSS vars `--exp-bg/--exp-accent/--exp-ink` consumed via `bg-[var(--exp-bg)]`, with a `vibePalette()` helper mapping vibe → mood colors). Keep all existing warm-cream tokens.
+- ✅ Scope confirmed (2026-05-27): dating-vertical-only, additive, planner unchanged.

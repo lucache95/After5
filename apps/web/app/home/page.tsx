@@ -61,7 +61,7 @@ export default async function FirstSessionHome() {
             Welcome to After5, <span className="italic text-accent">{firstName}</span>.
           </h1>
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-secondary md:text-base">
-            We&apos;re warming up your first Kelowna nights. Check back here as your matches open up.
+            We&apos;re warming up your first nights near you. Check back here as your matches open up.
           </p>
 
           <div className="mt-7">
@@ -82,7 +82,7 @@ export default async function FirstSessionHome() {
         <TeaserGallery cards={cards} />
 
         <section className="mt-14 rounded-card border border-border bg-surface p-6 text-center">
-          <p className="text-sm text-secondary">Know someone who&apos;d love this? <Link href="/" className="font-medium text-accent underline underline-offset-4">Invite a friend</Link> to help us light up Kelowna faster.</p>
+          <p className="text-sm text-secondary">Know someone who&apos;d love this? <Link href="/" className="font-medium text-accent underline underline-offset-4">Invite a friend</Link> to help us light up your city faster.</p>
         </section>
       </div>
     </main>

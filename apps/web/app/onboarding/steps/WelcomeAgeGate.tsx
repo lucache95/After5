@@ -28,7 +28,7 @@ export function WelcomeAgeGate() {
         <Sparkles className="h-3.5 w-3.5" /> Welcome to After5 dating
       </div>
       <h1 className="font-display text-2xl font-bold leading-tight text-text md:text-3xl">
-        Real people. Real Kelowna nights.
+        Real people. Real nights near you.
       </h1>
       <p className="mt-4 text-[15px] leading-relaxed text-secondary">
         After5 builds your match around a real plan for the evening. We verify every member, so the person you meet is who they say they are. Set up your profile to start.

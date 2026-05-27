@@ -38,7 +38,7 @@ export function DoneStep({
       </div>
       <h1 className="mt-6 font-display text-3xl font-bold text-text">You&apos;re in.</h1>
       <p className="mt-4 text-[15px] leading-relaxed text-secondary">
-        Your profile is set and confirmed. Flip dating on and we&apos;ll start warming up your first Kelowna nights.
+        Your profile is set and confirmed. Flip dating on and we&apos;ll start warming up your first nights near you.
       </p>
 
       {phase === 'error' && (
@@ -47,7 +47,7 @@ export function DoneStep({
 
       <div className="mt-8 flex flex-col items-center gap-3">
         {datingOn ? (
-          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll start lining up your first Kelowna nights.</p>
+          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll start lining up your first nights near you.</p>
         ) : gate.ok ? (
           <button type="button" onClick={enableDating} disabled={phase === 'enabling'}
             className={cn('inline-flex items-center justify-center rounded-pill px-8 py-3.5 text-[15px] font-medium transition-all',
