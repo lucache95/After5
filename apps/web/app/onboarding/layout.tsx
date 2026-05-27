@@ -1,22 +1,15 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import type { OnboardingStep } from '@after5/validators';
 
 export const dynamic = 'force-dynamic';
 
+// Auth gate for the whole /onboarding/* subtree. Step routing lives in page.tsx
+// (the index), which sends a `done` user to /home on normal entry. We do NOT
+// bounce `done` here, because /onboarding/done is the legitimate terminal
+// celebration the verified user lands on right after VerificationStatus advances.
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/onboarding');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('onboarding_step')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const step = (profile?.onboarding_step ?? 'age_gate') as OnboardingStep;
-  if (step === 'done') redirect('/home');
-
   return <>{children}</>;
 }
