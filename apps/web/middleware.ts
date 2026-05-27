@@ -69,7 +69,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Run on every page/route except static assets, image optimizer, favicon
-    // and the auth callback (which manages its own response).
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
+    // and the auth callback (which manages its own response — running the
+    // session-refresh middleware here rebuilds the response and drops the
+    // PKCE code-verifier / session cookies the callback is setting).
+    '/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
   ],
 };
