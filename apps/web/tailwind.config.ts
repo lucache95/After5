@@ -23,10 +23,18 @@ const config: Config = {
           DEFAULT: '#C2552B',
           soft: '#F4E5DC',
         },
+        // Barbiecore three-tier color system for the dating vertical.
+        // Tier 1 (shell): app chrome + primary nav. Tier 3 (profile): neutral card surfaces.
+        // Tier 2 per-experience mood surfaces are themed at runtime via inline CSS vars
+        // --exp-bg / --exp-accent / --exp-ink, consumed as bg-[var(--exp-bg)] etc. (no static token needed).
+        shell: { base: '#FFE5F1', accent: '#E0218A', ink: '#3D0F2E' },
+        profile: { base: '#FAFAF8', ink: '#141414', tag: '#E5E5E0' },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         display: ['var(--font-inter-display)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-display)', 'Georgia', 'serif'],
+        body: ['var(--font-body)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         xs:   ['12px', { lineHeight: '1.5' }],
@@ -55,6 +63,8 @@ const config: Config = {
         subtle: '0 1px 2px rgba(0, 0, 0, 0.04)',
         // Warm terracotta-tinted soft shadow for elevated cards/modals.
         warm: '0 20px 48px -12px rgba(194, 85, 43, 0.18)',
+        // Pink-tinted elevated shadow for Barbiecore dating cards.
+        fun: '0 16px 40px -12px rgba(224, 33, 138, 0.25)',
       },
       transitionDuration: {
         DEFAULT: '200ms',
