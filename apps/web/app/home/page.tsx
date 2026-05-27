@@ -4,7 +4,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { badgeFor } from '@after5/business';
+import { badgeFor, canEnableDating } from '@after5/business';
 import type { VerificationState } from '@after5/validators';
 import { homeState, primaryActionFor, itineraryToTeaser, type ItineraryRow } from '@/lib/onboarding/teaser';
 import { HomeStateBanner } from './HomeStateBanner';
@@ -19,11 +19,12 @@ export default async function FirstSessionHome() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/home');
 
-  const [{ data: profile }, { data: itineraries }] = await Promise.all([
+  const [{ data: profile }, { data: itineraries }, { data: priv }] = await Promise.all([
     supabase.from('profiles').select('first_name, verification, dating_enabled, reliability_score, onboarding_step').eq('id', user.id).maybeSingle(),
     supabase.from('itineraries')
       .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, cover_image_url')
       .eq('is_public', true).not('slug', 'is', null).order('generated_at', { ascending: false }).limit(6),
+    supabase.from('profiles_private').select('birthdate').eq('user_id', user.id).maybeSingle(),
   ]);
 
   if ((profile?.onboarding_step ?? 'age_gate') !== 'done') redirect('/onboarding');
@@ -32,6 +33,11 @@ export default async function FirstSessionHome() {
   const state = homeState({ verification, dating_enabled: profile?.dating_enabled ?? false });
   const action = primaryActionFor(state);
   const badge = badgeFor({ verification, reliability_score: profile?.reliability_score ?? null });
+  const gate = canEnableDating({
+    birthdate: (priv?.birthdate as string | null) ?? null,
+    verification,
+    onboarding_step: profile?.onboarding_step ?? 'age_gate',
+  });
   const cards = ((itineraries ?? []) as unknown as ItineraryRow[]).map(itineraryToTeaser);
   const firstName = profile?.first_name || 'there';
 
@@ -59,7 +65,7 @@ export default async function FirstSessionHome() {
           </p>
 
           <div className="mt-7">
-            <HomeStateBanner state={state} />
+            <HomeStateBanner state={state} gate={{ ok: gate.ok, reason: gate.reason }} />
             {/* Exactly one primary action per state: for pending/failed/dating_off
                 the banner carries it, so the page CTA shows only when verified
                 (the only state whose action is 'explore'). */}

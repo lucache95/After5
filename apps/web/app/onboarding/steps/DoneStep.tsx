@@ -1,13 +1,21 @@
 'use client';
 // Step 7 (done): celebrate + "turn dating on" + route to the first-session home.
-// The DB age-gate trigger enforces 18+ on dating_enabled; a rejection surfaces here.
+// Enabling is gated by canEnableDating (computed server-side, passed as `gate`);
+// the DB age-gate trigger remains the hard enforcement.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BadgeCheck, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client } from '@/lib/after5/client';
+import { datingGateMessage } from '@/lib/onboarding/dating-gate';
 
-export function DoneStep({ userId, badge }: { userId: string; badge: { verified: boolean; isNew: boolean } }) {
+export function DoneStep({
+  userId, badge, gate = { ok: true },
+}: {
+  userId: string;
+  badge: { verified: boolean; isNew: boolean };
+  gate?: { ok: boolean; reason?: string };
+}) {
   const router = useRouter();
   const [datingOn, setDatingOn] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'enabling' | 'error'>('idle');
@@ -38,14 +46,16 @@ export function DoneStep({ userId, badge }: { userId: string; badge: { verified:
       )}
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        {!datingOn ? (
+        {datingOn ? (
+          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll text you the moment matches are ready.</p>
+        ) : gate.ok ? (
           <button type="button" onClick={enableDating} disabled={phase === 'enabling'}
             className={cn('inline-flex items-center justify-center rounded-pill px-8 py-3.5 text-[15px] font-medium transition-all',
               phase === 'enabling' ? 'cursor-not-allowed bg-border text-muted' : 'bg-accent text-white hover:-translate-y-0.5')}>
             {phase === 'enabling' ? 'Turning on…' : phase === 'error' ? 'Try again' : 'Turn dating on'}
           </button>
         ) : (
-          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll text you the moment matches are ready.</p>
+          <p role="alert" className="mx-auto max-w-sm text-[13px] text-secondary">{datingGateMessage(gate.reason)}</p>
         )}
         <button type="button" onClick={() => router.push('/home')}
           className="inline-flex items-center gap-2 text-sm font-medium text-secondary underline decoration-border underline-offset-4 hover:text-text">

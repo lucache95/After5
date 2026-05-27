@@ -7,7 +7,7 @@ import { Clock, ShieldAlert } from 'lucide-react';
 import type { HomeState } from '@/lib/onboarding/teaser';
 import { EnableDatingButton } from './EnableDatingButton';
 
-export function HomeStateBanner({ state }: { state: HomeState }) {
+export function HomeStateBanner({ state, gate }: { state: HomeState; gate?: { ok: boolean; reason?: string } }) {
   const router = useRouter();
   if (state === 'verified') return null;
 
@@ -49,7 +49,7 @@ export function HomeStateBanner({ state }: { state: HomeState }) {
         <p className="text-sm font-semibold text-text">You&apos;re verified. Flip dating on to get matched.</p>
         <p className="text-[13px] text-secondary">We&apos;ll start warming up your first Kelowna nights.</p>
       </div>
-      <EnableDatingButton />
+      <EnableDatingButton gate={gate} />
     </div>
   );
 }

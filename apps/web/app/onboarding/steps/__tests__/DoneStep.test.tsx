@@ -38,4 +38,11 @@ describe('DoneStep', () => {
     await userEvent.click(screen.getByRole('button', { name: /try again/i }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
+
+  it('gate blocked: shows friendly message, no enable button, always shows Enter After5', () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'birthdate_missing' }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(/date of birth/i);
+    expect(screen.queryByRole('button', { name: /turn dating on/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /enter after5/i })).toBeInTheDocument();
+  });
 });

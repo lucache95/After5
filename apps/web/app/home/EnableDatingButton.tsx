@@ -1,15 +1,21 @@
 'use client';
-// Re-offers "turn dating on" from the home (dating_off state). The DB age-gate
-// trigger enforces 18+ on dating_enabled; a rejection surfaces inline.
+// Re-offers "turn dating on" from the home (dating_off state). Gated by
+// canEnableDating (computed server-side, passed as `gate`); the DB age-gate
+// trigger remains the hard enforcement.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client } from '@/lib/after5/client';
+import { datingGateMessage } from '@/lib/onboarding/dating-gate';
 
-export function EnableDatingButton() {
+export function EnableDatingButton({ gate = { ok: true } }: { gate?: { ok: boolean; reason?: string } }) {
   const router = useRouter();
   const [phase, setPhase] = useState<'idle' | 'enabling' | 'error'>('idle');
   const [msg, setMsg] = useState('');
+
+  if (!gate.ok) {
+    return <span role="alert" className="text-[12px] text-secondary">{datingGateMessage(gate.reason)}</span>;
+  }
 
   async function enable() {
     setPhase('enabling'); setMsg('');
