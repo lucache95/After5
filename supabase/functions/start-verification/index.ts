@@ -28,6 +28,12 @@ export async function handler(req: Request): Promise<Response> {
   const { data: { user } } = await authed.auth.getUser();
   if (!user) return json({ error: 'unauthorized' }, 401);
 
+  // Defense-in-depth: never re-mint an inquiry / re-seed 'pending' for a user who is
+  // already verified (that would un-verify them via the rollup trigger).
+  const svc = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const { data: prof } = await svc.from('profiles').select('verification').eq('id', user.id).maybeSingle();
+  if (prof?.verification === 'verified') return json({ error: 'already_verified' }, 409);
+
   const personaResp = await fetch('https://api.withpersona.com/api/v1/inquiries', {
     method: 'POST',
     headers: {
@@ -47,8 +53,7 @@ export async function handler(req: Request): Promise<Response> {
   const sessionToken: string | undefined = resp?.meta?.['session-token'];
   if (!inquiryId) return json({ error: 'persona_no_inquiry' }, 502);
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const { error } = await supabase.from('verifications').upsert(
+  const { error } = await svc.from('verifications').upsert(
     { user_id: user.id, kind: 'age', state: 'pending', provider: 'persona', provider_ref: inquiryId, updated_at: new Date().toISOString() },
     { onConflict: 'user_id,kind' },
   );
