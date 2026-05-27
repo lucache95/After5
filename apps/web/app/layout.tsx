@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { Inter } from 'next/font/google';
+import { Inter, Fraunces } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { PostHogProvider } from './PostHogProvider';
 import { EarlyAccessBanner } from '@/components/EarlyAccessBanner';
 import './globals.css';
@@ -12,11 +13,14 @@ const inter = Inter({
   weight: ['400', '500', '600'],
 });
 
-const interDisplay = Inter({
+// Fraunces: serif display font with optical-size axis.
+// variable maps to --font-inter-display so tailwind's fontFamily.display
+// resolves to Fraunces without changing the tailwind config token name.
+const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-inter-display',
   display: 'swap',
-  weight: ['600', '700'],
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -47,8 +51,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${interDisplay.variable}`}>
+    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body>
+        <Toaster richColors position="top-center" />
         <Suspense fallback={null}>
           <EarlyAccessBanner />
           {/* Relative wrapper scopes absolute-positioned headers (e.g. the

@@ -47,10 +47,14 @@ const config: Config = {
         DEFAULT: '8px',
         card: '8px',
         pill: '9999px',
+        '2xl': '1rem',
+        '3xl': '1.5rem',
       },
       boxShadow: {
         // Refined Minimal: only one allowed shadow, very subtle.
         subtle: '0 1px 2px rgba(0, 0, 0, 0.04)',
+        // Warm terracotta-tinted soft shadow for elevated cards/modals.
+        warm: '0 20px 48px -12px rgba(194, 85, 43, 0.18)',
       },
       transitionDuration: {
         DEFAULT: '200ms',
