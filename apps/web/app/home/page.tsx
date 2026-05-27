@@ -70,10 +70,10 @@ export default async function FirstSessionHome() {
                 the banner carries it, so the page CTA shows only when verified
                 (the only state whose action is 'explore'). */}
             {action.kind === 'explore' && (
-              <Link href={action.href}
-                className="inline-flex items-center justify-center rounded-pill bg-text px-7 py-3.5 text-[15px] font-medium text-background transition-all hover:-translate-y-0.5">
-                {action.label}
-              </Link>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href="/feed" className="rounded-pill bg-text px-6 py-3 text-[15px] font-medium text-background">Browse tonight&apos;s nights</a>
+                <a href="/nights/new" className="rounded-pill border border-border px-6 py-3 text-[15px] font-medium text-text">Post a night</a>
+              </div>
             )}
           </div>
         </section>
