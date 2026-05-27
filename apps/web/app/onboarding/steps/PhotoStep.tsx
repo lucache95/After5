@@ -58,27 +58,36 @@ export function PhotoStep({ userId }: { userId: string }) {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-text">Add a photo</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-secondary">
-        We blur it for the blind feed. We reveal your clear photo only after you both match on a night out.
+      <h1 className="font-heading text-3xl lowercase text-shell-ink">drop a photo</h1>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70">
+        it&apos;s blurred in the feed. your clear photo only shows up once you&apos;ve both matched on a night out.
       </p>
 
-      <label htmlFor="photo" className="mt-7 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-border bg-white/60 px-6 py-10 text-center text-sm text-secondary hover:border-accent">
-        <ImageUp className="h-6 w-6 text-muted" />
-        <span>{file ? file.name : 'Choose a photo'}</span>
-        <input id="photo" type="file" accept="image/jpeg,image/png" onChange={onPick} className="sr-only" aria-label="Choose a photo" />
+      <label
+        htmlFor="photo"
+        className={cn(
+          'mt-7 flex min-h-[44px] cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed px-6 py-10 text-center font-body text-sm transition',
+          'focus-within:ring-2 focus-within:ring-shell-accent/40 motion-reduce:transition-none',
+          file ? 'border-shell-accent/50 bg-shell-pink/40 text-shell-ink' : 'border-shell-ink/20 bg-white/60 text-shell-ink/60 hover:border-shell-accent/60',
+        )}
+      >
+        <ImageUp className="h-6 w-6 text-shell-accent" aria-hidden />
+        <span>{file ? file.name : 'pick a photo'}</span>
+        <input id="photo" type="file" accept="image/jpeg,image/png" onChange={onPick} className="sr-only" aria-label="pick a photo" />
       </label>
 
       {phase === 'error' && (
-        <div role="alert" className="mt-5 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">{errorMsg}</div>
+        <div role="alert" className="mt-5 rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
       )}
 
       <button
-        type="button" onClick={handleUpload} disabled={!file || phase === 'uploading'}
-        className={cn('mt-7 inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
-          !file || phase === 'uploading' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}
+        type="button" onClick={handleUpload} disabled={!file || phase === 'uploading'} aria-busy={phase === 'uploading'}
+        className={cn(
+          'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+          !file || phase === 'uploading' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}
       >
-        {phase === 'uploading' ? 'Uploading…' : phase === 'error' ? 'Try again' : 'Upload & continue'}
+        {phase === 'uploading' ? 'uploading…' : phase === 'error' ? 'try again' : 'next'}
       </button>
     </div>
   );

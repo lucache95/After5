@@ -14,7 +14,7 @@ export function EnableDatingButton({ gate = { ok: true } }: { gate?: { ok: boole
   const [msg, setMsg] = useState('');
 
   if (!gate.ok) {
-    return <span role="alert" className="text-[12px] text-secondary">{datingGateMessage(gate.reason)}</span>;
+    return <span role="alert" className="font-body text-[12px] lowercase text-shell-ink/60">{datingGateMessage(gate.reason)}</span>;
   }
 
   async function enable() {
@@ -30,11 +30,14 @@ export function EnableDatingButton({ gate = { ok: true } }: { gate?: { ok: boole
   return (
     <span className="flex flex-col items-end">
       <button type="button" onClick={enable} disabled={phase === 'enabling'}
-        className={cn('shrink-0 rounded-pill px-4 py-2 text-[13px] font-medium transition-all',
-          phase === 'enabling' ? 'cursor-not-allowed bg-border text-muted' : 'bg-accent text-white hover:opacity-90')}>
-        {phase === 'enabling' ? 'Turning on…' : 'Turn dating on'}
+        className={cn('min-h-[44px] shrink-0 rounded-full px-4 py-2 font-body text-[13px] font-semibold lowercase transition',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+          phase === 'enabling'
+            ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/50'
+            : 'bg-shell-accent text-white hover:scale-[1.03] active:scale-95 motion-reduce:hover:scale-100')}>
+        {phase === 'enabling' ? 'turning on…' : 'turn dating on'}
       </button>
-      {phase === 'error' && <span role="alert" className="mt-1 text-[11px] text-red-600">{msg}</span>}
+      {phase === 'error' && <span role="alert" className="mt-1 font-body text-[11px] text-red-600">{msg}</span>}
     </span>
   );
 }

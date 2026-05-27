@@ -42,8 +42,8 @@ export function VerificationStatus() {
   if (state === 'loading') {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <Loader2 className="h-6 w-6 animate-spin text-accent" />
-        <p className="text-sm text-secondary">Checking your verification…</p>
+        <Loader2 className="h-6 w-6 animate-spin text-shell-accent motion-reduce:animate-none" aria-hidden />
+        <p className="font-body text-sm text-shell-ink/70" aria-live="polite">checking your verification…</p>
       </div>
     );
   }
@@ -51,19 +51,19 @@ export function VerificationStatus() {
   if (state === 'failed' || state === 'appeal') {
     return (
       <div className="text-center">
-        <ShieldAlert className="mx-auto h-7 w-7 text-red-500" />
-        <h1 className="mt-4 font-display text-2xl font-bold text-text">That didn&apos;t go through.</h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-secondary">
-          We couldn&apos;t verify your ID. You can try the scan again, or appeal if you think this is a mistake.
+        <ShieldAlert className="mx-auto h-7 w-7 text-shell-accent" aria-hidden />
+        <h1 className="mt-4 font-heading text-3xl lowercase text-shell-ink">that didn&apos;t go through.</h1>
+        <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70">
+          we couldn&apos;t verify your id. run the scan again, or appeal if you think we got it wrong.
         </p>
         <div className="mt-7 flex flex-col items-center gap-3">
           <button type="button" onClick={() => { setState('loading'); check(); }}
-            className="inline-flex items-center justify-center rounded-pill bg-text px-7 py-3 text-[15px] font-medium text-background hover:-translate-y-0.5">
-            Try again
+            className="flex min-h-[48px] items-center justify-center rounded-full bg-shell-accent px-8 font-body text-[16px] font-semibold lowercase text-white shadow-fun transition hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none">
+            try again
           </button>
           <a href="mailto:hello@tryafter5.app?subject=Verification%20appeal"
-            className="text-sm font-medium text-secondary underline decoration-border underline-offset-4 hover:text-text">
-            Appeal this decision
+            className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+            appeal this
           </a>
         </div>
       </div>
@@ -73,19 +73,19 @@ export function VerificationStatus() {
   // pending (and unverified-after-submit) — show the limbo banner
   return (
     <div className="text-center">
-      <Loader2 className="mx-auto h-6 w-6 animate-spin text-accent" />
-      <h1 className="mt-4 font-display text-2xl font-bold text-text">We&apos;re checking your ID…</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-secondary">
-        Usually about a minute. Keep this open and it updates the moment you&apos;re cleared.
+      <Loader2 className="mx-auto h-6 w-6 animate-spin text-shell-accent motion-reduce:animate-none" aria-hidden />
+      <h1 className="mt-4 font-heading text-3xl lowercase text-shell-ink">checking your id…</h1>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70" aria-live="polite">
+        usually about a minute. keep this open and it&apos;ll update the second you&apos;re cleared.
       </p>
       <div className="mt-7 flex flex-col items-center gap-3">
         <button type="button" onClick={() => { setState('loading'); check(); }}
-          className="inline-flex items-center justify-center rounded-pill bg-text px-7 py-3 text-[15px] font-medium text-background hover:-translate-y-0.5">
-          Continue / re-open verification
+          className="flex min-h-[48px] items-center justify-center rounded-full bg-shell-accent px-8 font-body text-[16px] font-semibold lowercase text-white shadow-fun transition hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none">
+          re-open verification
         </button>
         <button type="button" onClick={() => router.push('/home')}
-          className="text-sm font-medium text-secondary underline decoration-border underline-offset-4 hover:text-text">
-          Look around while you wait
+          className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+          look around while you wait
         </button>
       </div>
     </div>

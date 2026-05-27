@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PreferencesInputSchema, GenderSchema, DealbreakerSchema } from '@after5/validators';
 import { cn } from '@/lib/cn';
+import { stickerRotation } from '@/lib/sticker';
 import { browserAfter5Client, savePreferences, advanceOnboarding } from '@/lib/after5/client';
 
 export interface PreferencesInitial {
@@ -20,6 +21,36 @@ export interface PreferencesInitial {
 
 const GENDERS = GenderSchema.options;
 const DEALBREAKERS = DealbreakerSchema.options;
+
+// Sticker chip (DESIGN-SYSTEM §5b): slapped-on rotation + shadow; selected = pink fill.
+function StickerChip({
+  label, selected, onToggle, role,
+}: {
+  label: string;
+  selected: boolean;
+  onToggle: () => void;
+  role?: 'radio' | 'checkbox';
+}) {
+  return (
+    <button
+      type="button"
+      role={role}
+      aria-checked={selected}
+      onClick={onToggle}
+      style={{ transform: `rotate(${stickerRotation(label)}deg)` }}
+      className={cn(
+        'rounded-full px-4 py-2 font-body text-sm capitalize shadow-md transition',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+        'active:scale-95 hover:-translate-y-0.5',
+        selected
+          ? 'bg-shell-accent text-white'
+          : 'bg-white text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40',
+      )}
+    >
+      {label}
+    </button>
+  );
+}
 
 export function PreferencesStep({ userId, initial }: { userId: string; initial: PreferencesInitial }) {
   const router = useRouter();
@@ -57,67 +88,70 @@ export function PreferencesStep({ userId, initial }: { userId: string; initial: 
     }
   }
 
+  const numberClass = cn(
+    'mt-1.5 block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-3 py-2 font-body text-shell-ink',
+    '[font-variant-numeric:tabular-nums] focus:outline-none focus:ring-2 focus:ring-shell-accent/60',
+  );
+
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-text">Who you&apos;re looking for</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-secondary">This shapes who we match you with.</p>
+      <h1 className="font-heading text-3xl lowercase text-shell-ink">who you&apos;re into</h1>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70">this shapes who we line up for you. tweak it anytime.</p>
 
       <fieldset className="mt-7">
-        <legend className="mb-2 text-sm font-medium text-text">I am</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="mb-3 font-body text-sm font-semibold lowercase text-shell-ink">i&apos;m a</legend>
+        <div className="flex flex-wrap gap-2.5">
           {GENDERS.map((g) => (
-            <button key={g} type="button" onClick={() => setGender(g)}
-              className={cn('rounded-pill border px-4 py-2 text-sm capitalize',
-                gender === g ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-white text-secondary')}>{g}</button>
+            <StickerChip key={g} label={g} role="radio" selected={gender === g} onToggle={() => setGender(g)} />
           ))}
         </div>
       </fieldset>
 
       <fieldset className="mt-6">
-        <legend className="mb-2 text-sm font-medium text-text">Interested in</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="mb-3 font-body text-sm font-semibold lowercase text-shell-ink">show me</legend>
+        <div className="flex flex-wrap gap-2.5">
           {GENDERS.map((g) => (
-            <button key={g} type="button" onClick={() => toggle(wants, g, setWants)}
-              className={cn('rounded-pill border px-4 py-2 text-sm capitalize',
-                wants.includes(g) ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-white text-secondary')}>{g}</button>
+            <StickerChip key={g} label={g} role="checkbox" selected={wants.includes(g)} onToggle={() => toggle(wants, g, setWants)} />
           ))}
         </div>
       </fieldset>
 
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <label className="text-sm font-medium text-text">Age from
+        <label className="font-body text-sm font-semibold lowercase text-shell-ink">age from
           <input type="number" min={18} max={99} value={ageMin} onChange={(e) => setAgeMin(Number(e.target.value))}
-            className="mt-1.5 block w-full rounded-card border border-border bg-white px-3 py-2 [font-variant-numeric:tabular-nums] focus:border-accent" />
+            className={numberClass} />
         </label>
-        <label className="text-sm font-medium text-text">Age to
+        <label className="font-body text-sm font-semibold lowercase text-shell-ink">age to
           <input type="number" min={18} max={99} value={ageMax} onChange={(e) => setAgeMax(Number(e.target.value))}
-            className="mt-1.5 block w-full rounded-card border border-border bg-white px-3 py-2 [font-variant-numeric:tabular-nums] focus:border-accent" />
+            className={numberClass} />
         </label>
       </div>
 
-      <label className="mt-6 block text-sm font-medium text-text">Within {distance} km
-        <input type="range" min={1} max={150} value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="mt-2 w-full accent-accent" />
+      <label className="mt-6 block font-body text-sm font-semibold lowercase text-shell-ink">within {distance} km
+        <input type="range" min={1} max={150} value={distance} onChange={(e) => setDistance(Number(e.target.value))}
+          className="mt-2 w-full accent-shell-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40" />
       </label>
 
       <fieldset className="mt-6">
-        <legend className="mb-2 text-sm font-medium text-text">Dealbreakers</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="mb-3 font-body text-sm font-semibold lowercase text-shell-ink">hard nos</legend>
+        <div className="flex flex-wrap gap-2.5">
           {DEALBREAKERS.map((d) => (
-            <button key={d} type="button" onClick={() => toggle(dealbreakers, d, setDealbreakers)}
-              className={cn('rounded-pill border px-3 py-1.5 text-[13px]',
-                dealbreakers.includes(d) ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-white text-secondary')}>{d.replace(/_/g, ' ')}</button>
+            <StickerChip key={d} label={d.replace(/_/g, ' ')} role="checkbox"
+              selected={dealbreakers.includes(d)} onToggle={() => toggle(dealbreakers, d, setDealbreakers)} />
           ))}
         </div>
       </fieldset>
 
       {phase === 'error' && (
-        <div role="alert" className="mt-5 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">{errorMsg}</div>
+        <div role="alert" className="mt-5 rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
       )}
 
-      <button type="button" onClick={handleContinue} disabled={phase === 'saving'}
-        className={cn('mt-7 inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
-          phase === 'saving' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}>
-        {phase === 'saving' ? 'Saving…' : phase === 'error' ? 'Try again' : 'Continue'}
+      <button type="button" onClick={handleContinue} disabled={phase === 'saving'} aria-busy={phase === 'saving'}
+        className={cn(
+          'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+          phase === 'saving' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
+        {phase === 'saving' ? 'saving…' : phase === 'error' ? 'try again' : 'next'}
       </button>
     </div>
   );

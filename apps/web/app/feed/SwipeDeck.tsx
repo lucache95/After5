@@ -14,6 +14,7 @@ import { Heart, X } from 'lucide-react';
 import { browserAfter5Client, recordSwipe, type FeedNight } from '@/lib/after5/client';
 import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
+import { BottomTabShell } from '@/components/BottomTabShell';
 import { cn } from '@/lib/cn';
 
 // Tier-1 shell screen (DESIGN-SYSTEM §1/§4): Barbiecore pink page, phone-width column.
@@ -56,7 +57,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-shell-base px-5 pb-8 pt-7">
+    <main className="flex min-h-dvh flex-col bg-shell-base px-5 pb-24 pt-7">
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
         <header className="mb-5 flex items-baseline justify-between">
           <h1 className="font-heading text-3xl lowercase text-shell-ink">tonight</h1>
@@ -113,6 +114,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
           swipe right if you’re in · left to skip
         </p>
       </div>
+      <BottomTabShell />
     </main>
   );
 }
@@ -221,7 +223,7 @@ function ActiveCard({
 // Empty / end-of-deck (DESIGN-SYSTEM §3): funny-not-helpful, multi-city (no Kelowna).
 function EmptyDeck({ tier }: { tier: FeedTier }) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-24 text-center">
       <div className="mx-auto max-w-[420px]">
         <p className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">
           that’s everyone for now.
@@ -253,6 +255,7 @@ function EmptyDeck({ tier }: { tier: FeedTier }) {
           </p>
         )}
       </div>
+      <BottomTabShell />
     </main>
   );
 }

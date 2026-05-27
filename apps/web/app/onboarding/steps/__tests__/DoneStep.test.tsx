@@ -17,15 +17,15 @@ beforeEach(() => { push.mockReset(); enableEq.mockClear(); });
 describe('DoneStep', () => {
   it('success: shows the Verified · New badge', () => {
     render(<DoneStep userId="u1" badge={{ verified: true, isNew: true }} />);
-    expect(screen.getByText(/verified/i)).toBeInTheDocument();
-    expect(screen.getByText(/new/i)).toBeInTheDocument();
+    // Badge-specific: "verified · new" (body copy also contains "verified").
+    expect(screen.getByText(/verified.*new/i)).toBeInTheDocument();
   });
 
   it('success: turning dating on writes dating_enabled then routes home', async () => {
     render(<DoneStep userId="u1" badge={{ verified: true, isNew: true }} />);
     await userEvent.click(screen.getByRole('button', { name: /turn dating on/i }));
     await waitFor(() => expect(enableEq).toHaveBeenCalled());
-    await userEvent.click(screen.getByRole('button', { name: /enter after5/i }));
+    await userEvent.click(screen.getByRole('button', { name: /take me in/i }));
     expect(push).toHaveBeenCalledWith('/home');
   });
 
@@ -43,6 +43,6 @@ describe('DoneStep', () => {
     render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'birthdate_missing' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent(/date of birth/i);
     expect(screen.queryByRole('button', { name: /turn dating on/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /enter after5/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /take me in/i })).toBeInTheDocument();
   });
 });

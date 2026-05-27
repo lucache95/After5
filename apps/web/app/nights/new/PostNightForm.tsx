@@ -204,7 +204,6 @@ function PlanCard({ plan, selected, onSelect, index, reduceMotion }: PlanCardPro
       type="button"
       role="radio"
       aria-checked={selected}
-      aria-pressed={selected}
       onClick={onSelect}
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={reduceMotion ? false : { opacity: 1, y: 0 }}

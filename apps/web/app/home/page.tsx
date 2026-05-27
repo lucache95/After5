@@ -11,6 +11,7 @@ import { HomeStateBanner } from './HomeStateBanner';
 import { MechanicExplainer } from './MechanicExplainer';
 import { TeaserGallery } from './TeaserGallery';
 import { RegisterDeviceOnLoad } from './RegisterDeviceOnLoad';
+import { BottomTabShell } from '@/components/BottomTabShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,37 +43,48 @@ export default async function FirstSessionHome() {
   const firstName = profile?.first_name || 'there';
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-dvh bg-shell-base">
       <RegisterDeviceOnLoad />
-      <header className="border-b border-border bg-background/85 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10">
-          <Link href="/" className="font-display text-xl font-semibold tracking-tight text-text">After5</Link>
+      <header className="sticky top-0 z-30 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
+        <nav className="mx-auto flex w-full max-w-[420px] items-center justify-between px-5 py-3.5">
+          <Link href="/" className="font-heading text-2xl lowercase text-shell-accent">after5</Link>
         </nav>
       </header>
 
-      <div className="mx-auto max-w-content px-6 pb-24 pt-12 md:px-10">
+      <div className="mx-auto w-full max-w-[420px] px-5 pb-28 pt-8">
         <section>
           {badge.verified && (
-            <div className="mb-4 inline-flex items-center gap-2 rounded-pill bg-emerald-50 px-3 py-1.5 text-[13px] font-semibold text-emerald-800">
-              Verified{badge.isNew ? ' · New' : ''}
+            <div className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-shell-pink px-3 py-1 font-body text-[12px] font-semibold lowercase text-shell-accent ring-1 ring-shell-accent/15">
+              verified{badge.isNew ? ' · new here' : ''}
             </div>
           )}
-          <h1 className="font-display text-3xl font-bold leading-tight text-text md:text-5xl">
-            Welcome to After5, <span className="italic text-accent">{firstName}</span>.
+          <h1 className="font-heading text-5xl lowercase leading-[1.02] text-shell-ink">
+            hey {firstName}
           </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-secondary md:text-base">
-            We&apos;re warming up your first nights near you. Check back here as your matches open up.
+          <p className="mt-3 max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/65">
+            we&apos;re warming up your first nights nearby. check back as matches open up.
           </p>
 
-          <div className="mt-7">
+          <div className="mt-6">
             <HomeStateBanner state={state} gate={{ ok: gate.ok, reason: gate.reason }} />
             {/* Exactly one primary action per state: for pending/failed/dating_off
                 the banner carries it, so the page CTA shows only when verified
-                (the only state whose action is 'explore'). */}
+                (the only state whose action is 'explore'). Pink lives on the
+                primary CTA only; the secondary is outlined ink. */}
             {action.kind === 'explore' && (
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a href="/feed" className="rounded-pill bg-text px-6 py-3 text-[15px] font-medium text-background">Browse tonight&apos;s nights</a>
-                <a href="/nights/new" className="rounded-pill border border-border px-6 py-3 text-[15px] font-medium text-text">Post a night</a>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href="/feed"
+                  className="rounded-full bg-shell-accent px-6 py-3 font-body text-[15px] font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none motion-reduce:hover:scale-100"
+                >
+                  browse tonight&apos;s nights
+                </a>
+                <a
+                  href="/nights/new"
+                  className="rounded-full border-2 border-shell-ink/15 px-6 py-3 font-body text-[15px] font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/20 motion-reduce:transition-none"
+                >
+                  post a night
+                </a>
               </div>
             )}
           </div>
@@ -81,10 +93,16 @@ export default async function FirstSessionHome() {
         <MechanicExplainer />
         <TeaserGallery cards={cards} />
 
-        <section className="mt-14 rounded-card border border-border bg-surface p-6 text-center">
-          <p className="text-sm text-secondary">Know someone who&apos;d love this? <Link href="/" className="font-medium text-accent underline underline-offset-4">Invite a friend</Link> to help us light up your city faster.</p>
+        <section className="mt-14 rounded-3xl bg-shell-pink/60 p-6 text-center ring-1 ring-shell-accent/10">
+          <p className="font-body text-sm leading-relaxed text-shell-ink/70">
+            know someone who&apos;d get it?{' '}
+            <Link href="/" className="font-semibold text-shell-accent underline decoration-2 underline-offset-4">drag a friend in</Link>{' '}
+            and light up your city faster.
+          </p>
         </section>
       </div>
+
+      <BottomTabShell />
     </main>
   );
 }

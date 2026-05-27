@@ -4,8 +4,10 @@
 // the DB age-gate trigger remains the hard enforcement.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
 import { BadgeCheck, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Polaroid } from '@/components/Polaroid';
 import { browserAfter5Client } from '@/lib/after5/client';
 import { datingGateMessage } from '@/lib/onboarding/dating-gate';
 
@@ -17,6 +19,7 @@ export function DoneStep({
   gate?: { ok: boolean; reason?: string };
 }) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const [datingOn, setDatingOn] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'enabling' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -32,34 +35,50 @@ export function DoneStep({
 
   return (
     <div className="text-center">
-      <div className="mx-auto inline-flex items-center gap-2 rounded-pill bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-800">
-        <BadgeCheck className="h-4 w-4" />
-        {badge.verified ? 'Verified' : 'Profile complete'}{badge.isNew ? ' · New' : ''}
+      <motion.div
+        className="mb-7 flex justify-center"
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.9, rotate: -4 }}
+        animate={reduceMotion ? false : { opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+      >
+        <Polaroid
+          src="/gallery/couple-dance-sunset.jpg"
+          alt="a couple dancing on a hillside against a sunset sky"
+          label="see you out there"
+          size="lg"
+        />
+      </motion.div>
+
+      <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-sm font-semibold lowercase text-shell-accent">
+        <BadgeCheck className="h-4 w-4" aria-hidden />
+        {badge.verified ? 'verified' : 'profile complete'}{badge.isNew ? ' · new' : ''}
       </div>
-      <h1 className="mt-6 font-display text-3xl font-bold text-text">You&apos;re in.</h1>
-      <p className="mt-4 text-[15px] leading-relaxed text-secondary">
-        Your profile is set and confirmed. Flip dating on and we&apos;ll start warming up your first nights near you.
+      <h1 className="mt-6 font-heading text-4xl lowercase text-shell-ink">you&apos;re in.</h1>
+      <p className="mt-4 font-body text-[15px] leading-relaxed text-shell-ink/70">
+        profile&apos;s set and verified. flip dating on and we&apos;ll start warming up your first nights nearby.
       </p>
 
       {phase === 'error' && (
-        <div role="alert" className="mx-auto mt-5 max-w-sm rounded-card border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">{errorMsg}</div>
+        <div role="alert" className="mx-auto mt-5 max-w-sm rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
       )}
 
       <div className="mt-8 flex flex-col items-center gap-3">
         {datingOn ? (
-          <p className="text-sm font-medium text-emerald-700">Dating is on. We&apos;ll start lining up your first nights near you.</p>
+          <p className="font-body text-sm font-semibold lowercase text-shell-accent" aria-live="polite">dating&apos;s on. lining up your first nights nearby.</p>
         ) : gate.ok ? (
-          <button type="button" onClick={enableDating} disabled={phase === 'enabling'}
-            className={cn('inline-flex items-center justify-center rounded-pill px-8 py-3.5 text-[15px] font-medium transition-all',
-              phase === 'enabling' ? 'cursor-not-allowed bg-border text-muted' : 'bg-accent text-white hover:-translate-y-0.5')}>
-            {phase === 'enabling' ? 'Turning on…' : phase === 'error' ? 'Try again' : 'Turn dating on'}
+          <button type="button" onClick={enableDating} disabled={phase === 'enabling'} aria-busy={phase === 'enabling'}
+            className={cn(
+              'flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+              phase === 'enabling' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
+            {phase === 'enabling' ? 'turning on…' : phase === 'error' ? 'try again' : 'turn dating on'}
           </button>
         ) : (
-          <p role="alert" className="mx-auto max-w-sm text-[13px] text-secondary">{datingGateMessage(gate.reason)}</p>
+          <p role="alert" className="mx-auto max-w-sm font-body text-[13px] text-shell-ink/70">{datingGateMessage(gate.reason)}</p>
         )}
         <button type="button" onClick={() => router.push('/home')}
-          className="inline-flex items-center gap-2 text-sm font-medium text-secondary underline decoration-border underline-offset-4 hover:text-text">
-          Enter After5 <ArrowRight className="h-4 w-4" />
+          className="inline-flex items-center gap-2 font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+          take me in <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
     </div>
