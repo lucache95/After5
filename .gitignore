@@ -36,3 +36,6 @@ coverage/
 
 # Deno (edge functions resolve remote modules; repo tracks no deno lockfile)
 deno.lock
+
+# Brainstorming visual-companion session files
+.superpowers/
