@@ -75,14 +75,14 @@ export function PhoneVerifyStep() {
           <button type="button" onClick={sendCode} disabled={!phone || phase === 'sending'}
             className={cn('inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
               !phone || phase === 'sending' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}>
-            {phase === 'sending' ? 'Sending...' : 'Send code'}
+            {phase === 'sending' ? 'Sending…' : 'Send code'}
           </button>
         ) : (
           <>
             <button type="button" onClick={verify} disabled={code.length < 6 || phase === 'verifying'}
               className={cn('inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
                 code.length < 6 || phase === 'verifying' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}>
-              {phase === 'verifying' ? 'Verifying...' : 'Verify'}
+              {phase === 'verifying' ? 'Verifying…' : 'Verify'}
             </button>
             <button type="button" onClick={() => { setStage('enter_phone'); setCode(''); setPhase('idle'); }}
               className="text-sm font-medium text-secondary underline decoration-border underline-offset-4 hover:text-text">
