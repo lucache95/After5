@@ -38,6 +38,9 @@ importers:
       '@after5/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@after5/business':
+        specifier: workspace:*
+        version: link:../../packages/business
       '@after5/types':
         specifier: workspace:*
         version: link:../../packages/types
