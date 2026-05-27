@@ -60,7 +60,10 @@ export default async function FirstSessionHome() {
 
           <div className="mt-7">
             <HomeStateBanner state={state} />
-            {action.kind !== 'enable_dating' && (
+            {/* Exactly one primary action per state: for pending/failed/dating_off
+                the banner carries it, so the page CTA shows only when verified
+                (the only state whose action is 'explore'). */}
+            {action.kind === 'explore' && (
               <Link href={action.href}
                 className="inline-flex items-center justify-center rounded-pill bg-text px-7 py-3.5 text-[15px] font-medium text-background transition-all hover:-translate-y-0.5">
                 {action.label}
