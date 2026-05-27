@@ -1,22 +1,13 @@
 import Image from 'next/image';
 import { MapPin, Clock, Wallet, Sparkles } from 'lucide-react';
 import { vibePalette } from '@after5/business';
+import { stickerRotation } from '@/lib/sticker';
 import type { FeedNight } from '@/lib/after5/client';
 
 // Tier-2 experience surface (DESIGN-SYSTEM §1). The card carries the *experience's*
 // vibe palette, not the global pink — derived from vibe_tags via vibePalette() and
 // applied as inline CSS vars so Tailwind arbitrary values can read them.
 // BLIND CONTRACT: FeedNight has no creator identity and we never render one.
-
-// Deterministic -3°..+3° rotation from a string hash so sticker chips look
-// "slapped on" but stay stable across renders (DESIGN-SYSTEM §5).
-function stickerRotation(label: string): number {
-  let hash = 0;
-  for (let i = 0; i < label.length; i += 1) {
-    hash = (hash * 31 + label.charCodeAt(i)) | 0;
-  }
-  return (Math.abs(hash) % 7) - 3; // -3..+3
-}
 
 // Coarse, blind-by-design time: weekday + hour bucket only. Never a precise minute.
 function coarseTime(iso: string): string {
@@ -137,4 +128,4 @@ export function NightCard({ night }: { night: FeedNight }) {
   );
 }
 
-export { stickerRotation, coarseTime, km };
+export { coarseTime, km };

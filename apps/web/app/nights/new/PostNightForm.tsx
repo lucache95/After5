@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Sparkles } from 'lucide-react';
 import { browserAfter5Client, postNight } from '@/lib/after5/client';
-import { stickerRotation } from '@/app/feed/NightCard';
+import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
 
 // Tier-1 shell surface (DESIGN-SYSTEM §1): Barbiecore pink chrome.
