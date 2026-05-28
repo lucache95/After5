@@ -742,6 +742,7 @@ Commit the regen as part of C's merge.
 |---|---|---|---|
 | `20260527124551_z_chat_lock_ready_5b_launch` | 2026-05-28T05:35Z | GREEN | Z.1 chat_lock_ready body → state='open' predicate. Body verified post-apply (`pg_get_functiondef` contains `state = 'open'`). `has_function_privilege('authenticated', ...)` = false; same for `anon`. Advisor: 0 new findings; all reported advisories are pre-existing (notably the `chat_threads rls_enabled_no_policy` was already there from `20260525124500_p2_chat_core` and is Phase 7's responsibility per Z spec §7.2). |
 | `20260527124552_z_chat_threads_promoted_at` | 2026-05-28T05:42Z | GREEN | Z.2 column add + promote state-filter hardening. Column verified (`promoted_at timestamp with time zone YES`). Function body verified contains `and state = 'open'` filter AND the distinguishing `IF NOT EXISTS` branch with two raise messages ("no chat thread for offer" vs "thread for offer % is not open"). `has_function_privilege('authenticated', ...)` = false; same for `anon`. Advisor: 0 new findings; same pre-existing list as Z.1's check. |
+| `20260527124550_s2_notification_type_5b_extend` | 2026-05-28T06:15Z | GREEN | PREREQ for A: adds 5 notification_type enum values (`reciprocal_detected, offer_passed, offer_expired, lock_cancelled_frozen, lock_cancelled_rolled`). Verified post-apply: all 5 values present via pg_enum query. Additive only; no advisor impact. |
 
 ---
 
