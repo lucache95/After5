@@ -44,17 +44,21 @@ This spec **does not redefine** any function signature, table column, or invaria
 **9 sub-projects.**
 
 ### Z — Chat-core primitives
-**Goal:** Ship the four thread-state functions A consumes (`open_chat_thread`, `chat_lock_ready`, `promote_chat_thread_to_lock`, `close_chat_thread`) and the table they read/write.
+**Goal:** Provide the four thread-state functions A consumes (`open_chat_thread`, `chat_lock_ready`, `promote_chat_thread_to_lock`, `close_chat_thread`) and the `chat_threads` table they read/write. Chat-core already shipped in S2 band 124500 (`20260525124500_p2_chat_core`); Z's 5b deliverables are amendments only.
 
-**Deliverables:**
-- `chat_threads` table — `id uuid PK, offer_id uuid NOT NULL REFERENCES offers(id) ON DELETE CASCADE UNIQUE, lock_id uuid NULL REFERENCES locks(id) ON DELETE SET NULL, participants uuid[2] NOT NULL, state chat_thread_state NOT NULL DEFAULT 'open', created_at, closed_at, promoted_at`. Structural 1:1 with offers via `offer_id UNIQUE`.
-- `chat_thread_state` enum — `('open', 'promoted', 'closed')`. Phase 7 may add `'ready'` between `open` and `promoted`; the enum is forward-extensible (Postgres `add value`).
+**Deliverables (Z is amendment-only — see `docs/superpowers/specs/2026-05-27-5b-Z-chat-core-design.md`):**
+- `chat_threads` table — exact as-built shape on prod: `id uuid PK, offer_id uuid NOT NULL REFERENCES offers(id) ON DELETE CASCADE UNIQUE, lock_id uuid NULL REFERENCES locks(id) ON DELETE SET NULL, state text NOT NULL CHECK in ('open','promoted','closed') DEFAULT 'open', both_ready bool DEFAULT false, legal_hold bool DEFAULT false, revoked_at timestamptz, promoted_at timestamptz (Z.2), created_at, updated_at`. Structural 1:1 with offers via `offer_id UNIQUE`. `state` uses text+CHECK rather than an enum — functionally equivalent; an enum upgrade is **deferred to Phase 7** if needed.
+- `chat_lock_ready(thread uuid) returns bool` (Z.1 5b amendment) — returns `state='open'` (true while thread is open, false after promote/close, false for missing thread). Phase 7 redefines internally by adding AND-conditions for rapport, without changing the signature.
+- `promote_chat_thread_to_lock(offer, lock)` (Z.2 hardening) — UPDATE filtered by `AND state='open'` so concurrent close-then-promote can never produce partial state; distinguishes "no thread for offer" vs "thread is not open" in its RAISE for caller translation.
+- `promoted_at` timestamptz column (Z.2 add) — set by `promote_chat_thread_to_lock`; supports 5b analytics + Phase 7 rapport-to-promotion latency metrics.
 - Migrations in **S2 band 124500** (NOT P5 band — chat-core is canonically S2).
-- `chat_lock_ready(thread uuid) returns bool` — at 5b launch returns `state='open'` (i.e., always true once thread exists). Phase 7 redefines internally without changing the signature.
-- RLS on `chat_threads`: participants can SELECT their own threads; no client INSERT/UPDATE/DELETE (RPC-only).
-- psql concurrency tests for state transitions; race tests for concurrent open/close on same offer.
+- RLS on `chat_threads`: enabled with **zero policies** (default-deny). Only SECURITY DEFINER paths (Z's RPCs called by A's match_* RPCs) can read/write. Participant-read policy is **Phase 7's responsibility** (referenced inline in the original migration's source comments).
+- Auth model: Z's functions are NOT public RPCs (`REVOKE EXECUTE FROM public, authenticated`); invariant §2.5 #7 (`auth.uid()=p_actor`) is enforced one layer up at A's match_* RPCs. Negative-authz test verifies the REVOKE via `has_function_privilege()` metadata check (a direct SET ROLE + REVOKE'd function call crashes the local PG build — known quirk).
+- Tests: in-place updates to `supabase/tests/p2_chat_core.sql` (4-combo lock_ready + promoted_at + state-filter + negative-authz + negative-RLS) + new `supabase/tests/z_chat_thread_races.sh` (two-session bash race harness).
 
-**Depends on:** S1 schema spine only.
+**Phase 7 expansions (NOT 5b):** participants column (if join-overhead becomes a hot path), enum upgrade for state, separate `closed_at`/`promoted_at` (if `revoked_at` semantics get muddier), `'ready'` substate between open and promoted (gated by rapport — chat_lock_ready redefined to AND-include the rapport check), participant-read RLS policy.
+
+**Depends on:** S1 schema spine + S2 chat-core baseline (`20260525124500_p2_chat_core`) already on prod.
 
 ### A — Backend happy path
 **Goal:** Ship the matching RPCs that drive shortlist → offer → accept → lock + the reveal predicate + supporting infrastructure.
