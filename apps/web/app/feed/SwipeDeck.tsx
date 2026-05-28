@@ -164,7 +164,12 @@ function ActiveCard({
   }
 
   function snapBack() {
-    void animate(x, 0, { type: 'spring', stiffness: 500, damping: 32 });
+    // Reduced motion: settle instantly (no spring), but keep the gesture itself.
+    if (reduceMotion) {
+      x.set(0);
+    } else {
+      void animate(x, 0, { type: 'spring', stiffness: 500, damping: 32 });
+    }
   }
 
   async function handleDragEnd(_e: unknown, info: PanInfo) {
@@ -186,12 +191,19 @@ function ActiveCard({
     <motion.div
       className="absolute inset-0 z-10 cursor-grab touch-pan-y active:cursor-grabbing"
       style={{ x, rotate }}
-      drag={reduceMotion ? false : 'x'}
+      // Drag stays enabled under reduced motion (it's the primary interaction);
+      // the rotate/fly flourish is what gets neutralised, not the gesture.
+      drag="x"
       dragSnapToOrigin={false}
       dragElastic={0.7}
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={(e, info) => void handleDragEnd(e, info)}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+      // Promote the next card in from the peek stack (scale/opacity only — the
+      // peek cards sit at ~0.95 scale / 0.65 opacity, so this reads as continuity).
+      initial={reduceMotion ? false : { scale: 0.94, opacity: 0.65 }}
+      animate={reduceMotion ? false : { scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
     >
       <NightCard night={night} />
 

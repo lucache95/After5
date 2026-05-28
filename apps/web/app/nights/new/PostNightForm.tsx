@@ -207,7 +207,7 @@ function PlanCard({ plan, selected, onSelect, index, reduceMotion }: PlanCardPro
       onClick={onSelect}
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={reduceMotion ? false : { opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, type: 'spring', stiffness: 400, damping: 32 }}
+      transition={{ delay: Math.min(index, 6) * 0.04, type: 'spring', stiffness: 400, damping: 32 }}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       className={cn(
         // Base: full-width tappable card, ≥44px target, left-aligned text

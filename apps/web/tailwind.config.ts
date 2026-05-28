@@ -5,6 +5,9 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
+  // Only apply `hover:` styles on devices that actually support hover (pointer:fine),
+  // so hover effects don't stick on touch taps. Critical for the mobile-first dating UI.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {
