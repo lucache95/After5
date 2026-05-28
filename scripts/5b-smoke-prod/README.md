@@ -63,13 +63,13 @@ re-extract.
 |---|---|---|
 | 0 | `0-baseline.sql` | Supabase MCP `execute_sql` |
 | 1 | `1-seed-profiles.sql` | Supabase MCP `execute_sql` (uses HOST_UID + CAND_UID) |
-| 2 | `2-seed-date.sql` | Supabase MCP `execute_sql` → capture `RETURNING id` as INST_ID |
+| 2 | `2-seed-date.sql` | Supabase MCP `execute_sql` → capture `RETURNING id` as INST_ID. **⚠️ Adjust the INSERT column list against the actual prod schema (`select column_name from information_schema.columns where table_schema='public' and table_name='date_instances'`) before pasting — the template is a best-guess and will error at insert time if prod has NOT NULL columns beyond the listed ones.** |
 | 3 | `3-flag-on.sql` | Supabase MCP `execute_sql` |
 | 4 | (Candidate UI swipe) | Browser → 5a feed → tap "interested" on Host's date |
 | 5 | `4-chain.sh` | `bash 4-chain.sh` from local terminal |
-| 6 | `5-verify.sql` | Supabase MCP `execute_sql` → check PASS criteria |
-| 7 | `6-flag-off.sql` | Supabase MCP `execute_sql` |
-| 8 | (negative test) | curl match-shortlist with flag off → expect `feature_disabled` |
+| 6 | `6-flag-off.sql` | Supabase MCP `execute_sql` |
+| 7 | (negative test) | curl match-shortlist with flag off → expect `feature_disabled` |
+| 8 | `5-verify.sql` | Supabase MCP `execute_sql` → check PASS criteria. Run AFTER flag-off so `flag_state` correctly reads `false`. |
 | 9 | `7-cleanup.sql` | Supabase MCP `execute_sql` |
 | 10 | (post-cleanup baseline check) | Re-run `0-baseline.sql` → counts match pre-run |
 
