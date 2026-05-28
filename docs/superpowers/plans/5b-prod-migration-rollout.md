@@ -740,7 +740,7 @@ Commit the regen as part of C's merge.
 
 | Version | Applied at | Advisor | Notes |
 |---|---|---|---|
-| _(none yet — runbook drafted 2026-05-27; no apply yet)_ | | | |
+| `20260527124551_z_chat_lock_ready_5b_launch` | 2026-05-28T05:35Z | GREEN | Z.1 chat_lock_ready body → state='open' predicate. Body verified post-apply (`pg_get_functiondef` contains `state = 'open'`). `has_function_privilege('authenticated', ...)` = false; same for `anon`. Advisor: 0 new findings; all reported advisories are pre-existing (notably the `chat_threads rls_enabled_no_policy` was already there from `20260525124500_p2_chat_core` and is Phase 7's responsibility per Z spec §7.2). |
 
 ---
 
