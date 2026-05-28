@@ -19,9 +19,20 @@ BEGIN
     THEN RAISE EXCEPTION 'notification_type missing appeal_resolved (C11.11)'; END IF;
   IF NOT ('offer_withdrawn' = ANY (enum_range(null::notification_type)::text[]))
     THEN RAISE EXCEPTION 'notification_type missing offer_withdrawn (C11.11)'; END IF;
-  -- Confirm total count = 15
-  IF array_length(enum_range(null::notification_type), 1) <> 15
-    THEN RAISE EXCEPTION 'notification_type should have 15 values, got %',
+  -- 5b PREREQ additions (5 extra values — see 20260527124550_s2_notification_type_5b_extend)
+  IF NOT ('reciprocal_detected' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing reciprocal_detected (5b)'; END IF;
+  IF NOT ('offer_passed' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing offer_passed (5b)'; END IF;
+  IF NOT ('offer_expired' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing offer_expired (5b)'; END IF;
+  IF NOT ('lock_cancelled_frozen' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing lock_cancelled_frozen (5b)'; END IF;
+  IF NOT ('lock_cancelled_rolled' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing lock_cancelled_rolled (5b)'; END IF;
+  -- Confirm total count = 20 (15 base/C11.11 + 5 from 5b PREREQ)
+  IF array_length(enum_range(null::notification_type), 1) <> 20
+    THEN RAISE EXCEPTION 'notification_type should have 20 values, got %',
       array_length(enum_range(null::notification_type), 1); END IF;
 END $$;
 
