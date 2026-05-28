@@ -451,7 +451,8 @@ git commit -m "docs(5b): prod migration runbook + prereq verification log"
 
 **Goal:** Flip `match_v2_enabled` from `false` to `true` for progressively-wider cohorts. NOT a sub-project — operational rollout step.
 
-- [ ] **Step 1: Internal-only cohort.** Update `feature_config` SQL: set a per-user override mechanism (e.g., add `feature_config_overrides(user_id, key, value)` table — TBD with B's spec if not already present). Flip `match_v2_enabled=true` for the QA account only (`lucache95@gmail.com`, UUID `5f387641-2ee9-443a-abb8-bb7f8e48a1a0`). Smoke-test the full loop end-to-end on prod with a second test account.
+- [x] **Step 1: Internal-only cohort.** Update `feature_config` SQL: set a per-user override mechanism (e.g., add `feature_config_overrides(user_id, key, value)` table — TBD with B's spec if not already present). Flip `match_v2_enabled=true` for the QA account only (`lucache95@gmail.com`, UUID `5f387641-2ee9-443a-abb8-bb7f8e48a1a0`). Smoke-test the full loop end-to-end on prod with a second test account.
+   - **Done 2026-05-28.** Pivoted from per-user override to global flip (true → smoke → false) since the match graph was empty; spec `docs/superpowers/specs/2026-05-28-5b-smoke-test-design.md`, plan `docs/superpowers/plans/2026-05-28-5b-smoke-test-prod.md`, run log `scripts/5b-smoke-prod/RUN-LOG.md`. Full chain traversed: signup → swipe → shortlist → make-offer → accept → reveal → ratings. Negative test (P5000 after flag off) passed. Zero admin_alerts. Baseline restored. Closed the 5a-loop migration gap mid-run (4 missing migrations applied).
 
 - [ ] **Step 2: Tester cohort (10-20 users).** Recruit testers per the `recruit real testers` line in the launch-readiness backlog. Enable the flag for their user_ids. Daily monitoring of `admin_alerts` + `analytics_events` for unexpected errors.
 
