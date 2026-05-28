@@ -103,16 +103,9 @@ git commit -m "docs(5b): prod migration runbook + prereq verification log"
 - [ ] **Step 6: Merge Z to `main`.** Pre-merge gates: typecheck + lint + Z tests green. Squash or merge-commit per session preference (5a precedent: `--no-ff`).
 
 **Acceptance criteria:**
-- `chat_threads` table exists on local + prod with the exact shape: `id, offer_id (FK + UNIQUE), lock_id (nullable FK), participants uuid[2], state chat_thread_state, created_at, closed_at, promoted_at`.
-- `chat_lock_ready(uuid) → bool` returns `true` when `state='open'`, false otherwise. Tested with all four state combos.
-- `open_chat_thread(offer)` is idempotent (replaying with same offer_id returns existing thread, no double-row).
-- `promote_chat_thread_to_lock(offer, lock)` sets `state='promoted'`, `lock_id`, `promoted_at` atomically. Race test confirms two concurrent calls produce one promotion + one no-op.
-- `close_chat_thread(offer)` sets `state='closed'`, `closed_at`. Idempotent on already-closed.
-- All four functions check `auth.uid()=p_actor` per C10 (verify with negative tests).
-- RLS denies non-participant SELECT (negative test).
-- Z's migrations applied to prod per runbook; security-advisor GREEN.
-- Z's tests CI-pinned (foreshadowing H's run-all gate).
-- Z merged to `main` with `e2f9b89`-style merge commit message.
+- See `docs/superpowers/specs/2026-05-27-5b-Z-chat-core-design.md` §5.2 — authoritative since Z brainstormed against the actual prod state (which the original roadmap acceptance criteria did not reflect; chat-core was already shipped via `20260525124500_p2_chat_core`).
+- Summary: 10 criteria covering table shape + chat_lock_ready 4-combo semantics + idempotency + promote atomicity & fail-loud + close state guard + auth boundary (REVOKE confirmed via negative test) + RLS default-deny + race correctness + prod-applied via runbook + overview spec amended.
+- The "auth.uid()=p_actor" line in the prior version of this acceptance list was **incorrect for Z** (invariant §2.5 #7 applies to public RPCs; Z's functions are not public — they are SECURITY DEFINER + REVOKE FROM public,authenticated). Auth enforcement happens one layer up at A's match_* RPCs.
 
 ---
 
