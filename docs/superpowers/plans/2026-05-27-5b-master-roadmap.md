@@ -36,23 +36,23 @@
 **Files:**
 - Create: `docs/superpowers/plans/5b-prod-migration-rollout.md` (runbook — sequencing of every Z + A + B + C migration with verification SQL + rollback SQL per file)
 
-- [ ] **Step 1: Verify prod profiles schema.** Use Supabase MCP read-only on prod ref `ufufmcpnysvwtutpbian`. Confirm columns exist: `profiles.account_state`, `profiles.standing`, `profiles.dating_enabled`. If any missing, STOP — fix before Z starts.
+- [x] **Step 1: Verify prod profiles schema.** ✓ GREEN — account_state (account_lifecycle), standing (standing_state), dating_enabled all present (see runbook verification log).
 
-- [ ] **Step 2: Verify S2 chat-core band is empty.** Confirm there are no migrations in band `124500-124999` already applied to prod. If any exist (e.g., earlier S2 partial work), inventory them and reconcile in the runbook.
+- [x] **Step 2: Verify S2 chat-core band is empty.** ✓ YELLOW — `20260525124500_p2_chat_core` already on prod; Z scope reduces to `chat_lock_ready` 5b-launch amendment + optional `promoted_at` column. Reconciled in runbook § Z.
 
-- [ ] **Step 3: Verify P5 band 126xxx is empty on prod.** Same check.
+- [x] **Step 3: Verify P5 band 126xxx is empty on prod.** ✓ GREEN — band empty.
 
-- [ ] **Step 4: Verify S2 prerequisites are on prod.** Confirm presence of: `feature_config` table (C11.1), `offer_expires_at()` function, `can_enter_lock_flow()` function, `analytics_events` table, `admin_alerts` table, `notifications` table, `notification_preferences` table, `dispatch_notification()` function, `enqueue_job()`/`cancel_jobs()` functions, `jobs` table + `job_type` enum + `notification_type` enum.
+- [x] **Step 4: Verify S2 prerequisites are on prod.** ✓ GREEN — all 6 tables + 5 functions + 2 enums present.
 
-- [ ] **Step 5: Inventory C1 enum gaps.** Read the current `notification_type` enum on prod. Cross-reference against the 9 types 5b emits (`offer_received, new_match, reciprocal_detected, offer_passed, offer_expired, standby_promoted, offer_withdrawn, lock_cancelled_frozen, lock_cancelled_rolled`). For any missing values, flag as a **C1 contract amendment** that must land in S2 BEFORE the sub-project that emits it.
+- [x] **Step 5: Inventory C1 enum gaps.** ✓ RED — 5 missing notification_type values (`reciprocal_detected, offer_passed, offer_expired, lock_cancelled_frozen, lock_cancelled_rolled`). Captured as PREREQ migration `20260527124550_s2_notification_type_5b_extend.sql` ahead of A.
 
-- [ ] **Step 6: Draft the migration runbook.** Create `docs/superpowers/plans/5b-prod-migration-rollout.md` with this structure:
+- [x] **Step 6: Draft the migration runbook.** ✓ Created `docs/superpowers/plans/5b-prod-migration-rollout.md` (770 lines) with this structure:
   - Section per sub-project (Z, A, B, C) — each lists the migration filenames in apply-order
   - Per-migration block: pre-conditions (what must exist), the SQL file path, the verification SQL (post-apply check), the rollback SQL, the security-advisor checks to run, expected duration estimate
   - "Apply, verify, then commit to advancing to the next" discipline reminder per memory `feedback_schema-data-integrity-rigor.md`
   - Per-migration approval gate: never apply two migrations in one session without verifying the first
 
-- [ ] **Step 7: Commit the runbook + verification log.**
+- [x] **Step 7: Commit the runbook + verification log.** ✓ Committed as `ac09782`.
 
 ```bash
 git add docs/superpowers/plans/5b-prod-migration-rollout.md
