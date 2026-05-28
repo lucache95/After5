@@ -210,7 +210,7 @@ function ActiveCard({
       <motion.div
         aria-hidden
         style={{ opacity: nopeOpacity }}
-        className="pointer-events-none absolute inset-0 flex items-start justify-end rounded-3xl bg-[#3a0410]/55 p-6"
+        className="pointer-events-none absolute inset-0 flex items-start justify-end rounded-3xl bg-swipe-nope/55 p-6"
       >
         <span className="rotate-[8deg] rounded-2xl border-4 border-rose-50/90 px-3 py-1 font-heading text-2xl lowercase text-rose-50 shadow-md">
           nope

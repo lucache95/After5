@@ -48,6 +48,7 @@ export function TeaserGallery({ cards }: { cards: TeaserCard[] }) {
           return (
             <li key={c.id} className="flex flex-col items-center text-center">
               <Polaroid
+                tone="dating"
                 src={cover}
                 alt={c.title}
                 size="lg"

@@ -42,6 +42,7 @@ export function DoneStep({
         transition={{ type: 'spring', stiffness: 320, damping: 24 }}
       >
         <Polaroid
+          tone="dating"
           src="/gallery/couple-dance-sunset.jpg"
           alt="a couple dancing on a hillside against a sunset sky"
           label="see you out there"

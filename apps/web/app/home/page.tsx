@@ -46,7 +46,7 @@ export default async function FirstSessionHome() {
     <main className="min-h-dvh bg-shell-base">
       <RegisterDeviceOnLoad />
       <header className="sticky top-0 z-30 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
-        <nav className="mx-auto flex w-full max-w-[420px] items-center justify-between px-5 py-3.5">
+        <nav aria-label="masthead" className="mx-auto flex w-full max-w-[420px] items-center justify-between px-5 py-3.5">
           <Link href="/" className="font-heading text-2xl lowercase text-shell-accent">after5</Link>
         </nav>
       </header>

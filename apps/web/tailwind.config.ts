@@ -31,6 +31,8 @@ const config: Config = {
         // shell.pink is a soft tint for occasional washes only.
         shell: { base: '#FAF4EC', accent: '#E0218A', ink: '#3D0F2E', pink: '#FFE5F1' },
         profile: { base: '#FAFAF8', ink: '#141414', tag: '#E5E5E0' },
+        // Feed swipe gesture tints: green = interested (right), dark red-black = pass (left).
+        swipe: { nope: '#3A0410' },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

@@ -38,6 +38,7 @@ export function WelcomeAgeGate() {
         transition={{ type: 'spring', stiffness: 360, damping: 30 }}
       >
         <Polaroid
+          tone="dating"
           src="/gallery/dinner-laughing.jpg"
           alt="two people laughing across a candlelit dinner table"
           size="sm"
@@ -45,6 +46,7 @@ export function WelcomeAgeGate() {
           className="-mr-3 translate-y-2"
         />
         <Polaroid
+          tone="dating"
           src="/gallery/couple-dance-sunset.jpg"
           alt="a couple dancing on a hillside against an orange sunset"
           label="real nights"
@@ -52,6 +54,7 @@ export function WelcomeAgeGate() {
           rotation={2}
         />
         <Polaroid
+          tone="dating"
           src="/gallery/bar-couple-cozy.jpg"
           alt="a couple leaning close at a warm candlelit bar"
           size="sm"

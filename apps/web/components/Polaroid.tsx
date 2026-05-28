@@ -41,6 +41,13 @@ interface PolaroidProps {
   rotation?: number;
   href?: string;
   className?: string;
+  /**
+   * Brand theming for the caption + broken-image fallback. 'planner' (default)
+   * keeps the warm-cream/terracotta + Fraunces look; 'dating' uses the
+   * warm-filmic dating tokens (Fredoka caption, pink/cream fallback) so
+   * polaroids on dating surfaces don't flash the planner brand.
+   */
+  tone?: 'planner' | 'dating';
 }
 
 /** Local fallback image used when the primary src fails to load. */
@@ -54,9 +61,11 @@ export function Polaroid({
   rotation,
   href,
   className,
+  tone = 'planner',
 }: PolaroidProps) {
   const tilt = rotation ?? tiltFor(label ?? src);
   const s = SIZES[size];
+  const dating = tone === 'dating';
 
   const [imgError, setImgError] = useState(false);
 
@@ -90,10 +99,24 @@ export function Polaroid({
       <div className={cn('relative overflow-hidden bg-surface', s.img)}>
         {showGradient ? (
           /* Warm on-brand gradient with the date title overlaid so the
-             polaroid looks intentional rather than broken. Colours pulled
-             from the palette: accent #C2552B, surface #F4ECDD. */
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#F4ECDD] via-[#E8CFBA] to-[#C2552B]/40 p-2">
-            <span className="line-clamp-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-text/50">
+             polaroid looks intentional rather than broken. Themed per `tone`
+             so dating surfaces fall back to pink/cream, not planner terracotta. */
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center bg-gradient-to-br p-2',
+              dating
+                ? 'from-shell-pink via-shell-pink to-shell-accent/30'
+                : 'from-[#F4ECDD] via-[#E8CFBA] to-[#C2552B]/40',
+            )}
+          >
+            <span
+              className={cn(
+                'line-clamp-2 text-center text-[11px] font-semibold',
+                dating
+                  ? 'font-heading lowercase text-shell-ink/50'
+                  : 'font-display uppercase tracking-[0.16em] text-text/50',
+              )}
+            >
               {label ?? alt}
             </span>
           </div>
@@ -111,7 +134,10 @@ export function Polaroid({
       {label && (
         <p
           className={cn(
-            'absolute bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap font-display font-medium tracking-[0.14em] text-text/70',
+            'absolute bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap',
+            dating
+              ? 'font-body font-semibold lowercase text-shell-ink/65'
+              : 'font-display font-medium tracking-[0.14em] text-text/70',
             s.label,
           )}
         >
