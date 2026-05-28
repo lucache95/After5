@@ -23,11 +23,9 @@ BEGIN
   t2 := open_chat_thread(off1);
   IF t1 <> t2 THEN RAISE EXCEPTION 'open_chat_thread not idempotent: % <> %', t1, t2; END IF;
 
-  -- chat_lock_ready: false until both_ready; null-safe for a missing thread
-  IF chat_lock_ready(t1) THEN RAISE EXCEPTION 'lock gate should be closed before rapport'; END IF;
-  IF chat_lock_ready(gen_random_uuid()) THEN RAISE EXCEPTION 'lock gate should be false for missing thread'; END IF;
-  update chat_threads set both_ready = true where id = t1;
-  IF NOT chat_lock_ready(t1) THEN RAISE EXCEPTION 'lock gate should open once both_ready'; END IF;
+  -- chat_lock_ready (Z.1): true while state='open', false otherwise; null-safe for missing thread
+  IF NOT chat_lock_ready(t1) THEN RAISE EXCEPTION 'Z.1: lock gate should be open immediately after open_chat_thread (state=open)'; END IF;
+  IF chat_lock_ready(gen_random_uuid()) THEN RAISE EXCEPTION 'Z.1: lock gate should be false for missing thread'; END IF;
 
   -- promote on accept
   insert into locks (date_instance_id, creator_id, matched_user_id, status)
@@ -35,6 +33,9 @@ BEGIN
   PERFORM promote_chat_thread_to_lock(off1, lk);
   SELECT state INTO st FROM chat_threads WHERE id = t1;
   IF st <> 'promoted' THEN RAISE EXCEPTION 'promote did not set state=promoted, got %', st; END IF;
+
+  -- Z.1: after promote, state='promoted' → chat_lock_ready returns false
+  IF chat_lock_ready(t1) THEN RAISE EXCEPTION 'Z.1: lock gate should close after promote (state=promoted)'; END IF;
 
   -- promote on a missing offer must fail loud
   BEGIN
@@ -66,6 +67,10 @@ BEGIN
   SELECT state, revoked_at INTO st, rv FROM chat_threads WHERE id = t1;
   IF st <> 'closed' THEN RAISE EXCEPTION 'open thread should close, got %', st; END IF;
   IF rv IS NULL THEN RAISE EXCEPTION 'close should stamp revoked_at'; END IF;
+
+  -- Z.1: after close, state='closed' → chat_lock_ready returns false
+  IF chat_lock_ready(t1) THEN RAISE EXCEPTION 'Z.1: lock gate should be false after close (state=closed)'; END IF;
+
   RAISE NOTICE 'chat-core close-open OK';
   ROLLBACK;
 END $$;
