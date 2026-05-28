@@ -179,6 +179,7 @@ export type Database = {
           legal_hold: boolean
           lock_id: string | null
           offer_id: string
+          promoted_at: string | null
           revoked_at: string | null
           state: string
           updated_at: string
@@ -190,6 +191,7 @@ export type Database = {
           legal_hold?: boolean
           lock_id?: string | null
           offer_id: string
+          promoted_at?: string | null
           revoked_at?: string | null
           state?: string
           updated_at?: string
@@ -201,6 +203,7 @@ export type Database = {
           legal_hold?: boolean
           lock_id?: string | null
           offer_id?: string
+          promoted_at?: string | null
           revoked_at?: string | null
           state?: string
           updated_at?: string
@@ -1996,8 +1999,10 @@ export type Database = {
           creator_id: string
           date_instance_id: string
           id: string
+          offer_frozen_rank: number | null
           rank: number | null
           status: Database["public"]["Enums"]["queue_status"]
+          swiper_disclosed_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2006,8 +2011,10 @@ export type Database = {
           creator_id: string
           date_instance_id: string
           id?: string
+          offer_frozen_rank?: number | null
           rank?: number | null
           status?: Database["public"]["Enums"]["queue_status"]
+          swiper_disclosed_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2016,8 +2023,10 @@ export type Database = {
           creator_id?: string
           date_instance_id?: string
           id?: string
+          offer_frozen_rank?: number | null
           rank?: number | null
           status?: Database["public"]["Enums"]["queue_status"]
+          swiper_disclosed_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2082,6 +2091,33 @@ export type Database = {
           identifier?: string
           request_count?: number
           window_start?: string
+        }
+        Relationships: []
+      }
+      reciprocal_pairs: {
+        Row: {
+          created_at: string
+          high_user: string
+          id: string
+          low_user: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          high_user: string
+          id?: string
+          low_user: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          high_user?: string
+          id?: string
+          low_user?: string
+          resolved_at?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -2317,6 +2353,21 @@ export type Database = {
           },
         ]
       }
+      temp_race: {
+        Row: {
+          k: string
+          v: string | null
+        }
+        Insert: {
+          k: string
+          v?: string | null
+        }
+        Update: {
+          k?: string
+          v?: string | null
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           created_at: string
@@ -2356,6 +2407,30 @@ export type Database = {
           slots?: Json
           suitable_for?: Database["public"]["Enums"]["occasion"][]
           vibe?: string[]
+        }
+        Relationships: []
+      }
+      transition_idempotency: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          idem_key: string
+          result: Json
+        }
+        Insert: {
+          action: string
+          actor: string
+          created_at?: string
+          idem_key: string
+          result: Json
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          idem_key?: string
+          result?: Json
         }
         Relationships: []
       }
@@ -2600,6 +2675,7 @@ export type Database = {
         Args: { ""?: string; att_name: string; tbl: unknown }
         Returns: string
       }
+      _seed_swipes_and_hint: { Args: { p_count: number }; Returns: string }
       _st_3dintersects: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -2709,6 +2785,11 @@ export type Database = {
             }
             Returns: string
           }
+      admin_force_cancel_lock: {
+        Args: { p_lock: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_force_expire_offer: { Args: { p_offer: string }; Returns: number }
       advance_onboarding_step: { Args: { p_to_step: string }; Returns: string }
       browse_feed_for_viewer: {
         Args: {
@@ -2929,6 +3010,97 @@ export type Database = {
         Args: { p_error?: string; p_id: string }
         Returns: undefined
       }
+      match_accept_offer: {
+        Args: { p_actor: string; p_idem_key: string; p_offer: string }
+        Returns: string
+      }
+      match_auto_roll: { Args: { p_instance: string }; Returns: string }
+      match_autoclose_creator_conflicts: {
+        Args: { p_creator: string; p_keep_instance: string; p_rng: unknown }
+        Returns: number
+      }
+      match_autowithdraw_user_conflicts: {
+        Args: { p_keep_instance: string; p_rng: unknown; p_user: string }
+        Returns: number
+      }
+      match_cancel_lock: {
+        Args: {
+          p_actor: string
+          p_idem_key: string
+          p_lock: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      match_demand_hint: { Args: { p_instance: string }; Returns: string }
+      match_expire_offer: { Args: { p_offer: string }; Returns: number }
+      match_idem_lookup: {
+        Args: { p_action: string; p_actor: string; p_key: string }
+        Returns: Json
+      }
+      match_idem_store: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_key: string
+          p_result: Json
+        }
+        Returns: undefined
+      }
+      match_ingest_interest: { Args: { p_instance: string }; Returns: number }
+      match_instance_lock_key: { Args: { inst: string }; Returns: number }
+      match_make_offer: {
+        Args: {
+          p_actor: string
+          p_candidate: string
+          p_idem_key: string
+          p_instance: string
+        }
+        Returns: string
+      }
+      match_next_standby: { Args: { p_instance: string }; Returns: string }
+      match_pair_lock_key: { Args: { a: string; b: string }; Returns: number }
+      match_pass_offer: {
+        Args: { p_actor: string; p_offer: string }
+        Returns: number
+      }
+      match_resolve_offer_negative: {
+        Args: {
+          p_offer: string
+          p_terminal: Database["public"]["Enums"]["offer_status"]
+        }
+        Returns: number
+      }
+      match_resolve_reciprocal: {
+        Args: {
+          p_actor: string
+          p_chosen_instance: string
+          p_idem_key: string
+          p_pair_id: string
+        }
+        Returns: string
+      }
+      match_reveal_allowed: {
+        Args: { p_instance: string; p_viewer: string }
+        Returns: boolean
+      }
+      match_reveal_allowed_pair: {
+        Args: { p_target: string; p_viewer: string }
+        Returns: boolean
+      }
+      match_shortlist: {
+        Args: {
+          p_actor: string
+          p_candidate: string
+          p_instance: string
+          p_rank: number
+        }
+        Returns: undefined
+      }
+      match_withdraw: {
+        Args: { p_actor: string; p_instance: string }
+        Returns: undefined
+      }
       mk_instance: {
         Args: { p_creator: string; p_itin: string; p_starts: string }
         Returns: string
@@ -2996,6 +3168,10 @@ export type Database = {
       promote_chat_thread_to_lock: {
         Args: { p_lock: string; p_offer: string }
         Returns: undefined
+      }
+      prune_idempotency_ledger: {
+        Args: { p_older_than?: string }
+        Returns: number
       }
       raise_admin_alert: {
         Args: { p_kind: string; p_payload?: Json }
@@ -3632,6 +3808,9 @@ export type Database = {
         | "safety"
         | "misconduct"
         | "other"
+        | "mutual"
+        | "no_show"
+        | "creator_pre_lock"
       date_match_status:
         | "none"
         | "seeking"
@@ -3681,6 +3860,11 @@ export type Database = {
         | "verification_failed"
         | "appeal_resolved"
         | "offer_withdrawn"
+        | "reciprocal_detected"
+        | "offer_passed"
+        | "offer_expired"
+        | "lock_cancelled_frozen"
+        | "lock_cancelled_rolled"
       occasion: "date" | "solo" | "friends"
       offer_status: "active" | "accepted" | "passed" | "expired"
       payment_preference: "i_pay" | "they_pay" | "split"
@@ -3886,6 +4070,9 @@ export const Constants = {
         "safety",
         "misconduct",
         "other",
+        "mutual",
+        "no_show",
+        "creator_pre_lock",
       ],
       date_match_status: [
         "none",
@@ -3939,6 +4126,11 @@ export const Constants = {
         "verification_failed",
         "appeal_resolved",
         "offer_withdrawn",
+        "reciprocal_detected",
+        "offer_passed",
+        "offer_expired",
+        "lock_cancelled_frozen",
+        "lock_cancelled_rolled",
       ],
       occasion: ["date", "solo", "friends"],
       offer_status: ["active", "accepted", "passed", "expired"],
