@@ -72,6 +72,43 @@ describe('BasicsStep', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/photo'));
   });
 
+  it('tag chips: comma commits, X removes, backspace at empty removes last', async () => {
+    upsertProfile.mockResolvedValue(undefined);
+    advanceOnboarding.mockResolvedValue('photos');
+    render(<BasicsStep userId="u1" initial={{ ...initial, first_name: 'Lee', bio: 'hi' }} />);
+    const tagInput = screen.getByLabelText(/vibe tags/i);
+    // Comma commits a chip
+    await userEvent.type(tagInput, 'trails,');
+    expect(screen.getByLabelText(/remove trails/i)).toBeInTheDocument();
+    // Second comma commits a second chip
+    await userEvent.type(tagInput, 'live music,');
+    expect(screen.getByLabelText(/remove live music/i)).toBeInTheDocument();
+    // X removes a chip
+    await userEvent.click(screen.getByLabelText(/remove trails/i));
+    expect(screen.queryByLabelText(/remove trails/i)).not.toBeInTheDocument();
+    // Backspace at empty input removes the last remaining chip
+    await userEvent.type(tagInput, '{Backspace}');
+    expect(screen.queryByLabelText(/remove live music/i)).not.toBeInTheDocument();
+    // Now add one tag and submit — it should reach upsertProfile with that tag
+    await userEvent.type(tagInput, 'patio,');
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(upsertProfile).toHaveBeenCalledWith(
+      fakeClient, 'u1', expect.objectContaining({ vibe_tags: ['patio'] }),
+    ));
+  });
+
+  it('tag chips: in-flight (uncommitted) typing is committed on submit', async () => {
+    upsertProfile.mockResolvedValue(undefined);
+    advanceOnboarding.mockResolvedValue('photos');
+    render(<BasicsStep userId="u1" initial={{ ...initial, first_name: 'Lee', bio: 'hi' }} />);
+    // Type a tag but DON'T add the comma — the input value is still "coffee"
+    await userEvent.type(screen.getByLabelText(/vibe tags/i), 'coffee');
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(upsertProfile).toHaveBeenCalledWith(
+      fakeClient, 'u1', expect.objectContaining({ vibe_tags: ['coffee'] }),
+    ));
+  });
+
   it('retry: a failed save shows retry that re-saves and advances', async () => {
     upsertProfile.mockRejectedValueOnce(new Error('save failed'));
     render(<BasicsStep userId="u1" initial={{ ...initial, first_name: 'Lee' }} />);
