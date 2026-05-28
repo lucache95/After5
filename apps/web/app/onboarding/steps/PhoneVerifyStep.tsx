@@ -56,48 +56,57 @@ export function PhoneVerifyStep() {
     }
   }
 
+  const inputBase = cn(
+    'block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] text-shell-ink',
+    'placeholder:text-shell-ink/35 focus:outline-none focus:ring-2 focus:ring-shell-accent/60',
+  );
+  const ctaBase = cn(
+    'flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+    'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+  );
+
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-text">Verify your phone</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-secondary">We verify every number so members can trust who they meet. We text a 6-digit code.</p>
+      <h1 className="font-heading text-3xl lowercase text-shell-ink">verify your number</h1>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70">every number gets checked, so nobody&apos;s a ghost. we&apos;ll text you a 6-digit code.</p>
 
       <div className="mt-7 space-y-4">
         <div>
-          <label htmlFor="phone" className="mb-1.5 block text-sm font-medium text-text">Phone</label>
+          <label htmlFor="phone" className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink">phone</label>
           <input id="phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 250 555 1234"
             disabled={stage === 'enter_code'}
-            className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-[3px] focus:ring-accent/15 disabled:opacity-60" />
+            className={cn(inputBase, 'disabled:opacity-60')} />
         </div>
         {stage === 'enter_code' && (
           <div>
-            <label htmlFor="code" className="mb-1.5 block text-sm font-medium text-text">6-digit code</label>
+            <label htmlFor="code" className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink">6-digit code</label>
             <input id="code" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)}
-              className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] tracking-[0.4em] [font-variant-numeric:tabular-nums] outline-none focus:border-accent" />
+              className={cn(inputBase, 'tracking-[0.4em] [font-variant-numeric:tabular-nums]')} />
           </div>
         )}
       </div>
 
       {phase === 'error' && (
-        <div role="alert" className="mt-5 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">{errorMsg}</div>
+        <div role="alert" className="mt-5 rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
       )}
 
       <div className="mt-7 flex items-center gap-4">
         {stage === 'enter_phone' ? (
-          <button type="button" onClick={sendCode} disabled={!phone || phase === 'sending'}
-            className={cn('inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
-              !phone || phase === 'sending' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}>
-            {phase === 'sending' ? 'Sending…' : 'Send code'}
+          <button type="button" onClick={sendCode} disabled={!phone || phase === 'sending'} aria-busy={phase === 'sending'}
+            className={cn(ctaBase,
+              !phone || phase === 'sending' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
+            {phase === 'sending' ? 'sending…' : 'text me a code'}
           </button>
         ) : (
           <>
-            <button type="button" onClick={verify} disabled={code.length < 6 || phase === 'verifying'}
-              className={cn('inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
-                code.length < 6 || phase === 'verifying' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}>
-              {phase === 'verifying' ? 'Verifying…' : 'Verify'}
+            <button type="button" onClick={verify} disabled={code.length < 6 || phase === 'verifying'} aria-busy={phase === 'verifying'}
+              className={cn(ctaBase,
+                code.length < 6 || phase === 'verifying' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
+              {phase === 'verifying' ? 'checking…' : "i'm in"}
             </button>
             <button type="button" onClick={() => { setStage('enter_phone'); setCode(''); setPhase('idle'); }}
-              className="text-sm font-medium text-secondary underline decoration-border underline-offset-4 hover:text-text">
-              Use a different number
+              className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+              use a different number
             </button>
           </>
         )}

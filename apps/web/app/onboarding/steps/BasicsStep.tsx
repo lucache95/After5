@@ -70,47 +70,54 @@ export function BasicsStep({ userId, initial }: { userId: string; initial: Basic
     }
   }
 
+  const inputClass = cn(
+    'block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] text-shell-ink',
+    'placeholder:text-shell-ink/35 focus:outline-none focus:ring-2 focus:ring-shell-accent/60',
+  );
+
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-text">The basics</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-secondary">Add your first name, a short bio, and a few tags.</p>
+      <h1 className="font-heading text-3xl lowercase text-shell-ink">the basics</h1>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70">name, a line about you, a few tags. that&apos;s it for now.</p>
 
       <div className="mt-7 space-y-5">
         <div>
-          <label htmlFor="first_name" className="mb-1.5 block text-sm font-medium text-text">First name</label>
+          <label htmlFor="first_name" className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink">first name</label>
           <input
             id="first_name" value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={40}
-            className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-[3px] focus:ring-accent/15"
+            className={inputClass}
           />
         </div>
         <div>
-          <label htmlFor="bio" className="mb-1.5 block text-sm font-medium text-text">Short bio</label>
+          <label htmlFor="bio" className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink">short bio</label>
           <textarea
             id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={4}
-            placeholder="Grew up on the lake, still finding new trails. Pitch me a patio at sunset and I'm in."
-            className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] outline-none placeholder:text-muted focus:border-accent focus:ring-[3px] focus:ring-accent/15"
+            placeholder="grew up on the lake, still finding new trails. pitch me a patio at sunset and i'm in."
+            className={inputClass}
           />
         </div>
         <div>
-          <label htmlFor="vibe_tags" className="mb-1.5 block text-sm font-medium text-text">Vibe tags <span className="text-muted">(comma-separated)</span></label>
+          <label htmlFor="vibe_tags" className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink">vibe tags <span className="font-normal text-shell-ink/45">(comma-separated)</span></label>
           <input
             id="vibe_tags" value={tagsRaw} onChange={(e) => setTagsRaw(e.target.value)}
             placeholder="trails, live music, third-wave coffee"
-            className="block w-full rounded-card border border-border bg-white px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-[3px] focus:ring-accent/15"
+            className={inputClass}
           />
         </div>
       </div>
 
       {phase === 'error' && (
-        <div role="alert" className="mt-5 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">{errorMsg}</div>
+        <div role="alert" className="mt-5 rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
       )}
 
       <button
-        type="button" onClick={handleContinue} disabled={!canContinue}
-        className={cn('mt-7 inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
-          !canContinue ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}
+        type="button" onClick={handleContinue} disabled={!canContinue} aria-busy={phase === 'saving'}
+        className={cn(
+          'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+          !canContinue ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}
       >
-        {phase === 'saving' ? 'Saving…' : phase === 'error' ? 'Try again' : 'Continue'}
+        {phase === 'saving' ? 'saving…' : phase === 'error' ? 'try again' : 'next'}
       </button>
     </div>
   );

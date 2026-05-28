@@ -25,7 +25,7 @@ describe('PreferencesStep', () => {
     savePreferences.mockResolvedValue(undefined);
     advanceOnboarding.mockResolvedValue('phone_verify');
     render(<PreferencesStep userId="u1" initial={initial} />);
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
       expect.anything(), 'u1', expect.objectContaining({ gender: 'woman', age_min: 25, age_max: 40 }),
     ));
@@ -35,7 +35,7 @@ describe('PreferencesStep', () => {
 
   it('error: age_max below age_min is rejected before any save', async () => {
     render(<PreferencesStep userId="u1" initial={{ ...initial, age_min: 40, age_max: 30 }} />);
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(savePreferences).not.toHaveBeenCalled();
   });
@@ -43,7 +43,7 @@ describe('PreferencesStep', () => {
   it('retry: a failed save shows retry that re-saves and advances', async () => {
     savePreferences.mockRejectedValueOnce(new Error('save failed'));
     render(<PreferencesStep userId="u1" initial={initial} />);
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     savePreferences.mockResolvedValueOnce(undefined);
     advanceOnboarding.mockResolvedValueOnce('phone_verify');

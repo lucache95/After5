@@ -20,6 +20,8 @@ const nextConfig = {
       // and email assets (welcome polaroid PNGs). Without this, next/image
       // returns a broken-image placeholder.
       { protocol: 'https', hostname: 'ufufmcpnysvwtutpbian.supabase.co' },
+      // Unsplash — placeholder/seed imagery for local QA + sample content.
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
 };

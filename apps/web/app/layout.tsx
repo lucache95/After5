@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { Inter } from 'next/font/google';
+import { Inter, Fraunces, Caprasimo, Fredoka } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { PostHogProvider } from './PostHogProvider';
 import { EarlyAccessBanner } from '@/components/EarlyAccessBanner';
 import './globals.css';
@@ -12,11 +13,30 @@ const inter = Inter({
   weight: ['400', '500', '600'],
 });
 
-const interDisplay = Inter({
+// Fraunces: serif display font with optical-size axis.
+// variable maps to --font-inter-display so tailwind's fontFamily.display
+// resolves to Fraunces without changing the tailwind config token name.
+const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-inter-display',
   display: 'swap',
-  weight: ['600', '700'],
+  weight: ['400', '500', '600', '700'],
+});
+
+// Caprasimo: dating-vertical Barbiecore brand display font (--font-display).
+const caprasimo = Caprasimo({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  weight: ['400'],
+});
+
+// Fredoka: dating-vertical Barbiecore brand body font (--font-body).
+const fredoka = Fredoka({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+  weight: ['300', '400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -47,8 +67,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${interDisplay.variable}`}>
+    <html lang="en" className={`${inter.variable} ${fraunces.variable} ${caprasimo.variable} ${fredoka.variable}`}>
       <body>
+        <Toaster richColors position="top-center" />
         <Suspense fallback={null}>
           <EarlyAccessBanner />
           {/* Relative wrapper scopes absolute-positioned headers (e.g. the

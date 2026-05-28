@@ -34,12 +34,12 @@ export function IdentityVerifyStep() {
 
   return (
     <div>
-      <div className="mb-5 inline-flex items-center gap-2 rounded-pill bg-accent-soft px-3 py-1.5 text-[11px] font-semibold tracking-wide text-accent">
-        <ShieldCheck className="h-3.5 w-3.5" /> One last step
+      <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-shell-pink px-3 py-1.5 font-body text-[11px] font-semibold lowercase tracking-wide text-shell-accent">
+        <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> one last thing
       </div>
-      <h1 className="font-display text-2xl font-bold text-text">Verify it&apos;s really you</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-secondary">
-        Persona runs a quick government-ID and selfie check. This keeps After5 real and confirms you&apos;re 18+.
+      <h1 className="font-heading text-3xl lowercase text-shell-ink">prove it&apos;s really you</h1>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70">
+        quick id + selfie check, runs through persona. it&apos;s how we keep after5 real and confirm you&apos;re 18+.
       </p>
 
       {stage === 'capturing' && inquiry ? (
@@ -55,12 +55,14 @@ export function IdentityVerifyStep() {
       ) : (
         <>
           {stage === 'error' && (
-            <div role="alert" className="mt-5 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">{errorMsg}</div>
+            <div role="alert" className="mt-5 rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
           )}
-          <button type="button" onClick={start} disabled={stage === 'starting'}
-            className={cn('mt-7 inline-flex items-center justify-center rounded-pill px-7 py-3 text-[15px] font-medium transition-all',
-              stage === 'starting' ? 'cursor-not-allowed bg-border text-muted' : 'bg-text text-background hover:-translate-y-0.5')}>
-            {stage === 'starting' ? 'Starting…' : stage === 'error' ? 'Try again' : 'Start verification'}
+          <button type="button" onClick={start} disabled={stage === 'starting'} aria-busy={stage === 'starting'}
+            className={cn(
+              'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+              stage === 'starting' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
+            {stage === 'starting' ? 'starting…' : stage === 'error' ? 'try again' : "let's do it"}
           </button>
         </>
       )}

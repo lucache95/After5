@@ -27,7 +27,7 @@ beforeEach(() => {
 describe('PhoneVerifyStep', () => {
   it('empty: send-code disabled until a phone is entered', () => {
     render(<PhoneVerifyStep />);
-    expect(screen.getByRole('button', { name: /send code/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /text me a code/i })).toBeDisabled();
   });
 
   it('success: attach phone (updateUser) → verify (phone_change) → confirmPhone → advance', async () => {
@@ -37,10 +37,10 @@ describe('PhoneVerifyStep', () => {
     advanceOnboarding.mockResolvedValue('selfie_verify');
     render(<PhoneVerifyStep />);
     await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
-    await userEvent.click(screen.getByRole('button', { name: /send code/i }));
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
     await waitFor(() => expect(updateUser).toHaveBeenCalledWith({ phone: '+12505551234' }));
     await userEvent.type(screen.getByLabelText(/code/i), '123456');
-    await userEvent.click(screen.getByRole('button', { name: /verify/i }));
+    await userEvent.click(screen.getByRole('button', { name: /i'm in/i }));
     await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith({ phone: '+12505551234', token: '123456', type: 'phone_change' }));
     await waitFor(() => expect(confirmPhone).toHaveBeenCalledWith(fakeClient));
     await waitFor(() => expect(advanceOnboarding).toHaveBeenCalledWith(fakeClient, 'selfie_verify'));
@@ -53,9 +53,9 @@ describe('PhoneVerifyStep', () => {
     verifyOtp.mockResolvedValue({ data: { session: {}, user: { id: 'someone_else' } }, error: null });
     render(<PhoneVerifyStep />);
     await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
-    await userEvent.click(screen.getByRole('button', { name: /send code/i }));
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
     await userEvent.type(screen.getByLabelText(/code/i), '123456');
-    await userEvent.click(screen.getByRole('button', { name: /verify/i }));
+    await userEvent.click(screen.getByRole('button', { name: /i'm in/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(confirmPhone).not.toHaveBeenCalled();
     expect(advanceOnboarding).not.toHaveBeenCalled();
@@ -67,9 +67,9 @@ describe('PhoneVerifyStep', () => {
     verifyOtp.mockResolvedValue({ data: { session: null }, error: { message: 'Token has expired or is invalid' } });
     render(<PhoneVerifyStep />);
     await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
-    await userEvent.click(screen.getByRole('button', { name: /send code/i }));
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
     await userEvent.type(screen.getByLabelText(/code/i), '000000');
-    await userEvent.click(screen.getByRole('button', { name: /verify/i }));
+    await userEvent.click(screen.getByRole('button', { name: /i'm in/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/expired|invalid/i));
     expect(advanceOnboarding).not.toHaveBeenCalled();
   });
@@ -78,7 +78,7 @@ describe('PhoneVerifyStep', () => {
     updateUser.mockResolvedValue({ error: { message: 'rate limit exceeded' } });
     render(<PhoneVerifyStep />);
     await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
-    await userEvent.click(screen.getByRole('button', { name: /send code/i }));
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/wait|moment|too many/i));
   });
 });

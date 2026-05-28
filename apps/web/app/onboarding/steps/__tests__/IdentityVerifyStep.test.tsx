@@ -25,21 +25,21 @@ beforeEach(() => { startVerification.mockReset(); lastProps = {}; });
 describe('IdentityVerifyStep', () => {
   it('empty: shows the start CTA before any inquiry', () => {
     render(<IdentityVerifyStep />);
-    expect(screen.getByRole('button', { name: /start verification/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /let's do it/i })).toBeInTheDocument();
     expect(screen.queryByTestId('persona-embed')).not.toBeInTheDocument();
   });
 
   it('loading→success: startVerification mounts the embed with inquiryId+sessionToken', async () => {
     startVerification.mockResolvedValue({ inquiryId: 'inq_1', sessionToken: 'sess_1' });
     render(<IdentityVerifyStep />);
-    await userEvent.click(screen.getByRole('button', { name: /start verification/i }));
+    await userEvent.click(screen.getByRole('button', { name: /let's do it/i }));
     await waitFor(() => expect(screen.getByTestId('persona-embed')).toBeInTheDocument());
   });
 
   it('error + retry: a failed startVerification shows an error and retries', async () => {
     startVerification.mockRejectedValueOnce(new Error('persona_error'));
     render(<IdentityVerifyStep />);
-    await userEvent.click(screen.getByRole('button', { name: /start verification/i }));
+    await userEvent.click(screen.getByRole('button', { name: /let's do it/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     startVerification.mockResolvedValueOnce({ inquiryId: 'inq_2', sessionToken: 'sess_2' });
     await userEvent.click(screen.getByRole('button', { name: /try again/i }));
@@ -49,7 +49,7 @@ describe('IdentityVerifyStep', () => {
   it('complete: onComplete reveals the VerificationStatus screen', async () => {
     startVerification.mockResolvedValue({ inquiryId: 'inq_1', sessionToken: 'sess_1' });
     render(<IdentityVerifyStep />);
-    await userEvent.click(screen.getByRole('button', { name: /start verification/i }));
+    await userEvent.click(screen.getByRole('button', { name: /let's do it/i }));
     await waitFor(() => expect(lastProps.onComplete).toBeTypeOf('function'));
     lastProps.onComplete?.();
     await waitFor(() => expect(screen.getByTestId('verification-status')).toBeInTheDocument());
@@ -58,9 +58,9 @@ describe('IdentityVerifyStep', () => {
   it('cancel: onCancel returns to the start CTA', async () => {
     startVerification.mockResolvedValue({ inquiryId: 'inq_1', sessionToken: 'sess_1' });
     render(<IdentityVerifyStep />);
-    await userEvent.click(screen.getByRole('button', { name: /start verification/i }));
+    await userEvent.click(screen.getByRole('button', { name: /let's do it/i }));
     await waitFor(() => expect(lastProps.onCancel).toBeTypeOf('function'));
     lastProps.onCancel?.();
-    await waitFor(() => expect(screen.getByRole('button', { name: /start verification/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: /let's do it/i })).toBeInTheDocument());
   });
 });

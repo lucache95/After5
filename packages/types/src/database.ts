@@ -271,7 +271,9 @@ export type Database = {
           creator_id: string
           duration_min: number
           id: string
+          is_seed: boolean
           itinerary_id: string
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
           starts_at: string
           status: Database["public"]["Enums"]["date_match_status"]
           time_range: unknown
@@ -284,7 +286,9 @@ export type Database = {
           creator_id: string
           duration_min?: number
           id?: string
+          is_seed?: boolean
           itinerary_id: string
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           starts_at: string
           status?: Database["public"]["Enums"]["date_match_status"]
           time_range?: unknown
@@ -297,7 +301,9 @@ export type Database = {
           creator_id?: string
           duration_min?: number
           id?: string
+          is_seed?: boolean
           itinerary_id?: string
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           starts_at?: string
           status?: Database["public"]["Enums"]["date_match_status"]
           time_range?: unknown
@@ -2704,6 +2710,28 @@ export type Database = {
             Returns: string
           }
       advance_onboarding_step: { Args: { p_to_step: string }; Returns: string }
+      browse_feed_for_viewer: {
+        Args: {
+          p_after_id?: string
+          p_after_starts?: string
+          p_limit?: number
+          p_point?: unknown
+          p_viewer?: string
+        }
+        Returns: {
+          city_id: string
+          cover_image_url: string
+          date_instance_id: string
+          distance_m: number
+          is_seed: boolean
+          pay_setting: string
+          time_window_start: string
+          title: string
+          venue_neighborhood: string
+          vibe_tags: string[]
+          why_note: string
+        }[]
+      }
       can_enter_lock_flow: { Args: { p_user: string }; Returns: boolean }
       cancel_jobs: {
         Args: {
@@ -2901,6 +2929,12 @@ export type Database = {
         Args: { p_error?: string; p_id: string }
         Returns: undefined
       }
+      mk_instance: {
+        Args: { p_creator: string; p_itin: string; p_starts: string }
+        Returns: string
+      }
+      mk_itinerary: { Args: { p_user: string }; Returns: string }
+      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -2913,6 +2947,15 @@ export type Database = {
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
+      post_night: {
+        Args: {
+          p_duration_min?: number
+          p_itinerary: string
+          p_starts_at: string
+          p_venue?: string
+        }
+        Returns: string
+      }
       postgis_constraint_dims: {
         Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: number
@@ -2968,6 +3011,13 @@ export type Database = {
       }
       recompute_profile_verification: {
         Args: { p_user: string }
+        Returns: undefined
+      }
+      record_swipe: {
+        Args: {
+          p_direction: Database["public"]["Enums"]["swipe_direction"]
+          p_instance: string
+        }
         Returns: undefined
       }
       register_device: {
@@ -3606,6 +3656,7 @@ export type Database = {
         | "analytics_relay"
         | "notify"
       lock_status: "active" | "completed" | "cancelled" | "no_show"
+      moderation_status: "pending" | "approved" | "rejected"
       modifier_difficulty: "tame" | "spicy" | "chaos"
       notification_channel:
         | "push_ios"
@@ -3862,6 +3913,7 @@ export const Constants = {
         "notify",
       ],
       lock_status: ["active", "completed", "cancelled", "no_show"],
+      moderation_status: ["pending", "approved", "rejected"],
       modifier_difficulty: ["tame", "spicy", "chaos"],
       notification_channel: [
         "push_ios",

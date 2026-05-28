@@ -7,7 +7,8 @@ begin
   insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at)
   values (uid, '00000000-0000-0000-0000-000000000000','authenticated','authenticated',
           p_label||'_'||left(uid::text,8)||'@test.local', now(), now());
-  insert into profiles (id, first_name) values (uid, p_label);
+  insert into profiles (id, first_name) values (uid, p_label)
+  on conflict (id) do update set first_name = p_label;
   return uid;
 end $$;
 

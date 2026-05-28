@@ -58,8 +58,8 @@ export function PersonaEmbed({
         strategy="afterInteractive"
         onLoad={launch}
       />
-      <div aria-live="polite" className="rounded-card border border-border bg-white/60 px-4 py-6 text-center text-sm text-secondary">
-        Opening secure verification…
+      <div aria-live="polite" className="rounded-2xl border border-shell-ink/15 bg-white/60 px-4 py-6 text-center font-body text-sm text-shell-ink/70">
+        opening secure verification…
       </div>
     </>
   );

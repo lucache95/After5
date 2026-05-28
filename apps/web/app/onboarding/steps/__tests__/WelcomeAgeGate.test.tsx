@@ -17,16 +17,16 @@ import { WelcomeAgeGate } from '../WelcomeAgeGate';
 beforeEach(() => { push.mockReset(); advanceOnboarding.mockReset(); });
 
 describe('WelcomeAgeGate', () => {
-  it('disables continue until 18+ is confirmed (empty/guard state)', () => {
+  it('disables the CTA until 18+ is confirmed (empty/guard state)', () => {
     render(<WelcomeAgeGate />);
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /let's go/i })).toBeDisabled();
   });
 
   it('success: confirming 18+ advances and routes to basics', async () => {
     advanceOnboarding.mockResolvedValue('basics');
     render(<WelcomeAgeGate />);
-    await userEvent.click(screen.getByLabelText(/i am 18 or older/i));
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByLabelText(/18 or older/i));
+    await userEvent.click(screen.getByRole('button', { name: /let's go/i }));
     await waitFor(() => expect(advanceOnboarding).toHaveBeenCalledWith(expect.anything(), 'basics'));
     expect(push).toHaveBeenCalledWith('/onboarding/basics');
   });
@@ -34,8 +34,8 @@ describe('WelcomeAgeGate', () => {
   it('error + retry: failed advance shows an error and a retry that re-calls', async () => {
     advanceOnboarding.mockRejectedValueOnce(new Error('network'));
     render(<WelcomeAgeGate />);
-    await userEvent.click(screen.getByLabelText(/i am 18 or older/i));
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByLabelText(/18 or older/i));
+    await userEvent.click(screen.getByRole('button', { name: /let's go/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/couldn.t|try again|network/i));
     advanceOnboarding.mockResolvedValueOnce('basics');
     await userEvent.click(screen.getByRole('button', { name: /try again/i }));
@@ -46,9 +46,9 @@ describe('WelcomeAgeGate', () => {
     let resolve!: (v: string) => void;
     advanceOnboarding.mockReturnValue(new Promise<string>((r) => { resolve = r; }));
     render(<WelcomeAgeGate />);
-    await userEvent.click(screen.getByLabelText(/i am 18 or older/i));
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
-    expect(screen.getByRole('button', { name: /continuing/i })).toBeDisabled();
+    await userEvent.click(screen.getByLabelText(/18 or older/i));
+    await userEvent.click(screen.getByRole('button', { name: /let's go/i }));
+    expect(screen.getByRole('button', { name: /one sec/i })).toBeDisabled();
     resolve('basics');
   });
 });

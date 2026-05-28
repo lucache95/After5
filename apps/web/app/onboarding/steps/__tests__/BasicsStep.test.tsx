@@ -36,13 +36,13 @@ describe('BasicsStep', () => {
 
   it('empty: renders a blank form with a disabled continue (no first name yet)', () => {
     render(<BasicsStep userId="u1" initial={initial} />);
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
   });
 
   it('error: shows a validation message when first name is blank on submit attempt', async () => {
     render(<BasicsStep userId="u1" initial={{ ...initial, bio: 'hi' }} />);
     await userEvent.type(screen.getByLabelText(/first name/i), ' ');
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(upsertProfile).not.toHaveBeenCalled();
   });
@@ -53,7 +53,7 @@ describe('BasicsStep', () => {
     render(<BasicsStep userId="u1" initial={initial} />);
     await userEvent.type(screen.getByLabelText(/first name/i), 'Lee');
     await userEvent.type(screen.getByLabelText(/bio/i), 'Coffee and trails.');
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(upsertProfile).toHaveBeenCalledWith(
       fakeClient, 'u1', expect.objectContaining({ first_name: 'Lee' }),
     ));
@@ -66,7 +66,7 @@ describe('BasicsStep', () => {
     advanceOnboarding.mockResolvedValue('photos');
     insertPrivate.mockResolvedValueOnce({ error: { code: '23505', message: 'duplicate key' } });
     render(<BasicsStep userId="u1" initial={{ ...initial, first_name: 'Lee', bio: 'hi' }} />);
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(updatePrivate).toHaveBeenCalled());
     expect(updateEq).toHaveBeenCalledWith('user_id', 'u1');
     await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/photo'));
@@ -75,7 +75,7 @@ describe('BasicsStep', () => {
   it('retry: a failed save shows retry that re-saves and advances', async () => {
     upsertProfile.mockRejectedValueOnce(new Error('save failed'));
     render(<BasicsStep userId="u1" initial={{ ...initial, first_name: 'Lee' }} />);
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     upsertProfile.mockResolvedValueOnce(undefined);
     advanceOnboarding.mockResolvedValueOnce('photos');
