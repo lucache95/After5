@@ -38,26 +38,32 @@ req "$HOST_JWT" 'match-shortlist' \
   "{\"instance\":\"${INST_ID}\",\"candidate\":\"${CAND_UID}\",\"rank\":1}"
 
 echo '=== STEP 4: host match-make-offer (capture offer_id) ==='
+# Edge function returns { ok: true, data: "<offer_uuid>" } — `data` is the bare UUID string,
+# not a nested object. Parse it as a string.
 OFFER_RESP=$(req "$HOST_JWT" 'match-make-offer' \
   "{\"instance\":\"${INST_ID}\",\"candidate\":\"${CAND_UID}\"}" \
   | sed '/^\[http=/d')
 echo "$OFFER_RESP"
-OFFER_ID=$(echo "$OFFER_RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["offer_id"])')
+OFFER_ID=$(echo "$OFFER_RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"])')
 echo "OFFER_ID=$OFFER_ID"
 
 echo '=== STEP 5: candidate match-accept-offer (capture lock_id) ==='
+# Same shape: data is the bare lock_id string, not a nested object.
 LOCK_RESP=$(req "$CAND_JWT" 'match-accept-offer' \
   "{\"offer\":\"${OFFER_ID}\"}" \
   | sed '/^\[http=/d')
 echo "$LOCK_RESP"
-LOCK_ID=$(echo "$LOCK_RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["lock_id"])')
+LOCK_ID=$(echo "$LOCK_RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"])')
 echo "LOCK_ID=$LOCK_ID"
 
-echo '=== STEP 6: both read profiles_select_revealed ==='
+echo '=== STEP 6: both read each other via profiles + profiles_select_revealed RLS policy ==='
+# profiles_select_revealed is an RLS POLICY ON public.profiles, not a separate view/table.
+# Query profiles directly with each user JWT; the policy gates row visibility via
+# match_reveal_allowed_pair, so a row is returned only when the reveal predicate fires.
 echo '--- HOST reads CANDIDATE ---'
-rest "$HOST_JWT" "profiles_select_revealed?id=eq.${CAND_UID}&select=id,first_name,clear_photo_url"
+rest "$HOST_JWT" "profiles?id=eq.${CAND_UID}&select=id,first_name,clear_photo_url"
 echo '--- CANDIDATE reads HOST ---'
-rest "$CAND_JWT" "profiles_select_revealed?id=eq.${HOST_UID}&select=id,first_name,clear_photo_url"
+rest "$CAND_JWT" "profiles?id=eq.${HOST_UID}&select=id,first_name,clear_photo_url"
 
 echo '=== STEP 7: both insert match_ratings ==='
 RATING_BODY_HOST="{\"lock_id\":\"${LOCK_ID}\",\"rater_id\":\"${HOST_UID}\",\"ratee_id\":\"${CAND_UID}\",\"showed_up\":true,\"on_time\":true,\"cancelled_with_notice\":false,\"unsafe_or_disrespectful\":false}"

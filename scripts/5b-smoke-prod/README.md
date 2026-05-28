@@ -11,8 +11,8 @@ match-system changes.
 ## Twilio note
 
 Twilio is **not required** for this smoke. Step `1-seed-profiles.sql` sets
-`profiles.verification='phone_verified'` directly via service_role. Real
-phone-OTP onboarding is a Task 10 Step 2 prerequisite, separate from this work.
+`profiles.verification='verified'` directly via service_role. Real phone-OTP
+onboarding is a Task 10 Step 2 prerequisite, separate from this work.
 
 ## Env-var contract
 
@@ -21,9 +21,10 @@ export SUPABASE_PROJECT_REF=ufufmcpnysvwtutpbian
 export SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co
 export SUPABASE_PUBLISHABLE_KEY=sb_publishable_obo6g7Epe5ciN99pzwvWVQ_Os479GOp
 
-# Smoke identities — fresh +suffix per run because auth.users is left dormant
-export HOST_EMAIL=lucas+smoke-host-1@breathefum.com
-export CAND_EMAIL=lucas+smoke-cand-1@breathefum.com
+# Smoke identities — use Gmail with +suffix so Gmail MCP can read magic links
+# (a Workspace inbox you control also works as long as Gmail MCP is bound to it).
+export HOST_EMAIL=lucache95+smoke-host-1@gmail.com
+export CAND_EMAIL=lucache95+smoke-cand-1@gmail.com
 
 # Captured after signup completes:
 export HOST_UID=...
@@ -46,16 +47,26 @@ export LOCK_ID=...
 
 ## JWT extraction
 
-After signing in via `/login` and landing on `/feed`, open DevTools Console
-in the signed-in browser and run:
+Modern Supabase SSR (`@supabase/ssr`) stores the session in a **cookie** named
+`sb-<projectref>-auth-token`, not localStorage. The cookie's value is
+`base64-<base64-encoded JSON session>`. After signing in via `/login` and
+landing on the redirect target, open DevTools Console in the signed-in browser
+and run:
 
 ```js
-JSON.parse(localStorage.getItem('sb-ufufmcpnysvwtutpbian-auth-token')).access_token
+(() => {
+  const raw = document.cookie
+    .split(';').map(s => s.trim())
+    .find(c => c.startsWith('sb-ufufmcpnysvwtutpbian-auth-token='))
+    .split('=').slice(1).join('=');
+  const json = JSON.parse(atob(decodeURIComponent(raw).replace(/^base64-/, '')));
+  return { uid: json.user.id, jwt: json.access_token };
+})();
 ```
 
-Copy that string. Repeat in a separate browser profile (or incognito) for the
-second user. JWTs expire after 1h — complete the chain within that window or
-re-extract.
+Copy `uid` and `jwt` into your shell. Repeat in a separate browser profile (or
+incognito) for the second user. JWTs expire after 1h — complete the chain
+within that window or re-extract.
 
 ## Execution order
 
@@ -63,7 +74,7 @@ re-extract.
 |---|---|---|
 | 0 | `0-baseline.sql` | Supabase MCP `execute_sql` |
 | 1 | `1-seed-profiles.sql` | Supabase MCP `execute_sql` (uses HOST_UID + CAND_UID) |
-| 2 | `2-seed-date.sql` | Supabase MCP `execute_sql` → capture `RETURNING id` as INST_ID. **⚠️ Adjust the INSERT column list against the actual prod schema (`select column_name from information_schema.columns where table_schema='public' and table_name='date_instances'`) before pasting — the template is a best-guess and will error at insert time if prod has NOT NULL columns beyond the listed ones.** |
+| 2 | `2-seed-date.sql` | Supabase MCP `execute_sql` → capture `RETURNING id` as INST_ID. Creates an `itineraries` row (host-owned) + a `date_instances` row referencing it. |
 | 3 | `3-flag-on.sql` | Supabase MCP `execute_sql` |
 | 4 | (Candidate UI swipe) | Browser → 5a feed → tap "interested" on Host's date |
 | 5 | `4-chain.sh` | `bash 4-chain.sh` from local terminal |
@@ -82,8 +93,9 @@ understood.
 
 ## Re-run hygiene
 
-Each smoke run uses fresh `+suffix-N` emails because `auth.users` rows are
-left dormant. Increment N on each run.
+`7-cleanup.sql` deletes `auth.users` for the smoke users at the end, freeing
+the `+suffix-N` emails for re-use. You can re-run with the same emails next
+time — no need to bump the suffix unless cleanup was skipped (e.g., halt mid-run).
 
 ## Run log
 

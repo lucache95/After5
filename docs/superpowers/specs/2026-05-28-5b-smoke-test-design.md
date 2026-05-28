@@ -24,10 +24,10 @@ Smoke-test the 5b match chain on production *once* with two synthesized identiti
 | Account setup | **Real signup + service-role SQL fixup.** | Twilio verification is currently broken; real phone OTP not testable. Service-role SQL flips the residual fields (verification, dating_enabled, onboarding_step, photos) to satisfy match-chain preconditions. |
 | Date seeding | **Service-role SQL** (one `date_instance` row anchored to an existing place). | Outside the match chain — testing `/nights/new` UI is a 5a concern, not 5b. |
 | Swipe leg | **5a feed UI** (deployed). | Real `record_swipe` path is already shipped and worth exercising via UI rather than RPC shortcut. |
-| Reveal verification | **Read `profiles_select_revealed` view with each JWT.** | The actual RLS surface for the post-reveal photo read. Reading `profiles` directly may hit a different policy and false-pass. |
+| Reveal verification | **Read `profiles` with each JWT** — the `profiles_select_revealed` RLS *policy* (on `public.profiles`, not a separate view/table) gates rows via `match_reveal_allowed_pair`. The verify SQL runs as service_role and bypasses RLS, so it calls `match_reveal_allowed_pair()` directly for a definitive boolean per direction. | Original spec assumed `profiles_select_revealed` was a queryable surface; it's a policy NAME. Corrected post-smoke. |
 | Reveal timing | **Immediately after accept.** | Per `match_reveal_allowed` migration body — predicate is lock-state-based, not date-time-based. Reveal fires the instant `match_accept_offer` writes the `locks` row. Seeded date can be 5 days out. |
 | Rating leg | **Direct `INSERT` into `match_ratings` via PostgREST** with each JWT. | No `match_rate` RPC exists — rating is gated by the `match_ratings_rater_insert` RLS policy directly. |
-| Twilio | **Not required for this smoke.** SQL fixup sets `verification='phone_verified'` directly. | Real phone verification is a Task 10 Step 2 pre-requisite. Twilio remains broken at the After5 account level as of this draft; out of scope here. |
+| Twilio | **Not required for this smoke.** SQL fixup sets `verification='verified'` directly. | Real phone verification is a Task 10 Step 2 pre-requisite. Twilio remains broken at the After5 account level as of this draft; out of scope here. |
 
 ## 3. State of prod at draft time
 
@@ -47,7 +47,7 @@ Smoke-test the 5b match chain on production *once* with two synthesized identiti
 
 ## 4. Architecture (one-paragraph)
 
-Two synthesized users (Host, Candidate) onboard for real via Supabase Auth PKCE (JWTs captured from each browser's localStorage). Service-role SQL flips the residual onboarding fields to satisfy match-chain preconditions and uploads stub photos to the `profile-photos` bucket. Service-role SQL seeds one `date_instance` owned by Host. Service-role SQL flips `match_v2_enabled=true`. Candidate swipes interested through the deployed 5a feed UI. Host curls `match-shortlist` → `match-make-offer` against the prod edge functions with the host JWT. Candidate curls `match-accept-offer` with the candidate JWT. Both call PostgREST to read `profiles_select_revealed` and insert a `match_ratings` row. Service-role SQL flips `match_v2_enabled=false`. A final verification SQL block asserts every expected side effect (queue entry, offer, lock + participants, reveal visibility for both, ratings, notifications, jobs, analytics) is present and that no `admin_alerts` fired. Cleanup deletes all smoke-scoped rows, leaving prod at the same baseline as before. The whole pass is one runbook folder with seven small files; the executor runs each step through the Supabase MCP `execute_sql` tool (for SQL) or `curl` (for edge functions) so every statement is read before it runs.
+Two synthesized users (Host, Candidate) onboard for real via Supabase Auth PKCE (JWTs captured from each browser's auth cookie — `@supabase/ssr` stores the session as a base64-prefixed JSON cookie, not in localStorage). Service-role SQL flips the residual onboarding fields to satisfy match-chain preconditions and sets stub photo URLs on the `profiles` rows. Service-role SQL seeds one host-owned `itineraries` row plus a `date_instances` row referencing it (the `itinerary_id` FK is NOT NULL). Service-role SQL flips `match_v2_enabled=true`. Candidate swipes interested through the deployed 5a feed UI. Host curls `match-shortlist` → `match-make-offer` against the prod edge functions with the host JWT (response is `{ ok: true, data: "<uuid>" }` — `data` is the bare ID string, not a nested object). Candidate curls `match-accept-offer` with the candidate JWT. Both call PostgREST `GET /rest/v1/profiles` with their own JWT to exercise the `profiles_select_revealed` RLS policy (which lives ON `profiles`, gating rows via `match_reveal_allowed_pair`) and then `POST /rest/v1/match_ratings` to insert a rating row. Service-role SQL flips `match_v2_enabled=false`. A final verification SQL block asserts every expected side effect is present and that no `admin_alerts` fired. Cleanup deletes all smoke-scoped rows including the itinerary and the auth.users rows, leaving prod at the pre-smoke baseline. The whole pass is one runbook folder with seven small files; the executor runs each step through the Supabase MCP `execute_sql` tool (for SQL) or `curl` (for edge functions) so every statement is read before it runs.
 
 ## 5. The match chain
 
@@ -61,7 +61,7 @@ Six chain steps + two flag-flips + a discovery probe. JWTs are extracted post-si
 | 3 | Host | `POST /functions/v1/match-shortlist` w/ host JWT | `{ instance, candidate, rank: 1 }` | `ok: true` |
 | 4 | Host | `POST /functions/v1/match-make-offer` w/ host JWT | `{ instance, candidate }` | `offer_id` |
 | 5 | Candidate | `POST /functions/v1/match-accept-offer` w/ cand JWT | `{ offer: offer_id }` | `lock_id` |
-| 6 | Both | `GET /rest/v1/profiles_select_revealed?id=eq.<other_uid>&select=id,clear_photo_url,first_name` w/ each JWT | — | each side reads opposite's `clear_photo_url`, `first_name` |
+| 6 | Both | `GET /rest/v1/profiles?id=eq.<other_uid>&select=id,clear_photo_url,first_name` w/ each JWT | — | The `profiles_select_revealed` RLS policy on `profiles` returns the row when the reveal predicate fires; each side reads opposite's `clear_photo_url`, `first_name`. |
 | 7 | Both | `POST /rest/v1/match_ratings` w/ each JWT | (column shape verified at execution time — see §10) | rating row id per direction |
 | 8 | service_role | `UPDATE feature_config SET value='false', updated_at=now() WHERE key='match_v2_enabled'` | — | flag back off |
 | 9 | service_role | `POST /functions/v1/match-shortlist` w/ host JWT | `{ instance, candidate, rank: 1 }` | expects `{ ok: false, code: 'feature_disabled' }` (P5000) — confirms flag enforcement |
@@ -71,7 +71,7 @@ Six chain steps + two flag-flips + a discovery probe. JWTs are extracted post-si
 - Any edge function returns `ok: false` with an unexpected code (other than the expected P5000 in step 9).
 - Any `admin_alerts` row created at any point during the run.
 - `lock_participants` row count ≠ 2 after step 5.
-- `profiles_select_revealed` returns 0 rows for either side after step 5.
+- `profiles` returns 0 rows for either side reading the opposite after step 5 (RLS policy blocked them).
 
 ## 6. Final-state verification
 
@@ -104,8 +104,9 @@ select
   (select count(*) from public.match_ratings mr
     join public.locks l on l.id = mr.lock_id
     where l.date_instance_id = :inst)                                                            as ratings_count,
-  (select count(*) from public.profiles_select_revealed
-    where id in (:host_uid, :cand_uid))                                                          as reveal_visible_count,
+  (case when public.match_reveal_allowed_pair(:host_uid, :cand_uid)
+         and public.match_reveal_allowed_pair(:cand_uid, :host_uid)
+        then 2 else 0 end)                                                                       as reveal_visible_count,
   (select array_agg(distinct type) from public.notifications
     where user_id in (:host_uid, :cand_uid)
       and created_at > :smoke_started_at)                                                        as notification_types,
@@ -115,6 +116,7 @@ select
   (select count(*) from public.jobs
     where created_at > :smoke_started_at
       and (payload->>'instance' = :inst::text
+        or payload->>'keep_instance' = :inst::text
         or payload->>'lock_id' in (select id::text from public.locks where date_instance_id = :inst)))
                                                                                                  as jobs_enqueued,
   (select count(*) from public.admin_alerts
@@ -128,7 +130,7 @@ select
 | Column | Expect |
 |---|---|
 | `queue_entries_count` | `1` |
-| `queue_status` | `'interested'` |
+| `queue_status` | `'locked'` (post-accept; was `'interested'` pre-accept — verify SQL runs after the chain so 'locked' is the right expectation) |
 | `queue_rank` | `1` |
 | `offers_count` | `1` |
 | `offer_status` | `'accepted'` |
@@ -137,8 +139,8 @@ select
 | `ratings_count` | `2` |
 | `reveal_visible_count` | `2` |
 | `notification_types` | superset of `{'offer_received','new_match'}` — set theory, not count |
-| `analytics_event_types` | superset of `{'match_offer_made','match_lock_created'}` + the shortlist event_type once verified at execution (§10) |
-| `jobs_enqueued` | `>= 1` (at minimum a `rating_window` job; B-complete cascades may add more) |
+| `analytics_event_types` | superset of `{'match_shortlisted','match_offer_made','match_lock_created'}` |
+| `jobs_enqueued` | `>= 3` — `rating_window` (always), plus `standby_roll` B-complete cascades (`autoclose_creator_conflicts` + `autowithdraw_user_conflicts`, payload keyed on `keep_instance`). Smoke run 2026-05-28 saw 3. |
 | `admin_alerts_count` | `0` — **HARD FAIL if non-zero** |
 | `flag_state` | `false` |
 
@@ -168,6 +170,7 @@ delete from public.jobs
   where created_at > :smoke_started_at
     and (
       payload->>'instance' = :inst::text
+      or payload->>'keep_instance' = :inst::text
       or payload->>'lock_id' in (select id::text from public.locks where date_instance_id = :inst)
       or payload->>'offer_id' in (select id::text from public.offers where date_instance_id = :inst)
     );
@@ -192,10 +195,20 @@ delete from public.profiles_private
 delete from public.profiles
   where id in (:host_uid, :cand_uid);
 
--- 7. auth.users — leave dormant; tagged via the `lucas+smoke-…` email pattern
---    for later sweep. Re-runs of the smoke MUST use a fresh `+suffix-N`
---    (e.g., +smoke-host-2) because Supabase Auth blocks re-signup
---    on an email that already has an auth.users row.
+-- 7. swipes by the smoke users (real swipe rows created by the 5a UI swipe)
+delete from public.swipes
+  where swiper_id in (:host_uid, :cand_uid);
+
+-- 8. the host-owned itinerary tagged for smoke
+delete from public.itineraries
+  where user_id = :host_uid
+    and (inputs->>'smoke_test')::boolean = true;
+
+-- 9. auth.users — delete at the end so the +suffix emails are reusable on the
+--    next smoke run. (Earlier draft left these dormant; that forced bumping
+--    +suffix-N each run, which was friction without benefit.)
+delete from auth.users
+  where id in (:host_uid, :cand_uid);
 ```
 
 **Post-cleanup probe:** re-run the §3 baseline snapshot. Counts must match within ±1 (cleanup may itself emit a single analytics_events row if a trigger logs the deletions — verify or accept).
@@ -207,7 +220,7 @@ delete from public.profiles
 | Edge function returns `ok: false, code: 'feature_disabled'` at step 3+ | Flag flip in step 0 didn't take, or `feature_config` row was rolled back | Re-run step 0 SQL; verify with `select value from feature_config where key='match_v2_enabled'`; re-run from step 3. The match RPCs are idempotent per-actor via the idempotency-ledger (`idem_key` minted by edge function). |
 | `match-shortlist` returns `ok: false, code: 'P5xxx'` other than P5000 | Real RPC bug or RLS issue on `queue_entries` | **Halt.** Dump `queue_entries`, `offers`, `analytics_events`, `admin_alerts` since `:smoke_started_at`. Investigate before flipping flag back. |
 | `match-accept-offer` succeeds but `lock_participants` count ≠ 2 | B-complete cascade bug or trigger failure | **Halt.** Inspect `locks`, `lock_participants`, `jobs` rows. Likely a code fix, not a manual cleanup. |
-| `profiles_select_revealed` returns 0 rows after step 5 | `match_reveal_allowed_pair` or A.7 RLS policy broken on prod | **Halt.** Compare the predicate on prod against the migration body. Likely a missed migration. |
+| `profiles` returns 0 rows for either side after step 5 (RLS policy `profiles_select_revealed` blocked them) | `match_reveal_allowed_pair` or A.7 RLS policy broken on prod | **Halt.** Compare the predicate on prod against the migration body. Likely a missed migration. |
 | Any `admin_alerts` row created | Match RPCs surfaced an internal alert | **Halt.** Inspect `admin_alerts` to see what fired. Highest-priority signal. |
 | Notifications never appear despite chain succeeding | `dispatch_notification` wiring or the type ENUM extension didn't apply | **Halt.** Verify `notification_type` enum contains `offer_received`, `new_match` (per migration `20260527124550`). |
 | Smoke completes but you discover a bug after | The chain ran but produced incorrect state | The cleanup block in §7 is safe to re-run on partial state — deletes are scoped by `:inst` + smoke uids. |
@@ -223,7 +236,7 @@ scripts/5b-smoke-prod/
 ├── README.md              — overview, env-var contract, JWT extraction, expected values
 ├── 0-baseline.sql         — pre-smoke row-count snapshot
 ├── 1-seed-profiles.sql    — birthdate + verification + dating_enabled + onboarding fixup + photo upload
-├── 2-seed-date.sql        — date_instance row anchored to an existing place_id
+├── 2-seed-date.sql        — host-owned itineraries row + date_instance row referencing it (NOT NULL FK); venue_id left null
 ├── 3-flag-on.sql          — UPDATE feature_config match_v2_enabled=true
 ├── 4-chain.sh             — curl sequence with HOST_JWT / CAND_JWT / HOST_UID / CAND_UID / INST_ID env vars
 ├── 5-verify.sql           — final-state verification query (§6)
@@ -239,8 +252,8 @@ export SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co
 export SUPABASE_PUBLISHABLE_KEY=sb_publishable_obo6g7Epe5ciN99pzwvWVQ_Os479GOp
 
 # Smoke identities — must be fresh-suffix on each smoke (auth.users left dormant)
-export HOST_EMAIL=lucas+smoke-host-1@breathefum.com
-export CAND_EMAIL=lucas+smoke-cand-1@breathefum.com
+export HOST_EMAIL=lucache95+smoke-host-1@gmail.com
+export CAND_EMAIL=lucache95+smoke-cand-1@gmail.com
 
 # Captured after step 1 (real signup completes):
 export HOST_UID=...
@@ -257,19 +270,24 @@ export SMOKE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 ### JWT extraction protocol (in README.md, exact)
 
-After Host signs up via the deployed `/login` page and lands on `/feed`, open browser DevTools → Console:
+After Host signs up via the deployed `/login` page and lands on the redirect target, open browser DevTools → Console. `@supabase/ssr` stores the session in a cookie named `sb-<projectref>-auth-token`, NOT localStorage (which is empty). The cookie value is `base64-<base64-encoded JSON>` — decode then JSON.parse:
 
 ```js
-JSON.parse(
-  localStorage.getItem('sb-ufufmcpnysvwtutpbian-auth-token')
-).access_token
+(() => {
+  const raw = document.cookie
+    .split(';').map(s => s.trim())
+    .find(c => c.startsWith('sb-ufufmcpnysvwtutpbian-auth-token='))
+    .split('=').slice(1).join('=');
+  const json = JSON.parse(atob(decodeURIComponent(raw).replace(/^base64-/, '')));
+  return { uid: json.user.id, jwt: json.access_token };
+})();
 ```
 
-Copy the resulting string into `HOST_JWT`. Repeat in a separate browser profile (or incognito) for Candidate → `CAND_JWT`. JWTs expire after 1h by default — complete chain within that window or re-extract.
+Copy `uid` into `HOST_UID` and `jwt` into `HOST_JWT`. Repeat in a separate browser profile (or incognito) for Candidate → `CAND_UID` / `CAND_JWT`. JWTs expire after 1h by default — complete the chain within that window or re-extract.
 
 ### Twilio call-out (README.md)
 
-> **Twilio is not required for this smoke.** Step 1 sets `verification='phone_verified'` via service-role SQL. The real phone-OTP flow is a Task 10 Step 2 (tester cohort) pre-requisite and is currently blocked by the After5 Twilio account's verification process. Do not attempt to drive onboarding step 5 (phone verification) as part of this smoke.
+> **Twilio is not required for this smoke.** Step 1 sets `verification='verified'` via service-role SQL. The real phone-OTP flow is a Task 10 Step 2 (tester cohort) pre-requisite and is currently blocked by the After5 Twilio account's verification process. Do not attempt to drive onboarding step 5 (phone verification) as part of this smoke.
 
 ## 10. Things to verify at execution time (not baked into the spec)
 
@@ -279,7 +297,7 @@ These are values I confirmed exist but did not pin a literal for in the spec, to
 - **`match_shortlist` analytics `event_type` string.** Migration `20260527126200_p5_shortlist.sql` line 89 has the insert; verify the literal (`match_shortlisted` per inference, but confirm before pinning the §6 expected set).
 - **Stub photo upload path.** Storage bucket `profile-photos` exists per `20260525122600_p1_profile_photos_bucket.sql`. Convention is `<uid>/blurred.jpg` for blur output. For the smoke seed: service-role uploads a 1×1 PNG to `<uid>/clear.jpg` and `<uid>/blurred.jpg` for each smoke user; sets `profiles.{clear_photo_url, blurred_photo_url}` to the resulting public URL. Confirm the bucket's RLS allows service-role unauthenticated `INSERT` (it should — service-role bypasses RLS by default).
 - **City row for `primary_city_id`.** `qa-feed-seed.sql` references the Kelowna city UUID `cde497ea-c50e-481c-8b56-4bc98a61388c` (local). Verify the same UUID exists on prod (or pick whatever Kelowna row is on prod) before seeding.
-- **B-complete cascade jobs after accept.** §6's `jobs_enqueued` count is `>= 1` (rating_window guaranteed). Confirm at execution which additional cascades fire on the *first* accept (B-complete code emits `standby_roll` only when there are competing candidates; the smoke has only one) and adjust expectations if zero cascades fire.
+- **B-complete cascade jobs after accept.** Smoke run 2026-05-28 saw 3 jobs: `rating_window` + `standby_roll (autoclose_creator_conflicts)` + `standby_roll (autowithdraw_user_conflicts)`. The cascades fire on first accept even without competing candidates because they pre-empt future overlap conflicts on the host's other dates and the candidate's other in-flight offers. Both cascade jobs key the smoke instance on `payload.keep_instance`, not `payload.instance` — `5-verify.sql` and `7-cleanup.sql` filter on both keys.
 
 ## 11. Out of scope, explicitly
 
@@ -309,7 +327,7 @@ When (1)–(6) all hold, Task 10 Step 1 is complete and the master roadmap can a
 
 **Placeholder scan:** §10 lists four values verified-to-exist but not literal-pinned, called out explicitly so the executor doesn't silently invent them. No `TBD` / `implement later` / vague-error-handling phrasing elsewhere.
 
-**Internal consistency:** §2's "reveal verification reads `profiles_select_revealed`" matches §5 step 6, §6's `reveal_visible_count`, and §8's reveal-failure row. §2's "Twilio not required" matches §9's README call-out and §11's out-of-scope item.
+**Internal consistency:** §2 + §5 step 6 + §6's `reveal_visible_count` + §8's reveal-failure row all describe the same mechanism (RLS policy `profiles_select_revealed` on `public.profiles`, gated by `match_reveal_allowed_pair`). §2's "Twilio not required" matches §9's README call-out and §11's out-of-scope item.
 
 **Scope check:** single sub-project (one smoke run, one runbook folder, six acceptance criteria). Not decomposable.
 
