@@ -33,6 +33,7 @@ coverage/
 .turbo/
 .vercel
 .claude/worktrees/
+.claude/settings.local.json
 
 # Deno (edge functions resolve remote modules; repo tracks no deno lockfile)
 deno.lock
