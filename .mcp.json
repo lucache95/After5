@@ -7,6 +7,14 @@
     "vercel": {
       "type": "http",
       "url": "https://mcp.vercel.com"
+    },
+    "playwright": {
+      "type": "http",
+      "url": "http://localhost:8931/mcp"
+    },
+    "magicpatterns": {
+      "type": "http",
+      "url": "https://mcp.magicpatterns.com/mcp"
     }
   }
 }
