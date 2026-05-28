@@ -12,10 +12,6 @@
     {
       "path": "/api/cron/post-date-feedback",
       "schedule": "0 17 * * *"
-    },
-    {
-      "path": "/api/cron/process-jobs",
-      "schedule": "* * * * *"
     }
   ]
 }
