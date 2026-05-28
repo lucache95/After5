@@ -65,7 +65,10 @@ export function EarlyAccessBanner() {
   ) : null;
 
   return (
-    <div className="relative z-[60] bg-gradient-to-r from-amber-100 via-rose-100 to-amber-100 text-amber-950">
+    <aside
+      aria-label="early access announcement"
+      className="relative z-[60] bg-gradient-to-r from-amber-100 via-rose-100 to-amber-100 text-amber-950"
+    >
       <div className="mx-auto flex max-w-content items-center justify-between gap-3 px-4 py-2 md:px-10">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-medium leading-tight md:text-[13px]">
           <span aria-hidden className="text-amber-700">★</span>
@@ -87,6 +90,6 @@ export function EarlyAccessBanner() {
           <X className="h-3.5 w-3.5" strokeWidth={2.25} />
         </button>
       </div>
-    </div>
+    </aside>
   );
 }

@@ -61,7 +61,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
         <header className="mb-5 flex items-baseline justify-between">
           <h1 className="font-heading text-3xl lowercase text-shell-ink">tonight</h1>
-          <p className="font-body text-sm text-shell-ink/55" aria-live="polite">
+          <p className="font-body text-sm text-shell-ink/75" aria-live="polite">
             {remaining} left
           </p>
         </header>
@@ -88,7 +88,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
             aria-label="nope, pass on this one"
             className={cn(
               'flex h-16 w-16 items-center justify-center rounded-full bg-white text-shell-ink shadow-fun transition',
-              'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/30',
+              'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/60',
               'motion-reduce:transition-none motion-reduce:hover:scale-100',
               busy && 'opacity-50',
             )}
@@ -110,7 +110,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
             <Heart className="h-7 w-7" strokeWidth={2.5} fill="currentColor" aria-hidden />
           </button>
         </div>
-        <p className="mt-3 text-center font-body text-xs text-shell-ink/45">
+        <p className="mt-3 text-center font-body text-xs text-shell-ink/75">
           swipe right if you’re in · left to skip
         </p>
       </div>

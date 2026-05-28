@@ -54,7 +54,7 @@ export default async function FirstSessionHome() {
       <div className="mx-auto w-full max-w-[420px] px-5 pb-28 pt-8">
         <section>
           {badge.verified && (
-            <div className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-shell-pink px-3 py-1 font-body text-[12px] font-semibold lowercase text-shell-accent ring-1 ring-shell-accent/15">
+            <div className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-shell-pink px-3 py-1 font-body text-[12px] font-semibold lowercase text-shell-ink ring-1 ring-shell-accent/15">
               verified{badge.isNew ? ' · new here' : ''}
             </div>
           )}
@@ -81,7 +81,7 @@ export default async function FirstSessionHome() {
                 </a>
                 <a
                   href="/nights/new"
-                  className="rounded-full border-2 border-shell-ink/15 px-6 py-3 font-body text-[15px] font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/20 motion-reduce:transition-none"
+                  className="rounded-full border-2 border-shell-ink/15 px-6 py-3 font-body text-[15px] font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/60 motion-reduce:transition-none"
                 >
                   post a night
                 </a>

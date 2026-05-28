@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -35,6 +35,58 @@ export function PostNightForm({ plans }: { plans: Plan[] }) {
   const [phase, setPhase] = useState<'idle' | 'saving' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const reduceMotion = useReducedMotion();
+
+  // Roving-tabindex refs for the radiogroup. Only one radio is in the tab
+  // order at a time (the selected one, or the first if none selected — per
+  // WAI-ARIA Authoring Practices); arrow keys move both focus and selection
+  // together (select-follows-focus is the standard pattern for radios).
+  const radioRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const selectedIndex = plans.findIndex((p) => p.id === selectedId);
+  // If nothing is selected, the first radio holds the tabstop.
+  const tabStopIndex = selectedIndex >= 0 ? selectedIndex : 0;
+
+  function setRadioRef(index: number, el: HTMLButtonElement | null) {
+    radioRefs.current[index] = el;
+  }
+
+  function focusRadio(index: number) {
+    const count = plans.length;
+    if (count === 0) return;
+    const wrapped = ((index % count) + count) % count;
+    const next = plans[wrapped];
+    if (!next) return;
+    setSelectedId(next.id);
+    // Defer focus until React commits the new selection so the ring follows.
+    requestAnimationFrame(() => {
+      radioRefs.current[wrapped]?.focus();
+    });
+  }
+
+  function handleRadioKeyDown(index: number, e: React.KeyboardEvent<HTMLButtonElement>) {
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault();
+        focusRadio(index + 1);
+        break;
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault();
+        focusRadio(index - 1);
+        break;
+      case 'Home':
+        e.preventDefault();
+        focusRadio(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        focusRadio(plans.length - 1);
+        break;
+      default:
+        break;
+    }
+  }
 
   const isDateFuture = startsAt !== '' && new Date(startsAt) > new Date();
   const canPost = selectedId !== '' && isDateFuture && phase !== 'saving';
@@ -117,6 +169,9 @@ export function PostNightForm({ plans }: { plans: Plan[] }) {
                   onSelect={() => setSelectedId(plan.id)}
                   index={idx}
                   reduceMotion={!!reduceMotion}
+                  isTabStop={idx === tabStopIndex}
+                  onKeyDown={(e) => handleRadioKeyDown(idx, e)}
+                  setRef={(el) => setRadioRef(idx, el)}
                 />
               ))}
             </div>
@@ -194,17 +249,32 @@ interface PlanCardProps {
   onSelect: () => void;
   index: number;
   reduceMotion: boolean;
+  isTabStop: boolean;
+  onKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
+  setRef: (el: HTMLButtonElement | null) => void;
 }
 
-function PlanCard({ plan, selected, onSelect, index, reduceMotion }: PlanCardProps) {
+function PlanCard({
+  plan,
+  selected,
+  onSelect,
+  index,
+  reduceMotion,
+  isTabStop,
+  onKeyDown,
+  setRef,
+}: PlanCardProps) {
   const tags = (plan.vibe_tags ?? []).filter(Boolean).slice(0, 4);
 
   return (
     <motion.button
+      ref={setRef}
       type="button"
       role="radio"
       aria-checked={selected}
+      tabIndex={isTabStop ? 0 : -1}
       onClick={onSelect}
+      onKeyDown={onKeyDown}
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={reduceMotion ? false : { opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 6) * 0.04, type: 'spring', stiffness: 400, damping: 32 }}

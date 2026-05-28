@@ -13,8 +13,8 @@ import type { FeedNight } from '@/lib/after5/client';
 function coarseTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  const weekday = d.toLocaleDateString([], { weekday: 'long' }).toLowerCase();
-  const hour = d.toLocaleTimeString([], { hour: 'numeric' }).toLowerCase().replace(/\s/g, '');
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const hour = d.toLocaleTimeString('en-US', { hour: 'numeric' }).toLowerCase().replace(/\s/g, '');
   return `${weekday} · ${hour}`;
 }
 

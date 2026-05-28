@@ -1,8 +1,10 @@
 'use client';
-// Tier-1 bottom-tab nav (DESIGN-SYSTEM §4): fixed, phone-width, lowercase labels,
-// hot-pink ACCENT on the active tab only. Two surfaces ship (discover → /feed,
-// profile → /home); dates + messages aren't built yet, so they're NOT dead links —
-// tapping fires a dry "coming soon" toast and they wear a tiny "soon" badge.
+// Tier-1 bottom-tab nav (DESIGN-SYSTEM §4): fixed, phone-width, lowercase labels.
+// Active state: ink-color label with a 2px pink bar above the icon (high-contrast;
+// the audit found pink-on-cream at 11px failed AA, so the readable text stays ink).
+// Two surfaces ship (discover → /feed, profile → /home); dates + messages aren't
+// built yet, so they're NOT dead links — tapping fires a dry "coming soon" toast.
+// The locked state is communicated via the muted ink color + aria-label.
 // Active tab is derived from the URL via usePathname (aria-current="page").
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -45,23 +47,39 @@ export function BottomTabShell() {
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1.5 transition-colors',
+                  'relative flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1.5 transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/50',
                   'motion-reduce:transition-none',
-                  active ? 'text-shell-accent' : 'text-shell-ink/55 hover:text-shell-ink',
+                  active
+                    ? 'text-shell-ink'
+                    : 'text-shell-ink/75 hover:text-shell-ink',
                 )}
               >
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute -top-1.5 left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-full bg-shell-accent"
+                  />
+                )}
                 <Icon
                   className="h-6 w-6"
                   strokeWidth={active ? 2.6 : 2}
                   aria-hidden
                 />
-                <span className="font-body text-[11px] lowercase leading-none">{tab.label}</span>
+                <span
+                  className={cn(
+                    'font-body text-[11px] lowercase leading-none',
+                    active && 'font-semibold',
+                  )}
+                >
+                  {tab.label}
+                </span>
               </Link>
             );
           }
 
-          // coming-soon tab: never navigates. Dry toast + persistent "soon" badge.
+          // coming-soon tab: never navigates. Dry toast + muted state.
+          // Locked state is communicated via the muted color and the aria-label.
           return (
             <button
               key={tab.key}
@@ -70,20 +88,12 @@ export function BottomTabShell() {
               aria-label={`${tab.label} — coming soon`}
               className={cn(
                 'relative flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1.5 transition-colors',
-                'text-shell-ink/40 hover:text-shell-ink/60',
+                'text-shell-ink/60 hover:text-shell-ink/75',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/50',
                 'motion-reduce:transition-none',
               )}
             >
-              <span className="relative inline-flex">
-                <Icon className="h-6 w-6" strokeWidth={2} aria-hidden />
-                <span
-                  aria-hidden
-                  className="absolute -right-3 -top-1.5 rounded-full bg-shell-pink px-1.5 py-px font-body text-[8px] font-semibold lowercase tracking-wide text-shell-accent ring-1 ring-shell-accent/20"
-                >
-                  soon
-                </span>
-              </span>
+              <Icon className="h-6 w-6" strokeWidth={2} aria-hidden />
               <span className="font-body text-[11px] lowercase leading-none">{tab.label}</span>
             </button>
           );
