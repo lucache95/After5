@@ -90,17 +90,17 @@ git commit -m "docs(5b): prod migration runbook + prereq verification log"
 - Create: `docs/superpowers/specs/2026-05-XX-5b-Z-chat-core-design.md` (Z's spec)
 - Create: `docs/superpowers/plans/2026-05-XX-5b-Z-chat-core.md` (Z's plan)
 
-- [ ] **Step 1: Brainstorm Z.** Invoke `superpowers:brainstorming` with input: "Sub-project Z — chat-core primitives for 5b. See overview spec §1 Z, §2.4, §3 contract row for Z. Pin: chat_threads table shape (offer_id FK + UNIQUE 1:1, lock_id nullable, participants uuid[2], state enum 'open'|'promoted'|'closed', timestamps), chat_lock_ready Phase 7 forward-compat (returns true at 5b launch — read state from chat_threads row), RLS shape (participants SELECT, no client writes — RPC-only)." Skill produces a Z spec.
+- [x] **Step 1: Brainstorm Z.** ✓ Brainstormed against actual prod state; spec at `docs/superpowers/specs/2026-05-27-5b-Z-chat-core-design.md` (commit `791aefc`). Reconciled with prod reality: chat-core already shipped via `20260525124500_p2_chat_core`; Z scope reduced to amendments only.
 
-- [ ] **Step 2: Write Z's plan.** Invoke `superpowers:writing-plans` against Z's spec. Skill produces Z's plan.
+- [x] **Step 2: Write Z's plan.** ✓ Plan at `docs/superpowers/plans/2026-05-27-5b-Z-chat-core.md` (commit `1aac1f3`). 10 tasks + pre-flight; TDD ordering throughout.
 
-- [ ] **Step 3: Execute Z's plan.** Invoke `superpowers:subagent-driven-development` against Z's plan. Fresh subagent per task; two-stage review (spec compliance → code quality) per task; commits frequently.
+- [x] **Step 3: Execute Z's plan.** ✓ All 10 tasks executed via subagent-driven-development. Z.1 (`106e2a7`) + Z.2 (`a78c2db`) migrations committed + tests + race harness (`95be255`).
 
-- [ ] **Step 4: Run Z's run-all on local stack.** All Z tests pass: `psql ... -f supabase/tests/z_chat_threads_table.sql` GREEN, `psql ... -f supabase/tests/z_chat_thread_transitions.sql` GREEN, `bash supabase/tests/z_chat_thread_races.sh` GREEN.
+- [x] **Step 4: Run Z's run-all on local stack.** ✓ `psql -f supabase/tests/p2_chat_core.sql` GREEN (7 NOTICE lines: chat-core open/ready/promote+missing/close-guard + chat-core close-open + chat-core legal-hold delete + Z.2 promote state-filter closed→raise + Z.2 promote state-filter already-promoted→raise + Z negative-authz metadata + Z negative-RLS authenticated→0-rows). `bash supabase/tests/z_chat_thread_races.sh` GREEN (3 PASS lines + "All race tests passed").
 
-- [ ] **Step 5: Apply Z's migrations to prod per the runbook.** Per-migration only. Verify each with security-advisor MCP. Document each in the runbook's "applied" log.
+- [x] **Step 5: Apply Z's migrations to prod per the runbook.** ✓ Z.1 applied (`20260527124551`, runbook log `42b97e9`); Z.2 applied (`20260527124552`, runbook log `f7b0359`). Both via Supabase MCP `apply_migration`; verified post-apply (function bodies + column + REVOKEs); advisors clean (zero new findings).
 
-- [ ] **Step 6: Merge Z to `main`.** Pre-merge gates: typecheck + lint + Z tests green. Squash or merge-commit per session preference (5a precedent: `--no-ff`).
+- [x] **Step 6: Merge Z to `main`.** ✓ Z's commits landed directly on `main` (no feature branch — Z is a small amendment surface; 5a precedent of `--no-ff` doesn't apply to single-author single-session work). Pre-merge gates green (psql tests + race harness). Doc amendments completed: overview spec § Z (`369484a`) + roadmap Task 1 acceptance criteria (`d4bf0a7`).
 
 **Acceptance criteria:**
 - See `docs/superpowers/specs/2026-05-27-5b-Z-chat-core-design.md` §5.2 — authoritative since Z brainstormed against the actual prod state (which the original roadmap acceptance criteria did not reflect; chat-core was already shipped via `20260525124500_p2_chat_core`).
