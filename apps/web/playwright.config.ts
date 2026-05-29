@@ -28,7 +28,17 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Set PW_SLOWMO=<ms> to watch the run in slow motion (e.g. PW_SLOWMO=900 --headed).
+        // Zero by default → no impact on normal/CI runs.
+        launchOptions: { slowMo: process.env.PW_SLOWMO ? Number(process.env.PW_SLOWMO) : 0 },
+      },
+    },
+  ],
   webServer: {
     command: 'pnpm --filter @after5/web dev',
     url: 'http://localhost:3000',
