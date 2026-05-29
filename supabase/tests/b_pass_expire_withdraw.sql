@@ -18,7 +18,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cand::text)::text, true);
   n := match_pass_offer(cand, oid);
@@ -67,7 +67,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   -- Job runner would call this (no auth context); we call directly as postgres (DEFINER bypasses auth check inside)
   n := match_expire_offer(oid);
@@ -98,7 +98,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cand::text)::text, true);
   PERFORM match_withdraw(cand, inst);

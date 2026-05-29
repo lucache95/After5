@@ -9,7 +9,7 @@ insert into feature_config(key, value) values ('match_v2_enabled', 'true'::jsonb
 -- Helper: prepare a shortlisted pair (creator + dating-enabled candidate, swiped right, ingested, shortlisted)
 -- Returns (creator, candidate, instance) via NOTICE
 DO $$
-DECLARE cre uuid; cand uuid; itin uuid; inst uuid; idem uuid; oid uuid;
+DECLARE cre uuid; cand uuid; itin uuid; inst uuid; idem uuid; oid uuid; res jsonb;
 BEGIN
   cre := mk_user('mo1_cre'); cand := mk_user('mo1_cand');
   insert into profiles_private(user_id, birthdate) values (cre, '1990-01-01'), (cand, '1990-01-01')
@@ -23,10 +23,14 @@ BEGIN
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
 
-  -- Happy path: make offer
+  -- Happy path: make offer → discriminated jsonb {kind:'offer', offer_id}
   idem := gen_random_uuid();
-  oid := match_make_offer(cre, inst, cand, idem);
-  IF oid IS NULL THEN RAISE EXCEPTION 'A.4: make_offer returned NULL'; END IF;
+  res := match_make_offer(cre, inst, cand, idem);
+  IF res->>'kind' IS DISTINCT FROM 'offer' THEN
+    RAISE EXCEPTION 'A.4: make_offer kind != offer (got %)', res;
+  END IF;
+  oid := (res->>'offer_id')::uuid;
+  IF oid IS NULL THEN RAISE EXCEPTION 'A.4: make_offer returned NULL offer_id'; END IF;
 
   -- offer row exists, status active, expires_at set
   PERFORM 1 FROM offers WHERE id=oid AND status='active' AND expires_at > now();
@@ -49,9 +53,9 @@ BEGIN
   PERFORM 1 FROM notifications WHERE user_id=cand AND type='offer_received';
   IF NOT FOUND THEN RAISE EXCEPTION 'A.4: offer_received notification not dispatched'; END IF;
 
-  -- idempotency replay returns same uuid (no second offer)
-  IF match_make_offer(cre, inst, cand, idem) <> oid THEN
-    RAISE EXCEPTION 'A.4: idempotency replay returned different uuid';
+  -- idempotency replay returns same offer_id (no second offer)
+  IF (match_make_offer(cre, inst, cand, idem)->>'offer_id')::uuid <> oid THEN
+    RAISE EXCEPTION 'A.4: idempotency replay returned different offer_id';
   END IF;
   IF (SELECT count(*) FROM offers WHERE date_instance_id=inst) <> 1 THEN
     RAISE EXCEPTION 'A.4: replay created a second offer row';
@@ -147,10 +151,11 @@ BEGIN
   ROLLBACK;
 END $$;
 
--- P5008: reciprocal detected (candidate has active offer to actor on different instance)
+-- reciprocal detected (candidate has active offer to actor on different instance)
+-- → returns jsonb {kind:'reciprocal', pair_id}; no offer is created.
 DO $$
 DECLARE
-  alice uuid; bob uuid; itin_a uuid; itin_b uuid; inst_a uuid; inst_b uuid; ok boolean := false;
+  alice uuid; bob uuid; itin_a uuid; itin_b uuid; inst_a uuid; inst_b uuid; res jsonb;
 BEGIN
   alice := mk_user('mo5_alice'); bob := mk_user('mo5_bob');
   insert into profiles_private(user_id, birthdate) values (alice, '1990-01-01'), (bob, '1990-01-01')
@@ -175,20 +180,20 @@ BEGIN
   PERFORM match_ingest_interest(inst_b);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', bob::text)::text, true);
   PERFORM match_shortlist(bob, inst_b, alice, 1);
-  -- Bob tries to make offer to Alice on his instance → P5008 reciprocal_pending
-  BEGIN
-    PERFORM match_make_offer(bob, inst_b, alice, gen_random_uuid());
-  EXCEPTION
-    WHEN sqlstate 'P5008' THEN ok := true;
-    WHEN others THEN RAISE EXCEPTION 'A.4: expected P5008, got %/%', sqlstate, sqlerrm;
-  END;
-  IF NOT ok THEN RAISE EXCEPTION 'A.4: reciprocal must raise P5008'; END IF;
-  -- And only Alice's offer exists (Bob's was rolled back) — scope to this pair's instances
+  -- Bob tries to make offer to Alice on his instance → reciprocal return (not an error)
+  res := match_make_offer(bob, inst_b, alice, gen_random_uuid());
+  IF res->>'kind' IS DISTINCT FROM 'reciprocal' THEN
+    RAISE EXCEPTION 'A.4: reciprocal must return kind=reciprocal (got %)', res;
+  END IF;
+  IF (res->>'pair_id') IS NULL THEN
+    RAISE EXCEPTION 'A.4: reciprocal return missing pair_id (got %)', res;
+  END IF;
+  -- And only Alice's offer exists (Bob's was never inserted) — scope to this pair's instances
   IF (SELECT count(*) FROM offers WHERE status='active' AND date_instance_id IN (inst_a, inst_b)) <> 1 THEN
-    RAISE EXCEPTION 'A.4: reciprocal P5008 should not have created second offer (count=%)',
+    RAISE EXCEPTION 'A.4: reciprocal should not have created second offer (count=%)',
       (SELECT count(*) FROM offers WHERE status='active' AND date_instance_id IN (inst_a, inst_b));
   END IF;
-  RAISE NOTICE 'A.4: P5008 reciprocal_pending OK';
+  RAISE NOTICE 'A.4: reciprocal return {kind:reciprocal, pair_id} OK';
   ROLLBACK;
 END $$;
 

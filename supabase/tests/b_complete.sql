@@ -20,7 +20,7 @@ BEGIN
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, c1, 1);
   PERFORM match_shortlist(cre, inst, c2, 2);
-  oid := match_make_offer(cre, inst, c1, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, c1, gen_random_uuid())->>'offer_id')::uuid;
 
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', c1::text)::text, true);
   PERFORM match_pass_offer(c1, oid);
@@ -49,7 +49,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cand::text)::text, true);
   lid := match_accept_offer(cand, oid, gen_random_uuid());
 
@@ -79,7 +79,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cand::text)::text, true);
   lid := match_accept_offer(cand, oid, gen_random_uuid());
 

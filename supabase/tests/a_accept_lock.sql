@@ -19,7 +19,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   -- Now candidate accepts
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cand::text)::text, true);
@@ -90,7 +90,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   -- Force expiry by setting expires_at in the past
   update offers set expires_at = now() - interval '1 minute' where id=oid;
@@ -121,7 +121,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   -- Other user tries to accept (auth.uid != p_actor)
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', other::text)::text, true);

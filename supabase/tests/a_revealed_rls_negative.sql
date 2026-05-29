@@ -36,7 +36,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   -- Candidate is in offer relationship; should see creator's Tier-3 fields
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cand::text)::text, true);

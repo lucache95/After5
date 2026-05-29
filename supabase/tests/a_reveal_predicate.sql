@@ -30,7 +30,7 @@ BEGIN
   PERFORM match_ingest_interest(inst);
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', cre::text)::text, true);
   PERFORM match_shortlist(cre, inst, cand, 1);
-  oid := match_make_offer(cre, inst, cand, gen_random_uuid());
+  oid := (match_make_offer(cre, inst, cand, gen_random_uuid())->>'offer_id')::uuid;
 
   -- Case 1: candidate of active offer reveals
   IF NOT match_reveal_allowed(cand, inst) THEN

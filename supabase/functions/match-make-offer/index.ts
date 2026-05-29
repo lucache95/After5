@@ -1,6 +1,10 @@
 // supabase/functions/match-make-offer/index.ts
 // Wraps public.match_make_offer (A.4). Args: { instance, candidate, idem_key? }.
-// idem_key is auto-minted if absent. Returns: { ok: true, data: { offer_id } }.
+// idem_key is auto-minted if absent.
+// Returns: { ok: true, data: { kind: 'offer' | 'reciprocal', ... } }
+//   - kind 'offer'      → data.offer_id (a reciprocal was NOT detected)
+//   - kind 'reciprocal' → data.pair_id  (caller routes to the reciprocal chooser)
+// (Previously the RPC returned a bare offer uuid; it now returns discriminated jsonb.)
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { withMatchHandler, callRpcAndRespond, mintIdemKey, type MatchHandler } from '../_shared/match.ts';
 
@@ -11,6 +15,8 @@ export const matchHandler: MatchHandler = async ({ user, body, client }) => {
       status: 400, headers: { 'content-type': 'application/json' },
     });
   }
+  // RPC returns discriminated jsonb; `data` is { kind: 'offer' | 'reciprocal', ... } and
+  // passes through callRpcAndRespond unchanged as { ok: true, data: <jsonb> }.
   return await callRpcAndRespond(client, 'match_make_offer', {
     p_actor: user.id,
     p_instance: instance,
