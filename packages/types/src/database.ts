@@ -998,6 +998,7 @@ export type Database = {
           id: string
           locked_at: string
           matched_user_id: string
+          rating_closed_at: string | null
           status: Database["public"]["Enums"]["lock_status"]
           updated_at: string
         }
@@ -1009,6 +1010,7 @@ export type Database = {
           id?: string
           locked_at?: string
           matched_user_id: string
+          rating_closed_at?: string | null
           status?: Database["public"]["Enums"]["lock_status"]
           updated_at?: string
         }
@@ -1020,6 +1022,7 @@ export type Database = {
           id?: string
           locked_at?: string
           matched_user_id?: string
+          rating_closed_at?: string | null
           status?: Database["public"]["Enums"]["lock_status"]
           updated_at?: string
         }
@@ -2844,6 +2847,7 @@ export type Database = {
         }
       }
       close_chat_thread: { Args: { p_offer: string }; Returns: undefined }
+      close_rating_window: { Args: { p_lock: string }; Returns: undefined }
       complete_job: { Args: { p_id: string }; Returns: undefined }
       disablelongtransactions: { Args: never; Returns: string }
       dispatch_notification: {
@@ -3023,6 +3027,7 @@ export type Database = {
         Args: { p_keep_instance: string; p_rng: unknown; p_user: string }
         Returns: number
       }
+      match_bulk_withdraw: { Args: { p_actor: string }; Returns: undefined }
       match_cancel_lock: {
         Args: {
           p_actor: string
@@ -3034,6 +3039,10 @@ export type Database = {
       }
       match_demand_hint: { Args: { p_instance: string }; Returns: string }
       match_expire_offer: { Args: { p_offer: string }; Returns: number }
+      match_host_can_see_candidate: {
+        Args: { p_candidate: string; p_viewer: string }
+        Returns: boolean
+      }
       match_idem_lookup: {
         Args: { p_action: string; p_actor: string; p_key: string }
         Returns: Json
@@ -3056,9 +3065,13 @@ export type Database = {
           p_idem_key: string
           p_instance: string
         }
-        Returns: string
+        Returns: Json
       }
       match_next_standby: { Args: { p_instance: string }; Returns: string }
+      match_offer_recipient_can_see_instance: {
+        Args: { p_instance: string; p_viewer: string }
+        Returns: boolean
+      }
       match_pair_lock_key: { Args: { a: string; b: string }; Returns: number }
       match_pass_offer: {
         Args: { p_actor: string; p_offer: string }
