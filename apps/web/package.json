@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --project web"
+    "test": "vitest run --project web",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@after5/api-client": "workspace:*",
@@ -33,6 +35,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@types/jest-axe": "^3.5.9",
     "@types/mapbox-gl": "^3.5.0",
     "@types/node": "^22.10.0",
