@@ -34,6 +34,27 @@ export function subscribeQueueInserts(
   };
 }
 
+export type NotificationRow = Database['public']['Tables']['notifications']['Row'];
+
+// Sub-project G (in-app notifications). User-scoped channel `notif:<userId>`.
+// We add an explicit user_id filter (belt on top of RLS notifications_recipient_read)
+// so the socket only delivers this viewer's rows. Caller (badge/toast) re-renders.
+export function subscribeNotifications(
+  userId: string,
+  onInsert: (row: NotificationRow) => void,
+): () => void {
+  const client = browserAfter5Client();
+  const ch = client
+    .channel(`notif:${userId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+      (payload: { new: NotificationRow }) => onInsert(payload.new),
+    )
+    .subscribe();
+  return () => { client.removeChannel(ch); };
+}
+
 export type LockRow = Database['public']['Tables']['locks']['Row'];
 
 // Sub-project F (MatchConfirmation). User-scoped channel: a viewer gets locks
