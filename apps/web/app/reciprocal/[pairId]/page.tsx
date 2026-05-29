@@ -44,7 +44,7 @@ export default async function ReciprocalPage({
   // since each is creator on one and candidate on the other).
   const lo = pair.low_user;
   const hi = pair.high_user;
-  const { data: offers } = await supabase
+  const { data: offersRaw } = await supabase
     .from('offers')
     .select(
       'id, date_instance_id, creator_id, candidate_id, status, ' +
@@ -53,9 +53,21 @@ export default async function ReciprocalPage({
     .eq('status', 'active')
     .or(`and(creator_id.eq.${lo},candidate_id.eq.${hi}),and(creator_id.eq.${hi},candidate_id.eq.${lo})`);
 
+  // Cast to a concrete type: Supabase join syntax produces a union with
+  // GenericStringError that TypeScript cannot narrow automatically.
+  type OfferRow = {
+    id: string;
+    date_instance_id: string;
+    creator_id: string;
+    candidate_id: string;
+    status: string;
+    date_instance: { id: string; starts_at: string | null; creator_id: string; itinerary: { title: string | null; cover_image_url: string | null } | null } | null;
+  };
+  const offers = (offersRaw ?? []) as unknown as OfferRow[];
+
   // A reciprocal CHOICE needs two distinct live instances. If fewer remain
   // (one expired/resolved), the pair is effectively stale — mirror P5009 copy.
-  const distinct = Array.from(new Map((offers ?? []).map((o) => [o.date_instance_id, o])).values());
+  const distinct = Array.from(new Map(offers.map((o) => [o.date_instance_id, o])).values());
   if (distinct.length < 2) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
@@ -67,12 +79,9 @@ export default async function ReciprocalPage({
     );
   }
 
-  const toInstance = (o: (typeof distinct)[number]): ReciprocalInstance => {
-    const di = (o.date_instance ?? {}) as {
-      starts_at?: string | null;
-      itinerary?: { title?: string | null; cover_image_url?: string | null } | null;
-    };
-    const it = di.itinerary ?? {};
+  const toInstance = (o: OfferRow): ReciprocalInstance => {
+    const di = o.date_instance ?? { starts_at: null, itinerary: null };
+    const it = di.itinerary ?? { title: null, cover_image_url: null };
     return {
       id: o.date_instance_id,
       title: it.title ?? 'a night out',
