@@ -1,14 +1,14 @@
 # Branded Auth Emails
 
-The HTML files in this folder are the branded versions of Supabase's auth emails. They share the After5 visual language: warm cream canvas, italic terra-cotta accent on one word in the headline, dark pill CTA, restrained Inter typography. Designed to render correctly in Gmail, Apple Mail, Outlook 2016+ and major mobile clients (all critical styles inlined; `<style>` block is fallback only).
+The HTML files in this folder are the branded versions of Supabase's auth emails. They share the after5 dating brand: shell-base canvas (`#FAF4EC`), lowercase Caprasimo-style wordmark/headline, pink (`#E0218A`) accent on one word, deep-plum (`#3D0F2E`) pill CTA, Fredoka body. Google fonts load as progressive enhancement; web-safe fallbacks (`Trebuchet MS`/`Segoe UI`) keep them rendering in clients that block remote fonts. Designed for Gmail, Apple Mail, Outlook 2016+ and major mobile clients (all critical styles inlined; `<style>` block is fallback only).
 
 ## Files
 
 | File                  | Supabase template          | Subject (paste in dashboard)         |
 | --------------------- | -------------------------- | ------------------------------------ |
-| `magic-link.html`     | Magic Link                 | `Your After5 sign-in link`           |
-| `confirm-signup.html` | Confirm signup             | `Confirm your After5 email`          |
-| `reset-password.html` | Reset Password             | `Reset your After5 password`         |
+| `magic-link.html`     | Magic Link                 | `your after5 sign-in link`           |
+| `confirm-signup.html` | Confirm signup             | `confirm your after5 email`          |
+| `reset-password.html` | Reset Password             | `reset your after5 password`         |
 
 > **Token used in all three:** `{{ .ConfirmationURL }}` — Supabase substitutes the time-limited link at send time.
 
