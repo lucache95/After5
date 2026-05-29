@@ -16,8 +16,12 @@ export function subscribeQueueInserts(
   onInsert: (row: QueueEntryRow) => void,
 ): () => void {
   const client = browserAfter5Client();
+  // Unique channel name per subscription: Supabase reuses a channel by topic, so a
+  // fixed name collides when the same hook double-mounts (strict mode) or multiple
+  // components subscribe — the reused channel is already subscribed and .on() throws
+  // "cannot add postgres_changes callbacks after subscribe". RLS + the filter still scope rows.
   const ch = client
-    .channel(`queue:${userId}`)
+    .channel(`queue:${userId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       {
@@ -45,7 +49,7 @@ export function subscribeNotifications(
 ): () => void {
   const client = browserAfter5Client();
   const ch = client
-    .channel(`notif:${userId}`)
+    .channel(`notif:${userId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
@@ -67,7 +71,7 @@ export function subscribeLockInserts(
 ): () => void {
   const client = browserAfter5Client();
   const ch = client
-    .channel(`locks:${userId}`)
+    .channel(`locks:${userId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'locks' },
