@@ -16,7 +16,9 @@ type DbClient = SupabaseClient | { rpc: (n: string, a: unknown) => Promise<{ dat
 export type NotificationType =
   | 'new_match' | 'offer_received' | 'offer_expiring' | 'standby_promoted' | 'date_reconfirm'
   | 'safety_checkin' | 'safety_alert' | 'new_message' | 'rating_request' | 'moderation_action' | 'account'
-  | 'verification_passed' | 'verification_failed' | 'appeal_resolved' | 'offer_withdrawn';
+  | 'verification_passed' | 'verification_failed' | 'appeal_resolved' | 'offer_withdrawn'
+  // 5b PREREQ (20260527124550): keep in sync with the notification_type DB enum (20 values).
+  | 'reciprocal_detected' | 'offer_passed' | 'offer_expired' | 'lock_cancelled_frozen' | 'lock_cancelled_rolled';
 
 export interface NotifyInput {
   userId: string;
