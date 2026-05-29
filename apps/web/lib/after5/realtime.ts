@@ -33,3 +33,27 @@ export function subscribeQueueInserts(
     client.removeChannel(ch);
   };
 }
+
+export type LockRow = Database['public']['Tables']['locks']['Row'];
+
+// Sub-project F (MatchConfirmation). User-scoped channel: a viewer gets locks
+// inserted where they participate. RLS (locks_party_read) already gates which
+// rows the socket delivers, so no server-side filter string is needed; the
+// caller still re-checks the new row references this viewer.
+export function subscribeLockInserts(
+  userId: string,
+  onInsert: (row: LockRow) => void,
+): () => void {
+  const client = browserAfter5Client();
+  const ch = client
+    .channel(`locks:${userId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'locks' },
+      (payload: { new: LockRow }) => onInsert(payload.new),
+    )
+    .subscribe();
+  return () => {
+    client.removeChannel(ch);
+  };
+}

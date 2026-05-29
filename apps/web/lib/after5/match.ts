@@ -123,3 +123,37 @@ export function resolveReciprocal(pairId: string, chosenInstance: string): Promi
 export function demandHint(instance: string): Promise<DemandBucket> {
   return call<DemandBucket>('match-demand-hint', { instance });
 }
+
+// Sub-project F (post-date rating). match_ratings has NO RPC — it's a direct
+// table insert under RLS (policy match_ratings_rater_insert: rater_id=auth.uid()
+// AND the lock pairs rater↔ratee). So this wrapper inserts via the browser client
+// rather than functions.invoke. The unique (lock_id, rater_id) constraint means a
+// resubmit returns 'already_rated' (terminal success), not an error.
+export interface RatingInput {
+  lockId: string;
+  rateeId: string;
+  showed_up: boolean | null;
+  on_time: boolean | null;
+  cancelled_with_notice: boolean | null;
+  unsafe_or_disrespectful: boolean | null;
+}
+
+export async function submitRating(input: RatingInput): Promise<'ok' | 'already_rated'> {
+  const client = browserAfter5Client();
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) throw new MatchError('auth_mismatch');
+  const { error } = await client.from('match_ratings').insert({
+    lock_id: input.lockId,
+    rater_id: user.id,
+    ratee_id: input.rateeId,
+    showed_up: input.showed_up,
+    on_time: input.on_time,
+    cancelled_with_notice: input.cancelled_with_notice,
+    unsafe_or_disrespectful: input.unsafe_or_disrespectful,
+  });
+  if (error) {
+    if (error.code === '23505') return 'already_rated';
+    throw new MatchError('server_error', error.code, error.message);
+  }
+  return 'ok';
+}
