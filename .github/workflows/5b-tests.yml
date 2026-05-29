@@ -1,0 +1,101 @@
+name: 5b tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: 5b-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Run the heavy job only when non-docs code changed. Positive globs are
+          # more portable than negated patterns; docs-only PRs match none of these.
+          filters: |
+            code:
+              - 'apps/**'
+              - 'packages/**'
+              - 'supabase/**'
+              - '.github/workflows/**'
+              - 'pnpm-lock.yaml'
+              - 'package.json'
+              - 'vitest.*.ts'
+              - 'vitest.config.ts'
+
+  e2e:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase stack
+        run: supabase start
+
+      - name: Export local stack env
+        run: supabase status -o env >> "$GITHUB_ENV"
+
+      - name: Serve edge functions (background)
+        # Reality #1: `supabase start` does not serve functions; the E2E needs them.
+        # `supabase status -o env` exports ANON_KEY / SERVICE_ROLE_KEY / PUBLISHABLE_KEY.
+        run: |
+          export SUPABASE_URL=http://127.0.0.1:54321
+          export SUPABASE_ANON_KEY="${ANON_KEY:-$SUPABASE_ANON_KEY}"
+          export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:-$SUPABASE_SERVICE_ROLE_KEY}"
+          nohup supabase functions serve > /tmp/functions-serve.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              "$SUPABASE_URL/functions/v1/match-shortlist" \
+              -H "apikey: $SUPABASE_ANON_KEY" -H 'content-type: application/json' -d '{}' || echo 000)
+            if [ "$code" != "503" ] && [ "$code" != "000" ]; then echo "functions-serve up ($code)"; break; fi
+            [ "$i" = "60" ] && { echo "functions-serve failed"; cat /tmp/functions-serve.log; exit 1; }
+            sleep 1
+          done
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @after5/web exec playwright install --with-deps chromium
+
+      - name: Run 5b run-all
+        env:
+          LOCAL_SUPABASE_PUBLISHABLE_KEY: ${{ env.PUBLISHABLE_KEY }}
+        run: bash supabase/tests/_all_5b.sh
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
