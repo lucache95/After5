@@ -63,7 +63,8 @@ export const HANDLERS: Record<string, Handler> = {
   day_of_reconfirm: (db, job) => notifyLockParties(db, job, 'date_reconfirm', 'Confirm your night', 'Still on for tonight? Tap to reconfirm.'),
   safety_checkin: (db, job) => notifyLockParties(db, job, 'safety_checkin', 'Checking in', 'You good? Tap to confirm you’re safe.'),
   reconfirm_timeout: async (db, job) => { await db.rpc('match_reconfirm_timeout', { p_lock: id(job, 'lock_id') }); },
-  bulk_withdraw: async (db, job) => { await db.rpc('match_bulk_withdraw', { p_actor: id(job, 'user_id') }); },
+  // payload key is 'user' (set by match_cancel_lock safety branch + match_autowithdraw_user_conflicts overflow).
+  bulk_withdraw: async (db, job) => { await db.rpc('match_bulk_withdraw', { p_actor: id(job, 'user') }); },
   chat_purge: async (db, job) => { await db.rpc('chat_purge_thread', { p_thread: id(job, 'thread_id') }); },           // P6/S7
   rating_window: async (db, job) => { await db.rpc('close_rating_window', { p_lock: id(job, 'lock_id') }); },          // P7/S8 (C11.10 canonical name)
   deletion_process: async (db, job) => { await db.rpc('process_deletion', { p_user: id(job, 'user_id') }); },          // P9/S10
