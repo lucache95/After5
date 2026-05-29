@@ -60,12 +60,12 @@ export async function POST(request: NextRequest) {
 
   let q = supabase
     .from('notifications')
-    .update({ read_at: new Date().toISOString() })  // RED-G1: only read_at
+    .update({ read_at: new Date().toISOString() }, { count: 'exact' })  // RED-G1: only read_at
     .eq('user_id', user.id)
     .is('read_at', null);
   if (!all) q = q.in('id', ids);
 
-  const { error, count } = await q.select('id', { count: 'exact' });
+  const { error, count } = await q.select('id');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ updated: count ?? 0 });
 }
