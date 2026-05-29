@@ -17,7 +17,8 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { OfferDetail } from './OfferDetail';
-import { AccountGate, deriveGateReason } from './AccountGate';
+import { AccountGate } from './AccountGate';
+import { deriveGateReason } from './gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,7 @@ export default async function OfferPage({
   const { data: offer } = await supabase
     .from('offers')
     .select(`id, status, expires_at, candidate_id, creator_id, date_instance_id,
-      host:profiles!offers_creator_id_fkey ( first_name, age, city, clear_photo_url, bio ),
+      host:profiles!offers_creator_id_fkey ( first_name, age, city, clear_photo_url ),
       instance:date_instances!offers_date_instance_id_fkey ( starts_at )`)
     .eq('id', offerId)
     .maybeSingle();
@@ -63,7 +64,7 @@ export default async function OfferPage({
   if (reason) return <AccountGate reason={reason} />;
 
   const host = (offer.host ?? {}) as {
-    first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null; bio?: string | null;
+    first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null;
   };
   const instance = (offer.instance ?? null) as { starts_at?: string | null } | null;
 
@@ -78,7 +79,7 @@ export default async function OfferPage({
         age: host.age ?? null,
         city: host.city ?? null,
         photo_url: host.clear_photo_url ?? null,
-        bio: host.bio ?? null,
+        bio: null, // profiles has no bio column; host preview is name/age/city/photo (parity with D)
       }}
       date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
     />

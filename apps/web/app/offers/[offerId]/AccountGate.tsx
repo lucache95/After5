@@ -6,22 +6,11 @@
 // Copy is lowercase, stop-slop (DESIGN-SYSTEM §4).
 'use client';
 import Link from 'next/link';
+import { deriveGateReason, type GateReason } from './gate';
 
-export type GateReason = 'verify' | 'cooldown' | 'suspended' | 'dating_disabled' | 'blocked' | 'generic';
-
-export function deriveGateReason(me: {
-  dating_enabled: boolean | null;
-  verification: string | null;
-  standing: string | null;
-  account_state: string | null;
-}): GateReason | null {
-  if (me.dating_enabled === false) return 'dating_disabled';
-  if (me.verification !== 'verified') return 'verify';
-  if (me.standing === 'cooldown') return 'cooldown';
-  if (me.standing === 'suspended' || me.standing === 'locked_ban') return 'suspended';
-  if (me.account_state && me.account_state !== 'active') return 'suspended';
-  return null;
-}
+// Re-export so existing importers (page.tsx server gate, tests) keep one entry point.
+export { deriveGateReason };
+export type { GateReason };
 
 const COPY: Record<GateReason, { headline: string; body: string; href: string; cta: string }> = {
   verify: {
