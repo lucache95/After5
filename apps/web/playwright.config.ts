@@ -19,7 +19,11 @@ export default defineConfig({
   globalSetup: './e2e/_helpers/global-setup.ts',
   reporter: process.env.CI ? [['html', { open: 'never' }], ['github']] : 'list',
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    // Use localhost (not 127.0.0.1) to match supabase config.toml site_url —
+    // signInWithOtp sets the PKCE code-verifier cookie on this app origin, and
+    // the verify→callback redirect lands on site_url. A host mismatch splits the
+    // cookie across origins and the session is lost on the next protected nav.
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -27,7 +31,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'pnpm --filter @after5/web dev',
-    url: 'http://127.0.0.1:3000',
+    url: 'http://localhost:3000',
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
     env: {

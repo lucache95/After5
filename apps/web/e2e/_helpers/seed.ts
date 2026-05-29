@@ -53,8 +53,10 @@ async function promoteProfile(
       primary_city_id: city.id,
       distance_pref_km: 40,
       vibe_tags: ['cozy', 'creative', 'nightlife'],
-      clear_photo_url: 'https://placeholder.e2e/clear.jpg',
-      blurred_photo_url: 'https://placeholder.e2e/blurred.jpg',
+      // Local public asset — a remote host would need next.config images allow-listing
+      // and next/image throws (→ server error) on an un-configured hostname.
+      clear_photo_url: '/places/place-walk.jpg',
+      blurred_photo_url: '/places/place-walk.jpg',
       verification: opts.verified === false ? 'unverified' : 'verified',
       dating_enabled: opts.verified === false ? false : true,
       onboarding_step: 'done',

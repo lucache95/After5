@@ -86,14 +86,17 @@ test('5b happy path: swipe → shortlist → offer → accept → reveal (two co
   // 5. Accept routes the candidate to /matches/<lockId>; both see the Tier-3 reveal.
   await expect(candPage).toHaveURL(/\/matches\//, { timeout: 20_000 });
   await candPage.getByRole('button', { name: /see their profile/i }).click();
-  await expect(candPage.getByRole('heading', { name: /Maya/i })).toBeVisible({ timeout: 15_000 });
+  // The reveal modal's visible name heading ends with ", <age>" (e.g. "Maya …, 34");
+  // the sr-only Drawer.Title ends with "'s profile" — anchor on the age suffix so we
+  // match only the visible heading (the run-id may itself contain digits).
+  await expect(candPage.getByRole('heading', { name: /Maya[^']*, \d+$/ })).toBeVisible({ timeout: 15_000 });
 
   // Host opens the match list, clicks into the lock, reveals the candidate.
   await hostPage.goto('/matches');
   await hostPage.getByRole('link', { name: /Jordan/i }).first().click();
   await expect(hostPage).toHaveURL(/\/matches\//);
   await hostPage.getByRole('button', { name: /see their profile/i }).click();
-  await expect(hostPage.getByRole('heading', { name: /Jordan/i })).toBeVisible({ timeout: 15_000 });
+  await expect(hostPage.getByRole('heading', { name: /Jordan[^']*, \d+$/ })).toBeVisible({ timeout: 15_000 });
 
   await hostContext.close();
   await candContext.close();

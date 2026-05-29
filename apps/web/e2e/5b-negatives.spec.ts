@@ -94,6 +94,14 @@ test('concurrent accept: two racing POSTs on one offer → exactly one wins', as
     .single();
   expect(error, error?.message).toBeNull();
 
+  // accept_offer gates on chat_lock_ready (state='open'); make-offer creates the
+  // thread in the real flow, but this offer was seeded directly, so add an open
+  // thread here or both racing accepts return P5005 chat_not_ready (no winner).
+  const { error: threadErr } = await sb
+    .from('chat_threads')
+    .insert({ offer_id: offer!.id, state: 'open' });
+  expect(threadErr, threadErr?.message).toBeNull();
+
   const candContext = await browser.newContext();
   await loginAs(candContext, seed.candEmail);
   const token = await accessToken(candContext);
