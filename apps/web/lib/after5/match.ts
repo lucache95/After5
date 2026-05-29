@@ -96,6 +96,17 @@ export function withdraw(instance: string): Promise<null> {
   return call<null>('match-withdraw', { instance });
 }
 
+// Sub-project E (candidate accept). match_accept_offer returns a bare uuid (the
+// lock id); the edge envelope is { ok:true, data:'<uuid>' } so call<string> yields it.
+export function acceptOffer(offer: string): Promise<string> {
+  return call<string>('match-accept-offer', { offer, idem_key: idemKey() });
+}
+
+// Sub-project E (candidate pass). match_pass_offer returns void; no idem_key.
+export async function passOffer(offer: string): Promise<void> {
+  await call<null>('match-pass-offer', { offer });
+}
+
 export function cancelLock(
   lock: string,
   reason: 'mutual' | 'no_show' | 'creator_pre_lock' | 'safety',

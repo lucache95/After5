@@ -8,6 +8,7 @@ vi.mock('@/lib/after5/client', () => ({
 
 import {
   shortlist, makeOffer, cancelLock, resolveReciprocal, demandHint,
+  acceptOffer, passOffer,
   MatchError, messageForCode,
 } from '../match';
 
@@ -81,6 +82,38 @@ describe('match wrapper', () => {
       error: { name: 'FunctionsHttpError', message: 'non-2xx' },
     });
     await expect(makeOffer('inst-1', 'cand-1')).rejects.toMatchObject({ code: 'time_conflict' });
+  });
+
+  it('acceptOffer mints an idem_key and returns the bare lock uuid string', async () => {
+    invoke.mockResolvedValue({ data: { ok: true, data: 'lock-uuid-1' }, error: null });
+    const res = await acceptOffer('off-1');
+    const [name, opts] = invoke.mock.calls[0];
+    expect(name).toBe('match-accept-offer');
+    expect(opts.body.offer).toBe('off-1');
+    expect(typeof opts.body.idem_key).toBe('string');
+    expect(opts.body.idem_key.length).toBeGreaterThan(10);
+    expect(res).toBe('lock-uuid-1');
+  });
+
+  it('passOffer invokes match-pass-offer with offer only (no idem_key) and resolves undefined', async () => {
+    invoke.mockResolvedValue({ data: { ok: true, data: null }, error: null });
+    const res = await passOffer('off-1');
+    const [name, opts] = invoke.mock.calls[0];
+    expect(name).toBe('match-pass-offer');
+    expect(opts.body).toEqual({ offer: 'off-1' });
+    expect('idem_key' in opts.body).toBe(false);
+    expect(res).toBeUndefined();
+  });
+
+  it('acceptOffer throws MatchError carrying code + errcode on an ok:false body', async () => {
+    invoke.mockResolvedValue({
+      data: { ok: false, code: 'offer_expired', errcode: 'P5007', message: 'that offer already expired.' },
+      error: null,
+    });
+    await expect(acceptOffer('off-1')).rejects.toMatchObject({
+      code: 'offer_expired',
+      errcode: 'P5007',
+    });
   });
 
   it('messageForCode maps known error names to dry lowercase copy', () => {
