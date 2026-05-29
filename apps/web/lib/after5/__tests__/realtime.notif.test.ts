@@ -14,7 +14,8 @@ beforeEach(() => { channel.mockClear(); on.mockClear(); subscribe.mockClear(); r
 describe('subscribeNotifications', () => {
   it('opens a per-user channel for notifications inserts', () => {
     subscribeNotifications('user-1', vi.fn());
-    expect(channel).toHaveBeenCalledWith('notif:user-1');
+    // Channel name carries a unique suffix (avoids topic-reuse collisions); assert the prefix.
+    expect(channel).toHaveBeenCalledWith(expect.stringMatching(/^notif:user-1:/));
     const [evt, cfg] = on.mock.calls[0];
     expect(evt).toBe('postgres_changes');
     expect(cfg).toMatchObject({ event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.user-1' });
