@@ -19,7 +19,10 @@ async function findVerifyUrl(context: BrowserContext, email: string): Promise<st
       const detailRes = await context.request.get(`${MAILPIT}/api/v1/message/${m.ID}`);
       const detail = (await detailRes.json()) as { HTML?: string; Text?: string };
       const body = `${detail.HTML ?? ''}\n${detail.Text ?? ''}`;
-      const match = body.match(/https?:\/\/[^"\s<]*auth\/v1\/verify\?token=pkce_[^"\s<&]*&redirect_to=[^"\s<]*/);
+      // The verify URL is `…/auth/v1/verify?token=pkce_…&type=magiclink&redirect_to=…`
+      // (note the `&type=` segment between token and redirect_to). Match the whole
+      // URL up to the first whitespace/quote/angle-bracket, then normalise &amp;.
+      const match = body.match(/https?:\/\/[^"\s<]*auth\/v1\/verify\?token=pkce_[^"\s<]*/);
       if (match) return match[0].replace(/&amp;/g, '&');
     }
     await new Promise((r) => setTimeout(r, 750));
@@ -40,4 +43,26 @@ export async function loginAs(context: BrowserContext, email: string): Promise<P
   // The callback redirects to an authed route; assert we are NOT back on /login.
   await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });
   return page;
+}
+
+// Pull the signed-in user's access_token (JWT) out of the @supabase/ssr auth
+// cookie so the negatives can call the match-* edge functions with a real Bearer
+// (functions verify the JWT — apikey alone gets a 401 auth_mismatch). The ssr
+// cookie value is `base64-<b64(JSON session)>`, chunked across `…auth-token.0/.1`
+// when large. We reassemble, strip the prefix, decode, and read access_token.
+export async function accessToken(context: BrowserContext): Promise<string> {
+  const cookies = await context.cookies();
+  const authCookies = cookies
+    .filter((c) => /sb-.*-auth-token(\.\d+)?$/.test(c.name))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (authCookies.length === 0) throw new Error('[auth helper] no supabase auth cookie found — not logged in?');
+  let raw = authCookies.map((c) => c.value).join('');
+  if (raw.startsWith('base64-')) {
+    raw = Buffer.from(raw.slice('base64-'.length), 'base64').toString('utf8');
+  } else {
+    raw = decodeURIComponent(raw);
+  }
+  const session = JSON.parse(raw) as { access_token?: string };
+  if (!session.access_token) throw new Error('[auth helper] auth cookie has no access_token');
+  return session.access_token;
 }
