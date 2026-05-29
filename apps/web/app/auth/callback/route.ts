@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ensureWelcomeSent } from '@/lib/email/welcome';
 
 // OAuth + magic link land here. Exchange the `code` query param for a
-// session cookie, then redirect to ?next=... (defaults to /account).
+// session cookie, then redirect to ?next=... (defaults to /home).
 // Supabase's helper sets the session cookies on `cookies()` — middleware
 // will refresh them on subsequent requests.
 //
@@ -16,7 +16,7 @@ import { ensureWelcomeSent } from '@/lib/email/welcome';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/account';
+  const next = searchParams.get('next') ?? '/home';
 
   if (!code) {
     console.error('[auth/callback] no code in query', Object.fromEntries(searchParams.entries()));
@@ -66,14 +66,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Claim any anonymously-generated itineraries that were tagged with this
-  // email at the gate. So the user lands on /account and immediately sees
-  // the plans they just made — no manual reconnecting.
+  // email at the gate. So a returning planner user still has their plans
+  // claimed (they now land on /home by default).
   await claimItineraries(data.session.user).catch((err) => {
     console.error('[auth/callback] claimItineraries failed', err);
   });
 
   // Path-only redirect to avoid open-redirect via crafted next param.
-  const safeNext = next.startsWith('/') ? next : '/account';
+  const safeNext = next.startsWith('/') ? next : '/home';
   return NextResponse.redirect(`${origin}${safeNext}`);
 }
 
