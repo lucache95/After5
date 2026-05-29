@@ -57,7 +57,9 @@ export default async function InterestedPage({
   // clear_photo_url) per spec §2.6 + the residual-column-leak mitigation note.
   const { data: queue } = await supabase
     .from('queue_entries')
-    .select('candidate_id, status, rank, candidate:profiles(first_name, age, city, clear_photo_url)')
+    // Disambiguate the embed: queue_entries has TWO FKs to profiles (candidate_id + creator_id),
+    // so an unhinted profiles embed errors with PGRST201. Pin the candidate FK explicitly.
+    .select('candidate_id, status, rank, candidate:profiles!queue_entries_candidate_id_fkey(first_name, age, city, clear_photo_url)')
     .eq('date_instance_id', instanceId)
     .order('rank', { ascending: true, nullsFirst: false })
     .limit(60);
