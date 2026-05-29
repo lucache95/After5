@@ -1,643 +1,85 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, Sparkles } from 'lucide-react';
-import { ExploreDatesStrip } from '@/components/ExploreDatesStrip';
-import { getSeason, SEASON_LABELS } from '@/lib/season';
-import { PLAN_THEMES } from '@/lib/themes';
-import { RecentBuildsToast } from '@/components/RecentBuildsToast';
-import { UserMenu } from '@/components/UserMenu';
+import { LandingHero } from '@/components/LandingHero';
 import { Polaroid } from '@/components/Polaroid';
-import { HonestTestimonials } from '@/components/HonestTestimonials';
-import { WowFactorStrip } from '@/components/WowFactorStrip';
-import { SafeCoverImage } from '@/components/SafeCoverImage';
-import { createClient } from '@/lib/supabase/server';
-import { coverImageFor } from '@/lib/place-image';
+import { UserMenu } from '@/components/UserMenu';
 
-// After5 marketing landing.
-// Refined Minimal + editorial photography — the vibe gallery does the visual heavy
-// lifting while type and spacing stay restrained. See apps/web/.design/brief.md.
+// after5 dating front door. Static/presentational — no DB fetches. The
+// planner is kept as the wedge: one low-emphasis "plan a night" door → /plan.
+// Motion lives in the LandingHero client child so this stays a server
+// component. Primary CTA → /onboarding (correct cold-start door).
 
-export const revalidate = 900; // ISR: regenerate every 15 minutes
-
-const VIBES = [
-  { id: 'romantic',     label: 'Romantic',    sub: 'Sunset, wine, slow dinner.',          img: '/vibes/vibe-romantic.jpg'    },
-  { id: 'adventurous',  label: 'Adventurous', sub: 'Earn the view. Then the beer.',       img: '/vibes/vibe-adventurous.jpg' },
-  { id: 'free',         label: 'Free',        sub: '$0 plans that feel like $100.',       img: '/vibes/vibe-free.jpg',        highlight: true },
-  { id: 'chill',        label: 'Chill',       sub: 'Low effort. High signal.',             img: '/vibes/vibe-chill.jpg'       },
-  { id: 'boujee',       label: 'Boujee',      sub: 'Worth the organizing.',                img: '/vibes/vibe-boujee.jpg'      },
-  { id: 'cozy',         label: 'Cozy',        sub: 'Rain, candlelight, the good bistro.',  img: '/vibes/vibe-cozy.jpg'        },
+const STEPS = [
+  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted for the week.' },
+  { n: '02', head: 'match on the plan', body: 'you like a night, they like you back, you’re locked in.' },
+  { n: '03', head: 'show up', body: 'everyone’s verified, so the date is the date.' },
 ] as const;
 
-const SAMPLE_PLANS = [
-  {
-    title: 'The Westside Sunset Classic',
-    vibe: ['romantic', 'boujee'],
-    cost: '$140',
-    time: '4 hr',
-    img: '/sample/westside-sunset.jpg',
-    imgAlt: 'Sunset over Westside vineyard with picnic table and Okanagan Lake',
-    stops: [
-      { time: '5:30', name: 'Mission Hill' },
-      { time: '7:00', name: "Quails' Gate" },
-      { time: '9:00', name: 'Frind' },
-    ],
-  },
-  {
-    title: 'First Date Downtown',
-    vibe: ['chill', 'intimate'],
-    cost: '$85',
-    time: '3 hr',
-    img: '/sample/first-date-downtown.jpg',
-    imgAlt: 'Candlelit downtown bistro table with two glasses of wine',
-    stops: [
-      { time: '6:30', name: "Skinny Duke's" },
-      { time: '7:45', name: 'Salted Brick' },
-      { time: '9:15', name: 'Sandrine' },
-    ],
-  },
-  {
-    title: 'Adventure Date',
-    vibe: ['adventurous', 'spontaneous'],
-    cost: '$50',
-    time: '3.5 hr',
-    img: '/sample/adventure-date.jpg',
-    imgAlt: 'Hiking boots and water bottle on Knox Mountain overlooking Kelowna',
-    stops: [
-      { time: '5:00', name: 'Knox Mountain' },
-      { time: '6:45', name: 'BNA Brewing' },
-      { time: '8:15', name: 'Parlour' },
-    ],
-  },
-] as const;
-
-const BENEFITS = [
-  { n: '01', head: 'Real Kelowna spots',        body: 'Not generic AI guesses. We curate every place by hand.' },
-  { n: '02', head: 'Full timeline, not lists',  body: "Drive flow, costs, and pacing — done. No 'here are 10 ideas.'" },
-  { n: '03', head: 'Three options every time',  body: 'Pick the night that fits the energy. Skip the others.' },
-] as const;
-
-// ─── Types for server-fetched data ──────────────────────────────────────────
-
-interface ItineraryRow {
-  id: string;
-  title: string | null;
-  total_cost_pp: number | null;
-  total_duration_min: number | null;
-  cover_image_url: string | null;
-  stops: unknown;
-  inputs: { vibe?: string[] } | null;
-}
-
-interface StopShape {
-  place_type?: string;
-  place_name?: string;
-  photo_url?: string | null;
-  start_time?: string;
-}
-
-interface LocalInsightRow {
-  name: string;
-  local_insight: string;
-}
-
-// ─── Server-side data fetching ──────────────────────────────────────────────
-
-async function fetchLandingData() {
-  const supabase = await createClient();
-
-  // 1. Recent high-quality public itineraries for the sample plans section
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: liveItineraries } = await (
-    supabase.from('itineraries') as unknown as {
-      select: (cols: string) => {
-        eq: (col: string, val: unknown) => {
-          not: (col: string, op: string, val: unknown) => {
-            gte: (col: string, val: string) => {
-              order: (col: string, opts: { ascending: boolean }) => {
-                limit: (n: number) => Promise<{ data: ItineraryRow[] | null }>;
-              };
-            };
-          };
-        };
-      };
-    }
-  )
-    .select('id, title, total_cost_pp, total_duration_min, cover_image_url, stops, inputs')
-    .eq('is_public', true)
-    .not('title', 'is', null)
-    .gte('generated_at', ninetyDaysAgo)
-    .order('generated_at', { ascending: false })
-    .limit(3);
-
-  // 2. Total itinerary count for the live counter
-  const { count: totalCount } = await (
-    supabase.from('itineraries') as unknown as {
-      select: (cols: string, opts: { count: string; head: boolean }) => Promise<{ count: number | null }>;
-    }
-  ).select('id', { count: 'exact', head: true });
-
-  // 3. Random venue with a local_insight for the benefits section
-  const { data: insightRows } = await (
-    supabase.from('places') as unknown as {
-      select: (cols: string) => {
-        not: (col: string, op: string, val: unknown) => {
-          eq: (col: string, val: unknown) => {
-            limit: (n: number) => Promise<{ data: LocalInsightRow[] | null }>;
-          };
-        };
-      };
-    }
-  )
-    .select('name, local_insight')
-    .not('local_insight', 'is', null)
-    .eq('is_active', true)
-    .limit(20);
-
-  // Pick a random insight from the pool, filtering for reasonable length
-  const goodInsights = (insightRows ?? []).filter(
-    (r) => r.local_insight && !r.local_insight.startsWith('#') && r.local_insight.length >= 40 && r.local_insight.length <= 220,
-  );
-  const randomInsight = goodInsights.length > 0
-    ? goodInsights[Math.floor(Math.random() * goodInsights.length)]
-    : null;
-
-  return {
-    liveItineraries: liveItineraries ?? [],
-    totalCount: totalCount ?? 0,
-    localInsight: randomInsight,
-  };
-}
-
-export default async function HomePage() {
-  const currentSeason = getSeason();
-  const { liveItineraries, totalCount, localInsight } = await fetchLandingData();
-
-  // Build sample plans: prefer live data, fall back to static
-  const livePlans = liveItineraries
-    .filter((it) => {
-      const stops = Array.isArray(it.stops) ? it.stops : [];
-      return stops.length >= 2 && it.title;
-    })
-    .map((it) => {
-      const stops = (Array.isArray(it.stops) ? it.stops : []) as StopShape[];
-      const vibes = it.inputs?.vibe ?? [];
-      const cover = coverImageFor(
-        stops.map((s) => ({ photo_url: s.photo_url, place_type: s.place_type })),
-        { itineraryCover: it.cover_image_url },
-      );
-      const totalHr = it.total_duration_min
-        ? `${Math.round((it.total_duration_min / 60) * 10) / 10} hr`
-        : '3 hr';
-      return {
-        title: it.title!,
-        vibe: vibes,
-        cost: `$${Math.round(it.total_cost_pp ?? 0)}`,
-        time: totalHr,
-        img: cover,
-        imgAlt: `${it.title} date plan in Kelowna`,
-        stops: stops.slice(0, 4).map((s) => ({
-          time: s.start_time ?? '',
-          name: s.place_name ?? 'Stop',
-        })),
-      };
-    });
-
-  // Merge: live plans first, then static fallbacks to ensure we always show 3
-  const samplePlans = [
-    ...livePlans,
-    ...SAMPLE_PLANS.slice(livePlans.length),
-  ].slice(0, 3);
-
-  const formattedCount = totalCount.toLocaleString('en-US');
+export default function HomePage() {
   return (
-    <>
-      {/* ─── Nav ── overlays the hero image, no chrome bar ─────
-           Top-down scrim sits behind the nav so the logo + button are
-           always legible regardless of how bright the hero photo is. */}
+    <main className="min-h-dvh bg-shell-base">
       <header className="absolute inset-x-0 top-0 z-50">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/85 via-black/45 to-transparent md:h-56"
-        />
-        <nav className="relative mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
-          <Link
-            href="/"
-            className="font-display text-xl font-semibold tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6),0_2px_16px_rgba(0,0,0,0.55)]"
-          >
-            After5
-          </Link>
-          <div className="flex items-center gap-3 sm:gap-5">
-            <UserMenu variant="on-dark" />
-            <Link
-              href="/plan"
-              className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text shadow-[0_4px_16px_rgba(0,0,0,0.18)] transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
-            >
-              Plan my date — free
-            </Link>
+        <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-5">
+          <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">after5</Link>
+          <div className="flex items-center gap-3">
+            <UserMenu variant="on-light" />
+            <Link href="/onboarding" className="rounded-full bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun">let&apos;s go</Link>
           </div>
         </nav>
       </header>
 
-      <main>
-        {/* ─── Image-led hero (text overlay, editorial cover style) ─── */}
-        <section className="relative isolate flex min-h-[88vh] w-full items-end overflow-hidden bg-surface md:min-h-[92vh]">
-          <Image
-            src="/vibes/vibe-hero.jpg"
-            alt="Okanagan Lake at sunset"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-          {/* Readability scrim — strong at bottom-left where the type sits, fading up */}
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent"
-          />
+      <LandingHero />
 
-          <div className="relative mx-auto w-full max-w-content px-6 pb-16 pt-32 md:px-10 md:pb-24 md:pt-40">
-            <div className="max-w-[860px]">
-              <div className="mb-7 flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-500/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-white shadow-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/90" />
-                  {SEASON_LABELS[currentSeason].name}
-                </span>
-                <span className="text-xs font-medium uppercase tracking-[0.22em] text-white/80">
-                  Kelowna · BC
-                </span>
-              </div>
-              <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-white md:text-6xl lg:text-[78px]">
-                A Kelowna date{' '}
-                <span className="italic font-semibold text-amber-200/95">worth talking about</span>
-                {' '}&mdash; in 30&nbsp;seconds.
-              </h1>
-              <p className="mt-7 max-w-[560px] text-lg text-white/85 md:text-xl">
-                Curated itineraries built for your vibe, budget, and time —
-                by people who actually live here.
-              </p>
-              {totalCount > 0 && (
-                <p className="mt-5 text-sm font-medium text-white/70">
-                  {formattedCount} dates planned in Kelowna
-                </p>
-              )}
-              <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
-                <Link
-                  href="/plan?surprise=true"
-                  className="inline-flex items-center gap-2 rounded-pill bg-white px-7 py-3.5 text-base font-medium text-text transition-transform hover:-translate-y-0.5"
-                >
-                  <Sparkles className="h-4 w-4" strokeWidth={2.25} />
-                  Surprise me
-                </Link>
-                <Link
-                  href="/plan"
-                  className="text-base text-white/90 underline decoration-white/40 decoration-1 underline-offset-[6px] transition-colors hover:text-white hover:decoration-white"
-                >
-                  Plan my date
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Quick-start themes ────────────────────────────── */}
-        <section id="themes" className="border-t border-border">
-          <div className="mx-auto max-w-content px-6 py-20 md:px-10 md:py-24">
-            <div className="mb-10 max-w-2xl">
-              <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                Quick start
-              </p>
-              <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-                Or pick a theme.{' '}
-                <span className="italic font-semibold text-accent">We&apos;ll handle the rest.</span>
-              </h2>
-              <p className="mt-3 text-base text-secondary md:text-lg">
-                Each one bundles vibe, length, budget and energy. One click — confirm the must-haves and you're done.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {PLAN_THEMES.map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/plan?theme=${t.id}`}
-                  className="group flex flex-col gap-2 rounded-card border border-border bg-surface px-5 py-5 transition-colors hover:border-text/40"
-                >
-                  <span className="font-display text-lg font-semibold leading-tight text-text">
-                    {t.label}
-                  </span>
-                  <span className="text-sm leading-snug text-secondary">{t.desc}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Vibe gallery (Pinterest-style) ────────────────── */}
-        <section id="vibes" className="border-t border-border">
-          <div className="mx-auto max-w-content px-6 py-20 md:px-10 md:py-28">
-            <div className="mb-12 flex items-end justify-between md:mb-16">
+      {/* how it works */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
+        <h2 className="font-heading text-2xl lowercase text-shell-ink">how it works</h2>
+        <div className="mt-6 space-y-5">
+          {STEPS.map((s) => (
+            <div key={s.n} className="flex gap-4">
+              <span className="font-heading text-2xl lowercase text-shell-accent [font-variant-numeric:tabular-nums]">{s.n}</span>
               <div>
-                <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                  Start with a feeling
-                </p>
-                <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-                  Pick the vibe.{' '}
-                  <span className="italic font-semibold text-accent">We pick the night.</span>
-                </h2>
-              </div>
-              <Link
-                href="/plan"
-                className="hidden text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text md:inline"
-              >
-                Or answer 5 questions
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
-              {VIBES.map((v) => (
-                <Link
-                  key={v.id}
-                  href={{ pathname: '/plan', query: { vibe: v.id } }}
-                  className="group block"
-                >
-                  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-surface">
-                    <Image
-                      src={v.img}
-                      alt={`${v.label} date plans in Kelowna`}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.02]"
-                    />
-                  </div>
-                  <div className="mt-4 flex items-baseline justify-between">
-                    <div>
-                      <p className="font-display text-xl font-semibold text-text md:text-2xl">
-                        {v.label}
-                      </p>
-                      <p className="mt-1 text-sm text-secondary">{v.sub}</p>
-                    </div>
-                    {'highlight' in v && v.highlight && (
-                      <span className="hidden rounded-pill bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent md:inline-block">
-                        New
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Sample plans ───────────────────────────────────── */}
-        <section className="border-t border-border bg-background">
-          <div className="mx-auto max-w-content px-6 py-20 md:px-10 md:py-28">
-            <div className="mb-12 md:mb-16">
-              <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                Three plans, every time
-              </p>
-              <h2 className="font-display text-2xl font-bold leading-tight tracking-[-0.01em] text-text md:text-3xl">
-                A{' '}
-                <span className="italic font-semibold text-accent">locals-only</span>
-                {' '}sample of what you&apos;d get.
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
-              {samplePlans.map((p) => {
-                return (
-                  <article
-                    key={p.title}
-                    className="group flex flex-col"
-                  >
-                    {/* Image hero — does the emotional lifting */}
-                    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-surface">
-                      <SafeCoverImage
-                        src={p.img}
-                        alt={p.imgAlt}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
-                      />
-                      {/* Stronger scrim so white text is guaranteed legible
-                          regardless of how bright the underlying photo is. */}
-                      <div
-                        aria-hidden
-                        className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/60 to-transparent"
-                      />
-                      <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
-                        {p.vibe.map((v) => (
-                          <span
-                            key={v}
-                            className="rounded-pill bg-white/95 px-2.5 py-1 text-[11px] font-medium tracking-wide text-text backdrop-blur-sm"
-                          >
-                            {v}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="absolute bottom-4 left-4 right-4 flex items-baseline justify-between text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)] [font-variant-numeric:tabular-nums]">
-                        <span className="text-sm font-medium">{p.cost}</span>
-                        <span className="text-xs text-white/95">{p.time}</span>
-                      </div>
-                    </div>
-
-                    {/* Title + timeline below the image */}
-                    <div className="mt-5">
-                      <h3 className="font-display text-xl font-semibold leading-tight text-text md:text-2xl">
-                        {p.title}
-                      </h3>
-                      <ul className="mt-4 space-y-2 text-sm">
-                        {p.stops.map((s) => (
-                          <li key={s.name} className="flex items-baseline gap-4">
-                            <span className="w-12 shrink-0 text-muted [font-variant-numeric:tabular-nums]">
-                              {s.time}
-                            </span>
-                            <span className="text-secondary">{s.name}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Explore real dates (server-fetched from /dates catalog) ─ */}
-        <ExploreDatesStrip />
-
-        {/* ─── Wow factor — every plan gets a "twist" modifier baked in ── */}
-        <WowFactorStrip />
-
-        {/* ─── Benefits ─────────────────────────────────────────── */}
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-content px-6 py-24 md:px-10 md:py-32">
-            <div className="grid grid-cols-1 gap-x-10 gap-y-14 md:grid-cols-3">
-              {BENEFITS.map((b) => (
-                <div key={b.n}>
-                  <p className="font-display text-4xl font-bold leading-none text-text [font-variant-numeric:tabular-nums]">
-                    {b.n}
-                  </p>
-                  <h3 className="mt-7 text-lg font-semibold text-text">{b.head}</h3>
-                  <p className="mt-3 max-w-[34ch] text-base text-secondary">{b.body}</p>
-                  {b.n === '01' && localInsight && (
-                    <blockquote className="mt-5 border-l-2 border-accent/40 pl-4">
-                      <p className="text-sm italic leading-relaxed text-secondary">
-                        &ldquo;{localInsight.local_insight.length > 180
-                          ? localInsight.local_insight.slice(0, 180).replace(/[,\s]+$/, '') + '...'
-                          : localInsight.local_insight}&rdquo;
-                      </p>
-                      <cite className="mt-2 block text-xs font-medium not-italic text-muted">
-                        &mdash; {localInsight.name}
-                      </cite>
-                    </blockquote>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Honest testimonials (placeholders until real ones land) ─ */}
-        <HonestTestimonials />
-
-        {/* ─── Insiders CTA ────────────────────────────────────── */}
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-content px-6 py-16 text-center md:px-10 md:py-20">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-              Early access
-            </p>
-            <h2 className="font-display text-2xl font-bold leading-tight tracking-[-0.01em] text-text md:text-3xl">
-              Help us build the best dates in Kelowna.
-            </h2>
-            <p className="mx-auto mt-4 max-w-[520px] text-base text-secondary">
-              Join the Insiders program — test new features before anyone else,
-              share local intel, and shape what After5 becomes.
-            </p>
-            <Link
-              href="/join"
-              className="mt-8 inline-flex items-center gap-2 rounded-pill border border-border bg-surface px-6 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
-            >
-              Become an Insider
-              <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
-            </Link>
-          </div>
-        </section>
-
-        {/* ─── CTA band ─────────────────────────────────────────── */}
-        <section className="relative border-t border-border overflow-hidden">
-          {/* Ambient warm gradient — matches /login + /account so the brand
-              language feels continuous from homepage to auth to dashboard. */}
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -left-32 top-12 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-amber-200/40 via-orange-200/20 to-transparent blur-3xl" />
-            <div className="absolute -right-32 bottom-0 h-[420px] w-[420px] rounded-full bg-gradient-to-tl from-rose-200/45 via-amber-100/25 to-transparent blur-3xl" />
-          </div>
-
-          <div className="relative mx-auto max-w-content px-6 py-28 md:px-10 md:py-36">
-            <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-[1.4fr_1fr] md:gap-16">
-              <div>
-                <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-                  One last thing
-                </p>
-                <h2 className="font-display text-4xl font-bold leading-[1.02] tracking-[-0.025em] text-text md:text-[56px]">
-                  Want one for{' '}
-                  <span className="italic font-semibold text-accent">tonight?</span>
-                </h2>
-                <p className="mt-5 max-w-prose text-base leading-relaxed text-secondary md:text-lg">
-                  30 seconds, three plans, free. No card, no sign-up to view.
-                </p>
-                <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
-                  <Link
-                    href="/plan"
-                    className="inline-flex items-center gap-2 rounded-pill bg-text px-7 py-3.5 text-base font-medium text-background transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.4)]"
-                  >
-                    Plan my date — free
-                    <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
-                  </Link>
-                  <Link
-                    href="/about"
-                    className="text-sm font-medium text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
-                  >
-                    Why we built this
-                  </Link>
-                </div>
-              </div>
-
-              {/* Stacked polaroid accent — same family as the dashboard hero. */}
-              <div className="relative hidden min-h-[300px] md:block">
-                <div className="absolute right-16 top-0">
-                  <Polaroid
-                    src="/pins/couple-trail.jpg"
-                    alt="Okanagan trail"
-                    label="WEST KELOWNA · 26"
-                    size="lg"
-                    rotation={-7}
-                  />
-                </div>
-                <div className="absolute right-0 top-40">
-                  <Polaroid
-                    src="/pins/couple-lake-kiss.jpg"
-                    alt="Lake Okanagan"
-                    label="LAKESIDE"
-                    size="md"
-                    rotation={9}
-                  />
-                </div>
+                <h3 className="font-body text-base font-semibold lowercase text-shell-ink">{s.head}</h3>
+                <p className="mt-1 font-body text-sm leading-relaxed text-shell-ink/65">{s.body}</p>
               </div>
             </div>
-          </div>
-        </section>
+          ))}
+        </div>
+      </section>
 
-        {/* ─── Footer ───────────────────────────────────────────── */}
-        <footer className="border-t border-border">
-          <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
-            <p className="text-xs text-muted">
-              Built in Kelowna by{' '}
-              <a
-                href="https://lucassenechal.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-border decoration-1 underline-offset-[4px] transition-colors hover:text-text hover:decoration-text"
-              >
-                Lucas Senechal
-              </a>
-              . Coming soon to more Okanagan cities.
-            </p>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted">
-              <Link href="/about" className="transition-colors hover:text-text">
-                About
-              </Link>
-              <Link href="/roadmap" className="transition-colors hover:text-text">
-                Roadmap
-              </Link>
-              <Link href="/tell-us" className="transition-colors hover:text-text">
-                Bug or idea?
-              </Link>
-              <Link href="/join" className="transition-colors hover:text-text">
-                Become an Insider
-              </Link>
-              <Link href="/privacy" className="transition-colors hover:text-text">
-                Privacy
-              </Link>
-              <Link href="/terms" className="transition-colors hover:text-text">
-                Terms
-              </Link>
-              <a
-                href="mailto:hello@tryafter5.app"
-                className="transition-colors hover:text-text"
-              >
-                hello@tryafter5.app
-              </a>
-            </div>
-          </div>
-        </footer>
-      </main>
+      {/* scrapbook of real nights */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Polaroid tone="dating" src="/gallery/bouldering-kiss.jpg" alt="two climbers kissing at a bouldering gym" label="active" size="sm" rotation={-5} />
+          <Polaroid tone="dating" src="/gallery/ramen-couple.jpg" alt="a couple sharing ramen at a counter" label="foodie" size="sm" rotation={4} />
+          <Polaroid tone="dating" src="/gallery/vinyl-records-filmic.jpg" alt="two people flipping through vinyl records" label="chill" size="sm" rotation={-3} />
+          <Polaroid tone="dating" src="/gallery/beach-cards-sunset.jpg" alt="a couple playing cards on a beach at sunset" label="evening" size="sm" rotation={6} />
+        </div>
+      </section>
 
-      <RecentBuildsToast />
-    </>
+      {/* verified reassurance — only allowed pink wash */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
+        <div className="rounded-3xl bg-shell-pink/60 p-6 text-center ring-1 ring-shell-accent/10">
+          <p className="font-body text-sm leading-relaxed text-shell-ink/75">
+            everyone&apos;s id-verified. the person who shows up is the person from the photos.
+          </p>
+        </div>
+      </section>
+
+      {/* planner wedge */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-shell-ink/10 p-6 text-center">
+          <p className="font-body text-sm text-shell-ink/70">just want to plan a date? we still do that.</p>
+          <Link href="/plan" className="rounded-full border-2 border-shell-ink/15 px-6 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95">plan a night</Link>
+        </div>
+      </section>
+
+      <footer className="mx-auto w-full max-w-[480px] px-6 pb-16 pt-6">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-body text-xs lowercase text-shell-ink/45">
+          <Link href="/about" className="hover:text-shell-ink">about</Link>
+          <Link href="/privacy" className="hover:text-shell-ink">privacy</Link>
+          <Link href="/terms" className="hover:text-shell-ink">terms</Link>
+          <a href="mailto:hello@tryafter5.app" className="hover:text-shell-ink">hello@tryafter5.app</a>
+        </div>
+      </footer>
+    </main>
   );
 }
