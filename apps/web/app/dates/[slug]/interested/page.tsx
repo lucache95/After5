@@ -1,4 +1,4 @@
-// apps/web/app/dates/[instanceId]/interested/page.tsx
+// apps/web/app/dates/[slug]/interested/page.tsx
 // Server entry for the host interested-list (spec §4.1). Follows the 5a feed
 // pattern: createClient() → getUser() → gate → fetch Tier-3 → props to the
 // client child. Non-host → minimal 403 state; flag off → ComingSoonBanner.
@@ -21,9 +21,10 @@ function clampWindow(raw: unknown): number {
 export default async function InterestedPage({
   params,
 }: {
-  params: Promise<{ instanceId: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { instanceId } = await params;
+  // Route segment is [slug] (shared with the planner itinerary route); here it carries the instance id.
+  const { slug: instanceId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/dates/${instanceId}/interested`);

@@ -1,4 +1,4 @@
-// apps/web/app/dates/[instanceId]/interested/__tests__/page.test.tsx
+// apps/web/app/dates/[slug]/interested/__tests__/page.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
@@ -41,19 +41,19 @@ beforeEach(() => { redirect.mockClear(); });
 describe('interested page', () => {
   it('redirects to login when signed out', async () => {
     mockClient.current = buildClient({ userId: null }) as Record<string, unknown>;
-    await expect(Page({ params: Promise.resolve({ instanceId: 'inst-1' }) })).rejects.toThrow(/REDIRECT:\/login/);
+    await expect(Page({ params: Promise.resolve({ slug: 'inst-1' }) })).rejects.toThrow(/REDIRECT:\/login/);
   });
 
   it('renders a not-your-date 403 state for a non-host', async () => {
     mockClient.current = buildClient({ userId: 'u2', creatorId: 'host-1' }) as Record<string, unknown>;
-    const ui = await Page({ params: Promise.resolve({ instanceId: 'inst-1' }) });
+    const ui = await Page({ params: Promise.resolve({ slug: 'inst-1' }) });
     render(ui);
     expect(screen.getByText(/not your date/i)).toBeInTheDocument();
   });
 
   it('renders ComingSoonBanner when the flag is off', async () => {
     mockClient.current = buildClient({ userId: 'host-1', creatorId: 'host-1', flag: false }) as Record<string, unknown>;
-    const ui = await Page({ params: Promise.resolve({ instanceId: 'inst-1' }) });
+    const ui = await Page({ params: Promise.resolve({ slug: 'inst-1' }) });
     render(ui);
     expect(screen.getByTestId('coming-soon')).toBeInTheDocument();
   });
