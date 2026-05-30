@@ -65,6 +65,12 @@ jobs:
       - name: Unit tests
         run: pnpm --filter @after5/web run test -- --run
 
+      - name: Date-quality typecheck
+        run: pnpm --filter @after5/date-quality typecheck
+
+      - name: Date-quality tests
+        run: pnpm --filter @after5/date-quality test
+
   e2e:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
