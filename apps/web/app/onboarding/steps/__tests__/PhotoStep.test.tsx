@@ -15,6 +15,29 @@ vi.mock('@/lib/after5/client', () => ({
   advanceOnboarding: (...a: unknown[]) => advanceOnboarding(...a),
 }));
 
+// Mock PhotoCropper — canvas-based cropping doesn't work in jsdom.
+// Renders two buttons that drive onConfirm/onCancel synchronously.
+vi.mock('../PhotoCropper', () => ({
+  PhotoCropper: ({
+    onConfirm,
+    onCancel,
+  }: {
+    file: File;
+    onConfirm: (blob: Blob) => void;
+    onCancel: () => void;
+    busy?: boolean;
+  }) => (
+    <div>
+      <button type="button" onClick={() => onConfirm(new Blob(['x'], { type: 'image/jpeg' }))}>
+        looks good
+      </button>
+      <button type="button" onClick={onCancel}>
+        choose different
+      </button>
+    </div>
+  ),
+}));
+
 import { PhotoStep } from '../PhotoStep';
 
 function pickFile() {
@@ -35,8 +58,10 @@ describe('PhotoStep', () => {
     advanceOnboarding.mockResolvedValue('preferences');
     render(<PhotoStep userId="u1" />);
     await userEvent.upload(screen.getByLabelText(/pick a photo/i), pickFile());
+    // Component enters cropping phase — confirm the mock crop to return to idle.
+    await userEvent.click(screen.getByRole('button', { name: /looks good/i }));
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
-    await waitFor(() => expect(upload).toHaveBeenCalledWith('u1/clear.jpg', expect.any(File), expect.objectContaining({ upsert: true })));
+    await waitFor(() => expect(upload).toHaveBeenCalledWith('u1/clear.jpg', expect.any(Blob), expect.objectContaining({ upsert: true })));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('generate-blur', expect.anything()));
     await waitFor(() => expect(advanceOnboarding).toHaveBeenCalledWith(fakeClient, 'preferences'));
     expect(push).toHaveBeenCalledWith('/onboarding/preferences');
@@ -46,6 +71,8 @@ describe('PhotoStep', () => {
     upload.mockResolvedValueOnce({ error: { message: 'storage down' } });
     render(<PhotoStep userId="u1" />);
     await userEvent.upload(screen.getByLabelText(/pick a photo/i), pickFile());
+    // Confirm the mock crop to return to idle with a croppedBlob.
+    await userEvent.click(screen.getByRole('button', { name: /looks good/i }));
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/storage down|couldn.t/i));
     upload.mockResolvedValueOnce({ error: null });
@@ -67,8 +94,11 @@ describe('PhotoStep', () => {
     upload.mockResolvedValueOnce({ error: { message: 'fail' } });
     render(<PhotoStep userId="u1" />);
     await userEvent.upload(screen.getByLabelText(/pick a photo/i), pickFile());
+    // Confirm the mock crop so we can click next and trigger the error.
+    await userEvent.click(screen.getByRole('button', { name: /looks good/i }));
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    // Picking a new file should clear the error (enters cropping again).
     await userEvent.upload(screen.getByLabelText(/pick a photo/i), pickFile());
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
