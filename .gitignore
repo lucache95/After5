@@ -44,3 +44,10 @@ deno.lock
 # Reference mood-board photos (copyrighted Pinterest saves) — local-only for now,
 # used in dev; swap to ship-safe (Unsplash/licensed/AI-gen) before deploy.
 apps/web/public/gallery/
+
+# Understand-anything analysis cache (local tooling)
+.understand-anything/
+
+# Playwright test output
+apps/web/test-results/
+apps/web/playwright-report/
