@@ -1,3 +1,5 @@
+> ⚠️ STALE / DO NOT EXECUTE — superseded by docs/after5-current-implementation-plan.md and docs/INTEGRATION-CONTRACT.md (2026-05-30). Kept for history only. May reference phantom columns, scalar return shapes, and wrong ownership.
+
 # Experience-First Dating — Implementation Roadmap
 
 > **For agentic workers:** This is a **roadmap of sub-plans**, not a directly-executable task list. The core-loop spec spans many subsystems; per the writing-plans scope check it is decomposed below into dependency-ordered phases. **Each phase must get its own detailed `superpowers:writing-plans` pass (TDD, bite-sized tasks, real code) before execution.** Do not execute from this document directly.

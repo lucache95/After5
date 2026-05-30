@@ -1,3 +1,5 @@
+> ⚠️ STALE / DO NOT EXECUTE — superseded by docs/after5-current-implementation-plan.md and docs/INTEGRATION-CONTRACT.md (2026-05-30). Kept for history only. May reference phantom columns, scalar return shapes, and wrong ownership.
+
 SUBORDINATE EXECUTION SLICE. This plan is not authoritative by itself. It must be implemented only through INTEGRATION-CONTRACT.md v2 and RECONCILED-MASTER-PLAN.md. If this file conflicts with either, this file loses.
 
 # P11 — Cross-Cutting Polish: States, A11y, Mobile, Analytics, Scale — Implementation Plan

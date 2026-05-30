@@ -1,3 +1,5 @@
+> ⚠️ STALE / DO NOT EXECUTE — superseded by docs/after5-current-implementation-plan.md and docs/INTEGRATION-CONTRACT.md (2026-05-30). Kept for history only. May reference phantom columns, scalar return shapes, and wrong ownership.
+
 # Dating Plans — Integration Contract (authoritative)
 
 **Date:** 2026-05-25
