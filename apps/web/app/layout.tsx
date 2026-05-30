@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { Inter, Fraunces, Caprasimo, Fredoka } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { PostHogProvider } from './PostHogProvider';
 import { EarlyAccessBanner } from '@/components/EarlyAccessBanner';
+import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import './globals.css';
 
 const inter = Inter({
@@ -47,6 +48,7 @@ export const metadata: Metadata = {
   description:
     "the dating app where you match around a real night out. everyone's verified. less small talk, more showing up.",
   metadataBase: new URL('https://tryafter5.app'),
+  manifest: '/manifest.webmanifest',
   openGraph: {
     title: 'after5 — match on the night, not the guy',
     description:
@@ -65,11 +67,18 @@ export const metadata: Metadata = {
   },
 };
 
+// PWA theme color lives in the viewport export in Next 15 (not metadata).
+// Barbiecore hot-pink to match the manifest theme_color.
+export const viewport: Viewport = {
+  themeColor: '#E0218A',
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable} ${caprasimo.variable} ${fredoka.variable}`}>
       <body>
         <Toaster richColors position="top-center" />
+        <ServiceWorkerRegistrar />
         <Suspense fallback={null}>
           <EarlyAccessBanner />
           {/* Relative wrapper scopes absolute-positioned headers (e.g. the
