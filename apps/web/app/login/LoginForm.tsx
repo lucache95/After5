@@ -6,10 +6,10 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar } from '@/components/Avatar';
+import { Polaroid } from '@/components/Polaroid';
 import { cn } from '@/lib/cn';
 
 export function LoginForm() {
@@ -22,7 +22,7 @@ export function LoginForm() {
 
 function LoginFormInner() {
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') ?? '/account';
+  const next = searchParams.get('next') ?? '/home';
   const callbackError = searchParams.get('error');
   const callbackReason = searchParams.get('reason');
 
@@ -114,23 +114,20 @@ function LoginFormInner() {
   const othersJoined = recent.length > 3 ? recent.length - 3 : (claimed && claimed > 3 ? claimed - 3 : 0);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
-      {/* Ambient warm gradient — soft amber/rose pools in opposite corners.
-          Gives the page atmosphere without fighting the card for attention. */}
+    <main className="relative min-h-screen overflow-hidden bg-shell-base">
+      {/* Single soft pink wash behind the card — atmosphere, not wallpaper. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-amber-200/50 via-orange-200/30 to-transparent blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-tl from-rose-200/55 via-amber-100/30 to-transparent blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/5 blur-3xl" />
+        <div className="absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-shell-pink/50 blur-3xl" />
       </div>
 
       <header className="relative z-10">
         <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6 md:px-10">
-          <Link href="/" className="font-display text-xl font-semibold tracking-tight text-text">
-            After5
+          <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">
+            after5
           </Link>
           <Link
             href="/"
-            className="text-[11px] font-medium uppercase tracking-[0.22em] text-secondary transition-colors hover:text-text"
+            className="text-[11px] font-medium uppercase tracking-[0.22em] text-shell-ink/60 transition-colors hover:text-shell-ink"
           >
             ← Home
           </Link>
@@ -142,34 +139,23 @@ function LoginFormInner() {
           {/* Floating polaroid accent — upper-right of card, tilts just
               enough to feel like a friend tucked a memory into an envelope. */}
           <div className="pointer-events-none absolute -right-3 -top-10 z-20 hidden md:block">
-            <div className="rotate-[6deg] rounded-[3px] bg-white px-2 pb-9 pt-2 shadow-[0_20px_48px_-12px_rgba(80,40,20,0.35)] ring-1 ring-black/5 transition-transform duration-500 hover:rotate-[2deg]">
-              <Image
-                src="/pins/couple-trail.jpg"
-                alt=""
-                width={124}
-                height={124}
-                className="h-[110px] w-[110px] object-cover"
-              />
-              <p className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap font-display text-[10px] font-medium tracking-[0.12em] text-text/70">
-                KELOWNA · 26
-              </p>
-            </div>
+            <Polaroid tone="dating" src="/gallery/couple-dance-sunset.jpg" alt="" label="tonight" size="md" rotation={6} />
           </div>
 
-          <div className="animate-card-in relative rounded-[20px] border border-amber-100/80 bg-white/85 px-7 pb-9 pt-9 shadow-[0_32px_72px_-20px_rgba(194,85,43,0.22)] backdrop-blur-md md:px-10 md:pb-11 md:pt-11">
+          <div className="animate-card-in relative rounded-3xl border border-shell-accent/10 bg-white/80 px-7 pb-9 pt-9 shadow-fun backdrop-blur-md md:px-10 md:pb-11 md:pt-11">
             {/* Early-access chip */}
-            <div className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-amber-100 via-rose-100 to-amber-100 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-amber-950 ring-1 ring-amber-200/60">
+            <div className="inline-flex items-center gap-2 rounded-full bg-shell-pink px-3 py-1.5 text-[11px] font-semibold lowercase text-shell-ink ring-1 ring-shell-accent/20">
               <span aria-hidden className="text-sm leading-none">★</span>
-              <span>First 100 Kelowna users</span>
+              <span>first 100 in your city</span>
               {remaining !== null && remaining > 0 && (
-                <span className="flex items-center gap-1.5 border-l border-amber-800/25 pl-2 [font-variant-numeric:tabular-nums]">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-600 animate-pulse" />
+                <span className="flex items-center gap-1.5 border-l border-shell-ink/15 pl-2 [font-variant-numeric:tabular-nums]">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-shell-accent animate-pulse" />
                   {remaining} left
                 </span>
               )}
               {remaining === 0 && (
-                <span className="flex items-center gap-1.5 border-l border-amber-800/25 pl-2">
-                  Waitlist
+                <span className="flex items-center gap-1.5 border-l border-shell-ink/15 pl-2">
+                  waitlist
                 </span>
               )}
             </div>
@@ -184,28 +170,26 @@ function LoginFormInner() {
               </div>
             )}
 
-            <h1 className="mt-7 font-display text-[40px] font-bold leading-[1.02] tracking-[-0.03em] text-text md:text-[48px]">
-              Good to{' '}
-              <span className="italic font-semibold text-accent">see</span>
-              {' '}you.
+            <h1 className="mt-7 font-heading text-[40px] lowercase leading-[1.02] text-shell-ink md:text-[48px]">
+              let&apos;s get you in.
             </h1>
-            <p className="mt-4 max-w-[400px] text-[15px] leading-relaxed text-secondary">
-              Save plans, vote with friends, and skip the email gate next time you build a date.
+            <p className="mt-4 max-w-[400px] font-body text-[15px] leading-relaxed text-shell-ink/65">
+              sign in to match on real nights near you. no passwords, just a link.
             </p>
 
             {phase === 'sent' ? (
-              <div className="mt-9 rounded-[14px] border border-emerald-200 bg-emerald-50/80 p-5">
-                <p className="font-display text-base font-semibold text-emerald-900">
-                  Check your inbox.
+              <div className="mt-9 rounded-3xl border border-shell-accent/20 bg-shell-pink/40 p-5">
+                <p className="font-heading text-base lowercase text-shell-ink">
+                  check your inbox.
                 </p>
-                <p className="mt-1.5 text-sm leading-relaxed text-emerald-900/80">
-                  We sent a sign-in link to <span className="font-medium text-emerald-900">{email}</span>. It expires in an hour.{' '}
+                <p className="mt-1.5 font-body text-sm leading-relaxed text-shell-ink/70">
+                  We sent a sign-in link to <span className="font-medium text-shell-ink">{email}</span>. It expires in an hour.{' '}
                   <button
                     type="button"
                     onClick={() => setPhase('idle')}
-                    className="underline decoration-emerald-700/40 underline-offset-[3px] transition-colors hover:decoration-emerald-900"
+                    className="underline decoration-shell-ink/30 underline-offset-[3px] transition-colors hover:decoration-shell-ink"
                   >
-                    Use a different email
+                    use a different email
                   </button>
                   .
                 </p>
@@ -215,22 +199,22 @@ function LoginFormInner() {
                 <button
                   type="button"
                   onClick={handleGoogle}
-                  className="group mt-8 flex w-full items-center justify-center gap-3 rounded-pill border border-text/15 bg-white px-6 py-3.5 text-[15px] font-medium text-text transition-all hover:-translate-y-0.5 hover:border-text/30 hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)]"
+                  className="group mt-8 flex w-full items-center justify-center gap-3 rounded-pill border border-shell-ink/15 bg-white px-6 py-3.5 text-[15px] font-medium lowercase text-shell-ink transition-all hover:-translate-y-0.5 hover:border-shell-ink/30 hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
                 >
                   <GoogleIcon />
-                  <span>Continue with Google</span>
+                  <span>continue with google</span>
                 </button>
 
-                <div className="my-6 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.24em] text-muted">
-                  <span className="h-px flex-1 bg-gradient-to-r from-transparent to-border" />
+                <div className="my-6 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.24em] text-shell-ink/40">
+                  <span className="h-px flex-1 bg-gradient-to-r from-transparent to-shell-ink/15" />
                   or email
-                  <span className="h-px flex-1 bg-gradient-to-l from-transparent to-border" />
+                  <span className="h-px flex-1 bg-gradient-to-l from-transparent to-shell-ink/15" />
                 </div>
 
                 <form onSubmit={handleMagicLink} className="space-y-3">
                   <label
                     htmlFor="login-email"
-                    className="block text-[11px] font-medium uppercase tracking-[0.22em] text-secondary"
+                    className="block text-[11px] font-medium uppercase tracking-[0.22em] text-shell-ink/60"
                   >
                     email
                   </label>
@@ -243,20 +227,20 @@ function LoginFormInner() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="block w-full rounded-pill border border-text/15 bg-white/80 px-5 py-3.5 text-[15px] text-text outline-none transition-all placeholder:text-muted focus:border-accent focus:bg-white focus:ring-[3px] focus:ring-accent/15"
+                    className="block w-full rounded-pill border border-shell-ink/15 bg-white/80 px-5 py-3.5 text-[15px] text-shell-ink outline-none transition-all placeholder:text-shell-ink/35 focus:border-shell-accent focus:bg-white focus:ring-[3px] focus:ring-shell-accent/15"
                     required
                   />
                   <button
                     type="submit"
                     disabled={phase === 'sending'}
                     className={cn(
-                      'inline-flex w-full items-center justify-center gap-2 rounded-pill px-7 py-3.5 text-[15px] font-medium transition-all',
+                      'inline-flex w-full items-center justify-center gap-2 rounded-pill px-7 py-3.5 text-[15px] font-medium lowercase transition-all',
                       phase === 'sending'
-                        ? 'bg-border text-muted cursor-not-allowed'
-                        : 'bg-text text-background hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.4)]',
+                        ? 'bg-shell-ink/15 text-shell-ink/50 cursor-not-allowed'
+                        : 'bg-shell-accent text-white shadow-fun hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:hover:scale-100',
                     )}
                   >
-                    {phase === 'sending' ? 'Sending…' : 'Email me a sign-in link'}
+                    {phase === 'sending' ? 'sending…' : 'email me a link'}
                   </button>
                 </form>
 
@@ -269,7 +253,7 @@ function LoginFormInner() {
             {/* Social-proof strip — real first-names + hashed-color avatars.
                 Shown only when we have at least one recent signup. */}
             {recent.length > 0 && (
-              <div className="mt-9 flex items-center gap-3 border-t border-amber-100/80 pt-5">
+              <div className="mt-9 flex items-center gap-3 border-t border-shell-ink/10 pt-5">
                 <div className="flex -space-x-2">
                   {recent.slice(0, 3).map((r, i) => (
                     <Avatar
@@ -280,14 +264,14 @@ function LoginFormInner() {
                     />
                   ))}
                 </div>
-                <p className="text-[12px] leading-relaxed text-secondary">
-                  <span className="font-medium text-text">
+                <p className="font-body text-[12px] leading-relaxed text-shell-ink/65">
+                  <span className="font-medium text-shell-ink">
                     {recent.slice(0, 3).map((r) => r.first_name).join(', ')}
                   </span>
                   {othersJoined > 0 && (
                     <>
                       {' '}and{' '}
-                      <span className="font-medium text-text [font-variant-numeric:tabular-nums]">
+                      <span className="font-medium text-shell-ink [font-variant-numeric:tabular-nums]">
                         {othersJoined}+ others
                       </span>
                     </>
@@ -298,18 +282,18 @@ function LoginFormInner() {
             )}
           </div>
 
-          <p className="mt-6 text-center text-[11px] leading-relaxed text-muted">
+          <p className="mt-6 text-center font-body text-[11px] leading-relaxed text-shell-ink/45">
             By signing in you agree to our{' '}
             <Link
               href="/terms"
-              className="underline decoration-border underline-offset-[3px] transition-colors hover:text-text hover:decoration-text"
+              className="underline decoration-shell-ink/30 underline-offset-[3px] transition-colors hover:text-shell-ink hover:decoration-shell-ink"
             >
               terms
             </Link>
             {' '}and{' '}
             <Link
               href="/privacy"
-              className="underline decoration-border underline-offset-[3px] transition-colors hover:text-text hover:decoration-text"
+              className="underline decoration-shell-ink/30 underline-offset-[3px] transition-colors hover:text-shell-ink hover:decoration-shell-ink"
             >
               privacy policy
             </Link>

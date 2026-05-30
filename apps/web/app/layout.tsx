@@ -41,26 +41,26 @@ const fredoka = Fredoka({
 
 export const metadata: Metadata = {
   title: {
-    default: 'After5 — Plan the perfect Kelowna date in 30 seconds',
-    template: '%s · After5',
+    default: 'after5 — match on the night, not the guy',
+    template: '%s · after5',
   },
   description:
-    'Curated date itineraries built for your vibe, budget, and time — by people who actually live in Kelowna.',
+    "the dating app where you match around a real night out. everyone's verified. less small talk, more showing up.",
   metadataBase: new URL('https://tryafter5.app'),
   openGraph: {
-    title: 'After5 — Plan the perfect Kelowna date in 30 seconds',
+    title: 'after5 — match on the night, not the guy',
     description:
-      'Curated date itineraries built for your vibe, budget, and time — by people who actually live in Kelowna.',
+      "the dating app where you match around a real night out. everyone's verified. less small talk, more showing up.",
     url: 'https://tryafter5.app',
-    siteName: 'After5',
+    siteName: 'after5',
     locale: 'en_CA',
     type: 'website',
-    images: [{ url: '/og.jpg', width: 1920, height: 1080, alt: 'After5 — Kelowna date planner' }],
+    images: [{ url: '/og.jpg', width: 1920, height: 1080, alt: 'after5 — match on the night, not the guy' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'After5',
-    description: 'Plan the perfect Kelowna date in 30 seconds.',
+    title: 'after5',
+    description: 'match on the night, not the guy.',
     images: ['/og.jpg'],
   },
 };
