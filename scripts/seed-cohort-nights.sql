@@ -1,3 +1,15 @@
+-- ── SAFETY GUARD — prevent an accidental PRODUCTION run ──────────────────────
+-- Writes directly to the DB and bypasses RLS. You MUST name the target; a run
+-- with no `-v target` aborts before any write:
+--   local: psql "$LOCAL_URL" -v target=local -f scripts/seed-cohort-nights.sql
+--   prod : psql "$PROD_URL"  -v target=prod  -f scripts/seed-cohort-nights.sql   (deliberate, reviewed)
+\set ON_ERROR_STOP on
+\if :{?target}
+\else
+\echo '*** ABORT seed-cohort-nights: pass -v target=local (or -v target=prod after review). No writes performed. ***'
+\quit
+\endif
+
 -- =============================================================================
 -- seed-cohort-nights.sql — seed swipeable nights for the tester cohort
 -- =============================================================================

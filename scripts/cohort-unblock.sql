@@ -1,3 +1,15 @@
+-- ── SAFETY GUARD — prevent an accidental PRODUCTION run ──────────────────────
+-- Writes directly to the DB and bypasses RLS. You MUST name the target; a run
+-- with no `-v target` aborts before any write:
+--   local: psql "$LOCAL_URL" -v target=local -v city_slug=kelowna -f scripts/cohort-unblock.sql
+--   prod : psql "$PROD_URL"  -v target=prod  -v city_slug=kelowna -f scripts/cohort-unblock.sql   (deliberate, reviewed)
+\set ON_ERROR_STOP on
+\if :{?target}
+\else
+\echo '*** ABORT cohort-unblock: pass -v target=local (or -v target=prod after review). No writes performed. ***'
+\quit
+\endif
+
 -- =============================================================================
 -- cohort-unblock.sql — tester-cohort onboarding bypass
 -- =============================================================================
