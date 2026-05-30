@@ -1,8 +1,11 @@
-// Authenticated dashboard. Warm-cream canvas with polaroid accents;
-// the "your home" page after signing in.
+// Authenticated account + settings surface. Warm-cream canvas with polaroid
+// accents. NOTE: /home is the dating home (login lands there); /account holds
+// saved plans + profile + settings and links back INTO the dating loop so it's
+// never a planner-only dead-end.
 //
 // Sections:
 //   - Hero greeting (italic accent) + tonight sub-line + primary CTA
+//   - Dating loop nav: /home, /feed, /matches, /nights/new
 //   - Your Dates: polaroid grid of saved plans (or empty state)
 //   - Picks for this week: recent public itineraries
 //   - Inspiration board: themes
@@ -11,7 +14,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Heart, Compass, CalendarPlus, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Polaroid } from '@/components/Polaroid';
@@ -146,7 +149,7 @@ export default async function AccountPage() {
         <section className="grid grid-cols-1 gap-10 md:grid-cols-[1.3fr_1fr] md:gap-14">
           <div>
             <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-              Your home
+              Your account
             </p>
             <h1 className="font-display text-[44px] font-bold leading-[1.02] tracking-[-0.03em] text-text md:text-[60px]">
               Hello,{' '}
@@ -195,6 +198,30 @@ export default async function AccountPage() {
                 rotation={8}
               />
             </div>
+          </div>
+        </section>
+
+        {/* DATING LOOP NAV — /home is the dating home; these are the live loop surfaces */}
+        <section className="mt-14 md:mt-16">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+            {[
+              { href: '/home', label: 'Dating home', desc: "Tonight's nights", Icon: Sparkles },
+              { href: '/feed', label: 'Browse nights', desc: "See who's out", Icon: Compass },
+              { href: '/matches', label: 'Your matches', desc: 'Locked-in plans', Icon: Heart },
+              { href: '/nights/new', label: 'Post a night', desc: 'Turn a plan into a date', Icon: CalendarPlus },
+            ].map(({ href, label, desc, Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group flex flex-col gap-2 rounded-[16px] border border-amber-100/80 bg-white/85 p-4 backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[0_16px_40px_-16px_rgba(80,40,20,0.22)]"
+              >
+                <Icon className="h-5 w-5 text-accent" strokeWidth={2} aria-hidden />
+                <div>
+                  <p className="font-display text-sm font-semibold leading-tight text-text">{label}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-secondary">{desc}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
 
