@@ -40,8 +40,24 @@ serve(async (req: Request) => {
       // strand sibling jobs in 'running' for a full requeue grace window.
       try {
         await supabase.rpc('fail_job', { p_id: job.id, p_error: String(e) });
-        // Safety jobs never fail silently — surface the failure to ops (C11.8).
-        if (job.type === 'safety_checkin') {
+        const code = (e as { rpcCode?: string }).rpcCode;
+        // A missing consumer RPC (PGRST202 = PostgREST can't find it, 42883 = pg
+        // "function does not exist") means the job did NOTHING — alert ops for any
+        // job type so the gap is caught before a GDPR/safety job is silently skipped.
+        const missingFn = code === 'PGRST202' || code === '42883' ||
+          /Could not find the function|does not exist/i.test(String(e));
+        if (missingFn) {
+          await supabase.rpc('raise_admin_alert', {
+            p_kind: 'job_missing_rpc',
+            p_payload: {
+              job_id: job.id,
+              job_type: job.type,
+              fn: (e as { rpcFn?: string }).rpcFn ?? null,
+              error: String(e),
+            },
+          });
+        } else if (job.type === 'safety_checkin') {
+          // Safety jobs never fail silently — surface the failure to ops (C11.8).
           await supabase.rpc('raise_admin_alert', {
             p_kind: 'safety_job_failed', p_payload: { job_id: job.id, error: String(e) },
           });
