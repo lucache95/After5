@@ -19,33 +19,33 @@
   "stops": [
     {
       "place_id": "a1b2c3d4-0007-4a07-9007-000000000701",
-      "place_name": "Myra Canyon Kettle Valley Rail Trail",
+      "place_name": "Knox Mountain Park Trail",
       "place_type": "trail",
       "start_time": "13:00",
-      "duration_min": 90,
+      "duration_min": 75,
       "estimated_cost_pp": 0,
       "facts": {
         "place_id": "a1b2c3d4-0007-4a07-9007-000000000701",
-        "name": "Myra Canyon Kettle Valley Rail Trail",
-        "allowed_claims": ["restored wooden trestles on the old Kettle Valley Railway", "flat gravel rail-trail", "canyon and forest views", "bike or walk the trestles"],
-        "setting_tags": ["outdoor", "mountain", "active"],
-        "sensory_tags": ["pine forest", "canyon drop-offs", "wood trestle underfoot"],
-        "avoid_claims": ["food service", "lakefront", "indoor"]
+        "name": "Knox Mountain Park Trail",
+        "allowed_claims": ["hilltop park above downtown Kelowna", "summit viewpoint over Okanagan Lake", "forested walking trails", "outdoor activity with lake panorama"],
+        "setting_tags": ["outdoor", "hilltop", "active"],
+        "sensory_tags": ["pine and sage", "lake panorama", "fresh open air"],
+        "avoid_claims": ["food service", "indoor"]
       },
-      "lat": 49.8014,
-      "lng": -119.2389,
+      "lat": 49.9075,
+      "lng": -119.4818,
       "opens": "06:00",
       "closes": "21:00",
       "vibe_tags": ["active", "scenic"],
-      "pairing_tags": ["hike", "bike"],
-      "quality_score": 0.84
+      "pairing_tags": ["hike", "activity", "view"],
+      "quality_score": 0.76
     },
     {
       "place_id": "a1b2c3d4-0007-4a07-9007-000000000702",
       "place_name": "The Train Station Pub",
       "place_type": "pub",
-      "start_time": "15:00",
-      "duration_min": 55,
+      "start_time": "14:45",
+      "duration_min": 75,
       "estimated_cost_pp": 28,
       "facts": {
         "place_id": "a1b2c3d4-0007-4a07-9007-000000000702",
@@ -62,7 +62,7 @@
       "closes": "23:00",
       "vibe_tags": ["casual", "playful"],
       "pairing_tags": ["food", "drinks"],
-      "quality_score": 0.75
+      "quality_score": 0.84
     }
   ],
   "packVoiceNote": "Reward the do-something instinct; make the post-trail pint feel earned."

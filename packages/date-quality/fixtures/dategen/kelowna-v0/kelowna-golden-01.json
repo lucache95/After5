@@ -27,7 +27,7 @@
       "closes": "20:00",
       "vibe_tags": ["romantic", "scenic", "upscale"],
       "pairing_tags": ["drinks", "view"],
-      "quality_score": 0.93,
+      "quality_score": 0.87,
       "facts": {
         "place_id": "0a1b2c3d-9001-4b01-8101-000000000001",
         "name": "CedarCreek Estate Winery Terrace",
@@ -50,7 +50,7 @@
       "closes": "21:00",
       "vibe_tags": ["romantic", "farm-to-table"],
       "pairing_tags": ["dinner"],
-      "quality_score": 0.92,
+      "quality_score": 0.95,
       "facts": {
         "place_id": "0a1b2c3d-9001-4b01-8101-000000000002",
         "name": "Home Block at CedarCreek",

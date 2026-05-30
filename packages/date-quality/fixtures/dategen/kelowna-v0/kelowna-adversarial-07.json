@@ -18,7 +18,7 @@
     {
       "place_id": "0a1b2c3d-7777-4a07-8007-000000000001",
       "place_name": "Waterfront Wines Restaurant",
-      "place_type": "restaurant",
+      "place_type": "wine_bar",
       "start_time": "18:00",
       "duration_min": 90,
       "estimated_cost_pp": 60,
@@ -28,7 +28,7 @@
       "closes": "22:00",
       "vibe_tags": ["romantic", "upscale"],
       "pairing_tags": ["dinner"],
-      "quality_score": 0.86,
+      "quality_score": 0.75,
       "facts": {
         "place_id": "0a1b2c3d-7777-4a07-8007-000000000001",
         "name": "Waterfront Wines Restaurant",
@@ -76,7 +76,7 @@
       "closes": "22:00",
       "vibe_tags": ["scenic", "free"],
       "pairing_tags": ["view"],
-      "quality_score": 0.8,
+      "quality_score": 0.87,
       "facts": {
         "place_id": "0a1b2c3d-7777-4a07-8007-000000000003",
         "name": "Knox Mountain Apex Lookout",

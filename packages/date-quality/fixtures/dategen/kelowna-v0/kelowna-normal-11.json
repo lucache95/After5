@@ -39,7 +39,7 @@
       "closes": "22:00",
       "vibe_tags": ["cozy", "romantic"],
       "pairing_tags": ["dinner"],
-      "quality_score": 0.85
+      "quality_score": 0.75
     },
     {
       "place_id": "a1b2c3d4-0011-4a11-9011-000000001102",
@@ -63,7 +63,7 @@
       "closes": "21:00",
       "vibe_tags": ["cozy", "sweet"],
       "pairing_tags": ["dessert", "tea"],
-      "quality_score": 0.77
+      "quality_score": 0.87
     }
   ],
   "packVoiceNote": "Honor the milestone with warmth; never lean on a drink to set the mood."

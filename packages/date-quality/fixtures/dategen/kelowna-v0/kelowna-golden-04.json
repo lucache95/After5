@@ -26,7 +26,7 @@
       "closes": "19:00",
       "vibe_tags": ["scenic", "outdoor", "adventurous"],
       "pairing_tags": ["walk", "view"],
-      "quality_score": 0.86,
+      "quality_score": 0.79,
       "facts": {
         "place_id": "0a1b2c3d-9004-4b04-8104-000000000001",
         "name": "Myra Canyon Trestles Walk",
@@ -73,7 +73,7 @@
       "closes": "21:00",
       "vibe_tags": ["relaxed", "farm-to-table"],
       "pairing_tags": ["dinner"],
-      "quality_score": 0.83,
+      "quality_score": 0.88,
       "facts": {
         "place_id": "0a1b2c3d-9004-4b04-8104-000000000003",
         "name": "Sunset Organic Bistro",

@@ -39,7 +39,7 @@
       "closes": "16:00",
       "vibe_tags": ["relaxed", "bright"],
       "pairing_tags": ["coffee"],
-      "quality_score": 0.83
+      "quality_score": 0.76
     },
     {
       "place_id": "a1b2c3d4-0016-4a16-9016-000000001602",
@@ -87,7 +87,7 @@
       "closes": "15:00",
       "vibe_tags": ["relaxed", "fresh"],
       "pairing_tags": ["lunch", "food"],
-      "quality_score": 0.81
+      "quality_score": 0.86
     }
   ],
   "packVoiceNote": "No agenda, no clock; let a slow morning unfold one good bite at a time."

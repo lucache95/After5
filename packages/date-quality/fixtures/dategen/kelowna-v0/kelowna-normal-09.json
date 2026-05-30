@@ -38,7 +38,7 @@
       "closes": "22:30",
       "vibe_tags": ["romantic", "refined"],
       "pairing_tags": ["dessert", "wine"],
-      "quality_score": 0.87
+      "quality_score": 0.72
     },
     {
       "place_id": "a1b2c3d4-0009-4a09-9009-000000000902",
@@ -61,7 +61,7 @@
       "closes": "23:59",
       "vibe_tags": ["romantic", "calm"],
       "pairing_tags": ["walk", "view"],
-      "quality_score": 0.72
+      "quality_score": 0.87
     }
   ],
   "packVoiceNote": "Dial up the romance for a strong first impression without trying too hard."

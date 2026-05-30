@@ -26,7 +26,7 @@
       "closes": "21:30",
       "vibe_tags": ["cozy", "comfort"],
       "pairing_tags": ["dinner"],
-      "quality_score": 0.82,
+      "quality_score": 0.72,
       "facts": {
         "place_id": "0a1b2c3d-2222-4a02-8002-000000000001",
         "name": "Krafty Kitchen + Bar",
@@ -39,7 +39,7 @@
     {
       "place_id": "0a1b2c3d-2222-4a02-8002-000000000002",
       "place_name": "Bean Scene Coffee House",
-      "place_type": "cafe",
+      "place_type": "dessert_cafe",
       "start_time": "22:30",
       "duration_min": 40,
       "estimated_cost_pp": 12,
@@ -49,7 +49,7 @@
       "closes": "22:00",
       "vibe_tags": ["cozy", "casual"],
       "pairing_tags": ["coffee"],
-      "quality_score": 0.74,
+      "quality_score": 0.84,
       "facts": {
         "place_id": "0a1b2c3d-2222-4a02-8002-000000000002",
         "name": "Bean Scene Coffee House",

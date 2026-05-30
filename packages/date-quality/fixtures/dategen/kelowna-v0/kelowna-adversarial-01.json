@@ -26,7 +26,7 @@
       "closes": "22:00",
       "vibe_tags": ["upscale", "regional"],
       "pairing_tags": ["dinner"],
-      "quality_score": 0.91,
+      "quality_score": 0.80,
       "facts": {
         "place_id": "0a1b2c3d-1111-4a01-8001-000000000001",
         "name": "RauDZ Regional Table",
@@ -39,7 +39,7 @@
     {
       "place_id": "0a1b2c3d-1111-4a01-8001-000000000002",
       "place_name": "Sandhill Wines Tasting Room",
-      "place_type": "winery",
+      "place_type": "tasting_room",
       "start_time": "20:15",
       "duration_min": 60,
       "estimated_cost_pp": 65,
@@ -49,7 +49,7 @@
       "closes": "21:00",
       "vibe_tags": ["upscale", "tasting"],
       "pairing_tags": ["drinks"],
-      "quality_score": 0.84,
+      "quality_score": 0.92,
       "facts": {
         "place_id": "0a1b2c3d-1111-4a01-8001-000000000002",
         "name": "Sandhill Wines Tasting Room",

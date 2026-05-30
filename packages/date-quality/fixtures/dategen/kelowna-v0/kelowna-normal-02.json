@@ -39,7 +39,7 @@
       "closes": "22:00",
       "vibe_tags": ["romantic", "scenic"],
       "pairing_tags": ["dinner", "wine"],
-      "quality_score": 0.9
+      "quality_score": 0.82
     },
     {
       "place_id": "a1b2c3d4-0002-4a02-9002-000000000202",
@@ -62,7 +62,7 @@
       "closes": "23:59",
       "vibe_tags": ["romantic", "calm"],
       "pairing_tags": ["walk", "view"],
-      "quality_score": 0.85
+      "quality_score": 0.9
     },
     {
       "place_id": "a1b2c3d4-0002-4a02-9002-000000000203",

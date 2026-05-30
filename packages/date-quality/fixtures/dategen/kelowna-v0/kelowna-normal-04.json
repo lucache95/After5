@@ -39,7 +39,7 @@
       "closes": "18:00",
       "vibe_tags": ["foodie", "scenic"],
       "pairing_tags": ["lunch", "wine"],
-      "quality_score": 0.88
+      "quality_score": 0.76
     },
     {
       "place_id": "a1b2c3d4-0004-4a04-9004-000000000402",
@@ -63,7 +63,7 @@
       "closes": "17:00",
       "vibe_tags": ["foodie", "playful"],
       "pairing_tags": ["snack", "dessert"],
-      "quality_score": 0.79
+      "quality_score": 0.88
     },
     {
       "place_id": "a1b2c3d4-0004-4a04-9004-000000000403",

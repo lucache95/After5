@@ -38,7 +38,7 @@
       "closes": "22:00",
       "vibe_tags": ["scenic", "calm"],
       "pairing_tags": ["walk", "view"],
-      "quality_score": 0.78
+      "quality_score": 0.72
     },
     {
       "place_id": "a1b2c3d4-0014-4a14-9014-000000001402",
@@ -62,7 +62,7 @@
       "closes": "20:00",
       "vibe_tags": ["cozy", "curious"],
       "pairing_tags": ["coffee", "browse"],
-      "quality_score": 0.75
+      "quality_score": 0.82
     }
   ],
   "packVoiceNote": "Easy and sober-friendly; let a walk and a warm drink carry a first meet."

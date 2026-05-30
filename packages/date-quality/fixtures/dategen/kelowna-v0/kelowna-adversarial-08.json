@@ -15,33 +15,10 @@
   },
   "stops": [
     {
-      "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
-      "place_name": "Sunset Ranch Sunset Terrace",
-      "place_type": "viewpoint",
-      "start_time": "08:30",
-      "duration_min": 45,
-      "estimated_cost_pp": 0,
-      "lat": 49.9203,
-      "lng": -119.3781,
-      "opens": "08:00",
-      "closes": "21:00",
-      "vibe_tags": ["scenic", "romantic"],
-      "pairing_tags": ["view"],
-      "quality_score": 0.78,
-      "facts": {
-        "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
-        "name": "Sunset Ranch Sunset Terrace",
-        "allowed_claims": ["west-facing terrace", "valley overlook"],
-        "setting_tags": ["outdoor", "hillside", "west-facing"],
-        "sensory_tags": ["open sky"],
-        "avoid_claims": ["sunset at this hour", "golden-hour light in the morning"]
-      }
-    },
-    {
       "place_id": "0a1b2c3d-8888-4a08-8008-000000000002",
       "place_name": "Sprout Bread + Cafe",
       "place_type": "cafe",
-      "start_time": "09:30",
+      "start_time": "08:00",
       "duration_min": 50,
       "estimated_cost_pp": 18,
       "lat": 49.8889,
@@ -50,7 +27,7 @@
       "closes": "15:00",
       "vibe_tags": ["cozy", "casual"],
       "pairing_tags": ["breakfast"],
-      "quality_score": 0.81,
+      "quality_score": 0.76,
       "facts": {
         "place_id": "0a1b2c3d-8888-4a08-8008-000000000002",
         "name": "Sprout Bread + Cafe",
@@ -61,27 +38,50 @@
       }
     },
     {
-      "place_id": "0a1b2c3d-8888-4a08-8008-000000000003",
-      "place_name": "Mission Creek Greenway Walk",
-      "place_type": "trail",
-      "start_time": "10:45",
-      "duration_min": 50,
+      "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
+      "place_name": "Sunset Ranch Sunset Terrace",
+      "place_type": "viewpoint",
+      "start_time": "09:15",
+      "duration_min": 60,
       "estimated_cost_pp": 0,
-      "lat": 49.8642,
-      "lng": -119.4391,
-      "opens": "06:00",
-      "closes": "22:00",
-      "vibe_tags": ["scenic", "free"],
-      "pairing_tags": ["walk"],
+      "lat": 49.9203,
+      "lng": -119.3781,
+      "opens": "08:00",
+      "closes": "21:00",
+      "vibe_tags": ["scenic", "romantic"],
+      "pairing_tags": ["view", "sunset_spot"],
+      "quality_score": 0.87,
+      "facts": {
+        "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
+        "name": "Sunset Ranch Sunset Terrace",
+        "allowed_claims": ["west-facing terrace", "valley overlook"],
+        "setting_tags": ["outdoor", "hillside", "west-facing"],
+        "sensory_tags": ["open sky"],
+        "avoid_claims": ["sunset at this hour", "golden-hour light in the morning"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-8888-4a08-8008-000000000003",
+      "place_name": "Kelowna Art Gallery",
+      "place_type": "gallery",
+      "start_time": "10:30",
+      "duration_min": 70,
+      "estimated_cost_pp": 5,
+      "lat": 49.8878,
+      "lng": -119.4940,
+      "opens": "10:00",
+      "closes": "17:00",
+      "vibe_tags": ["cultural", "relaxed"],
+      "pairing_tags": ["culture", "browse"],
       "quality_score": 0.74,
       "facts": {
         "place_id": "0a1b2c3d-8888-4a08-8008-000000000003",
-        "name": "Mission Creek Greenway Walk",
-        "allowed_claims": ["creekside path", "cottonwood shade"],
-        "setting_tags": ["outdoor", "creek"],
-        "sensory_tags": ["creek sound", "shade"]
+        "name": "Kelowna Art Gallery",
+        "allowed_claims": ["free drop-in gallery", "rotating regional exhibitions", "downtown Bernard Avenue"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["quiet gallery light", "local artwork"]
       }
     }
   ],
-  "packVoiceNote": "Adversarial: a morning date (time_of_day morning, first stop 08:30) routed to a west-facing 'Sunset Terrace'. The time-of-day / golden-hour logistics gate should fire if the writer promises sunset or golden-hour light, which is physically impossible at 08:30 and explicitly listed in avoid_claims. The venue name baits the writer toward an unsupported sunset claim."
+  "packVoiceNote": "Adversarial: a morning date (time_of_day morning) routed to a west-facing 'Sunset Terrace' at 09:15. The time-of-day / golden-hour logistics gate should fire because the sunset_spot stop starts at 09:15 — far outside the 16:30–20:30 window. The venue name baits the writer toward an unsupported sunset claim, and the avoid_claims list explicitly forbids those claims."
 }

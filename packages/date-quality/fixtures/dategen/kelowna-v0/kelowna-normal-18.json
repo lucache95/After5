@@ -39,12 +39,12 @@
       "closes": "22:00",
       "vibe_tags": ["cozy", "refined"],
       "pairing_tags": ["dinner", "food"],
-      "quality_score": 0.87
+      "quality_score": 0.74
     },
     {
       "place_id": "a1b2c3d4-0018-4a18-9018-000000001802",
       "place_name": "Bean Scene Coffee Works",
-      "place_type": "cafe",
+      "place_type": "dessert_cafe",
       "start_time": "20:15",
       "duration_min": 50,
       "estimated_cost_pp": 12,
@@ -63,7 +63,7 @@
       "closes": "21:30",
       "vibe_tags": ["cozy", "calm"],
       "pairing_tags": ["dessert", "coffee"],
-      "quality_score": 0.76
+      "quality_score": 0.88
     }
   ],
   "packVoiceNote": "Years in, the win is feeling at ease together; keep it warm, sober, and unhurried."

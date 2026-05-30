@@ -17,7 +17,7 @@
     {
       "place_id": "0a1b2c3d-3333-4a03-8003-000000000001",
       "place_name": "Downtown Kelowna Marina Meetup",
-      "place_type": "viewpoint",
+      "place_type": "public_plaza",
       "start_time": "17:30",
       "duration_min": 30,
       "estimated_cost_pp": 0,
@@ -27,7 +27,7 @@
       "closes": "23:59",
       "vibe_tags": ["scenic", "public"],
       "pairing_tags": ["meet"],
-      "quality_score": 0.72,
+      "quality_score": 0.65,
       "facts": {
         "place_id": "0a1b2c3d-3333-4a03-8003-000000000001",
         "name": "Downtown Kelowna Marina Meetup",
@@ -49,7 +49,7 @@
       "closes": "21:00",
       "vibe_tags": ["secluded", "remote", "adventurous"],
       "pairing_tags": ["hike"],
-      "quality_score": 0.68,
+      "quality_score": 0.78,
       "facts": {
         "place_id": "0a1b2c3d-3333-4a03-8003-000000000002",
         "name": "Goats Peak Regional Park Trailhead",

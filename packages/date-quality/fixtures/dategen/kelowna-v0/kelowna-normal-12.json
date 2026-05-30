@@ -19,7 +19,7 @@
     {
       "place_id": "a1b2c3d4-0012-4a12-9012-000000001201",
       "place_name": "BNA Brewing Bowling Lanes",
-      "place_type": "activity_bar",
+      "place_type": "bowling_alley",
       "start_time": "19:00",
       "duration_min": 75,
       "estimated_cost_pp": 30,
@@ -38,7 +38,7 @@
       "closes": "00:00",
       "vibe_tags": ["playful", "lively"],
       "pairing_tags": ["activity", "drinks"],
-      "quality_score": 0.82
+      "quality_score": 0.72
     },
     {
       "place_id": "a1b2c3d4-0012-4a12-9012-000000001202",
@@ -62,7 +62,7 @@
       "closes": "22:00",
       "vibe_tags": ["playful", "casual"],
       "pairing_tags": ["drinks"],
-      "quality_score": 0.74
+      "quality_score": 0.84
     }
   ],
   "packVoiceNote": "Keep the energy up and a little competitive; this night is meant to be fun."

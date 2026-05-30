@@ -38,7 +38,7 @@
       "closes": "23:00",
       "vibe_tags": ["foodie", "casual"],
       "pairing_tags": ["dinner", "wine"],
-      "quality_score": 0.83
+      "quality_score": 0.76
     },
     {
       "place_id": "a1b2c3d4-0008-4a08-9008-000000000802",
@@ -62,7 +62,7 @@
       "closes": "21:00",
       "vibe_tags": ["relaxed", "sweet"],
       "pairing_tags": ["dessert", "coffee"],
-      "quality_score": 0.78
+      "quality_score": 0.87
     }
   ],
   "packVoiceNote": "Make the most of a perfect patio night; keep it easy and unfussy."

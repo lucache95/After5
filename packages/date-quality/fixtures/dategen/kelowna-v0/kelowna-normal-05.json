@@ -38,7 +38,7 @@
       "closes": "20:00",
       "vibe_tags": ["cozy", "calm"],
       "pairing_tags": ["coffee", "snack"],
-      "quality_score": 0.81
+      "quality_score": 0.74
     },
     {
       "place_id": "a1b2c3d4-0005-4a05-9005-000000000502",
@@ -61,7 +61,7 @@
       "closes": "21:00",
       "vibe_tags": ["cozy", "curious"],
       "pairing_tags": ["browse"],
-      "quality_score": 0.76
+      "quality_score": 0.85
     }
   ],
   "packVoiceNote": "Sober-friendly and unhurried; let conversation carry the night."
