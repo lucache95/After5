@@ -1,0 +1,91 @@
+{
+  "id": "kelowna-adversarial-07-must-include-not-satisfied",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "scenic"],
+    "budget_per_person": 100,
+    "duration_min": 210,
+    "effort": "high",
+    "location": "out",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-08-08",
+    "time_of_day": "evening",
+    "must_includes": ["sunset boat cruise on Okanagan Lake"],
+    "note": "She loves being on the water; a boat is the whole point."
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-7777-4a07-8007-000000000001",
+      "place_name": "Waterfront Wines Restaurant",
+      "place_type": "restaurant",
+      "start_time": "18:00",
+      "duration_min": 90,
+      "estimated_cost_pp": 60,
+      "lat": 49.8901,
+      "lng": -119.4982,
+      "opens": "16:30",
+      "closes": "22:00",
+      "vibe_tags": ["romantic", "upscale"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.86,
+      "facts": {
+        "place_id": "0a1b2c3d-7777-4a07-8007-000000000001",
+        "name": "Waterfront Wines Restaurant",
+        "allowed_claims": ["seasonal tasting plates", "extensive BC wine list"],
+        "signature_items": ["pan-seared halibut"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["candlelight"],
+        "avoid_claims": ["lake view", "boat dock"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-7777-4a07-8007-000000000002",
+      "place_name": "Sunset Organic Bistro",
+      "place_type": "restaurant",
+      "start_time": "19:45",
+      "duration_min": 60,
+      "estimated_cost_pp": 35,
+      "lat": 49.8835,
+      "lng": -119.4915,
+      "opens": "17:00",
+      "closes": "21:30",
+      "vibe_tags": ["romantic", "garden"],
+      "pairing_tags": ["dessert"],
+      "quality_score": 0.77,
+      "facts": {
+        "place_id": "0a1b2c3d-7777-4a07-8007-000000000002",
+        "name": "Sunset Organic Bistro",
+        "allowed_claims": ["organic dessert menu", "garden patio"],
+        "signature_items": ["lavender panna cotta"],
+        "setting_tags": ["patio", "garden"],
+        "sensory_tags": ["herb garden scent"],
+        "avoid_claims": ["on the water", "boat"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-7777-4a07-8007-000000000003",
+      "place_name": "Knox Mountain Apex Lookout",
+      "place_type": "viewpoint",
+      "start_time": "21:00",
+      "duration_min": 40,
+      "estimated_cost_pp": 0,
+      "lat": 49.9075,
+      "lng": -119.4818,
+      "opens": "06:00",
+      "closes": "22:00",
+      "vibe_tags": ["scenic", "free"],
+      "pairing_tags": ["view"],
+      "quality_score": 0.8,
+      "facts": {
+        "place_id": "0a1b2c3d-7777-4a07-8007-000000000003",
+        "name": "Knox Mountain Apex Lookout",
+        "allowed_claims": ["panoramic city and lake overlook", "summit drive"],
+        "setting_tags": ["outdoor", "hilltop"],
+        "sensory_tags": ["wind", "wide view"],
+        "avoid_claims": ["boat", "on the water"]
+      }
+    }
+  ],
+  "packVoiceNote": "Adversarial: explicit must-include is a 'sunset boat cruise on Okanagan Lake', but selection has zero boat/on-water stops and each fact-bank forbids boat/on-water claims. A must-include-satisfaction gate should fire. The writer must not claim or imply a boat cruise happens (e.g. by calling the hilltop lookout 'on the water')."
+}

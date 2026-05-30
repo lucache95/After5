@@ -1,0 +1,70 @@
+{
+  "id": "kelowna-normal-11-anniversary-cozy-no-alcohol-evening-short-drive",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["cozy", "romantic"],
+    "budget_per_person": 65,
+    "duration_min": 150,
+    "effort": "moderate",
+    "must_includes": ["dinner"],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "he/him",
+    "intent": "reconnect",
+    "when": "future",
+    "future_date": "2026-06-28",
+    "note": "anniversary but we don't drink; want warm and intimate",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0011-4a11-9011-000000001101",
+      "place_name": "Frankie We Salute You",
+      "place_type": "restaurant",
+      "start_time": "18:30",
+      "duration_min": 95,
+      "estimated_cost_pp": 48,
+      "facts": {
+        "place_id": "a1b2c3d4-0011-4a11-9011-000000001101",
+        "name": "Frankie We Salute You",
+        "allowed_claims": ["intimate downtown restaurant", "wood-fired sharing plates", "warm dim dining room", "non-alcoholic spritz menu"],
+        "signature_items": ["wood-fired focaccia", "house n/a spritz"],
+        "setting_tags": ["indoor", "downtown", "intimate"],
+        "sensory_tags": ["wood-fire glow", "low warm light", "close tables"],
+        "avoid_claims": ["lake view", "patio"]
+      },
+      "lat": 49.8859,
+      "lng": -119.4949,
+      "opens": "17:00",
+      "closes": "22:00",
+      "vibe_tags": ["cozy", "romantic"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.85
+    },
+    {
+      "place_id": "a1b2c3d4-0011-4a11-9011-000000001102",
+      "place_name": "Bliss Bakery & Bistro",
+      "place_type": "dessert_cafe",
+      "start_time": "20:15",
+      "duration_min": 45,
+      "estimated_cost_pp": 14,
+      "facts": {
+        "place_id": "a1b2c3d4-0011-4a11-9011-000000001102",
+        "name": "Bliss Bakery & Bistro",
+        "allowed_claims": ["bakery and cafe in the Pandosy village", "house-made cakes and tarts", "evening tea and decaf"],
+        "signature_items": ["lemon tart", "carrot cake"],
+        "setting_tags": ["indoor", "village", "cozy"],
+        "sensory_tags": ["bakery warmth", "dessert case"],
+        "avoid_claims": ["alcohol", "lake view"]
+      },
+      "lat": 49.8584,
+      "lng": -119.4889,
+      "opens": "07:00",
+      "closes": "21:00",
+      "vibe_tags": ["cozy", "sweet"],
+      "pairing_tags": ["dessert", "tea"],
+      "quality_score": 0.77
+    }
+  ],
+  "packVoiceNote": "Honor the milestone with warmth; never lean on a drink to set the mood."
+}

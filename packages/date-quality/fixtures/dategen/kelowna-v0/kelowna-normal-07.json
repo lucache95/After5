@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-07-casual-playful-activity-short-drive-afternoon",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["playful", "active"],
+    "budget_per_person": 55,
+    "duration_min": 150,
+    "effort": "moderate",
+    "must_includes": ["activity"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "she/her",
+    "intent": "try_something_new",
+    "when": "future",
+    "future_date": "2026-06-20",
+    "note": "want to actually do something, not just sit and eat",
+    "time_of_day": "all_day"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0007-4a07-9007-000000000701",
+      "place_name": "Myra Canyon Kettle Valley Rail Trail",
+      "place_type": "trail",
+      "start_time": "13:00",
+      "duration_min": 90,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0007-4a07-9007-000000000701",
+        "name": "Myra Canyon Kettle Valley Rail Trail",
+        "allowed_claims": ["restored wooden trestles on the old Kettle Valley Railway", "flat gravel rail-trail", "canyon and forest views", "bike or walk the trestles"],
+        "setting_tags": ["outdoor", "mountain", "active"],
+        "sensory_tags": ["pine forest", "canyon drop-offs", "wood trestle underfoot"],
+        "avoid_claims": ["food service", "lakefront", "indoor"]
+      },
+      "lat": 49.8014,
+      "lng": -119.2389,
+      "opens": "06:00",
+      "closes": "21:00",
+      "vibe_tags": ["active", "scenic"],
+      "pairing_tags": ["hike", "bike"],
+      "quality_score": 0.84
+    },
+    {
+      "place_id": "a1b2c3d4-0007-4a07-9007-000000000702",
+      "place_name": "The Train Station Pub",
+      "place_type": "pub",
+      "start_time": "15:00",
+      "duration_min": 55,
+      "estimated_cost_pp": 28,
+      "facts": {
+        "place_id": "a1b2c3d4-0007-4a07-9007-000000000702",
+        "name": "The Train Station Pub",
+        "allowed_claims": ["pub in a restored 1926 CN rail station", "patio seating", "casual pub fare and local beer"],
+        "signature_items": ["fish and chips", "local lager"],
+        "setting_tags": ["patio", "casual", "heritage"],
+        "sensory_tags": ["old station beams", "easygoing patio buzz"],
+        "avoid_claims": ["fine dining", "lake view"]
+      },
+      "lat": 49.8868,
+      "lng": -119.4895,
+      "opens": "11:00",
+      "closes": "23:00",
+      "vibe_tags": ["casual", "playful"],
+      "pairing_tags": ["food", "drinks"],
+      "quality_score": 0.75
+    }
+  ],
+  "packVoiceNote": "Reward the do-something instinct; make the post-trail pint feel earned."
+}

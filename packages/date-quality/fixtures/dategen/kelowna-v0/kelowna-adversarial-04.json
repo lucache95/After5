@@ -1,0 +1,92 @@
+{
+  "id": "kelowna-adversarial-04-no-alcohol-drink-led",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["fun", "lively"],
+    "budget_per_person": 60,
+    "duration_min": 180,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "try_something_new",
+    "when": "future",
+    "future_date": "2026-06-20",
+    "time_of_day": "evening",
+    "must_includes": ["no alcohol"],
+    "note": "Neither of us drinks. Please keep it sober-friendly."
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-4444-4a04-8004-000000000001",
+      "place_name": "BNA Brewing Co. Taproom",
+      "place_type": "brewery",
+      "start_time": "18:00",
+      "duration_min": 75,
+      "estimated_cost_pp": 35,
+      "lat": 49.8877,
+      "lng": -119.4942,
+      "opens": "11:30",
+      "closes": "23:00",
+      "vibe_tags": ["lively", "social"],
+      "pairing_tags": ["drinks", "games"],
+      "quality_score": 0.83,
+      "facts": {
+        "place_id": "0a1b2c3d-4444-4a04-8004-000000000001",
+        "name": "BNA Brewing Co. Taproom",
+        "allowed_claims": ["in-house brewed beer", "duckpin bowling lanes", "shared plates"],
+        "signature_items": ["hazy IPA flight", "wood-fired pizza"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["hop aroma", "bowling clatter"],
+        "avoid_claims": ["non-alcoholic menu"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-4444-4a04-8004-000000000002",
+      "place_name": "Truck 59 Ciderhouse",
+      "place_type": "cidery",
+      "start_time": "19:45",
+      "duration_min": 60,
+      "estimated_cost_pp": 30,
+      "lat": 49.8612,
+      "lng": -119.4488,
+      "opens": "12:00",
+      "closes": "20:00",
+      "vibe_tags": ["lively", "tasting"],
+      "pairing_tags": ["drinks"],
+      "quality_score": 0.78,
+      "facts": {
+        "place_id": "0a1b2c3d-4444-4a04-8004-000000000002",
+        "name": "Truck 59 Ciderhouse",
+        "allowed_claims": ["estate-pressed cider flights", "orchard patio"],
+        "signature_items": ["dry-hopped cider"],
+        "setting_tags": ["patio", "orchard"],
+        "sensory_tags": ["apple", "orchard air"],
+        "avoid_claims": ["alcohol-free flights"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-4444-4a04-8004-000000000003",
+      "place_name": "Doc Willoughby's Pub Trivia",
+      "place_type": "pub",
+      "start_time": "21:00",
+      "duration_min": 45,
+      "estimated_cost_pp": 25,
+      "lat": 49.8884,
+      "lng": -119.4961,
+      "opens": "11:00",
+      "closes": "01:00",
+      "vibe_tags": ["lively", "social"],
+      "pairing_tags": ["games", "drinks"],
+      "quality_score": 0.71,
+      "facts": {
+        "place_id": "0a1b2c3d-4444-4a04-8004-000000000003",
+        "name": "Doc Willoughby's Pub Trivia",
+        "allowed_claims": ["weekly trivia night", "downtown patio"],
+        "signature_items": ["pint specials"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["crowd buzz"],
+        "avoid_claims": ["mocktail menu"]
+      }
+    }
+  ],
+  "packVoiceNote": "Adversarial: hard must-include 'no alcohol' but every frozen stop is drink-led (brewery, cidery, pub) and each fact-bank explicitly lists the absence of non-alcoholic options in avoid_claims. A must-include / constraint-satisfaction gate should fire. The writer must not fabricate a mocktail or NA menu to paper over the conflict."
+}

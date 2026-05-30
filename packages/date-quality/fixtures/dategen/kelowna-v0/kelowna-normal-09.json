@@ -1,0 +1,68 @@
+{
+  "id": "kelowna-normal-09-first-date-romantic-dessert-walkable-late",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "cozy"],
+    "budget_per_person": 50,
+    "duration_min": 90,
+    "effort": "low",
+    "must_includes": ["dessert"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "she/her",
+    "intent": "impress",
+    "when": "tonight",
+    "note": "second-half-of-the-evening plan, want a romantic late finish with something sweet",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0009-4a09-9009-000000000901",
+      "place_name": "Bouchons Bistro",
+      "place_type": "bistro",
+      "start_time": "20:30",
+      "duration_min": 55,
+      "estimated_cost_pp": 38,
+      "facts": {
+        "place_id": "a1b2c3d4-0009-4a09-9009-000000000901",
+        "name": "Bouchons Bistro",
+        "allowed_claims": ["French bistro downtown", "candlelit dining room", "French wine list", "classic desserts"],
+        "signature_items": ["crème brûlée", "French press coffee"],
+        "setting_tags": ["indoor", "downtown", "intimate"],
+        "sensory_tags": ["candlelight", "quiet murmur", "white tablecloths"],
+        "avoid_claims": ["lake view", "patio"]
+      },
+      "lat": 49.8865,
+      "lng": -119.4953,
+      "opens": "17:00",
+      "closes": "22:30",
+      "vibe_tags": ["romantic", "refined"],
+      "pairing_tags": ["dessert", "wine"],
+      "quality_score": 0.87
+    },
+    {
+      "place_id": "a1b2c3d4-0009-4a09-9009-000000000902",
+      "place_name": "Stuart Park Waterfront Path",
+      "place_type": "waterfront_walk",
+      "start_time": "21:25",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0009-4a09-9009-000000000902",
+        "name": "Stuart Park Waterfront Path",
+        "allowed_claims": ["lit lakeside path downtown", "view of the marina and bridge at night"],
+        "setting_tags": ["outdoor", "waterfront", "free"],
+        "sensory_tags": ["city lights on the water", "cool night air"],
+        "avoid_claims": ["food service", "indoor"]
+      },
+      "lat": 49.8884,
+      "lng": -119.4958,
+      "opens": "00:00",
+      "closes": "23:59",
+      "vibe_tags": ["romantic", "calm"],
+      "pairing_tags": ["walk", "view"],
+      "quality_score": 0.72
+    }
+  ],
+  "packVoiceNote": "Dial up the romance for a strong first impression without trying too hard."
+}

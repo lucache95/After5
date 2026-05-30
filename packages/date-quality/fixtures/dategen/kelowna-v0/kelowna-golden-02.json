@@ -1,0 +1,85 @@
+{
+  "id": "kelowna-golden-02-generic-but-valid",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["casual", "easygoing"],
+    "budget_per_person": 50,
+    "duration_min": 150,
+    "effort": "low",
+    "location": "out",
+    "intent": "chill",
+    "when": "tonight",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-9002-4b02-8102-000000000001",
+      "place_name": "Twisted Tomato Pizzeria",
+      "place_type": "restaurant",
+      "start_time": "18:30",
+      "duration_min": 60,
+      "estimated_cost_pp": 25,
+      "lat": 49.8867,
+      "lng": -119.4934,
+      "opens": "11:00",
+      "closes": "22:00",
+      "vibe_tags": ["casual", "comfort"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.7,
+      "facts": {
+        "place_id": "0a1b2c3d-9002-4b02-8102-000000000001",
+        "name": "Twisted Tomato Pizzeria",
+        "allowed_claims": ["hand-tossed pizza", "casual booths"],
+        "signature_items": ["margherita pizza"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["oven warmth"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9002-4b02-8102-000000000002",
+      "place_name": "Rotten Grape Wine Bar",
+      "place_type": "wine_bar",
+      "start_time": "19:45",
+      "duration_min": 50,
+      "estimated_cost_pp": 22,
+      "lat": 49.8872,
+      "lng": -119.4946,
+      "opens": "16:00",
+      "closes": "23:00",
+      "vibe_tags": ["casual", "social"],
+      "pairing_tags": ["drinks"],
+      "quality_score": 0.72,
+      "facts": {
+        "place_id": "0a1b2c3d-9002-4b02-8102-000000000002",
+        "name": "Rotten Grape Wine Bar",
+        "allowed_claims": ["by-the-glass local pours", "shared cheese boards"],
+        "signature_items": ["cheese board"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["low chatter"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9002-4b02-8102-000000000003",
+      "place_name": "Waterfront Boardwalk Stroll",
+      "place_type": "viewpoint",
+      "start_time": "20:45",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "lat": 49.8896,
+      "lng": -119.4981,
+      "opens": "00:00",
+      "closes": "23:59",
+      "vibe_tags": ["scenic", "free"],
+      "pairing_tags": ["walk"],
+      "quality_score": 0.68,
+      "facts": {
+        "place_id": "0a1b2c3d-9002-4b02-8102-000000000003",
+        "name": "Waterfront Boardwalk Stroll",
+        "allowed_claims": ["downtown lakefront boardwalk"],
+        "setting_tags": ["outdoor", "waterfront"],
+        "sensory_tags": ["lake air"]
+      }
+    }
+  ],
+  "packVoiceNote": "Golden: a perfectly fine, unremarkable casual night (pizza -> wine bar -> waterfront walk). All gates pass and logistics are clean, but it is generic and low-effort by design. Expected to land in the middle band, not the top. Regression anchor: it should never score as high as golden-01, and never fail a gate."
+}

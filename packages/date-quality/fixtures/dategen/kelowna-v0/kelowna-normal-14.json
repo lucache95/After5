@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-14-first-date-scenic-no-alcohol-short-drive-golden-hour",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["scenic", "relaxed"],
+    "budget_per_person": 25,
+    "duration_min": 120,
+    "effort": "moderate",
+    "must_includes": ["view"],
+    "location": "out",
+    "you_pronouns": "they/them",
+    "partner_pronouns": "she/her",
+    "intent": "try_something_new",
+    "when": "future",
+    "future_date": "2026-06-18",
+    "note": "first date, no drinking, want pretty views and a short drive is fine",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0014-4a14-9014-000000001401",
+      "place_name": "Mission Creek Greenway",
+      "place_type": "trail",
+      "start_time": "18:00",
+      "duration_min": 60,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0014-4a14-9014-000000001401",
+        "name": "Mission Creek Greenway",
+        "allowed_claims": ["riverside walking path along Mission Creek", "shaded cottonwood trail", "footbridges over the creek"],
+        "setting_tags": ["outdoor", "creekside", "free"],
+        "sensory_tags": ["running water", "dappled evening light", "cottonwood shade"],
+        "avoid_claims": ["food service", "lake view", "indoor"]
+      },
+      "lat": 49.8689,
+      "lng": -119.4358,
+      "opens": "06:00",
+      "closes": "22:00",
+      "vibe_tags": ["scenic", "calm"],
+      "pairing_tags": ["walk", "view"],
+      "quality_score": 0.78
+    },
+    {
+      "place_id": "a1b2c3d4-0014-4a14-9014-000000001402",
+      "place_name": "Pulp Fiction Coffee House",
+      "place_type": "cafe",
+      "start_time": "19:15",
+      "duration_min": 50,
+      "estimated_cost_pp": 8,
+      "facts": {
+        "place_id": "a1b2c3d4-0014-4a14-9014-000000001402",
+        "name": "Pulp Fiction Coffee House",
+        "allowed_claims": ["cafe attached to a used bookstore", "espresso and loose-leaf tea", "shelves of secondhand books"],
+        "signature_items": ["maple latte", "loose-leaf chai"],
+        "setting_tags": ["indoor", "cozy", "casual"],
+        "sensory_tags": ["old-book smell", "quiet corners", "warm lamplight"],
+        "avoid_claims": ["alcohol", "lake view"]
+      },
+      "lat": 49.8623,
+      "lng": -119.4598,
+      "opens": "08:00",
+      "closes": "20:00",
+      "vibe_tags": ["cozy", "curious"],
+      "pairing_tags": ["coffee", "browse"],
+      "quality_score": 0.75
+    }
+  ],
+  "packVoiceNote": "Easy and sober-friendly; let a walk and a warm drink carry a first meet."
+}

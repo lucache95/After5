@@ -1,0 +1,89 @@
+{
+  "id": "kelowna-golden-04-logistically-awkward",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["scenic", "adventurous"],
+    "budget_per_person": 70,
+    "duration_min": 240,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "try_something_new",
+    "when": "future",
+    "future_date": "2026-07-18",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-9004-4b04-8104-000000000001",
+      "place_name": "Myra Canyon Trestles Walk",
+      "place_type": "viewpoint",
+      "start_time": "18:30",
+      "duration_min": 75,
+      "estimated_cost_pp": 0,
+      "lat": 49.8167,
+      "lng": -119.2839,
+      "opens": "06:00",
+      "closes": "19:00",
+      "vibe_tags": ["scenic", "outdoor", "adventurous"],
+      "pairing_tags": ["walk", "view"],
+      "quality_score": 0.86,
+      "facts": {
+        "place_id": "0a1b2c3d-9004-4b04-8104-000000000001",
+        "name": "Myra Canyon Trestles Walk",
+        "allowed_claims": ["restored rail trestles", "canyon-edge gravel trail"],
+        "setting_tags": ["outdoor", "mountain", "canyon"],
+        "sensory_tags": ["pine air", "canyon quiet"],
+        "avoid_claims": ["lakeview", "patio", "wine flight"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9004-4b04-8104-000000000002",
+      "place_name": "Waterfront Wines Tasting Room",
+      "place_type": "wine_bar",
+      "start_time": "19:30",
+      "duration_min": 60,
+      "estimated_cost_pp": 35,
+      "lat": 49.8901,
+      "lng": -119.4972,
+      "opens": "12:00",
+      "closes": "21:00",
+      "vibe_tags": ["scenic", "relaxed"],
+      "pairing_tags": ["drinks", "snacks"],
+      "quality_score": 0.81,
+      "facts": {
+        "place_id": "0a1b2c3d-9004-4b04-8104-000000000002",
+        "name": "Waterfront Wines Tasting Room",
+        "allowed_claims": ["downtown lakefront tasting bar", "Okanagan flights by the glass"],
+        "signature_items": ["Okanagan reds flight"],
+        "setting_tags": ["indoor", "waterfront", "downtown"],
+        "sensory_tags": ["lake light"],
+        "avoid_claims": ["mountain view", "trailside firepit"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9004-4b04-8104-000000000003",
+      "place_name": "Sunset Organic Bistro",
+      "place_type": "restaurant",
+      "start_time": "20:30",
+      "duration_min": 90,
+      "estimated_cost_pp": 35,
+      "lat": 49.7644,
+      "lng": -119.6011,
+      "opens": "17:00",
+      "closes": "21:00",
+      "vibe_tags": ["relaxed", "farm-to-table"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.83,
+      "facts": {
+        "place_id": "0a1b2c3d-9004-4b04-8104-000000000003",
+        "name": "Sunset Organic Bistro",
+        "allowed_claims": ["organic farm-to-table plates", "westside vineyard setting"],
+        "signature_items": ["garden harvest bowl"],
+        "setting_tags": ["indoor", "vineyard", "westside"],
+        "sensory_tags": ["garden herbs"],
+        "avoid_claims": ["lakefront", "rooftop", "downtown"]
+      }
+    }
+  ],
+  "packVoiceNote": "Golden: every fact-bank is honest and the copy can read well, so the truthfulness and writing-quality gates should stay clean and the judge should reward the scenic/adventurous vibe. The selection is logistically awkward BY DESIGN: stop 1 (Myra Canyon, far southeast mountains) closes 19:00 yet sits before a 19:30 downtown stop ~40min drive away, and stop 3 (Sunset Organic, westside) opens 17:00 / closes 21:00 but is scheduled to start 20:30 and run 90min past close, with another long cross-town drive from downtown. Regression anchor: the deferred logistics gates (open-at-arrival, travel/pacing) must FAIL here and cap the score, while the truthfulness and copy gates stay clean. A refactor that lets this pass logistics, or that wrongly trips truthfulness, is a regression."
+}

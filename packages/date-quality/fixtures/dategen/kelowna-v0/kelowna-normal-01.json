@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-01-first-date-playful-walkable-evening",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["playful", "casual"],
+    "budget_per_person": 45,
+    "duration_min": 120,
+    "effort": "low",
+    "must_includes": ["drinks"],
+    "location": "out",
+    "you_pronouns": "they/them",
+    "partner_pronouns": "she/her",
+    "intent": "try_something_new",
+    "when": "tonight",
+    "note": "first date, keep it light and walkable downtown",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0001-4a01-9001-000000000101",
+      "place_name": "Doc Willoughby's Downtown Pub",
+      "place_type": "pub",
+      "start_time": "18:30",
+      "duration_min": 60,
+      "estimated_cost_pp": 22,
+      "facts": {
+        "place_id": "a1b2c3d4-0001-4a01-9001-000000000101",
+        "name": "Doc Willoughby's Downtown Pub",
+        "allowed_claims": ["heritage brick building on Bernard Avenue", "rotating BC craft taps", "shared appetizer plates", "open until late"],
+        "signature_items": ["sweet potato fries", "local IPA flight"],
+        "setting_tags": ["indoor", "downtown", "casual"],
+        "sensory_tags": ["warm low lighting", "chatter", "exposed brick"],
+        "avoid_claims": ["lake view", "patio"]
+      },
+      "lat": 49.8862,
+      "lng": -119.4955,
+      "opens": "11:00",
+      "closes": "00:00",
+      "vibe_tags": ["casual", "lively"],
+      "pairing_tags": ["drinks", "snacks"],
+      "quality_score": 0.78
+    },
+    {
+      "place_id": "a1b2c3d4-0001-4a01-9001-000000000102",
+      "place_name": "Sandrine Chocolate & Pastry",
+      "place_type": "dessert_cafe",
+      "start_time": "19:45",
+      "duration_min": 45,
+      "estimated_cost_pp": 18,
+      "facts": {
+        "place_id": "a1b2c3d4-0001-4a01-9001-000000000102",
+        "name": "Sandrine Chocolate & Pastry",
+        "allowed_claims": ["French-style pastry counter", "handmade bonbons", "espresso and hot chocolate"],
+        "signature_items": ["passionfruit bonbon", "dark hot chocolate"],
+        "setting_tags": ["indoor", "downtown", "intimate"],
+        "sensory_tags": ["cocoa smell", "glass display case"],
+        "avoid_claims": ["full dinner menu", "alcohol"]
+      },
+      "lat": 49.8869,
+      "lng": -119.4948,
+      "opens": "09:00",
+      "closes": "21:00",
+      "vibe_tags": ["sweet", "intimate"],
+      "pairing_tags": ["dessert"],
+      "quality_score": 0.82
+    }
+  ],
+  "packVoiceNote": "Keep it breezy and low-pressure; this is a getting-to-know-you night."
+}

@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-06-anniversary-scenic-splurge-golden-hour-flexible",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["scenic", "romantic"],
+    "budget_per_person": 180,
+    "duration_min": 180,
+    "effort": "high",
+    "must_includes": ["view", "dinner"],
+    "location": "out",
+    "you_pronouns": "they/them",
+    "partner_pronouns": "they/them",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-07-02",
+    "note": "anniversary, want jaw-dropping views and a real splurge dinner",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0006-4a06-9006-000000000601",
+      "place_name": "Knox Mountain Park Lookout",
+      "place_type": "viewpoint",
+      "start_time": "18:45",
+      "duration_min": 50,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0006-4a06-9006-000000000601",
+        "name": "Knox Mountain Park Lookout",
+        "allowed_claims": ["panoramic lookout above the city", "paved road to the upper viewpoint", "view over Okanagan Lake and downtown"],
+        "setting_tags": ["outdoor", "viewpoint", "free"],
+        "sensory_tags": ["golden-hour light over the lake", "wide open horizon", "wind at the summit"],
+        "avoid_claims": ["food service", "indoor seating"]
+      },
+      "lat": 49.9089,
+      "lng": -119.4869,
+      "opens": "06:00",
+      "closes": "22:00",
+      "vibe_tags": ["scenic", "romantic"],
+      "pairing_tags": ["view", "walk"],
+      "quality_score": 0.86
+    },
+    {
+      "place_id": "a1b2c3d4-0006-4a06-9006-000000000602",
+      "place_name": "RauDZ Regional Table",
+      "place_type": "fine_dining",
+      "start_time": "20:00",
+      "duration_min": 110,
+      "estimated_cost_pp": 130,
+      "facts": {
+        "place_id": "a1b2c3d4-0006-4a06-9006-000000000602",
+        "name": "RauDZ Regional Table",
+        "allowed_claims": ["farm-to-table downtown restaurant", "seasonal Okanagan tasting menu", "open kitchen", "extensive BC wine list"],
+        "signature_items": ["chef's seasonal tasting", "local steelhead trout"],
+        "setting_tags": ["indoor", "downtown", "upscale"],
+        "sensory_tags": ["open kitchen energy", "candlelit tables"],
+        "avoid_claims": ["lake view", "patio"]
+      },
+      "lat": 49.8866,
+      "lng": -119.4956,
+      "opens": "17:00",
+      "closes": "22:00",
+      "vibe_tags": ["romantic", "refined"],
+      "pairing_tags": ["dinner", "wine"],
+      "quality_score": 0.92
+    }
+  ],
+  "packVoiceNote": "Pull out the stops; this should feel like an occasion worth dressing up for."
+}

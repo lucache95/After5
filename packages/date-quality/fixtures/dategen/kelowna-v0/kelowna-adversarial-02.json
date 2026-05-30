@@ -1,0 +1,86 @@
+{
+  "id": "kelowna-adversarial-02-tonight-barely-open",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["cozy", "lowkey"],
+    "budget_per_person": 70,
+    "duration_min": 150,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "reconnect",
+    "when": "tonight",
+    "time_of_day": "evening",
+    "note": "We are heading out late, around 9."
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-2222-4a02-8002-000000000001",
+      "place_name": "Krafty Kitchen + Bar",
+      "place_type": "restaurant",
+      "start_time": "21:00",
+      "duration_min": 75,
+      "estimated_cost_pp": 45,
+      "lat": 49.8889,
+      "lng": -119.4955,
+      "opens": "11:00",
+      "closes": "21:30",
+      "vibe_tags": ["cozy", "comfort"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.82,
+      "facts": {
+        "place_id": "0a1b2c3d-2222-4a02-8002-000000000001",
+        "name": "Krafty Kitchen + Bar",
+        "allowed_claims": ["scratch-made comfort plates", "local sourcing"],
+        "signature_items": ["short rib poutine"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["warm room"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-2222-4a02-8002-000000000002",
+      "place_name": "Bean Scene Coffee House",
+      "place_type": "cafe",
+      "start_time": "22:30",
+      "duration_min": 40,
+      "estimated_cost_pp": 12,
+      "lat": 49.8901,
+      "lng": -119.4963,
+      "opens": "06:30",
+      "closes": "22:00",
+      "vibe_tags": ["cozy", "casual"],
+      "pairing_tags": ["coffee"],
+      "quality_score": 0.74,
+      "facts": {
+        "place_id": "0a1b2c3d-2222-4a02-8002-000000000002",
+        "name": "Bean Scene Coffee House",
+        "allowed_claims": ["house-roasted beans", "fireplace seating"],
+        "signature_items": ["maple latte"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["roast aroma", "fireplace warmth"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-2222-4a02-8002-000000000003",
+      "place_name": "Stuart Park Lakefront Walk",
+      "place_type": "viewpoint",
+      "start_time": "23:15",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "lat": 49.8895,
+      "lng": -119.4985,
+      "opens": "00:00",
+      "closes": "23:59",
+      "vibe_tags": ["scenic", "free"],
+      "pairing_tags": ["walk"],
+      "quality_score": 0.7,
+      "facts": {
+        "place_id": "0a1b2c3d-2222-4a02-8002-000000000003",
+        "name": "Stuart Park Lakefront Walk",
+        "allowed_claims": ["lakefront boardwalk", "spirit bear sculpture"],
+        "setting_tags": ["outdoor", "waterfront"],
+        "sensory_tags": ["lake air", "night quiet"]
+      }
+    }
+  ],
+  "packVoiceNote": "Adversarial: the open-at-arrival logistics gate should fire. Stop 1 arrives 21:00 but closes 21:30 (kitchen effectively closing), stop 2 arrives 22:30 but closes 22:00 (already shut). The writer must not promise lingering meals at venues about to close, and must not invent late hours the fact-bank does not support."
+}

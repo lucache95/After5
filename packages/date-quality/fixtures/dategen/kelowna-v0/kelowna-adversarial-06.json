@@ -1,0 +1,87 @@
+{
+  "id": "kelowna-adversarial-06-three-same-category",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["foodie", "casual"],
+    "budget_per_person": 80,
+    "duration_min": 210,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "chill",
+    "when": "future",
+    "future_date": "2026-06-27",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-6666-4a06-8006-000000000001",
+      "place_name": "Salt & Brick",
+      "place_type": "restaurant",
+      "start_time": "18:00",
+      "duration_min": 70,
+      "estimated_cost_pp": 30,
+      "lat": 49.8881,
+      "lng": -119.4951,
+      "opens": "16:00",
+      "closes": "23:00",
+      "vibe_tags": ["foodie", "casual"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.85,
+      "facts": {
+        "place_id": "0a1b2c3d-6666-4a06-8006-000000000001",
+        "name": "Salt & Brick",
+        "allowed_claims": ["weekly-changing menu", "open kitchen", "local produce"],
+        "signature_items": ["beef tartare"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["kitchen sizzle"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-6666-4a06-8006-000000000002",
+      "place_name": "Frankie We Salute You",
+      "place_type": "restaurant",
+      "start_time": "19:30",
+      "duration_min": 70,
+      "estimated_cost_pp": 28,
+      "lat": 49.8869,
+      "lng": -119.4938,
+      "opens": "17:00",
+      "closes": "22:00",
+      "vibe_tags": ["foodie", "casual"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.8,
+      "facts": {
+        "place_id": "0a1b2c3d-6666-4a06-8006-000000000002",
+        "name": "Frankie We Salute You",
+        "allowed_claims": ["wood-fired plates", "natural wine list"],
+        "signature_items": ["wood-fired flatbread"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["wood smoke"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-6666-4a06-8006-000000000003",
+      "place_name": "Bouchons Bistro",
+      "place_type": "restaurant",
+      "start_time": "21:00",
+      "duration_min": 70,
+      "estimated_cost_pp": 22,
+      "lat": 49.8858,
+      "lng": -119.4929,
+      "opens": "17:00",
+      "closes": "22:30",
+      "vibe_tags": ["foodie", "french"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.82,
+      "facts": {
+        "place_id": "0a1b2c3d-6666-4a06-8006-000000000003",
+        "name": "Bouchons Bistro",
+        "allowed_claims": ["classic French bistro plates", "Okanagan wine pairings"],
+        "signature_items": ["steak frites"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["bistro hum"]
+      }
+    }
+  ],
+  "packVoiceNote": "Adversarial: three back-to-back sit-down dinner restaurants with no arc variety (eat, eat, eat). The arc / pacing judge dimension and any same-category-repetition gate should penalize. The writer must not pretend three consecutive dinners form a varied progression."
+}

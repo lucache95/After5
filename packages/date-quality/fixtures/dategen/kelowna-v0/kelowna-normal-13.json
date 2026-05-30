@@ -1,0 +1,70 @@
+{
+  "id": "kelowna-normal-13-casual-foodie-dessert-walkable-afternoon",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["foodie", "playful"],
+    "budget_per_person": 35,
+    "duration_min": 90,
+    "effort": "low",
+    "must_includes": ["food", "dessert"],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "she/her",
+    "intent": "chill",
+    "when": "future",
+    "future_date": "2026-06-09",
+    "note": "lazy afternoon, want to graze and get something sweet",
+    "time_of_day": "morning"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0013-4a13-9013-000000001301",
+      "place_name": "Kelowna Farmers' & Crafters' Market",
+      "place_type": "market",
+      "start_time": "10:00",
+      "duration_min": 55,
+      "estimated_cost_pp": 18,
+      "facts": {
+        "place_id": "a1b2c3d4-0013-4a13-9013-000000001301",
+        "name": "Kelowna Farmers' & Crafters' Market",
+        "allowed_claims": ["outdoor seasonal market", "local produce and food stalls", "Okanagan fruit and baked goods", "Wednesday and Saturday mornings"],
+        "signature_items": ["fresh cherries", "wood-fired market pizza"],
+        "setting_tags": ["outdoor", "market", "casual"],
+        "sensory_tags": ["produce stalls", "morning bustle", "fruit in the sun"],
+        "avoid_claims": ["alcohol bar", "indoor seating", "evening hours"]
+      },
+      "lat": 49.8889,
+      "lng": -119.4451,
+      "opens": "08:00",
+      "closes": "13:00",
+      "vibe_tags": ["foodie", "playful"],
+      "pairing_tags": ["graze", "browse"],
+      "quality_score": 0.79
+    },
+    {
+      "place_id": "a1b2c3d4-0013-4a13-9013-000000001302",
+      "place_name": "Sandrine Chocolate & Pastry",
+      "place_type": "gelato",
+      "start_time": "11:00",
+      "duration_min": 30,
+      "estimated_cost_pp": 9,
+      "facts": {
+        "place_id": "a1b2c3d4-0013-4a13-9013-000000001302",
+        "name": "Sandrine Chocolate & Pastry",
+        "allowed_claims": ["downtown pastry and chocolate counter", "handmade gelato and bonbons", "morning espresso"],
+        "signature_items": ["lavender gelato", "passionfruit bonbon"],
+        "setting_tags": ["indoor", "downtown", "casual"],
+        "sensory_tags": ["cocoa aroma", "gelato case"],
+        "avoid_claims": ["alcohol", "lake view"]
+      },
+      "lat": 49.8869,
+      "lng": -119.4948,
+      "opens": "09:00",
+      "closes": "21:00",
+      "vibe_tags": ["sweet", "playful"],
+      "pairing_tags": ["dessert"],
+      "quality_score": 0.78
+    }
+  ],
+  "packVoiceNote": "Keep it light and grazy; this is a wandering, snack-as-you-go morning."
+}

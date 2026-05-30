@@ -1,0 +1,87 @@
+{
+  "id": "kelowna-adversarial-08-golden-hour-wrong-window",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "scenic"],
+    "budget_per_person": 70,
+    "duration_min": 180,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-07-18",
+    "time_of_day": "morning",
+    "note": "Morning date, we both work afternoons."
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
+      "place_name": "Sunset Ranch Sunset Terrace",
+      "place_type": "viewpoint",
+      "start_time": "08:30",
+      "duration_min": 45,
+      "estimated_cost_pp": 0,
+      "lat": 49.9203,
+      "lng": -119.3781,
+      "opens": "08:00",
+      "closes": "21:00",
+      "vibe_tags": ["scenic", "romantic"],
+      "pairing_tags": ["view"],
+      "quality_score": 0.78,
+      "facts": {
+        "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
+        "name": "Sunset Ranch Sunset Terrace",
+        "allowed_claims": ["west-facing terrace", "valley overlook"],
+        "setting_tags": ["outdoor", "hillside", "west-facing"],
+        "sensory_tags": ["open sky"],
+        "avoid_claims": ["sunset at this hour", "golden-hour light in the morning"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-8888-4a08-8008-000000000002",
+      "place_name": "Sprout Bread + Cafe",
+      "place_type": "cafe",
+      "start_time": "09:30",
+      "duration_min": 50,
+      "estimated_cost_pp": 18,
+      "lat": 49.8889,
+      "lng": -119.4944,
+      "opens": "07:00",
+      "closes": "15:00",
+      "vibe_tags": ["cozy", "casual"],
+      "pairing_tags": ["breakfast"],
+      "quality_score": 0.81,
+      "facts": {
+        "place_id": "0a1b2c3d-8888-4a08-8008-000000000002",
+        "name": "Sprout Bread + Cafe",
+        "allowed_claims": ["wood-fired sourdough", "morning pastry case"],
+        "signature_items": ["sourdough breakfast sandwich"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["fresh bread aroma"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-8888-4a08-8008-000000000003",
+      "place_name": "Mission Creek Greenway Walk",
+      "place_type": "trail",
+      "start_time": "10:45",
+      "duration_min": 50,
+      "estimated_cost_pp": 0,
+      "lat": 49.8642,
+      "lng": -119.4391,
+      "opens": "06:00",
+      "closes": "22:00",
+      "vibe_tags": ["scenic", "free"],
+      "pairing_tags": ["walk"],
+      "quality_score": 0.74,
+      "facts": {
+        "place_id": "0a1b2c3d-8888-4a08-8008-000000000003",
+        "name": "Mission Creek Greenway Walk",
+        "allowed_claims": ["creekside path", "cottonwood shade"],
+        "setting_tags": ["outdoor", "creek"],
+        "sensory_tags": ["creek sound", "shade"]
+      }
+    }
+  ],
+  "packVoiceNote": "Adversarial: a morning date (time_of_day morning, first stop 08:30) routed to a west-facing 'Sunset Terrace'. The time-of-day / golden-hour logistics gate should fire if the writer promises sunset or golden-hour light, which is physically impossible at 08:30 and explicitly listed in avoid_claims. The venue name baits the writer toward an unsupported sunset claim."
+}

@@ -1,0 +1,94 @@
+{
+  "id": "kelowna-normal-04-casual-foodie-flexible-drive-afternoon",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["foodie", "casual"],
+    "budget_per_person": 70,
+    "duration_min": 180,
+    "effort": "moderate",
+    "must_includes": ["food"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "he/him",
+    "intent": "try_something_new",
+    "when": "future",
+    "future_date": "2026-06-07",
+    "note": "both love eating, happy to drive out to the wineries",
+    "time_of_day": "all_day"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0004-4a04-9004-000000000401",
+      "place_name": "Quails' Gate Estate Winery",
+      "place_type": "winery_restaurant",
+      "start_time": "12:30",
+      "duration_min": 105,
+      "estimated_cost_pp": 48,
+      "facts": {
+        "place_id": "a1b2c3d4-0004-4a04-9004-000000000401",
+        "name": "Quails' Gate Estate Winery",
+        "allowed_claims": ["hillside vineyard above Okanagan Lake in West Kelowna", "Old Vines Restaurant patio", "estate wine tasting", "farm-to-table lunch"],
+        "signature_items": ["Old Vines Foch", "charcuterie board"],
+        "setting_tags": ["patio", "vineyard", "scenic"],
+        "sensory_tags": ["rows of vines", "lake panorama", "warm afternoon sun"],
+        "avoid_claims": ["downtown", "late night"]
+      },
+      "lat": 49.8503,
+      "lng": -119.5945,
+      "opens": "10:00",
+      "closes": "18:00",
+      "vibe_tags": ["foodie", "scenic"],
+      "pairing_tags": ["lunch", "wine"],
+      "quality_score": 0.88
+    },
+    {
+      "place_id": "a1b2c3d4-0004-4a04-9004-000000000402",
+      "place_name": "Carmelis Goat Cheese Artisan",
+      "place_type": "farm_shop",
+      "start_time": "14:45",
+      "duration_min": 50,
+      "estimated_cost_pp": 14,
+      "facts": {
+        "place_id": "a1b2c3d4-0004-4a04-9004-000000000402",
+        "name": "Carmelis Goat Cheese Artisan",
+        "allowed_claims": ["goat dairy and creamery on the hillside", "goat cheese tasting flights", "goat-milk gelato"],
+        "signature_items": ["goat-milk gelato", "fresh chevre flight"],
+        "setting_tags": ["outdoor", "rural", "casual"],
+        "sensory_tags": ["goats in the pasture", "hillside views"],
+        "avoid_claims": ["alcohol bar", "fine dining"]
+      },
+      "lat": 49.8222,
+      "lng": -119.4347,
+      "opens": "10:00",
+      "closes": "17:00",
+      "vibe_tags": ["foodie", "playful"],
+      "pairing_tags": ["snack", "dessert"],
+      "quality_score": 0.79
+    },
+    {
+      "place_id": "a1b2c3d4-0004-4a04-9004-000000000403",
+      "place_name": "Sandhill Wines Tasting Room",
+      "place_type": "winery",
+      "start_time": "15:45",
+      "duration_min": 45,
+      "estimated_cost_pp": 8,
+      "facts": {
+        "place_id": "a1b2c3d4-0004-4a04-9004-000000000403",
+        "name": "Sandhill Wines Tasting Room",
+        "allowed_claims": ["single-vineyard BC wines", "downtown-adjacent tasting bar", "small-lot reds"],
+        "signature_items": ["Small Lots Cabernet Franc"],
+        "setting_tags": ["indoor", "tasting_room", "casual"],
+        "sensory_tags": ["oak barrels", "wine on the counter"],
+        "avoid_claims": ["lake view", "food menu"]
+      },
+      "lat": 49.8839,
+      "lng": -119.4901,
+      "opens": "11:00",
+      "closes": "18:00",
+      "vibe_tags": ["foodie", "relaxed"],
+      "pairing_tags": ["wine"],
+      "quality_score": 0.77
+    }
+  ],
+  "packVoiceNote": "Talk food and craft like a fellow enthusiast, not a tour brochure."
+}

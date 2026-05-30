@@ -1,0 +1,93 @@
+{
+  "id": "kelowna-normal-15-anniversary-romantic-winery-splurge-golden-hour-flexible-drive",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "scenic"],
+    "budget_per_person": 165,
+    "duration_min": 180,
+    "effort": "high",
+    "must_includes": ["wine", "view", "dinner"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "she/her",
+    "intent": "reconnect",
+    "when": "future",
+    "future_date": "2026-07-11",
+    "note": "anniversary, splurge, wine country and a slow golden-hour dinner, happy to drive",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0015-4a15-9015-000000001501",
+      "place_name": "Quails' Gate Winery Tasting Room",
+      "place_type": "winery",
+      "start_time": "17:00",
+      "duration_min": 60,
+      "estimated_cost_pp": 35,
+      "facts": {
+        "place_id": "a1b2c3d4-0015-4a15-9015-000000001501",
+        "name": "Quails' Gate Winery Tasting Room",
+        "allowed_claims": ["hillside vineyard overlooking Okanagan Lake", "guided flight of estate wines", "old log-house tasting room"],
+        "signature_items": ["estate Pinot Noir", "Chenin Blanc"],
+        "setting_tags": ["outdoor", "vineyard", "lakeview"],
+        "sensory_tags": ["lake light", "warm vineyard air", "rows of vines"],
+        "avoid_claims": ["downtown", "indoor only", "no alcohol"]
+      },
+      "lat": 49.8453,
+      "lng": -119.5712,
+      "opens": "10:00",
+      "closes": "19:00",
+      "vibe_tags": ["scenic", "elevated"],
+      "pairing_tags": ["wine", "view"],
+      "quality_score": 0.88
+    },
+    {
+      "place_id": "a1b2c3d4-0015-4a15-9015-000000001502",
+      "place_name": "Old Vines Restaurant",
+      "place_type": "restaurant",
+      "start_time": "18:30",
+      "duration_min": 90,
+      "estimated_cost_pp": 110,
+      "facts": {
+        "place_id": "a1b2c3d4-0015-4a15-9015-000000001502",
+        "name": "Old Vines Restaurant",
+        "allowed_claims": ["floor-to-ceiling windows over the vineyard and lake", "seasonal Okanagan tasting menu", "wine-pairing service"],
+        "signature_items": ["seared scallops", "Okanagan lamb"],
+        "setting_tags": ["indoor", "vineyard", "lakeview", "upscale"],
+        "sensory_tags": ["golden sunset over the lake", "candlelight", "open kitchen aromas"],
+        "avoid_claims": ["fast food", "patio only", "casual pub"]
+      },
+      "lat": 49.8451,
+      "lng": -119.5709,
+      "opens": "11:30",
+      "closes": "21:00",
+      "vibe_tags": ["romantic", "upscale"],
+      "pairing_tags": ["dinner", "wine", "view"],
+      "quality_score": 0.91
+    },
+    {
+      "place_id": "a1b2c3d4-0015-4a15-9015-000000001503",
+      "place_name": "Rotary Beach Park",
+      "place_type": "beach",
+      "start_time": "20:15",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0015-4a15-9015-000000001503",
+        "name": "Rotary Beach Park",
+        "allowed_claims": ["sandy public beach on Okanagan Lake", "lakeside benches", "evening lake breeze"],
+        "setting_tags": ["outdoor", "waterfront", "free"],
+        "sensory_tags": ["lapping water", "cool night air", "moonlight on the lake"],
+        "avoid_claims": ["food service", "indoor", "alcohol service"]
+      },
+      "lat": 49.8447,
+      "lng": -119.4878,
+      "opens": "06:00",
+      "closes": "23:00",
+      "vibe_tags": ["scenic", "calm"],
+      "pairing_tags": ["walk", "view"],
+      "quality_score": 0.74
+    }
+  ],
+  "packVoiceNote": "Make the years count; slow the night down and let the lake do the talking."
+}

@@ -1,0 +1,93 @@
+{
+  "id": "kelowna-normal-17-spontaneous-tonight-foodie-patio-dessert-walkable-evening",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["foodie", "playful"],
+    "budget_per_person": 75,
+    "duration_min": 150,
+    "effort": "moderate",
+    "must_includes": ["patio", "dinner", "dessert"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "he/him",
+    "intent": "impress",
+    "when": "tonight",
+    "note": "spontaneous tonight, want a buzzy patio dinner and a sweet finish, all walkable",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0017-4a17-9017-000000001701",
+      "place_name": "Bouchons Bistro",
+      "place_type": "restaurant",
+      "start_time": "18:45",
+      "duration_min": 75,
+      "estimated_cost_pp": 55,
+      "facts": {
+        "place_id": "a1b2c3d4-0017-4a17-9017-000000001701",
+        "name": "Bouchons Bistro",
+        "allowed_claims": ["French bistro patio off Lawrence Avenue", "classic French dishes", "Okanagan wine list"],
+        "signature_items": ["steak frites", "moules marinieres"],
+        "setting_tags": ["patio", "downtown", "intimate"],
+        "sensory_tags": ["string lights", "butter and garlic aromas", "patio chatter"],
+        "avoid_claims": ["lake view", "fast food", "rooftop"]
+      },
+      "lat": 49.8874,
+      "lng": -119.4961,
+      "opens": "17:00",
+      "closes": "22:00",
+      "vibe_tags": ["lively", "refined"],
+      "pairing_tags": ["dinner", "patio", "wine"],
+      "quality_score": 0.86
+    },
+    {
+      "place_id": "a1b2c3d4-0017-4a17-9017-000000001702",
+      "place_name": "BNA Brewing Co.",
+      "place_type": "brewery",
+      "start_time": "20:15",
+      "duration_min": 45,
+      "estimated_cost_pp": 14,
+      "facts": {
+        "place_id": "a1b2c3d4-0017-4a17-9017-000000001702",
+        "name": "BNA Brewing Co.",
+        "allowed_claims": ["brewery in a former tobacco warehouse", "in-house beers on tap", "duckpin bowling lanes"],
+        "signature_items": ["hazy pale ale", "soft pretzel"],
+        "setting_tags": ["indoor", "downtown", "lively"],
+        "sensory_tags": ["pin clatter", "warehouse brick", "hoppy air"],
+        "avoid_claims": ["lake view", "quiet", "fine dining"]
+      },
+      "lat": 49.8843,
+      "lng": -119.4929,
+      "opens": "11:00",
+      "closes": "23:00",
+      "vibe_tags": ["playful", "lively"],
+      "pairing_tags": ["drinks", "activity"],
+      "quality_score": 0.8
+    },
+    {
+      "place_id": "a1b2c3d4-0017-4a17-9017-000000001703",
+      "place_name": "BeyondVille Gelato",
+      "place_type": "dessert_cafe",
+      "start_time": "21:15",
+      "duration_min": 30,
+      "estimated_cost_pp": 9,
+      "facts": {
+        "place_id": "a1b2c3d4-0017-4a17-9017-000000001703",
+        "name": "BeyondVille Gelato",
+        "allowed_claims": ["made-in-house gelato counter", "rotating seasonal flavours", "walk-up window on Bernard Avenue"],
+        "signature_items": ["pistachio gelato", "Okanagan berry sorbetto"],
+        "setting_tags": ["indoor", "downtown", "casual"],
+        "sensory_tags": ["cold sweet air", "evening crowd on Bernard", "bright case lighting"],
+        "avoid_claims": ["alcohol", "lake view", "full kitchen"]
+      },
+      "lat": 49.8866,
+      "lng": -119.4951,
+      "opens": "12:00",
+      "closes": "22:30",
+      "vibe_tags": ["sweet", "playful"],
+      "pairing_tags": ["dessert"],
+      "quality_score": 0.77
+    }
+  ],
+  "packVoiceNote": "Pull out the stops on short notice; a great patio plus a little fun should feel effortless."
+}

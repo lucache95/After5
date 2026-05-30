@@ -1,0 +1,94 @@
+{
+  "id": "kelowna-normal-16-casual-relaxed-all-day-morning-walkable-flexible-drive",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["relaxed", "foodie"],
+    "budget_per_person": 50,
+    "duration_min": 180,
+    "effort": "moderate",
+    "must_includes": ["coffee", "market", "lunch"],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "they/them",
+    "intent": "chill",
+    "when": "future",
+    "future_date": "2026-06-27",
+    "note": "lazy weekend morning into early afternoon, coffee then wander, no rush",
+    "time_of_day": "morning"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0016-4a16-9016-000000001601",
+      "place_name": "Bright Jenny Coffee",
+      "place_type": "cafe",
+      "start_time": "09:30",
+      "duration_min": 45,
+      "estimated_cost_pp": 9,
+      "facts": {
+        "place_id": "a1b2c3d4-0016-4a16-9016-000000001601",
+        "name": "Bright Jenny Coffee",
+        "allowed_claims": ["small-batch local roaster", "espresso bar with bench seating", "house-roasted single origins"],
+        "signature_items": ["flat white", "cold brew"],
+        "setting_tags": ["indoor", "casual", "bright"],
+        "sensory_tags": ["fresh-ground coffee smell", "morning light", "milk steam"],
+        "avoid_claims": ["lake view", "alcohol", "full kitchen"]
+      },
+      "lat": 49.8901,
+      "lng": -119.4622,
+      "opens": "07:00",
+      "closes": "16:00",
+      "vibe_tags": ["relaxed", "bright"],
+      "pairing_tags": ["coffee"],
+      "quality_score": 0.83
+    },
+    {
+      "place_id": "a1b2c3d4-0016-4a16-9016-000000001602",
+      "place_name": "Kelowna Farmers' and Crafters' Market",
+      "place_type": "market",
+      "start_time": "10:30",
+      "duration_min": 60,
+      "estimated_cost_pp": 15,
+      "facts": {
+        "place_id": "a1b2c3d4-0016-4a16-9016-000000001602",
+        "name": "Kelowna Farmers' and Crafters' Market",
+        "allowed_claims": ["outdoor stalls of Okanagan produce and crafts", "local fruit and baked goods", "Saturday and Wednesday market"],
+        "signature_items": ["fresh cherries", "wood-fired pretzel"],
+        "setting_tags": ["outdoor", "market", "casual"],
+        "sensory_tags": ["ripe fruit smell", "vendor chatter", "warm sun"],
+        "avoid_claims": ["indoor mall", "fine dining", "lake view"]
+      },
+      "lat": 49.8819,
+      "lng": -119.4471,
+      "opens": "08:00",
+      "closes": "13:00",
+      "vibe_tags": ["lively", "local"],
+      "pairing_tags": ["browse", "snacks"],
+      "quality_score": 0.79
+    },
+    {
+      "place_id": "a1b2c3d4-0016-4a16-9016-000000001603",
+      "place_name": "Krafty Kitchen + Bar",
+      "place_type": "restaurant",
+      "start_time": "12:00",
+      "duration_min": 75,
+      "estimated_cost_pp": 26,
+      "facts": {
+        "place_id": "a1b2c3d4-0016-4a16-9016-000000001603",
+        "name": "Krafty Kitchen + Bar",
+        "allowed_claims": ["farm-to-table brunch and lunch menu", "scratch kitchen", "bright downtown dining room"],
+        "signature_items": ["loaded breakfast bowl", "smashed-avocado toast"],
+        "setting_tags": ["indoor", "downtown", "casual"],
+        "sensory_tags": ["kitchen sizzle", "fresh herbs", "midday buzz"],
+        "avoid_claims": ["lake view", "rooftop"]
+      },
+      "lat": 49.8878,
+      "lng": -119.4938,
+      "opens": "08:00",
+      "closes": "15:00",
+      "vibe_tags": ["relaxed", "fresh"],
+      "pairing_tags": ["lunch", "food"],
+      "quality_score": 0.81
+    }
+  ],
+  "packVoiceNote": "No agenda, no clock; let a slow morning unfold one good bite at a time."
+}

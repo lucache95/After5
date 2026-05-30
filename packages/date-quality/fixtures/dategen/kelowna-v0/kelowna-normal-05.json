@@ -1,0 +1,68 @@
+{
+  "id": "kelowna-normal-05-first-date-cozy-no-alcohol-walkable-evening",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["cozy", "relaxed"],
+    "budget_per_person": 30,
+    "duration_min": 120,
+    "effort": "low",
+    "must_includes": ["coffee"],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "he/him",
+    "intent": "chill",
+    "when": "tonight",
+    "note": "neither of us drinks, want a cozy low-key first meet",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0005-4a05-9005-000000000501",
+      "place_name": "Bright Jenny Coffee",
+      "place_type": "cafe",
+      "start_time": "18:00",
+      "duration_min": 60,
+      "estimated_cost_pp": 9,
+      "facts": {
+        "place_id": "a1b2c3d4-0005-4a05-9005-000000000501",
+        "name": "Bright Jenny Coffee",
+        "allowed_claims": ["small-batch roaster and cafe", "pour-over and espresso", "house-baked pastries"],
+        "signature_items": ["honey lavender latte", "morning bun"],
+        "setting_tags": ["indoor", "cozy", "casual"],
+        "sensory_tags": ["roasting aroma", "soft music", "warm wood counter"],
+        "avoid_claims": ["alcohol", "lake view"]
+      },
+      "lat": 49.8806,
+      "lng": -119.4607,
+      "opens": "07:00",
+      "closes": "20:00",
+      "vibe_tags": ["cozy", "calm"],
+      "pairing_tags": ["coffee", "snack"],
+      "quality_score": 0.81
+    },
+    {
+      "place_id": "a1b2c3d4-0005-4a05-9005-000000000502",
+      "place_name": "Mosaic Books",
+      "place_type": "bookstore",
+      "start_time": "19:05",
+      "duration_min": 55,
+      "estimated_cost_pp": 12,
+      "facts": {
+        "place_id": "a1b2c3d4-0005-4a05-9005-000000000502",
+        "name": "Mosaic Books",
+        "allowed_claims": ["independent downtown bookstore", "deep local-author and fiction sections", "gift and stationery corner"],
+        "setting_tags": ["indoor", "downtown", "quiet"],
+        "sensory_tags": ["paper smell", "quiet browsing", "tall shelves"],
+        "avoid_claims": ["alcohol", "cafe seating"]
+      },
+      "lat": 49.8861,
+      "lng": -119.4943,
+      "opens": "09:00",
+      "closes": "21:00",
+      "vibe_tags": ["cozy", "curious"],
+      "pairing_tags": ["browse"],
+      "quality_score": 0.76
+    }
+  ],
+  "packVoiceNote": "Sober-friendly and unhurried; let conversation carry the night."
+}

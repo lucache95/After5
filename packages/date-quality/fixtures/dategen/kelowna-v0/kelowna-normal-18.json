@@ -1,0 +1,70 @@
+{
+  "id": "kelowna-normal-18-anniversary-reconnect-cozy-no-alcohol-short-drive-evening",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["cozy", "relaxed"],
+    "budget_per_person": 60,
+    "duration_min": 150,
+    "effort": "moderate",
+    "must_includes": ["dinner", "dessert"],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "she/her",
+    "intent": "reconnect",
+    "when": "future",
+    "future_date": "2026-09-19",
+    "note": "anniversary, both off alcohol this year, want something warm and unhurried, short drive ok",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0018-4a18-9018-000000001801",
+      "place_name": "RauDZ Regional Table",
+      "place_type": "restaurant",
+      "start_time": "18:30",
+      "duration_min": 90,
+      "estimated_cost_pp": 45,
+      "facts": {
+        "place_id": "a1b2c3d4-0018-4a18-9018-000000001801",
+        "name": "RauDZ Regional Table",
+        "allowed_claims": ["regional farm-sourced menu", "open kitchen dining room downtown", "non-alcoholic house mocktails"],
+        "signature_items": ["seasonal vegetable plate", "house mocktail"],
+        "setting_tags": ["indoor", "downtown", "warm"],
+        "sensory_tags": ["open-kitchen warmth", "low pendant light", "quiet hum"],
+        "avoid_claims": ["lake view", "patio only", "fast food"]
+      },
+      "lat": 49.8872,
+      "lng": -119.4946,
+      "opens": "17:00",
+      "closes": "22:00",
+      "vibe_tags": ["cozy", "refined"],
+      "pairing_tags": ["dinner", "food"],
+      "quality_score": 0.87
+    },
+    {
+      "place_id": "a1b2c3d4-0018-4a18-9018-000000001802",
+      "place_name": "Bean Scene Coffee Works",
+      "place_type": "cafe",
+      "start_time": "20:15",
+      "duration_min": 50,
+      "estimated_cost_pp": 12,
+      "facts": {
+        "place_id": "a1b2c3d4-0018-4a18-9018-000000001802",
+        "name": "Bean Scene Coffee Works",
+        "allowed_claims": ["long-running local cafe", "house-baked desserts", "decaf and herbal tea options"],
+        "signature_items": ["carrot cake", "London Fog"],
+        "setting_tags": ["indoor", "cozy", "casual"],
+        "sensory_tags": ["warm lamplight", "espresso hiss", "soft conversation"],
+        "avoid_claims": ["alcohol", "lake view"]
+      },
+      "lat": 49.8881,
+      "lng": -119.4959,
+      "opens": "06:30",
+      "closes": "21:30",
+      "vibe_tags": ["cozy", "calm"],
+      "pairing_tags": ["dessert", "coffee"],
+      "quality_score": 0.76
+    }
+  ],
+  "packVoiceNote": "Years in, the win is feeling at ease together; keep it warm, sober, and unhurried."
+}

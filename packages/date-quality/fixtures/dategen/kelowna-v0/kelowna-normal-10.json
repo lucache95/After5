@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-10-casual-scenic-lake-walkable-golden-hour",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["scenic", "relaxed"],
+    "budget_per_person": 40,
+    "duration_min": 120,
+    "effort": "low",
+    "must_includes": ["lake"],
+    "location": "out",
+    "you_pronouns": "they/them",
+    "partner_pronouns": "he/him",
+    "intent": "chill",
+    "when": "future",
+    "future_date": "2026-06-11",
+    "note": "want golden hour by the lake, keep it walkable",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0010-4a10-9010-000000001001",
+      "place_name": "Tugboat Bay Beach",
+      "place_type": "beach",
+      "start_time": "18:00",
+      "duration_min": 50,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0010-4a10-9010-000000001001",
+        "name": "Tugboat Bay Beach",
+        "allowed_claims": ["small downtown swimming beach beside Waterfront Park", "sandy shoreline on Okanagan Lake", "west-facing for sunset"],
+        "setting_tags": ["outdoor", "waterfront", "free"],
+        "sensory_tags": ["lake lapping the sand", "golden-hour glare off the water", "warm sand"],
+        "avoid_claims": ["food service", "indoor seating"]
+      },
+      "lat": 49.8893,
+      "lng": -119.4983,
+      "opens": "06:00",
+      "closes": "23:00",
+      "vibe_tags": ["scenic", "calm"],
+      "pairing_tags": ["beach", "view"],
+      "quality_score": 0.8
+    },
+    {
+      "place_id": "a1b2c3d4-0010-4a10-9010-000000001002",
+      "place_name": "Bonfire Restaurant at The Cove Lakeside Resort",
+      "place_type": "waterfront_bar",
+      "start_time": "19:00",
+      "duration_min": 60,
+      "estimated_cost_pp": 30,
+      "facts": {
+        "place_id": "a1b2c3d4-0010-4a10-9010-000000001002",
+        "name": "Bonfire Restaurant at The Cove Lakeside Resort",
+        "allowed_claims": ["lakefront resort patio in West Kelowna", "tables overlooking the water", "cocktails and shareable plates"],
+        "signature_items": ["wood-fired flatbread", "spritz cocktails"],
+        "setting_tags": ["patio", "waterfront", "casual"],
+        "sensory_tags": ["lake right at the rail", "sunset over the water"],
+        "avoid_claims": ["downtown core", "rooftop"]
+      },
+      "lat": 49.8746,
+      "lng": -119.5478,
+      "opens": "11:00",
+      "closes": "22:00",
+      "vibe_tags": ["scenic", "relaxed"],
+      "pairing_tags": ["drinks", "snacks"],
+      "quality_score": 0.81
+    }
+  ],
+  "packVoiceNote": "Let the lake do the heavy lifting; keep the words simple and unhurried."
+}

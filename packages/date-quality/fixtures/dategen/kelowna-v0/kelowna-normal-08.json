@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-08-spontaneous-tonight-foodie-patio-walkable-evening",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["foodie", "relaxed"],
+    "budget_per_person": 60,
+    "duration_min": 120,
+    "effort": "low",
+    "must_includes": ["patio", "dinner"],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "she/her",
+    "intent": "chill",
+    "when": "tonight",
+    "note": "warm night, want a good patio downtown",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0008-4a08-9008-000000000801",
+      "place_name": "Salt & Brick",
+      "place_type": "restaurant",
+      "start_time": "18:30",
+      "duration_min": 80,
+      "estimated_cost_pp": 42,
+      "facts": {
+        "place_id": "a1b2c3d4-0008-4a08-9008-000000000801",
+        "name": "Salt & Brick",
+        "allowed_claims": ["small-plates restaurant on Bernard Avenue", "sidewalk patio", "daily-changing chalkboard menu", "local and seasonal ingredients"],
+        "signature_items": ["house gnocchi", "burrata plate"],
+        "setting_tags": ["patio", "downtown", "casual"],
+        "sensory_tags": ["sidewalk patio buzz", "open chalkboard menu"],
+        "avoid_claims": ["lake view", "fine dining tasting menu"]
+      },
+      "lat": 49.8867,
+      "lng": -119.4947,
+      "opens": "16:00",
+      "closes": "23:00",
+      "vibe_tags": ["foodie", "casual"],
+      "pairing_tags": ["dinner", "wine"],
+      "quality_score": 0.83
+    },
+    {
+      "place_id": "a1b2c3d4-0008-4a08-9008-000000000802",
+      "place_name": "Parallel 49 Coffee Roasters",
+      "place_type": "gelato",
+      "start_time": "20:00",
+      "duration_min": 35,
+      "estimated_cost_pp": 10,
+      "facts": {
+        "place_id": "a1b2c3d4-0008-4a08-9008-000000000802",
+        "name": "Parallel 49 Coffee Roasters",
+        "allowed_claims": ["downtown roaster and cafe", "small-batch gelato", "evening espresso and affogato"],
+        "signature_items": ["affogato", "pistachio gelato"],
+        "setting_tags": ["indoor", "downtown", "casual"],
+        "sensory_tags": ["coffee aroma", "gelato case glow"],
+        "avoid_claims": ["alcohol", "lake view"]
+      },
+      "lat": 49.8852,
+      "lng": -119.4938,
+      "opens": "07:00",
+      "closes": "21:00",
+      "vibe_tags": ["relaxed", "sweet"],
+      "pairing_tags": ["dessert", "coffee"],
+      "quality_score": 0.78
+    }
+  ],
+  "packVoiceNote": "Make the most of a perfect patio night; keep it easy and unfussy."
+}

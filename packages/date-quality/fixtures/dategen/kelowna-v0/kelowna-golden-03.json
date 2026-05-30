@@ -1,0 +1,90 @@
+{
+  "id": "kelowna-golden-03-hallucination-prone",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["foodie", "intimate"],
+    "budget_per_person": 85,
+    "duration_min": 180,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-09-05",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-9003-4b03-8103-000000000001",
+      "place_name": "Old Vines Restaurant at Quails' Gate",
+      "place_type": "restaurant",
+      "start_time": "18:00",
+      "duration_min": 90,
+      "estimated_cost_pp": 55,
+      "lat": 49.8311,
+      "lng": -119.5712,
+      "opens": "11:00",
+      "closes": "21:00",
+      "vibe_tags": ["upscale", "foodie"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.9,
+      "facts": {
+        "place_id": "0a1b2c3d-9003-4b03-8103-000000000001",
+        "name": "Old Vines Restaurant at Quails' Gate",
+        "allowed_claims": ["vineyard-view dining room", "seasonal regional menu"],
+        "signature_items": ["seasonal regional menu"],
+        "setting_tags": ["indoor", "vineyard"],
+        "sensory_tags": ["vineyard view"],
+        "avoid_claims": ["Michelin star", "celebrity chef", "rooftop", "ocean view", "tableside flambe"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9003-4b03-8103-000000000002",
+      "place_name": "The Modest Butcher Tasting Counter",
+      "place_type": "wine_bar",
+      "start_time": "19:45",
+      "duration_min": 50,
+      "estimated_cost_pp": 30,
+      "lat": 49.8859,
+      "lng": -119.4922,
+      "opens": "15:00",
+      "closes": "23:00",
+      "vibe_tags": ["intimate", "foodie"],
+      "pairing_tags": ["drinks", "snacks"],
+      "quality_score": 0.79,
+      "facts": {
+        "place_id": "0a1b2c3d-9003-4b03-8103-000000000002",
+        "name": "The Modest Butcher Tasting Counter",
+        "allowed_claims": ["charcuterie counter", "local wine flights"],
+        "signature_items": ["house charcuterie board"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["cured meat aroma"],
+        "avoid_claims": ["dry-aging room tour", "in-house distillery", "live jazz", "waterfront patio"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9003-4b03-8103-000000000003",
+      "place_name": "Bliss Bakery Dessert Stop",
+      "place_type": "bakery",
+      "start_time": "20:45",
+      "duration_min": 30,
+      "estimated_cost_pp": 12,
+      "lat": 49.8821,
+      "lng": -119.4901,
+      "opens": "07:00",
+      "closes": "21:30",
+      "vibe_tags": ["cozy", "sweet"],
+      "pairing_tags": ["dessert"],
+      "quality_score": 0.74,
+      "facts": {
+        "place_id": "0a1b2c3d-9003-4b03-8103-000000000003",
+        "name": "Bliss Bakery Dessert Stop",
+        "allowed_claims": ["fresh-baked pastries", "espresso bar"],
+        "signature_items": ["butter croissant"],
+        "setting_tags": ["indoor", "downtown"],
+        "sensory_tags": ["butter aroma"],
+        "avoid_claims": ["chocolate fountain", "gelato bar", "patio firepit", "award-winning pastry chef"]
+      }
+    }
+  ],
+  "packVoiceNote": "Golden: the selection is genuinely good and should score well, BUT each fact-bank lists tempting unsupported claims in avoid_claims (Michelin star, celebrity chef, live jazz, chocolate fountain, etc.) that a careless writer would invent to sound impressive. Regression anchor: the truthfulness gate must stay clean only if the writer cites real allowed_claims; any avoid_claim leaking into copy is a hard failure this fixture is designed to catch."
+}

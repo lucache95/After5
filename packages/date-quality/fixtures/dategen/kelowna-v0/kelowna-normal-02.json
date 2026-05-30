@@ -1,0 +1,93 @@
+{
+  "id": "kelowna-normal-02-anniversary-romantic-lake-golden-hour",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "scenic"],
+    "budget_per_person": 140,
+    "duration_min": 180,
+    "effort": "moderate",
+    "must_includes": ["lake", "dinner"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "she/her",
+    "intent": "reconnect",
+    "when": "future",
+    "future_date": "2026-06-14",
+    "note": "fifth anniversary, want something special by the water at sunset",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0002-4a02-9002-000000000201",
+      "place_name": "Hotel Eldorado Boardwalk Patio",
+      "place_type": "waterfront_restaurant",
+      "start_time": "18:30",
+      "duration_min": 105,
+      "estimated_cost_pp": 95,
+      "facts": {
+        "place_id": "a1b2c3d4-0002-4a02-9002-000000000201",
+        "name": "Hotel Eldorado Boardwalk Patio",
+        "allowed_claims": ["lakefront boardwalk patio on Okanagan Lake", "west-facing tables for sunset", "Okanagan wine list", "seasonal Pacific Northwest menu"],
+        "signature_items": ["seared scallops", "Okanagan rosé"],
+        "setting_tags": ["patio", "waterfront", "upscale"],
+        "sensory_tags": ["lake light", "sunset over the water", "boats on the marina"],
+        "avoid_claims": ["rooftop", "live DJ"]
+      },
+      "lat": 49.8517,
+      "lng": -119.4912,
+      "opens": "16:00",
+      "closes": "22:00",
+      "vibe_tags": ["romantic", "scenic"],
+      "pairing_tags": ["dinner", "wine"],
+      "quality_score": 0.9
+    },
+    {
+      "place_id": "a1b2c3d4-0002-4a02-9002-000000000202",
+      "place_name": "Waterfront Park Boardwalk",
+      "place_type": "waterfront_walk",
+      "start_time": "20:30",
+      "duration_min": 40,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0002-4a02-9002-000000000202",
+        "name": "Waterfront Park Boardwalk",
+        "allowed_claims": ["lakeside walking path", "Bear sculpture and Rotary Marsh", "views across Okanagan Lake to the W.R. Bennett Bridge"],
+        "setting_tags": ["outdoor", "waterfront", "free"],
+        "sensory_tags": ["evening breeze off the lake", "city lights on the water"],
+        "avoid_claims": ["food service", "indoor seating"]
+      },
+      "lat": 49.8889,
+      "lng": -119.4972,
+      "opens": "00:00",
+      "closes": "23:59",
+      "vibe_tags": ["romantic", "calm"],
+      "pairing_tags": ["walk", "view"],
+      "quality_score": 0.85
+    },
+    {
+      "place_id": "a1b2c3d4-0002-4a02-9002-000000000203",
+      "place_name": "BNA Brewing Co. & Eatery",
+      "place_type": "brewery",
+      "start_time": "21:15",
+      "duration_min": 35,
+      "estimated_cost_pp": 24,
+      "facts": {
+        "place_id": "a1b2c3d4-0002-4a02-9002-000000000203",
+        "name": "BNA Brewing Co. & Eatery",
+        "allowed_claims": ["converted tobacco warehouse", "house-brewed beer", "five-pin bowling lanes on site", "dessert and nightcaps"],
+        "signature_items": ["Don't Lie Pale Ale"],
+        "setting_tags": ["indoor", "downtown", "lively"],
+        "sensory_tags": ["high ceilings", "warm filament lighting"],
+        "avoid_claims": ["lake view", "quiet"]
+      },
+      "lat": 49.8845,
+      "lng": -119.4951,
+      "opens": "11:00",
+      "closes": "00:00",
+      "vibe_tags": ["lively", "fun"],
+      "pairing_tags": ["drinks", "nightcap"],
+      "quality_score": 0.8
+    }
+  ],
+  "packVoiceNote": "Lean tender and celebratory without being saccharine; honor five years together."
+}

@@ -1,0 +1,75 @@
+{
+  "id": "kelowna-adversarial-05-sparse-venue-metadata",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "scenic"],
+    "budget_per_person": 75,
+    "duration_min": 180,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-07-04",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-5555-4a05-8005-000000000001",
+      "place_name": "The Restaurant at the Lake",
+      "place_type": "restaurant",
+      "start_time": "18:30",
+      "duration_min": 90,
+      "estimated_cost_pp": 55,
+      "lat": null,
+      "lng": null,
+      "opens": null,
+      "closes": null,
+      "facts": {
+        "place_id": "0a1b2c3d-5555-4a05-8005-000000000001",
+        "name": "The Restaurant at the Lake",
+        "allowed_claims": [],
+        "setting_tags": [],
+        "sensory_tags": []
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-5555-4a05-8005-000000000002",
+      "place_name": "A Wine Bar Downtown",
+      "place_type": "wine_bar",
+      "start_time": "20:15",
+      "duration_min": 60,
+      "estimated_cost_pp": 40,
+      "lat": null,
+      "lng": null,
+      "opens": null,
+      "closes": null,
+      "facts": {
+        "place_id": "0a1b2c3d-5555-4a05-8005-000000000002",
+        "name": "A Wine Bar Downtown",
+        "allowed_claims": [],
+        "setting_tags": [],
+        "sensory_tags": []
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-5555-4a05-8005-000000000003",
+      "place_name": "Lakeside Spot",
+      "place_type": "viewpoint",
+      "start_time": "21:30",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "lat": null,
+      "lng": null,
+      "opens": null,
+      "closes": null,
+      "facts": {
+        "place_id": "0a1b2c3d-5555-4a05-8005-000000000003",
+        "name": "Lakeside Spot",
+        "allowed_claims": [],
+        "setting_tags": [],
+        "sensory_tags": []
+      }
+    }
+  ],
+  "packVoiceNote": "Adversarial: every stop has empty fact-banks, generic names, and null geo/hours. The truthfulness / unsupported-concrete-claim gate must fire if the writer invents any concrete dish, feature, or setting detail, because allowed_claims is empty everywhere. Tests that the writer stays vague-but-honest rather than hallucinating specificity to fill the void."
+}

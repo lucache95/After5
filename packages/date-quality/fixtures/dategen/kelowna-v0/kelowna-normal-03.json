@@ -1,0 +1,68 @@
+{
+  "id": "kelowna-normal-03-spontaneous-tonight-relaxed-short-drive-late",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["relaxed", "spontaneous"],
+    "budget_per_person": 35,
+    "duration_min": 90,
+    "effort": "low",
+    "must_includes": [],
+    "location": "out",
+    "you_pronouns": "she/her",
+    "partner_pronouns": "they/them",
+    "intent": "chill",
+    "when": "tonight",
+    "note": "decided last minute, want somewhere open late and chill",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0003-4a03-9003-000000000301",
+      "place_name": "Krafty Kitchen + Bar",
+      "place_type": "bar",
+      "start_time": "21:00",
+      "duration_min": 55,
+      "estimated_cost_pp": 26,
+      "facts": {
+        "place_id": "a1b2c3d4-0003-4a03-9003-000000000301",
+        "name": "Krafty Kitchen + Bar",
+        "allowed_claims": ["late-night shareable plates", "local craft beer and cocktails", "downtown corner spot"],
+        "signature_items": ["loaded tots", "bourbon sour"],
+        "setting_tags": ["indoor", "downtown", "casual"],
+        "sensory_tags": ["dim lighting", "easygoing buzz"],
+        "avoid_claims": ["lake view", "fine dining"]
+      },
+      "lat": 49.888,
+      "lng": -119.494,
+      "opens": "11:00",
+      "closes": "01:00",
+      "vibe_tags": ["relaxed", "casual"],
+      "pairing_tags": ["drinks", "late_night"],
+      "quality_score": 0.74
+    },
+    {
+      "place_id": "a1b2c3d4-0003-4a03-9003-000000000302",
+      "place_name": "Stuart Park",
+      "place_type": "park",
+      "start_time": "22:05",
+      "duration_min": 35,
+      "estimated_cost_pp": 0,
+      "facts": {
+        "place_id": "a1b2c3d4-0003-4a03-9003-000000000302",
+        "name": "Stuart Park",
+        "allowed_claims": ["downtown public plaza near the lake", "Spirit of Sail sculpture", "open green space steps from the waterfront"],
+        "setting_tags": ["outdoor", "downtown", "free"],
+        "sensory_tags": ["quiet at night", "string lights nearby"],
+        "avoid_claims": ["food service", "indoor"]
+      },
+      "lat": 49.8884,
+      "lng": -119.4958,
+      "opens": "00:00",
+      "closes": "23:59",
+      "vibe_tags": ["calm", "open"],
+      "pairing_tags": ["walk"],
+      "quality_score": 0.7
+    }
+  ],
+  "packVoiceNote": "No pressure, no plan worship; make spontaneity feel like the point."
+}

@@ -1,0 +1,69 @@
+{
+  "id": "kelowna-normal-12-spontaneous-tonight-playful-activity-walkable-evening",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["playful", "fun"],
+    "budget_per_person": 50,
+    "duration_min": 120,
+    "effort": "low",
+    "must_includes": ["activity", "drinks"],
+    "location": "out",
+    "you_pronouns": "he/him",
+    "partner_pronouns": "they/them",
+    "intent": "try_something_new",
+    "when": "tonight",
+    "note": "want something fun and a little competitive tonight",
+    "time_of_day": "evening"
+  },
+  "stops": [
+    {
+      "place_id": "a1b2c3d4-0012-4a12-9012-000000001201",
+      "place_name": "BNA Brewing Bowling Lanes",
+      "place_type": "activity_bar",
+      "start_time": "19:00",
+      "duration_min": 75,
+      "estimated_cost_pp": 30,
+      "facts": {
+        "place_id": "a1b2c3d4-0012-4a12-9012-000000001201",
+        "name": "BNA Brewing Co. & Eatery",
+        "allowed_claims": ["five-pin bowling lanes inside a converted tobacco warehouse", "house-brewed beer", "shareable food", "downtown"],
+        "signature_items": ["Don't Lie Pale Ale", "loaded nachos"],
+        "setting_tags": ["indoor", "downtown", "lively"],
+        "sensory_tags": ["bowling pins crashing", "high warehouse ceilings", "filament lighting"],
+        "avoid_claims": ["lake view", "quiet"]
+      },
+      "lat": 49.8845,
+      "lng": -119.4951,
+      "opens": "11:00",
+      "closes": "00:00",
+      "vibe_tags": ["playful", "lively"],
+      "pairing_tags": ["activity", "drinks"],
+      "quality_score": 0.82
+    },
+    {
+      "place_id": "a1b2c3d4-0012-4a12-9012-000000001202",
+      "place_name": "Red Bird Brewing Tasting Room",
+      "place_type": "brewery",
+      "start_time": "20:30",
+      "duration_min": 45,
+      "estimated_cost_pp": 18,
+      "facts": {
+        "place_id": "a1b2c3d4-0012-4a12-9012-000000001202",
+        "name": "Red Bird Brewing",
+        "allowed_claims": ["neighbourhood brewery tasting room", "rotating small-batch beers", "casual taproom seating"],
+        "signature_items": ["hazy pale ale"],
+        "setting_tags": ["indoor", "casual", "taproom"],
+        "sensory_tags": ["brite tanks behind the bar", "easygoing taproom hum"],
+        "avoid_claims": ["lake view", "fine dining"]
+      },
+      "lat": 49.8762,
+      "lng": -119.4444,
+      "opens": "12:00",
+      "closes": "22:00",
+      "vibe_tags": ["playful", "casual"],
+      "pairing_tags": ["drinks"],
+      "quality_score": 0.74
+    }
+  ],
+  "packVoiceNote": "Keep the energy up and a little competitive; this night is meant to be fun."
+}

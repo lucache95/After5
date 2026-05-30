@@ -1,0 +1,87 @@
+{
+  "id": "kelowna-golden-01-known-excellent",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["romantic", "scenic", "relaxed"],
+    "budget_per_person": 95,
+    "duration_min": 210,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-08-15",
+    "time_of_day": "evening",
+    "note": "Anniversary. We love wine and a good view."
+  },
+  "stops": [
+    {
+      "place_id": "0a1b2c3d-9001-4b01-8101-000000000001",
+      "place_name": "CedarCreek Estate Winery Terrace",
+      "place_type": "winery",
+      "start_time": "17:30",
+      "duration_min": 75,
+      "estimated_cost_pp": 45,
+      "lat": 49.8132,
+      "lng": -119.4748,
+      "opens": "11:00",
+      "closes": "20:00",
+      "vibe_tags": ["romantic", "scenic", "upscale"],
+      "pairing_tags": ["drinks", "view"],
+      "quality_score": 0.93,
+      "facts": {
+        "place_id": "0a1b2c3d-9001-4b01-8101-000000000001",
+        "name": "CedarCreek Estate Winery Terrace",
+        "allowed_claims": ["lakeview terrace tasting", "estate pinot noir", "vineyard rows down to the lake"],
+        "signature_items": ["estate pinot noir", "platinum riesling"],
+        "setting_tags": ["patio", "vineyard", "lakeview"],
+        "sensory_tags": ["late sun", "lake light", "vineyard breeze"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9001-4b01-8101-000000000002",
+      "place_name": "Home Block at CedarCreek",
+      "place_type": "restaurant",
+      "start_time": "19:00",
+      "duration_min": 90,
+      "estimated_cost_pp": 50,
+      "lat": 49.813,
+      "lng": -119.4745,
+      "opens": "11:30",
+      "closes": "21:00",
+      "vibe_tags": ["romantic", "farm-to-table"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.92,
+      "facts": {
+        "place_id": "0a1b2c3d-9001-4b01-8101-000000000002",
+        "name": "Home Block at CedarCreek",
+        "allowed_claims": ["vineyard-side patio dining", "estate-garden produce", "wood-fired mains"],
+        "signature_items": ["wood-fired flatbread", "garden vegetable plate"],
+        "setting_tags": ["patio", "vineyard", "lakeview"],
+        "sensory_tags": ["wood smoke", "golden hour"]
+      }
+    },
+    {
+      "place_id": "0a1b2c3d-9001-4b01-8101-000000000003",
+      "place_name": "Mission Hill Lookout Stroll",
+      "place_type": "viewpoint",
+      "start_time": "20:45",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "lat": 49.8401,
+      "lng": -119.5688,
+      "opens": "10:00",
+      "closes": "21:00",
+      "vibe_tags": ["scenic", "romantic"],
+      "pairing_tags": ["view", "walk"],
+      "quality_score": 0.89,
+      "facts": {
+        "place_id": "0a1b2c3d-9001-4b01-8101-000000000003",
+        "name": "Mission Hill Lookout Stroll",
+        "allowed_claims": ["hilltop amphitheatre arch", "panoramic lake-and-vineyard view"],
+        "setting_tags": ["outdoor", "hilltop", "lakeview"],
+        "sensory_tags": ["dusk light", "open air"]
+      }
+    }
+  ],
+  "packVoiceNote": "Golden: a known-excellent Okanagan evening. Vibe (romantic/scenic), budget, time-of-day, and arc (tasting -> vineyard dinner -> dusk lookout) all cohere; every stop has a rich, honest fact-bank. Expected to score high with all gates passing. Regression anchor: a refactor that drops this below the high band is a regression."
+}
