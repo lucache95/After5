@@ -53,21 +53,29 @@ supabase functions deploy process-jobs --project-ref ufufmcpnysvwtutpbian
 
 | Secret | Where | Needed for | When |
 |---|---|---|---|
-| `JOBS_RUNNER_SECRET` (edge) == `CRON_SECRET` (Vercel) | confirm they match | cron→process-jobs chain | **before cohort** |
+| **`JOBS_RUNNER_SECRET`** | set IDENTICALLY on **Vercel (web)** AND **Supabase edge** | cron→process-jobs chain | **before cohort** — 🔴 currently MISSING on both |
 | `PERSONA_WEBHOOK_SECRET` | Supabase edge secret (currently **blank**) | organic identity verification | **only if testing organic verify** — the attended cohort bypasses it (Step 4), so optional for R2 |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` | Vercel | web-push offer delivery | **R3** (unattended) — not needed for an attended R2 |
 | `RESEND_API_KEY` | already on Vercel ✅ | offer email (Next route) | already works |
+| `CRON_SECRET` | already on Vercel ✅ | Vercel→cron-route auth (Vercel injects it) | already works — **separate from `JOBS_RUNNER_SECRET`** |
 
-- **Verify the cron secret match:** `supabase secrets list` (edge `JOBS_RUNNER_SECRET`) vs Vercel `CRON_SECRET`. If the cron caller sends `CRON_SECRET` but the edge fn checks `JOBS_RUNNER_SECRET`, they must be the same value (or align the names). Confirm a manual cron hit returns 200, not 401.
+- **🔴 The cron chain is currently broken** (verified read-only 2026-05-30): the route `/api/cron/process-jobs` authenticates the incoming Vercel call with `CRON_SECRET` (present), then forwards to the edge fn with `process.env.JOBS_RUNNER_SECRET`; the edge fn checks `Deno.env.get('JOBS_RUNNER_SECRET')`. **`JOBS_RUNNER_SECRET` is set on neither Vercel nor Supabase edge**, so the chain dead-ends (route 500 on missing var, or edge 401). Jobs (offer-expiry, rating-window, etc.) are NOT being processed in prod.
+- **Fix:** generate one strong value; set `JOBS_RUNNER_SECRET` = that value on **both** Vercel (Production) and Supabase edge secrets. **Verify:** hit `/api/cron/process-jobs?secret=<CRON_SECRET>&dry_run=true` → 200; then a real (non-dry) hit → `{invoked:true, status:200}` (not 401/500); confirm `process-jobs` edge logs show 200s.
 
 ---
 
 ## Step 4 — 🔶 GATED: cohort enablement (the careful part)
 
-**Decision first — how does `match_v2_enabled` gate the loop?** It's a **global** flag (no cohort column). Two safe paths:
+**Decision — RESOLVED (read-only investigation 2026-05-30):** `match_v2_enabled` is a **hard global gate inside every matching RPC** (`match_shortlist`, `match_make_offer`, `match_accept_offer`, pass/expire/withdraw, `b_complete`, reciprocal, the swipe hook all begin with `if not (match_v2_enabled) then raise P5000`). There is no per-user/cohort column. **Therefore "unblock users without flipping the flag" does NOT work** — a verified, unblocked cohort user still hits P5000 unless the flag is ON globally.
 
-- **Path A (recommended for R2): unblock USERS, keep the flag logic cohort-safe.** Confirm in code/RPCs whether the matching surfaces hard-gate on `match_v2_enabled` globally, or whether being `verified + dating_enabled` is sufficient to enter the loop. If verification/dating-enabled is the real gate, you can run an attended cohort **without flipping the global flag** — only your reviewed UUIDs are unblocked, the public sees nothing.
-- **Path B (if the loop truly requires the flag ON):** add a cohort/allowlist check to `feature_config` (or the flag read) *before* flipping, so ON doesn't expose every future verified user. Don't flip the bare global flag for a cohort.
+- **Recommended for an attended R2: flip ON → test → flip OFF.** Flipping the global flag is acceptably cohort-safe *right now* because the flag only empowers users who are `verified + dating_enabled + active`, and (a) there are **0 organic verified users** and (b) **organic verification is currently closed** (Persona webhook secret blank → can't complete; Twilio unproven). So with the flag ON, the ONLY users who can act are the UUIDs you manually `cohort-unblock`. Flip it back OFF after the traversal. ⚠️ This containment relies on verification staying closed — do NOT leave the flag ON while also fixing Persona/Twilio.
+  ```sql
+  -- flip ON for the test window (deliberate, prod)
+  update feature_config set value='true'::jsonb where key='match_v2_enabled';
+  -- … run R2 traversal …
+  update feature_config set value='false'::jsonb where key='match_v2_enabled';  -- flip back OFF
+  ```
+- **For a sustained / unattended cohort: add a cohort allowlist** (a code change to the flag check — e.g. an `allowed_user_ids` set or a per-user `dating_cohort` column checked alongside `match_v2_enabled`) so ON doesn't expose every future verified user. Don't run an unattended public cohort on the bare global flip.
 
 **Then unblock the reviewed testers** (deliberate prod write — note the new `-v target` guard):
 

@@ -35,7 +35,7 @@ The matching loop has been proven only by **one local E2E**, never in production
 | `match_v2_enabled` | **`false`** | 2026-05-28 21:04 UTC |
 | `offer_window_hours` | `24` | 2026-05-27 05:28 |
 
-`match_v2_enabled` is **global** — no cohort/user/city targeting column. Flipping it ON exposes every user. Cohort enablement (R1.3) must unblock *users* (verification bypass for reviewed UUIDs) rather than flip the global flag, OR add targeting first.
+`match_v2_enabled` is a **hard global gate inside every matching RPC** (verified 2026-05-30): `match_shortlist`/`make_offer`/`accept_offer`/pass/expire/withdraw/`b_complete`/reciprocal + the swipe hook all begin with `if not (match_v2_enabled) then raise P5000`. No cohort/user column. **Consequence:** unblocking users alone does NOT let them act — the flag must be ON globally. Cohort-safe path for an attended R2 = flip ON → test → flip OFF, safe *only because* organic verification is currently closed (0 verified users, Persona webhook secret blank). A sustained cohort needs a code-level allowlist alongside the flag.
 
 ## 4. Migrations
 
@@ -87,7 +87,7 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 - ✅ **Email from the web app works** — `RESEND_API_KEY` is on Vercel; `apps/web/lib/email/resend.ts` reads `process.env.RESEND_API_KEY`. R3's offer-email should be a Next route/server action (which has the key), not an edge function.
 - ⚠️ **Email from an edge function would silently skip** — edge `RESEND_API_KEY` is blank. Don't build email delivery in an edge fn without setting it.
 - 🔴 **Identity verification is broken on prod right now** — `persona-webhook` fails closed when `PERSONA_WEBHOOK_SECRET` is absent, and it's blank. Persona inquiries can't be confirmed → no organic `verified` users. **R1 blocker.** (R2 sidesteps this via cohort-unblock; organic verification needs the secret set + a controlled test.)
-- `CRON_SECRET` lives on Vercel (the cron caller); the edge-side check expects `JOBS_RUNNER_SECRET` via `x-jobs-secret`. **Verify these match** before relying on the cron→process-jobs chain (R1.2 / R3).
+- 🔴 **The cron→process-jobs chain is currently broken** (verified 2026-05-30). The Vercel route `/api/cron/process-jobs` auths the incoming cron with `CRON_SECRET` (present ✅) then forwards to the edge fn with `process.env.JOBS_RUNNER_SECRET`; the edge fn checks `JOBS_RUNNER_SECRET`. **`JOBS_RUNNER_SECRET` is set on NEITHER Vercel nor Supabase edge** → the chain dead-ends and no jobs are processed in prod. Fix: set one identical value on both. (`CRON_SECRET` is separate and only auths Vercel→route.)
 - Twilio (phone OTP) is configured in the **Supabase Auth dashboard**, not edge secrets — verify there; unproven on prod.
 
 ## 7. Routes & ownership
