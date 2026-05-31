@@ -2,9 +2,8 @@
 // Tier-1 bottom-tab nav (DESIGN-SYSTEM §4): fixed, phone-width, lowercase labels.
 // Active state: ink-color label with a 2px pink bar above the icon (high-contrast;
 // the audit found pink-on-cream at 11px failed AA, so the readable text stays ink).
-// Two surfaces ship (discover → /feed, profile → /home); dates + messages aren't
-// built yet, so they're NOT dead links — tapping fires a dry "coming soon" toast.
-// The locked state is communicated via the muted ink color + aria-label.
+// Live surfaces: discover → /feed, dates → /my-nights, profile → /home.
+// messages isn't built yet — tapping fires a dry "coming soon" toast.
 // Active tab is derived from the URL via usePathname (aria-current="page").
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,7 +17,7 @@ type Tab = LiveTab | SoonTab;
 
 const TABS: Tab[] = [
   { kind: 'live', key: 'discover', label: 'discover', href: '/feed', icon: Compass },
-  { kind: 'soon', key: 'dates', label: 'dates', icon: CalendarHeart },
+  { kind: 'live', key: 'dates', label: 'dates', href: '/my-nights', icon: CalendarHeart },
   { kind: 'soon', key: 'messages', label: 'messages', icon: MessageCircle },
   { kind: 'live', key: 'profile', label: 'profile', href: '/home', icon: UserRound },
 ];
