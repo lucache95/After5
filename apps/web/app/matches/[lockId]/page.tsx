@@ -5,6 +5,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { LockDetail } from './LockDetail';
 import { pickCounterpart, isRatingOpen, type LockRowWithParties } from '../lock-view';
 
@@ -22,9 +23,7 @@ export default async function LockPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/matches/${lockId}`);
 
-  const { data: flagRow } = await supabase
-    .from('feature_config').select('value').eq('key', 'match_v2_enabled').maybeSingle();
-  if (flagRow?.value !== true) return <ComingSoonBanner />;
+  if (!(await isMatchEnabledForViewer(supabase))) return <ComingSoonBanner />;
 
   const { data: row } = await supabase
     .from('locks')

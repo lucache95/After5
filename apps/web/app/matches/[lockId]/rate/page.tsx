@@ -6,6 +6,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { RatingForm } from './RatingForm';
 import { pickCounterpart, isRatingOpen, ratingOpensAt, type LockRowWithParties } from '../../lock-view';
 
@@ -17,9 +18,7 @@ export default async function RatePage({ params }: { params: Promise<{ lockId: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/matches/${lockId}/rate`);
 
-  const { data: flagRow } = await supabase
-    .from('feature_config').select('value').eq('key', 'match_v2_enabled').maybeSingle();
-  if (flagRow?.value !== true) return <ComingSoonBanner />;
+  if (!(await isMatchEnabledForViewer(supabase))) return <ComingSoonBanner />;
 
   const { data: row } = await supabase
     .from('locks')

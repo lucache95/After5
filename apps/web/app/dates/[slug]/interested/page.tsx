@@ -8,6 +8,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { InterestedList, type HostCandidate } from './InterestedList';
 
 export const dynamic = 'force-dynamic';
@@ -43,9 +44,7 @@ export default async function InterestedPage({
     );
   }
 
-  const { data: flagRow } = await supabase
-    .from('feature_config').select('value').eq('key', 'match_v2_enabled').maybeSingle();
-  if (flagRow?.value !== true) return <ComingSoonBanner />;
+  if (!(await isMatchEnabledForViewer(supabase))) return <ComingSoonBanner />;
 
   const { data: windowRow } = await supabase
     .from('feature_config').select('value').eq('key', 'offer_window_hours').maybeSingle();

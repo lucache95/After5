@@ -16,6 +16,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { OfferDetail } from './OfferDetail';
 import { AccountGate } from './AccountGate';
 import { deriveGateReason } from './gate';
@@ -32,9 +33,7 @@ export default async function OfferPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/offers/${offerId}`);
 
-  const { data: flagRow } = await supabase
-    .from('feature_config').select('value').eq('key', 'match_v2_enabled').maybeSingle();
-  if (flagRow?.value !== true) return <ComingSoonBanner />;
+  if (!(await isMatchEnabledForViewer(supabase))) return <ComingSoonBanner />;
 
   const { data: offer } = await supabase
     .from('offers')

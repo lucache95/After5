@@ -2794,6 +2794,7 @@ export type Database = {
       }
       admin_force_expire_offer: { Args: { p_offer: string }; Returns: number }
       advance_onboarding_step: { Args: { p_to_step: string }; Returns: string }
+      app_match_enabled_self: { Args: never; Returns: boolean }
       browse_feed_for_viewer: {
         Args: {
           p_after_id?: string
