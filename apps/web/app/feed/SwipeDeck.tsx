@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   motion,
@@ -153,6 +153,13 @@ function ActiveCard({
   const rotate = useTransform(x, [-200, 200], reduceMotion ? [0, 0] : [-12, 12]);
   const likeOpacity = useTransform(x, [10, SWIPE_THRESHOLD], [0, 1]);
   const nopeOpacity = useTransform(x, [-SWIPE_THRESHOLD, -10], [1, 0]);
+
+  // Belt-and-suspenders: if this component instance is ever reused for a
+  // different card (e.g. key identity is preserved across a re-render), snap
+  // x back to 0 so the like/nope overlays start clean on the new card.
+  useEffect(() => {
+    x.set(0);
+  }, [night.date_instance_id, x]);
 
   function flyOff(direction: Direction) {
     const target = direction === 'right' ? 600 : -600;
