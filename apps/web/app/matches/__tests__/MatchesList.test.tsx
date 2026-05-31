@@ -19,8 +19,9 @@ describe('MatchesList', () => {
         past={[card({ id: 'p1', status: 'completed', counterpart: person({ id: 'q', first_name: 'alex' }) })]}
       />,
     );
-    expect(screen.getByText('jamie')).toBeInTheDocument();
-    expect(screen.getByText('alex')).toBeInTheDocument();
+    // each name appears at least once (may also appear in the polaroid placeholder)
+    expect(screen.getAllByText('jamie').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('alex').length).toBeGreaterThanOrEqual(1);
     // status pill on the active card (the "locked in" section header also exists)
     expect(screen.getAllByText('locked in').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('done')).toBeInTheDocument();

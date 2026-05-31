@@ -34,7 +34,7 @@ function tiltFor(seed: string): number {
 }
 
 interface PolaroidProps {
-  src: string;
+  src: string | null | undefined;
   alt: string;
   label?: string;
   size?: Size;
@@ -63,7 +63,7 @@ export function Polaroid({
   className,
   tone = 'planner',
 }: PolaroidProps) {
-  const tilt = rotation ?? tiltFor(label ?? src);
+  const tilt = rotation ?? tiltFor(label ?? src ?? '');
   const s = SIZES[size];
   const dating = tone === 'dating';
 
@@ -74,8 +74,11 @@ export function Polaroid({
   // fallback errors out we show the gradient placeholder so users never
   // see broken alt-text.
   const [fallbackError, setFallbackError] = useState(false);
-  const showGradient = imgError && fallbackError;
-  const displaySrc = imgError ? FALLBACK_SRC : src;
+  // Also show the gradient placeholder immediately when src is falsy
+  // (empty string, null, undefined) — avoids passing '' to next/image.
+  const noSrc = !src;
+  const showGradient = noSrc || (imgError && fallbackError);
+  const displaySrc = imgError ? FALLBACK_SRC : (src ?? '');
 
   const handleError = useCallback(() => {
     if (!imgError) {
