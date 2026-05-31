@@ -57,9 +57,9 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 | match-make-offer | 3 | true | start-verification | 2 | true |
 | match-accept-offer | 2 | true | confirm-phone | 2 | true |
 | match-pass-offer | 2 | true | persona-webhook | 2 | false |
-| match-withdraw | 2 | true | process-jobs | 1 | false |
+| match-withdraw | 2 | true | process-jobs | 2 | false |
 
-`process-jobs` is **v1 on prod** — the R0.2 fail-closed guard is committed locally but **not yet deployed** (redeploy is part of R1.2).
+`process-jobs` is **v2 on prod** (redeployed 2026-05-30, SHA `68777b8d`) — the R0.2 fail-closed guard is **live** (health-checked: 401 on no/bad `x-jobs-secret`). All other edge fns unchanged.
 
 ## 6. Secrets (the operational gaps)
 
