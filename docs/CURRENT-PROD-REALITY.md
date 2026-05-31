@@ -72,7 +72,8 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 | **`PERSONA_WEBHOOK_SECRET`** | **BLANK** (digest = SHA-256 of empty string) |
 | **`RESEND_API_KEY`** | **BLANK** |
 | `RESEND_FROM_ADDRESS`, `REPLICATE_API_TOKEN`, all `SUPABASE_*` | set |
-| `TWILIO_*`, `JOBS_RUNNER_SECRET`, `CRON_SECRET` | **not present** in edge secrets |
+| `JOBS_RUNNER_SECRET` | **set** (2026-05-31) — matches Vercel |
+| `TWILIO_*`, `CRON_SECRET` | not present in edge secrets (`CRON_SECRET` is Vercel-only by design) |
 
 **Vercel project env** (web app):
 
@@ -87,7 +88,7 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 - ✅ **Email from the web app works** — `RESEND_API_KEY` is on Vercel; `apps/web/lib/email/resend.ts` reads `process.env.RESEND_API_KEY`. R3's offer-email should be a Next route/server action (which has the key), not an edge function.
 - ⚠️ **Email from an edge function would silently skip** — edge `RESEND_API_KEY` is blank. Don't build email delivery in an edge fn without setting it.
 - 🔴 **Identity verification is broken on prod right now** — `persona-webhook` fails closed when `PERSONA_WEBHOOK_SECRET` is absent, and it's blank. Persona inquiries can't be confirmed → no organic `verified` users. **R1 blocker.** (R2 sidesteps this via cohort-unblock; organic verification needs the secret set + a controlled test.)
-- 🔴 **The cron→process-jobs chain is currently broken** (verified 2026-05-30). The Vercel route `/api/cron/process-jobs` auths the incoming cron with `CRON_SECRET` (present ✅) then forwards to the edge fn with `process.env.JOBS_RUNNER_SECRET`; the edge fn checks `JOBS_RUNNER_SECRET`. **`JOBS_RUNNER_SECRET` is set on NEITHER Vercel nor Supabase edge** → the chain dead-ends and no jobs are processed in prod. Fix: set one identical value on both. (`CRON_SECRET` is separate and only auths Vercel→route.)
+- 🟡 **The cron→process-jobs chain: secret now set, effective after next Vercel deploy** (2026-05-31). The Vercel route `/api/cron/process-jobs` auths the incoming cron with `CRON_SECRET` (present ✅) then forwards to the edge fn with `process.env.JOBS_RUNNER_SECRET`; the edge fn checks `JOBS_RUNNER_SECRET`. `JOBS_RUNNER_SECRET` was missing on both; **now set (identical value) on Supabase edge AND Vercel Production**. The edge side is live immediately; the Vercel side takes effect on the **next deploy** (Step 1 push). So the cron completes end-to-end only after Step 1. (`CRON_SECRET` is separate and only auths Vercel→route.) VAPID keys still unset (R3).
 - Twilio (phone OTP) is configured in the **Supabase Auth dashboard**, not edge secrets — verify there; unproven on prod.
 
 ## 7. Routes & ownership
