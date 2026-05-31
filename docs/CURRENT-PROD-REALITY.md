@@ -40,6 +40,7 @@ The matching loop has been proven only by **one local E2E**, never in production
 ## 4. Migrations
 
 - Prod history runs through `p5_reveal_hardening` (prod version `20260530160224`). The 5b remediation set `127100`–`127700` + reveal-hardening are all applied.
+- **`p5_match_cohort_allowlist` applied to prod 2026-05-31** (`match_cohort` table deny-all RLS + `app_match_enabled(p_user)` helper; 8 user-initiated match RPCs re-gated). Verified no-op on prod: `app_match_enabled(null)=false`, cohort empty, flag still false, advisors clean (helper not anon/authenticated-executable; redefined RPCs kept their grants). Enroll UUIDs in `match_cohort` to run a cohort with the global flag OFF.
 - **Version-key drift (documented, accepted):** prod `schema_migrations.version` = the *apply* timestamp (e.g. `20260529234051`); `name` = the original logical filename (e.g. `20260527127100_p5_reciprocal_pair_wire`). `supabase migration list` will show mismatched version columns vs local filenames. This is cosmetic — do **not** "fix" it with naive `db push`/`repair` without care.
 - **`126850_p5_cancel_reason_extend`**: was prod-only; now **backfilled locally** (this branch) as an idempotent no-op so `db reset` reproduces prod ordering. Local + prod `cancel_reason` enums are functionally identical: `schedule_conflict, venue_issue, changed_mind, account_closed, safety, misconduct, other, mutual, no_show, creator_pre_lock`.
 - **`temp_race`**: leftover table still on prod. Cleanup deferred (drop-after-verify) — not load-bearing.
