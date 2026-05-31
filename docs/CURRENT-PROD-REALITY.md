@@ -71,7 +71,7 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 |---|---|
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | set |
 | `PERSONA_API_KEY`, `PERSONA_TEMPLATE_ID` | set |
-| `PERSONA_WEBHOOK_SECRET` | **SET 2026-05-31** (`wbhsec_…` from the Persona webhook `wbh_A2qFsmNvZMHxm4fJWNqdhg1WgE2W8J`). ⚠️ Webhook created in Persona **Sandbox** — confirm prod `PERSONA_API_KEY` env matches (else recreate in Production). |
+| `PERSONA_WEBHOOK_SECRET` | **SET 2026-05-31** (`wbhsec_…` from webhook `wbh_A2qFsmNvZMHxm4fJWNqdhg1WgE2W8J`). Environment **confirmed SANDBOX & consistent** — prod `PERSONA_API_KEY` is a `persona_sandbox_…` key, matching the Sandbox webhook + template. Pre-public-launch: switch API key + template + webhook to **Production**. |
 | **`RESEND_API_KEY`** | **BLANK** |
 | `RESEND_FROM_ADDRESS`, `REPLICATE_API_TOKEN`, all `SUPABASE_*` | set |
 | `JOBS_RUNNER_SECRET` | **set** (2026-05-31) — matches Vercel |
