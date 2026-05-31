@@ -85,10 +85,38 @@ export function shortlist(instance: string, candidate: string, rank: number): Pr
 }
 
 // Returns the discriminated jsonb: caller branches on result.kind.
-export function makeOffer(instance: string, candidate: string): Promise<OfferResult> {
-  return call<OfferResult>('match-make-offer', {
+// On a successful 'offer' result we fire the offer-received email best-effort:
+// the edge runtime that creates the offer can't send mail (blank RESEND key),
+// so we ping the Node route /api/offers/notify-offered, which resolves the
+// recipient + sends. Fire-and-forget — a failed/blocked send never affects the
+// offer (the RPC result is the source of truth). A 'reciprocal' result is not a
+// new outgoing offer, so it sends nothing here.
+export async function makeOffer(instance: string, candidate: string): Promise<OfferResult> {
+  const result = await call<OfferResult>('match-make-offer', {
     instance, candidate, idem_key: idemKey(),
   });
+  if (result.kind === 'offer') {
+    notifyOfferReceived(result.offer_id);
+  }
+  return result;
+}
+
+// Best-effort: never throws, never awaited by callers. Mirrors the email
+// layer's warn-and-skip contract so the offer flow is never blocked on mail.
+function notifyOfferReceived(offerId: string): void {
+  try {
+    if (typeof fetch !== 'function') return;
+    void fetch('/api/offers/notify-offered', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId }),
+      keepalive: true,
+    }).catch((err) => {
+      console.warn('[match] offer-received email trigger failed', err);
+    });
+  } catch (err) {
+    console.warn('[match] offer-received email trigger threw', err);
+  }
 }
 
 // Exported for sub-project E (candidate self-withdraw); D never calls it (F-1).
