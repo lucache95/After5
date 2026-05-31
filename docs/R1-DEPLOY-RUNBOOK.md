@@ -68,14 +68,18 @@ supabase functions deploy process-jobs --project-ref ufufmcpnysvwtutpbian
 
 **Decision — RESOLVED (read-only investigation 2026-05-30):** `match_v2_enabled` is a **hard global gate inside every matching RPC** (`match_shortlist`, `match_make_offer`, `match_accept_offer`, pass/expire/withdraw, `b_complete`, reciprocal, the swipe hook all begin with `if not (match_v2_enabled) then raise P5000`). There is no per-user/cohort column. **Therefore "unblock users without flipping the flag" does NOT work** — a verified, unblocked cohort user still hits P5000 unless the flag is ON globally.
 
-- **Recommended for an attended R2: flip ON → test → flip OFF.** Flipping the global flag is acceptably cohort-safe *right now* because the flag only empowers users who are `verified + dating_enabled + active`, and (a) there are **0 organic verified users** and (b) **organic verification is currently closed** (Persona webhook secret blank → can't complete; Twilio unproven). So with the flag ON, the ONLY users who can act are the UUIDs you manually `cohort-unblock`. Flip it back OFF after the traversal. ⚠️ This containment relies on verification staying closed — do NOT leave the flag ON while also fixing Persona/Twilio.
+- **✅ Recommended — use the cohort allowlist (built 2026-05-31, migration `20260527127800_p5_match_cohort_allowlist`). NO global flag flip needed.** The matching gate is now `app_match_enabled(p_actor)` = `global match_v2_enabled OR actor ∈ match_cohort`. So you enroll the cohort's UUIDs in `match_cohort` and they can use the full loop **while `match_v2_enabled` stays OFF and the public stays gated**. Apply the migration to prod first (it's a byte-for-byte no-op until you add cohort rows), then:
   ```sql
-  -- flip ON for the test window (deliberate, prod)
-  update feature_config set value='true'::jsonb where key='match_v2_enabled';
-  -- … run R2 traversal …
-  update feature_config set value='false'::jsonb where key='match_v2_enabled';  -- flip back OFF
+  -- enroll reviewed tester UUIDs (deliberate, prod). Public is unaffected; flag stays OFF.
+  insert into match_cohort (user_id, note) values
+    ('<tester-uuid-1>', 'R2 host'),
+    ('<tester-uuid-2>', 'R2 candidate')
+  on conflict (user_id) do nothing;
+  -- … run R2 traversal … then to end the cohort:
+  delete from match_cohort where user_id in ('<tester-uuid-1>','<tester-uuid-2>');
   ```
-- **For a sustained / unattended cohort: add a cohort allowlist** (a code change to the flag check — e.g. an `allowed_user_ids` set or a per-user `dating_cohort` column checked alongside `match_v2_enabled`) so ON doesn't expose every future verified user. Don't run an unattended public cohort on the bare global flip.
+  Testers still need `verified + dating_enabled + active` (that's what `cohort-unblock.sql` sets) — the allowlist only lifts the `match_v2_enabled` gate for them.
+- **Legacy fallback (avoid):** flipping the global flag ON works too, but exposes every `verified+dating_enabled` user — only "safe" while verification stays closed, and footgun-prone. Prefer the allowlist.
 
 **Then unblock the reviewed testers** (deliberate prod write — note the new `-v target` guard):
 
