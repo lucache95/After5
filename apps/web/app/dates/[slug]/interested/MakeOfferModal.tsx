@@ -13,6 +13,7 @@ import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { Polaroid } from '@/components/Polaroid';
 import { makeOffer, MatchError, messageForCode } from '@/lib/after5/match';
+import { LocalTime } from '@/components/LocalTime';
 
 export interface OfferCandidate {
   candidate_id: string;
@@ -22,10 +23,7 @@ export interface OfferCandidate {
   photo_url: string | null;
 }
 
-function deadlineCopy(hours: number): string {
-  const at = new Date(Date.now() + hours * 3600_000);
-  return at.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-}
+const DEADLINE_OPTS: Intl.DateTimeFormatOptions = { weekday: 'short', hour: 'numeric', minute: '2-digit' };
 
 export function MakeOfferModal({
   open,
@@ -44,6 +42,7 @@ export function MakeOfferModal({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const deadlineIso = new Date(Date.now() + offerWindowHours * 3600_000).toISOString();
 
   async function confirm() {
     if (busy) return;
@@ -78,7 +77,7 @@ export function MakeOfferModal({
             send it to {candidate.first_name.toLowerCase()}?
           </Drawer.Title>
           <Drawer.Description className="mt-1 font-body text-sm text-shell-ink/70">
-            they&apos;ll have {offerWindowHours} hours to accept — until {deadlineCopy(offerWindowHours)}.
+            they&apos;ll have {offerWindowHours} hours to accept — until <LocalTime iso={deadlineIso} opts={DEADLINE_OPTS} />.
           </Drawer.Description>
 
           <div className="mt-5 flex items-center gap-4">

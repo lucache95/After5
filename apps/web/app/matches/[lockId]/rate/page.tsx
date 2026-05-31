@@ -9,6 +9,7 @@ import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { RatingForm } from './RatingForm';
 import { pickCounterpart, isRatingOpen, ratingOpensAt, type LockRowWithParties } from '../../lock-view';
+import { LocalTime } from '@/components/LocalTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,7 @@ export default async function RatePage({ params }: { params: Promise<{ lockId: s
       <main className="mx-auto max-w-[420px] px-4 py-16 text-center">
         <h1 className="font-heading text-3xl lowercase text-shell-ink">not yet</h1>
         <p className="mt-3 font-body text-shell-ink/70">
-          you can rate this once the date&apos;s done{opens ? `, after ${opens.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric' })}` : ''}.
+          you can rate this once the date&apos;s done{opens ? <>, after <LocalTime iso={opens.toISOString()} opts={{ month: 'short', day: 'numeric', hour: 'numeric' }} /></> : ''}.
         </p>
       </main>
     );
