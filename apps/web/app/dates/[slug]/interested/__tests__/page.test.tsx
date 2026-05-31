@@ -21,6 +21,9 @@ function buildClient(opts: {
 }) {
   return {
     auth: { getUser: async () => ({ data: { user: opts.userId ? { id: opts.userId } : null } }) },
+    // isMatchEnabledForViewer() now gates via the app_match_enabled_self() RPC
+    // instead of a raw feature_config read; the flag option drives its result.
+    rpc: async (_fn: string) => ({ data: opts.flag ?? true, error: null }),
     from: (table: string) => ({
       select: () => ({
         eq: (_c: string, _v: string) => ({
