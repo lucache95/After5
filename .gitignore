@@ -51,3 +51,7 @@ apps/web/public/gallery/
 # Playwright test output
 apps/web/test-results/
 apps/web/playwright-report/
+
+# prod walkthrough screenshots
+docs/superpowers/reports/prod-walkthrough-*/*.png
+docs/superpowers/reports/prod-walkthrough-*/summary.json

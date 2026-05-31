@@ -31,7 +31,10 @@ function Card({ card }: { card: MatchCard }) {
       <Polaroid src={card.counterpart?.clear_photo_url ?? ''} alt={name} size="sm" tone="dating" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-heading text-xl lowercase text-shell-ink">{name}</p>
-        <p className="truncate font-body text-sm text-shell-ink/65">{whenLabel(card.startsAt)}</p>
+        {/* suppressHydrationWarning: toLocaleString renders the server's UTC time
+            but the client's local time — an intentional, desirable difference.
+            Without this the divergent text trips React hydration error #418. */}
+        <p suppressHydrationWarning className="truncate font-body text-sm text-shell-ink/65">{whenLabel(card.startsAt)}</p>
       </div>
       <span className="shrink-0 rounded-full bg-shell-pink px-3 py-1 font-body text-xs font-semibold lowercase text-shell-ink">
         {lockStatusLabel(card.status)}

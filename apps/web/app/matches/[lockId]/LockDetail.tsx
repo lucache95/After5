@@ -57,7 +57,9 @@ export function LockDetail({ lockId, status, counterpart, startsAt, ratingOpen, 
         <Polaroid src={counterpart.clear_photo_url ?? ''} alt={name} size="md" tone="dating" />
         <div className="min-w-0">
           <h1 className="truncate font-heading text-3xl lowercase text-shell-ink">{name}</h1>
-          <p className="font-body text-shell-ink/70">{whenLabel(startsAt)}</p>
+          {/* suppressHydrationWarning: server renders UTC, client renders local
+              time — intentional; avoids React hydration error #418. */}
+          <p suppressHydrationWarning className="font-body text-shell-ink/70">{whenLabel(startsAt)}</p>
         </div>
       </header>
 
