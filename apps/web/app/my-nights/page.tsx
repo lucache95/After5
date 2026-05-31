@@ -10,6 +10,7 @@ import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Polaroid } from '@/components/Polaroid';
 import { CalendarHeart } from 'lucide-react';
+import { LocalTime } from '@/components/LocalTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,15 +24,13 @@ interface NightRow {
   } | null;
 }
 
-function whenLabel(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+const WHEN_OPTS: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+};
 
 function statusPill(status: string): string {
   switch (status) {
@@ -64,7 +63,9 @@ function NightCard({ night }: { night: NightRow }) {
       <Polaroid src={cover} alt={title} size="sm" tone="dating" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-heading text-xl lowercase text-shell-ink">{title}</p>
-        <p className="truncate font-body text-sm text-shell-ink/65">{whenLabel(night.starts_at)}</p>
+        <p className="truncate font-body text-sm text-shell-ink/65">
+          <LocalTime iso={night.starts_at} opts={WHEN_OPTS} />
+        </p>
       </div>
       <span
         className={`shrink-0 rounded-full px-3 py-1 font-body text-xs font-semibold lowercase ${pillColor(night.status)}`}

@@ -16,6 +16,7 @@ import { cn } from '@/lib/cn';
 import { acceptOffer, passOffer, withdraw, MatchError, messageForCode } from '@/lib/after5/match';
 import { ExpiryCountdown } from './ExpiryCountdown';
 import { AccountGate, type GateReason } from './AccountGate';
+import { LocalTime } from '@/components/LocalTime';
 
 export interface OfferDetailProps {
   offerId: string;
@@ -26,15 +27,13 @@ export interface OfferDetailProps {
   date: { startsAt: string } | null;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+const DATE_OPTS: Intl.DateTimeFormatOptions = {
+  weekday: 'long',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+};
 
 export function OfferDetail({ offerId, instanceId, expiresAt, host, date }: OfferDetailProps) {
   const router = useRouter();
@@ -98,7 +97,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date }: Offe
         <div className="mt-6">
           <p className="font-body text-sm text-shell-accent">the night</p>
           <p className="mt-1 font-body text-base text-shell-ink">
-            {date ? formatDate(date.startsAt) : 'details unlock when you accept'}
+            {date ? <LocalTime iso={date.startsAt} opts={DATE_OPTS} /> : 'details unlock when you accept'}
           </p>
         </div>
 
