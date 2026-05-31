@@ -45,9 +45,14 @@ export function ExpiryCountdown({
     }
   }, [expired, onExpire]);
 
+  // suppressHydrationWarning: `now` is seeded from Date.now(), so the SSR render
+  // (server clock) and the first client render (browser clock) produce different
+  // countdown text — an intentional live-clock difference, not a real mismatch.
+  // Without this the divergent text trips React hydration error #418 on load.
   if (expired) {
     return (
       <p
+        suppressHydrationWarning
         role="timer"
         aria-live="polite"
         className="font-body text-sm text-shell-ink/60"
@@ -59,6 +64,7 @@ export function ExpiryCountdown({
 
   return (
     <p
+      suppressHydrationWarning
       role="timer"
       aria-live="off"
       className={cn('font-body text-sm text-shell-ink')}
