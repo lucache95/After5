@@ -10,9 +10,8 @@
 
 | What | Value | Note |
 |---|---|---|
-| Vercel production commit | `d350ab5` (= `origin/main` `d350ab58`) | Serves **pre-5b** code. Dating UI / Barbiecore rebrand / reveal-hardening are **NOT live**. |
-| `origin/main` | `d350ab58` | What Vercel builds from. |
-| local `main` HEAD | `2107c821` | **78 commits ahead** of `origin/main`, unpushed. |
+| Vercel production commit | **`c9bc3b7`** (deployed 2026-05-31 PM, READY) | **Dating build LIVE** on `tryafter5.app`. Adds cohort-aware gating, `/my-nights` host surface, swipe + Polaroid fixes. Rollback candidate = `855c3f1`. |
+| `origin/main` = local `main` | `c9bc3b7` | In sync; prod current. |
 | active work branch | `r0.1-ci-green-gates` | R0 re-baseline work; ahead of `main`, unpushed, not deployed. |
 | Vercel project | `prj_duxdnFH3jYXWvMXrleupvP8AmPMo` (team `after5`) | Deploys from `origin/main` on push. |
 
@@ -32,8 +31,10 @@ The matching loop has been proven only by **one local E2E**, never in production
 
 | key | value | updated_at |
 |---|---|---|
-| `match_v2_enabled` | **`false`** | 2026-05-28 21:04 UTC |
+| `match_v2_enabled` | **`true`** | ON since 2026-05-31 (R2 test); **deliberately left ON** per user. Pages no longer key on it directly — they call `app_match_enabled_self()` (global flag OR `match_cohort`). Flip OFF anytime: `update feature_config set value='false' where key='match_v2_enabled'` — the cohort keeps access via the allowlist. |
 | `offer_window_hours` | `24` | 2026-05-27 05:28 |
+
+**Gate helper (added 2026-05-31):** `app_match_enabled_self()` — no-arg SECURITY DEFINER = `app_match_enabled(auth.uid())`, granted `authenticated` only (anon denied). The 5 match/host pages gate on it via `apps/web/lib/match/flag.ts → isMatchEnabledForViewer()`. This decouples the UI from the raw global flag so a cohort works with the flag OFF.
 
 `match_v2_enabled` is a **hard global gate inside every matching RPC** (verified 2026-05-30): `match_shortlist`/`make_offer`/`accept_offer`/pass/expire/withdraw/`b_complete`/reciprocal + the swipe hook all begin with `if not (match_v2_enabled) then raise P5000`. No cohort/user column. **Consequence:** unblocking users alone does NOT let them act — the flag must be ON globally. Cohort-safe path for an attended R2 = flip ON → test → flip OFF, safe *only because* organic verification is currently closed (0 verified users, Persona webhook secret blank). A sustained cohort needs a code-level allowlist alongside the flag.
 
@@ -70,7 +71,7 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 |---|---|
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | set |
 | `PERSONA_API_KEY`, `PERSONA_TEMPLATE_ID` | set |
-| **`PERSONA_WEBHOOK_SECRET`** | **BLANK** (digest = SHA-256 of empty string) |
+| `PERSONA_WEBHOOK_SECRET` | **SET 2026-05-31** (`wbhsec_…` from the Persona webhook `wbh_A2qFsmNvZMHxm4fJWNqdhg1WgE2W8J`). ⚠️ Webhook created in Persona **Sandbox** — confirm prod `PERSONA_API_KEY` env matches (else recreate in Production). |
 | **`RESEND_API_KEY`** | **BLANK** |
 | `RESEND_FROM_ADDRESS`, `REPLICATE_API_TOKEN`, all `SUPABASE_*` | set |
 | `JOBS_RUNNER_SECRET` | **set** (2026-05-31) — matches Vercel |
@@ -88,7 +89,7 @@ All deployed; **entrypoints are laptop/CLI paths (`file:///Users/lucas/...` or `
 **Implications:**
 - ✅ **Email from the web app works** — `RESEND_API_KEY` is on Vercel; `apps/web/lib/email/resend.ts` reads `process.env.RESEND_API_KEY`. R3's offer-email should be a Next route/server action (which has the key), not an edge function.
 - ⚠️ **Email from an edge function would silently skip** — edge `RESEND_API_KEY` is blank. Don't build email delivery in an edge fn without setting it.
-- 🔴 **Identity verification is broken on prod right now** — `persona-webhook` fails closed when `PERSONA_WEBHOOK_SECRET` is absent, and it's blank. Persona inquiries can't be confirmed → no organic `verified` users. **R1 blocker.** (R2 sidesteps this via cohort-unblock; organic verification needs the secret set + a controlled test.)
+- ✅ **Identity verification now wired (2026-05-31)** — `PERSONA_WEBHOOK_SECRET` is set and a Persona webhook posts inquiry events to `persona-webhook`. `start-verification` passes `reference-id=uid`; the webhook maps `inquiry.approved` → `verified` + writes DOB. ⚠️ Webhook lives in Persona **Sandbox** — needs a live end-to-end inquiry test and confirmation that prod `PERSONA_API_KEY` is the matching (sandbox) environment.
 - 🟡 **The cron→process-jobs chain: secret now set, effective after next Vercel deploy** (2026-05-31). The Vercel route `/api/cron/process-jobs` auths the incoming cron with `CRON_SECRET` (present ✅) then forwards to the edge fn with `process.env.JOBS_RUNNER_SECRET`; the edge fn checks `JOBS_RUNNER_SECRET`. `JOBS_RUNNER_SECRET` was missing on both; **now set (identical value) on Supabase edge AND Vercel Production**. The edge side is live immediately; the Vercel side takes effect on the **next deploy** (Step 1 push). So the cron completes end-to-end only after Step 1. (`CRON_SECRET` is separate and only auths Vercel→route.) VAPID keys still unset (R3).
 - Twilio (phone OTP) is configured in the **Supabase Auth dashboard**, not edge secrets — verify there; unproven on prod.
 
