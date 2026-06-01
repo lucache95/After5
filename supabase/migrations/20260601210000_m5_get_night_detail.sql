@@ -82,5 +82,9 @@ returns table (
     and di.creator_id <> auth.uid();
 $fn$;
 
+-- Supabase default privileges auto-grant EXECUTE to anon on new public functions,
+-- so revoking from public is NOT enough — revoke anon explicitly (authenticated-only,
+-- matching browse_feed_for_viewer). cf. the same gotcha on the DEFINER reveal helpers.
 revoke execute on function get_night_detail(uuid) from public;
+revoke execute on function get_night_detail(uuid) from anon;
 grant execute on function get_night_detail(uuid) to authenticated;
