@@ -1078,6 +1078,24 @@ export type Database = {
           },
         ]
       }
+      match_cohort: {
+        Row: {
+          added_at: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       match_ratings: {
         Row: {
           cancelled_with_notice: boolean | null
@@ -1147,6 +1165,101 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_profile_card"
             referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      message_reports: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          reason: string | null
+          reporter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          reason?: string | null
+          reporter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          reason?: string | null
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2794,6 +2907,7 @@ export type Database = {
       }
       admin_force_expire_offer: { Args: { p_offer: string }; Returns: number }
       advance_onboarding_step: { Args: { p_to_step: string }; Returns: string }
+      app_match_enabled: { Args: { p_user?: string }; Returns: boolean }
       app_match_enabled_self: { Args: never; Returns: boolean }
       browse_feed_for_viewer: {
         Args: {
@@ -2826,6 +2940,25 @@ export type Database = {
         Returns: number
       }
       chat_lock_ready: { Args: { p_thread: string }; Returns: boolean }
+      chat_mark_read: { Args: { p_thread: string }; Returns: number }
+      chat_recompute_both_ready: {
+        Args: { p_thread: string }
+        Returns: boolean
+      }
+      chat_send_message: {
+        Args: {
+          p_actor: string
+          p_body: string
+          p_idem_key: string
+          p_thread: string
+        }
+        Returns: Json
+      }
+      chat_thread_messageable: { Args: { p_thread: string }; Returns: boolean }
+      chat_thread_party: {
+        Args: { p_thread: string; p_uid: string }
+        Returns: boolean
+      }
       claim_due_jobs: {
         Args: { p_limit?: number }
         Returns: {
@@ -3213,6 +3346,10 @@ export type Database = {
       register_device: {
         Args: { p_platform: string; p_token: string; p_web_push?: Json }
         Returns: string
+      }
+      report_message: {
+        Args: { p_actor: string; p_message: string; p_reason: string }
+        Returns: Json
       }
       requeue_stuck_jobs: { Args: { p_grace?: string }; Returns: number }
       st_3dclosestpoint: {
