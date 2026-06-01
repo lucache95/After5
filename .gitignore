@@ -55,3 +55,5 @@ apps/web/playwright-report/
 # prod walkthrough screenshots
 docs/superpowers/reports/prod-walkthrough-*/*.png
 docs/superpowers/reports/prod-walkthrough-*/summary.json
+docs/superpowers/reports/prod-full-walkthrough-*/*.png
+docs/superpowers/reports/prod-full-walkthrough-*/summary.json
