@@ -10,7 +10,11 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export const revalidate = 60;
+// force-dynamic: this route uses the service-role admin client, so it must NOT be
+// statically prerendered at build time (that requires SUPABASE_SECRET_KEY, which CI
+// doesn't have — it was failing the GitHub Actions `static-checks` build). Runs
+// per-request instead; the UI effect tolerates that fine.
+export const dynamic = 'force-dynamic';
 
 const EARLY_ACCESS_CAP = 100;
 
