@@ -27,6 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <NavItem href="/admin/insiders" label="Insiders" />
             <NavItem href="/admin/eval" label="Eval" />
             <NavItem href="/admin/alerts" label="Alerts" />
+            <NavItem href="/admin/reports" label="Reports" />
           </ul>
         </nav>
       </header>
