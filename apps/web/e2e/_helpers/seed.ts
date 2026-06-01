@@ -141,3 +141,83 @@ export async function cleanup(seed: SeedResult) {
     await sb.auth.admin.deleteUser(id).catch(() => {});
   }
 }
+
+// --- Phase 7 chat seed ----------------------------------------------------
+// A chat_thread exists per offer (open_chat_thread runs inside match_make_offer).
+// For the chat E2E we don't drive swipe→offer through the UI; we seed the offer +
+// open thread directly (service-role setup write, RLS bypassed for SETUP only — the
+// tests still read/send under the real authed clients). We also seed a THIRD user
+// who is NOT a party to assert the non-party negatives.
+
+export interface ChatSeedResult extends SeedResult {
+  // The two parties' display names (run-id suffixed). Host = "Maya …", cand = "Jordan …".
+  hostName: string;
+  candName: string;
+  // The active offer between host (creator) and candidate, and its open chat thread.
+  offerId: string;
+  threadId: string;
+  // A third seeded user with NO offer/thread membership.
+  outsiderEmail: string;
+  outsiderId: string;
+}
+
+export async function seedChatThread(): Promise<ChatSeedResult> {
+  const sb = admin();
+  const base = await seedTwoUsersAndNight();
+  const runId = Date.now().toString(36);
+
+  // Third (non-party) user — a fully promoted profile so /messages renders for them.
+  const outsiderEmail = `outsider+${runId}@e2e.local`;
+  const outsiderId = await createUser(sb, outsiderEmail);
+  await promoteProfile(sb, outsiderId, {
+    firstName: `Riley ${runId}`,
+    birthdate: '1990-02-02',
+    gender: 'woman',
+    prefs: ['man', 'woman'],
+  });
+
+  // Active offer host→candidate, then the open thread (mirrors open_chat_thread:
+  // one thread per offer, state 'open'). char-check / RLS untouched — direct insert
+  // is a service-role setup write.
+  const { data: offer, error: offerErr } = await sb
+    .from('offers')
+    .insert({
+      date_instance_id: base.instanceId,
+      creator_id: base.hostId,
+      candidate_id: base.candId,
+      status: 'active',
+      expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+    })
+    .select('id')
+    .single();
+  if (offerErr || !offer) throw new Error(`offers (chat seed): ${offerErr?.message}`);
+
+  const { data: thread, error: threadErr } = await sb
+    .from('chat_threads')
+    .insert({ offer_id: offer.id, state: 'open' })
+    .select('id')
+    .single();
+  if (threadErr || !thread) throw new Error(`chat_threads (chat seed): ${threadErr?.message}`);
+
+  return {
+    ...base,
+    // seedTwoUsersAndNight names host "Maya <runId>" and cand "Jordan <runId>".
+    // Tests anchor on these stable first-name prefixes (the run-id suffix varies).
+    hostName: 'Maya',
+    candName: 'Jordan',
+    offerId: offer.id as string,
+    threadId: thread.id as string,
+    outsiderEmail,
+    outsiderId,
+  };
+}
+
+export async function cleanupChat(seed: ChatSeedResult) {
+  const sb = admin();
+  // messages/threads/offers cascade off the offer + date_instance; clear explicitly
+  // first so the base cleanup's offer delete doesn't trip FK ordering, then base.
+  await sb.from('messages').delete().eq('thread_id', seed.threadId);
+  await sb.from('chat_threads').delete().eq('id', seed.threadId);
+  await cleanup(seed);
+  await sb.auth.admin.deleteUser(seed.outsiderId).catch(() => {});
+}

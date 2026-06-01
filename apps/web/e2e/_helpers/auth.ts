@@ -34,7 +34,8 @@ export async function loginAs(context: BrowserContext, email: string): Promise<P
   const page = await context.newPage();
   await page.goto('/login');
   await page.getByRole('textbox', { name: /email/i }).fill(email);
-  await page.getByRole('button', { name: /email me a sign-in link/i }).click();
+  // LoginForm CTA reads "email me a link" (was "email me a sign-in link"); match both.
+  await page.getByRole('button', { name: /email me a (sign-in )?link/i }).click();
   // Confirm the "we sent a link" confirmation rendered before polling Mailpit.
   await expect(page.getByText(/sent a sign-in link/i)).toBeVisible();
 

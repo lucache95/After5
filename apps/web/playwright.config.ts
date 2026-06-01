@@ -8,7 +8,8 @@ const LOCAL_PUBLISHABLE_KEY =
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '5b-*.spec.ts',
+  // 5b-* = the dating loop suite; chat-* = the Phase 7 chat suite.
+  testMatch: /(5b-|chat-).*\.spec\.ts$/,
   // Shared DB state across the two-context flow → run serially.
   fullyParallel: false,
   workers: 1,
