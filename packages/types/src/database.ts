@@ -1417,6 +1417,7 @@ export type Database = {
           creator_id: string
           date_instance_id: string
           expires_at: string
+          expiring_email_sent_at: string | null
           id: string
           resolved_at: string | null
           status: Database["public"]["Enums"]["offer_status"]
@@ -1427,6 +1428,7 @@ export type Database = {
           creator_id: string
           date_instance_id: string
           expires_at: string
+          expiring_email_sent_at?: string | null
           id?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["offer_status"]
@@ -1437,6 +1439,7 @@ export type Database = {
           creator_id?: string
           date_instance_id?: string
           expires_at?: string
+          expiring_email_sent_at?: string | null
           id?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["offer_status"]
@@ -2791,7 +2794,6 @@ export type Database = {
         Args: { ""?: string; att_name: string; tbl: unknown }
         Returns: string
       }
-      _seed_swipes_and_hint: { Args: { p_count: number }; Returns: string }
       _st_3dintersects: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -3248,12 +3250,6 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
-      mk_instance: {
-        Args: { p_creator: string; p_itin: string; p_starts: string }
-        Returns: string
-      }
-      mk_itinerary: { Args: { p_user: string }; Returns: string }
-      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
