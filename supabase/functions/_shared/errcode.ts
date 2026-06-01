@@ -11,7 +11,10 @@ export type P5ErrorCode =
   | 'P5005'  // chat_not_ready         → 425
   | 'P5007'  // offer_expired          → 410
   | 'P5008'  // reciprocal_pending     → 409
-  | 'P5009'; // reciprocal_stale       → 409
+  | 'P5009'  // reciprocal_stale       → 409
+  | 'P5010'  // chat_not_party         → 403
+  | 'P5011'  // chat_closed            → 409
+  | 'P5012'; // cannot_report          → 403
 
 export type ErrorBody = {
   ok: false;
@@ -33,6 +36,9 @@ const MAP: Record<P5ErrorCode, { status: number; code: string; message: string }
   P5007: { status: 410, code: 'offer_expired',        message: 'That offer expired.' },
   P5008: { status: 409, code: 'reciprocal_pending',   message: 'You have a reciprocal match — choose which night to lock.' },
   P5009: { status: 409, code: 'reciprocal_stale',     message: "That reciprocal pair isn't available anymore." },
+  P5010: { status: 403, code: 'chat_not_party',       message: "this conversation isn't yours." },
+  P5011: { status: 409, code: 'chat_closed',          message: 'this chat is closed.' },
+  P5012: { status: 403, code: 'cannot_report',        message: "you can't report that message." },
 };
 
 // Supabase PostgrestError shape: { code, message, details, hint }.
