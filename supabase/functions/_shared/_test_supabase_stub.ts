@@ -58,7 +58,11 @@ export class SupabaseClient {
   }
 }
 
-type QueryResult = { data: unknown[]; error: { message: string } | null; count: number | null };
+// `data` is intentionally `any` — the real supabase-js select() returns
+// loosely-typed rows (the field string isn't parsed into a row type), so
+// consumer code compiles the same way it does against the shipped client.
+// deno-lint-ignore no-explicit-any
+type QueryResult = { data: any; error: { message: string } | null; count: number | null };
 
 class QueryBuilderStub implements PromiseLike<QueryResult> {
   select(..._a: unknown[]): this { return this; }

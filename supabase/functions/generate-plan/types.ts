@@ -23,6 +23,10 @@ export interface PlanInputs {
   future_date?: string;
   intent?: 'impress' | 'chill' | 'reconnect' | 'try_something_new' | '';
   time_of_day?: 'morning' | 'evening' | 'all_day';
+  // Explicit slot-start override (legacy / API users) — ISO datetime string.
+  start_at?: string;
+  // Anonymous claim flow — lowercased email tagged onto generated itineraries.
+  claim_email?: string;
   // M1: additive + optional. Resolves which city's places + provider to use.
   // Absent ⇒ 'kelowna' (byte-identical to pre-M1 behavior).
   city_slug?: string;

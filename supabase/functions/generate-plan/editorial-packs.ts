@@ -338,8 +338,10 @@ export function enforceSequenceRules(
 
 /** Detect "surprise me" — weak or absent user signal. */
 export function isSurpriseMe(inputs: PlanInputs): boolean {
-  // No intent + generic vibe = weak signal
-  const weakIntent = !inputs.intent || inputs.intent === '';
+  // No intent + generic vibe = weak signal. Empty-string intent is falsy, so
+  // `!inputs.intent` already covers both absent and '' (the redundant
+  // `=== ''` comparison was removed — it tripped strict type-narrowing).
+  const weakIntent = !inputs.intent;
   const genericVibe = inputs.vibe.length <= 1;
   return weakIntent && genericVibe;
 }
