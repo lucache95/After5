@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ExternalLink,
 } from 'lucide-react';
+import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -307,7 +308,7 @@ export function EvalDashboard() {
                       </span>
                     </div>
                     <p className="mb-2 text-xs text-muted">
-                      {new Date(d.generatedAt).toLocaleDateString()}
+                      <LocalTime iso={d.generatedAt} opts={{ dateStyle: 'medium' }} />
                     </p>
                     <div className="mb-3 flex flex-wrap gap-1">
                       {d.stopNames.map((name, i) => (

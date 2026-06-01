@@ -43,13 +43,6 @@ function one<T>(v: T | T[] | null | undefined): T | null {
   return v ?? null;
 }
 
-function dateLabel(startsAt: string | null): string {
-  if (!startsAt) return 'date tbd';
-  return new Date(startsAt).toLocaleString(undefined, {
-    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-  });
-}
-
 export default async function MessagesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -100,7 +93,7 @@ export default async function MessagesPage() {
       threadId: r.id,
       counterpartName: counterpart?.first_name ?? null,
       counterpartPhotoUrl: counterpart?.clear_photo_url ?? null,
-      dateLabel: dateLabel(instance?.starts_at ?? null),
+      startsAt: instance?.starts_at ?? null,
       lastMessage: preview?.body ?? null,
       lastAt: preview?.at ?? null,
       unread: unreadCount(msgs, user.id),

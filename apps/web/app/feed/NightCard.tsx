@@ -3,6 +3,7 @@ import { MapPin, Clock, Wallet, Sparkles } from 'lucide-react';
 import { vibePalette } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
 import type { FeedNight } from '@/lib/after5/client';
+import { LocalTime } from '@/components/LocalTime';
 
 // Tier-2 experience surface (DESIGN-SYSTEM §1). The card carries the *experience's*
 // vibe palette, not the global pink — derived from vibe_tags via vibePalette() and
@@ -26,7 +27,6 @@ function km(distanceM: number | null): string | null {
 
 export function NightCard({ night }: { night: FeedNight }) {
   const pal = vibePalette(night.vibe_tags);
-  const time = coarseTime(night.time_window_start);
   const distance = km(night.distance_m);
   const tags = (night.vibe_tags ?? []).filter(Boolean).slice(0, 4);
 
@@ -95,11 +95,21 @@ export function NightCard({ night }: { night: FeedNight }) {
         )}
 
         <dl className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 font-body text-[13px] opacity-80">
-          {time && (
+          {night.time_window_start && (
             <div className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 shrink-0" aria-hidden />
               <dt className="sr-only">when</dt>
-              <dd>{time}</dd>
+              <dd>
+                <LocalTime
+                  iso={night.time_window_start}
+                  format={(d) => {
+                    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+                    const hour = d.toLocaleTimeString('en-US', { hour: 'numeric' }).toLowerCase().replace(/\s/g, '');
+                    return `${weekday} · ${hour}`;
+                  }}
+                  fallback=""
+                />
+              </dd>
             </div>
           )}
           {night.venue_neighborhood && (

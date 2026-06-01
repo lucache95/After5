@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { VenueRow, FeedbackRow, PairingRow } from './page';
 import { VenueEditPanel } from './venue-edit-panel';
+import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
 // Quality helpers
@@ -536,7 +537,7 @@ function VenueTableRow({
         </td>
         <td className="px-4 py-3 [font-variant-numeric:tabular-nums]">{v.total_appearances}</td>
         <td className="px-4 py-3 text-xs text-muted [font-variant-numeric:tabular-nums]">
-          {new Date(v.updated_at).toLocaleDateString()}
+          <LocalTime iso={v.updated_at} opts={{ dateStyle: 'medium' }} />
         </td>
       </tr>
       {isExpanded && (

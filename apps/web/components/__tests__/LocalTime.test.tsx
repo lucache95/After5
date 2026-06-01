@@ -35,4 +35,16 @@ describe('LocalTime', () => {
     const span = container.querySelector('span');
     expect(span).toHaveClass('text-sm');
   });
+
+  it('renders the result of a custom format function when provided', () => {
+    const format = (d: Date) => `custom:${d.getUTCFullYear()}`;
+    render(<LocalTime iso="2026-06-04T00:40:00Z" format={format} />);
+    expect(screen.getByText('custom:2026')).toBeInTheDocument();
+  });
+
+  it('renders fallback via format path when iso is null', () => {
+    const format = (d: Date) => `custom:${d.getUTCFullYear()}`;
+    render(<LocalTime iso={null} format={format} fallback="nope" />);
+    expect(screen.getByText('nope')).toBeInTheDocument();
+  });
 });

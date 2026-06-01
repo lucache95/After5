@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CheckCircle2, X, Loader2, ExternalLink } from 'lucide-react';
 import type { ApplicationRow, ActiveInsiderRow } from './page';
+import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
 // Tabs
@@ -146,7 +147,7 @@ export function InsidersAdmin({ applications: initial, insiders }: Props) {
                   </a>
                 )}
                 <span className="text-xs text-muted [font-variant-numeric:tabular-nums]">
-                  Applied {new Date(app.created_at).toLocaleDateString()}
+                  Applied <LocalTime iso={app.created_at} opts={{ dateStyle: 'medium' }} />
                 </span>
               </div>
 
@@ -280,7 +281,7 @@ export function InsidersAdmin({ applications: initial, insiders }: Props) {
                       </td>
                       <td className="py-3 text-right text-muted [font-variant-numeric:tabular-nums]">
                         {ins.insider_approved_at
-                          ? new Date(ins.insider_approved_at).toLocaleDateString()
+                          ? <LocalTime iso={ins.insider_approved_at} opts={{ dateStyle: 'medium' }} />
                           : '-'}
                       </td>
                     </tr>

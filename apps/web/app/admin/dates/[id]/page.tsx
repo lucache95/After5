@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { LocalTime } from '@/components/LocalTime';
 
 interface ItineraryAuditRow {
   id: string;
@@ -78,7 +79,7 @@ export default async function AdminDateAuditPage(props: { params: Promise<{ id: 
           )}
           <Stat label="Template" value={row.template_id ?? '—'} mono />
           <Stat label="Modifier" value={row.modifier_id ?? '—'} mono />
-          <Stat label="Generated" value={new Date(row.generated_at).toLocaleString()} />
+          <Stat label="Generated" value={<LocalTime iso={row.generated_at} />} />
           <Stat label="Season" value={row.season ?? '—'} />
           <Stat label="When planned" value={row.when_planned ?? '—'} />
           <Stat label="Planned for" value={row.planned_for_date ?? '—'} />

@@ -22,6 +22,7 @@ import { MatchError, messageForCode } from '@/lib/after5/match';
 import { cn } from '@/lib/cn';
 import { mergeMessage, type MessageRow } from '../thread-view';
 import { Composer } from './Composer';
+import { LocalTime } from '@/components/LocalTime';
 
 export interface ConversationProps {
   threadId: string;
@@ -30,10 +31,6 @@ export interface ConversationProps {
   messageable: boolean;
   bothReady: boolean;
   initialMessages: MessageRow[];
-}
-
-function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 function Bubble({
@@ -68,9 +65,11 @@ function Bubble({
           </button>
         )}
       </div>
-      <span suppressHydrationWarning className="mt-0.5 px-1 font-body text-[10px] text-shell-ink/40">
-        {timeLabel(message.created_at)}
-      </span>
+      <LocalTime
+        iso={message.created_at}
+        opts={{ hour: 'numeric', minute: '2-digit' }}
+        className="mt-0.5 px-1 font-body text-[10px] text-shell-ink/40"
+      />
     </li>
   );
 }
