@@ -58,7 +58,12 @@ export function NightDetailSheet({
     setDetail(null);
     getNightDetail(browserAfter5Client(), instanceId)
       .then((d) => { if (!cancelled) setDetail(d); })
-      .catch(() => { if (!cancelled) setDetail(null); }); // fall back to the blind summary
+      .catch((err) => {
+        // Fall back to the blind summary, but log so a broken RPC doesn't degrade silently in prod.
+        // eslint-disable-next-line no-console
+        console.warn('[night-detail] get_night_detail failed; showing blind summary', err);
+        if (!cancelled) setDetail(null);
+      });
     return () => { cancelled = true; };
   }, [open, instanceId]);
 

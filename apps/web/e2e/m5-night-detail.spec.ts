@@ -28,7 +28,9 @@ test('M5: tapping a feed card opens the full blind-safe detail', async ({ browse
   const html = await page.content();
   expect(html).not.toContain('instagram.com/the-secret-host');
   expect(html).not.toContain(seed.hostId); // creator id never shipped
-  // (host display name also absent — the seed sets no public host name on this surface)
+  // host display name (seed names the host "Maya <runId>") must never reach the swiper —
+  // it's the most human-readable identity; the RPC structurally omits it, prove it here.
+  expect(html).not.toContain('Maya');
 
   // Can swipe from inside the sheet.
   await page.getByRole('button', { name: /interested/i }).last().click();

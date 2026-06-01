@@ -54,7 +54,12 @@ returns table (
     di.is_seed,
     it.total_cost_pp,
     it.total_duration_min,
-    -- Scrub reservation_url from every stop (possible identifying host link).
+    -- Scrub reservation_url from every stop: it's the only host-AUTHORED free-form
+    -- field on a stop (a host could embed an identifying/personal booking link). Every
+    -- other stop field (place_name/place_slug/address/coords/photo/local_insight) is
+    -- derived from the curated `places` catalog, which has no host/owner column, so it's
+    -- safe pre-swipe per the locked decision. NOTE: any future host-authored stop field
+    -- must be scrubbed here too.
     -- Guarded: legacy/thin rows may store a non-array jsonb; only iterate arrays.
     case when jsonb_typeof(it.stops) = 'array'
       then coalesce(
