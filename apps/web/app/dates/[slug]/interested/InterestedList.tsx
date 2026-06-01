@@ -18,6 +18,7 @@ import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
 import { shortlist as shortlistRpc } from '@/lib/after5/match';
 import { subscribeQueueInserts } from '@/lib/after5/realtime';
+import { browserAfter5Client } from '@/lib/after5/client';
 import { MakeOfferModal } from './MakeOfferModal';
 
 const PAGE = 20;
@@ -52,7 +53,11 @@ export function InterestedList({
   const [offerFor, setOfferFor] = useState<HostCandidate | null>(null);
   const offerActive = activeOffer !== null;
 
-  // Seam 5: append genuinely-new inserts (skip rows we already hold).
+  // Seam 5: append genuinely-new inserts (skip rows we already hold). The realtime
+  // payload is the raw queue_entries row — no joined profile — so we append a
+  // "someone new" placeholder for instant feedback, then enrich it with the
+  // candidate's Tier-3 profile (RLS profiles_select_revealed) so the real name and
+  // photo fill in live, matching the server fetch on load.
   useEffect(() => {
     return subscribeQueueInserts(userId, instanceId, (row) => {
       setRows((prev) =>
@@ -72,6 +77,29 @@ export function InterestedList({
               },
             ],
       );
+      // Fire-and-forget profile fetch; patches the row in place when it resolves.
+      // Idempotent, so a duplicate insert event just re-applies the same values.
+      void browserAfter5Client()
+        .from('profiles')
+        .select('first_name, age, city, clear_photo_url')
+        .eq('id', row.candidate_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data) return;
+          setRows((cur) =>
+            cur.map((r) =>
+              r.candidate_id === row.candidate_id
+                ? {
+                    ...r,
+                    first_name: data.first_name ?? r.first_name,
+                    age: data.age ?? r.age,
+                    city: data.city ?? r.city,
+                    photo_url: data.clear_photo_url ?? r.photo_url,
+                  }
+                : r,
+            ),
+          );
+        });
     });
   }, [userId, instanceId]);
 

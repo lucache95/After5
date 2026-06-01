@@ -7,10 +7,10 @@
 // the supabase_realtime publication (20260601201000) + RLS queue_creator_read gating
 // delivery to the host. Before those fixes the host's idle socket got zero rows.
 //
-// The live-appended row shows the placeholder name "someone new": the realtime payload
-// carries only queue_entries columns, not the joined candidate profile (name/photo come
-// from the server fetch on load). That placeholder IS the live-delivery signal — the
-// real name fills in on the host's next load. We assert on it directly.
+// The live row first appears as a "someone new" placeholder (the realtime payload has
+// no joined profile), then InterestedList enriches it with the candidate's Tier-3
+// profile (RLS profiles_select_revealed) so the real name fills in live. We assert on
+// the enriched name — the full live experience, no reload.
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from './_helpers/auth';
 import { seedTwoUsersAndNight, cleanup, type SeedResult } from './_helpers/seed';
@@ -50,9 +50,9 @@ test('host interested-list updates live when a candidate swipes (no reload)', as
   await likeBtn.click();
 
   // 3. The new candidate appears on the HOST's already-open page via realtime — no
-  //    reload, no re-navigation. Live rows render as "someone new" until a fetch joins
-  //    the profile. This is the push that delivered ZERO rows before the fixes.
-  await expect(hostPage.getByRole('button', { name: /add someone new to shortlist/i }))
+  //    reload, no re-navigation — and enriches to their real name (Jordan). This is the
+  //    push that delivered ZERO rows before the joinAuthed + publication fixes.
+  await expect(hostPage.getByRole('button', { name: /add Jordan.* to shortlist/i }))
     .toBeVisible({ timeout: 20_000 });
   await expect(hostPage.getByText(/no new right-swipes yet/i)).toHaveCount(0);
 
