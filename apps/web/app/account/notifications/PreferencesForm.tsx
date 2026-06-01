@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { browserAfter5Client } from '@/lib/after5/client';
 import { cn } from '@/lib/cn';
+import { EnableWebPushButton } from './EnableWebPushButton';
 
 export interface PrefsInitial {
   push_enabled: boolean;
@@ -173,6 +174,8 @@ export function PreferencesForm({ userId, initial }: { userId: string; initial: 
           </button>
         )}
       </section>
+
+      <EnableWebPushButton />
 
       <button
         type="button"
