@@ -1,5 +1,7 @@
 # Phase 7 Chat — Adversarial Security Audit
 
+> **✅ REMEDIATION (2026-06-01, post-audit):** HIGH-1 (`chat_send_message`/`report_message` REVOKEd from `authenticated`, breaking all sends/reports) was independently caught by a live prod write-path test and **fixed** via migration `20260601100600_p7_grant_chat_write_rpcs.sql` — grant EXECUTE to `authenticated`, mirroring the `match_*` pattern; the in-body `auth.uid()=p_actor` + party + Gate-A checks preserve safety. Applied to prod and verified: a real r2host→r2cand message sends end-to-end (row inserted + `new_message` notification dispatched). The LOW finding is documented/accepted. No open security items remain.
+
 - **Date:** 2026-06-01
 - **Auditor:** read-only adversarial review (isolated worktree `worktree-agent-adb0923a92e85f48e`)
 - **Scope:** migrations `20260601100000`–`20260601100500` (messages table, party RLS, `chat_send_message` / `chat_recompute_both_ready` / `chat_thread_messageable` / `chat_mark_read`, `message_reports` + `report_message`, realtime publication); edge fns `chat-send-message` + `chat-report-message`; client `apps/web/lib/after5/chat.ts` + `/messages` UI.
