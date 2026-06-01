@@ -3,7 +3,13 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const recordSwipe = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/lib/after5/client', () => ({ browserAfter5Client: () => ({}), recordSwipe: (...a: unknown[]) => recordSwipe(...a) }));
+vi.mock('@/lib/after5/client', () => ({
+  browserAfter5Client: () => ({}),
+  recordSwipe: (...a: unknown[]) => recordSwipe(...a),
+  // NightDetailSheet (rendered by SwipeDeck) now fetches get_night_detail on open.
+  // Return null so the sheet shows the blind-summary fallback these tests assert.
+  getNightDetail: vi.fn().mockResolvedValue(null),
+}));
 // vaul's pointer-drag dismissal reads real CSS transform matrices that jsdom
 // doesn't compute, so we stub the Drawer primitives to plain DOM. The blind
 // contract + swipe wiring under test live in our own component, not vaul.
