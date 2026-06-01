@@ -20,10 +20,6 @@
     {
       "path": "/api/cron/offer-expiring",
       "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/push-web",
-      "schedule": "* * * * *"
     }
   ]
 }
