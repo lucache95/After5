@@ -5,6 +5,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { pickWeeklySpotlight } from './feature-spotlights';
 import { makeUnsubToken } from './unsubscribe-token';
+import { emailShell, eyebrow, ctaButton, hairline, BRAND, FONT_BODY, FONT_HEADING } from './layout';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tryafter5.app';
 
@@ -52,15 +53,15 @@ export async function renderWeeklyDigest(opts: {
   email: string;
   firstName: string | null;
 }): Promise<RenderedDigest> {
-  const greeting = opts.firstName ? `Hey ${opts.firstName}` : 'Hey';
+  const greeting = opts.firstName ? `hey ${escapeHtml(opts.firstName)}` : 'hey';
   const spotlight = pickWeeklySpotlight();
   const plans = await loadRecentPlans(3);
   const unsubToken = makeUnsubToken(opts.email);
   const unsubUrl = `${SITE_URL}/unsubscribe?token=${unsubToken}`;
 
   const subject = plans[0]
-    ? `This week in After5 — ${plans[0].title}`
-    : `This week in After5`;
+    ? `this week in after5 — ${plans[0].title}`
+    : `this week in after5`;
 
   const planHtml = plans
     .map((p) => {
@@ -68,14 +69,14 @@ export async function renderWeeklyDigest(opts: {
       return `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
           <tr>
-            <td bgcolor="#F4ECDD" style="background-color:#F4ECDD;border:1px solid #E8DFCB;border-radius:12px;padding:18px 20px;">
-              <a href="${SITE_URL}/dates/${p.slug}" style="font-family:'Inter',sans-serif;font-size:16px;font-weight:600;color:#1A1A1A;text-decoration:none;line-height:1.3;">
+            <td bgcolor="${BRAND.pink}" style="background-color:${BRAND.pink};border:1px solid ${BRAND.hairline};border-radius:16px;padding:18px 20px;">
+              <a href="${SITE_URL}/dates/${p.slug}" style="font-family:${FONT_BODY};font-size:16px;font-weight:600;color:${BRAND.ink};text-decoration:none;line-height:1.3;">
                 ${escapeHtml(p.title)}
               </a>
-              ${p.hook ? `<p style="margin:6px 0 10px 0;font-family:'Inter',sans-serif;font-size:13px;line-height:1.55;color:#6B6864;">${escapeHtml(p.hook)}</p>` : ''}
-              <p style="margin:0;font-family:'Inter',sans-serif;font-size:12px;color:#8B8884;">
+              ${p.hook ? `<p style="margin:6px 0 10px 0;font-family:${FONT_BODY};font-size:13px;line-height:1.55;color:${BRAND.ink};">${escapeHtml(p.hook)}</p>` : ''}
+              <p style="margin:0;font-family:${FONT_BODY};font-size:12px;color:${BRAND.muted};">
                 $${Math.round(p.total_cost_pp)} &middot; ${hr} hr &middot;
-                <a href="${SITE_URL}/dates/${p.slug}" style="color:#C2552B;text-decoration:underline;">see the plan &rarr;</a>
+                <a href="${SITE_URL}/dates/${p.slug}" style="color:${BRAND.accent};text-decoration:underline;">see the plan &rarr;</a>
               </p>
             </td>
           </tr>
@@ -90,107 +91,60 @@ export async function renderWeeklyDigest(opts: {
     })
     .join('\n');
 
-  const html = `<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="x-apple-disable-message-reformatting">
-<title>${escapeHtml(subject)}</title>
-<style>
-  body, table, td, p, a, h1, h2 { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  a.btn:hover { background-color: #2a2a2a !important; }
-</style>
-</head>
-<body style="margin:0;padding:0;background-color:#FDF9F3;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FDF9F3" style="background-color:#FDF9F3;">
-    <tr>
-      <td align="center" style="padding:48px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+  const cardBody = `
+    ${eyebrow('this week in <span style="color:' + BRAND.accent + '">after5</span>', BRAND.muted)}
+    <h1 style="margin:0 0 14px 0;font-family:${FONT_HEADING};font-size:30px;font-weight:400;line-height:1.05;color:${BRAND.ink};">
+      ${greeting} &mdash; here&rsquo;s what&rsquo;s new.
+    </h1>
 
-          <tr>
-            <td align="left" style="padding:0 0 28px 0;">
-              <a href="${SITE_URL}" style="font-family:'Inter',sans-serif;font-size:20px;font-weight:700;color:#1A1A1A;text-decoration:none;letter-spacing:-0.01em;">After5</a>
-            </td>
-          </tr>
+    <p style="margin:0 0 18px 0;font-family:${FONT_BODY};font-size:14px;line-height:1.55;color:${BRAND.muted};">
+      three plans real people built this week. tap any for the full night.
+    </p>
 
-          <tr>
-            <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E8DFCB;border-radius:18px;padding:32px 28px;">
-              <p style="margin:0 0 10px 0;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#8B8884;">
-                This week in <em style="font-style:italic;font-weight:600;color:#C2552B;">After5</em>
-              </p>
-              <h1 style="margin:0 0 14px 0;font-family:'Inter',sans-serif;font-size:26px;font-weight:700;line-height:1.15;letter-spacing:-0.02em;color:#1A1A1A;">
-                ${greeting} &mdash; here&rsquo;s what&rsquo;s new.
-              </h1>
+    ${planHtml}
 
-              <p style="margin:0 0 18px 0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.55;color:#6B6864;">
-                Three plans real Kelownans built this week. Tap any to see the full night.
-              </p>
+    ${hairline()}
 
-              ${planHtml}
+    ${eyebrow('hidden gem', BRAND.accent)}
+    <h2 style="margin:0 0 10px 0;font-family:${FONT_HEADING};font-size:20px;font-weight:400;line-height:1.2;color:${BRAND.ink};">
+      ${escapeHtml(spotlight.title)}
+    </h2>
+    <p style="margin:0 0 14px 0;font-family:${FONT_BODY};font-size:14px;line-height:1.6;color:${BRAND.ink};">
+      ${escapeHtml(spotlight.body)}
+    </p>
+    ${
+      spotlight.cta_path
+        ? `<a href="${SITE_URL}${spotlight.cta_path}" style="display:inline-block;font-family:${FONT_BODY};font-size:13px;font-weight:600;color:${BRAND.accent};text-decoration:underline;">${escapeHtml(spotlight.cta_label ?? 'try it')} &rarr;</a>`
+        : ''
+    }
 
-              <hr style="border:none;border-top:1px solid #E8DFCB;margin:26px 0 22px 0;">
+    ${hairline()}
 
-              <p style="margin:0 0 6px 0;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#8B8884;">
-                Hidden gem
-              </p>
-              <h2 style="margin:0 0 10px 0;font-family:'Inter',sans-serif;font-size:18px;font-weight:600;line-height:1.3;color:#1A1A1A;">
-                ${escapeHtml(spotlight.title)}
-              </h2>
-              <p style="margin:0 0 14px 0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#6B6864;">
-                ${escapeHtml(spotlight.body)}
-              </p>
-              ${
-                spotlight.cta_path
-                  ? `<a href="${SITE_URL}${spotlight.cta_path}" style="display:inline-block;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#C2552B;text-decoration:underline;">${escapeHtml(spotlight.cta_label ?? 'Try it')} &rarr;</a>`
-                  : ''
-              }
+    <p style="margin:0 0 14px 0;font-family:${FONT_BODY};font-size:13px;line-height:1.6;color:${BRAND.ink};">
+      <strong>found a bug? want a place added?</strong> reply here or hit
+      <a href="${SITE_URL}/tell-us" style="color:${BRAND.accent};text-decoration:underline;">tryafter5.app/tell-us</a>.
+      i read every note.
+    </p>
 
-              <hr style="border:none;border-top:1px solid #E8DFCB;margin:26px 0 22px 0;">
+    ${ctaButton({ href: `${SITE_URL}/plan`, label: 'plan tonight &rarr;' })}
 
-              <p style="margin:0 0 14px 0;font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;color:#1A1A1A;">
-                <strong>Found a bug? Want a place added?</strong> Reply to this email or hit
-                <a href="${SITE_URL}/tell-us" style="color:#C2552B;text-decoration:underline;">tryafter5.app/tell-us</a>.
-                I read every note.
-              </p>
+    <p style="margin:16px 0 0 0;font-family:${FONT_BODY};font-size:13px;line-height:1.6;color:${BRAND.ink};">
+      later,<br>lucas
+    </p>`;
 
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 4px 0;">
-                <tr>
-                  <td bgcolor="#1A1A1A" style="background-color:#1A1A1A;border-radius:9999px;">
-                    <a class="btn" href="${SITE_URL}/plan" target="_blank"
-                       style="display:inline-block;padding:13px 28px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:#FDF9F3;text-decoration:none;border-radius:9999px;">
-                      Plan tonight &rarr;
-                    </a>
-                  </td>
-                </tr>
-              </table>
+  const html = emailShell({
+    title: escapeHtml(subject),
+    preheader: plans[0] ? `new this week: ${plans[0].title}` : 'this week in after5',
+    body: cardBody,
+    siteUrl: SITE_URL,
+    unsubUrl,
+    unsubLabel: "don't want these weekly notes?",
+    maxWidth: 600,
+  });
 
-              <p style="margin:24px 0 0 0;font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;color:#1A1A1A;">
-                Have a good week,<br>Lucas
-              </p>
-            </td>
-          </tr>
+  const text = `${greeting} — this week in after5.
 
-          <tr>
-            <td style="padding:24px 8px 0 8px;">
-              <p style="margin:0 0 6px 0;font-family:'Inter',sans-serif;font-size:11px;line-height:1.6;color:#8B8884;">
-                <a href="${SITE_URL}" style="color:#1A1A1A;text-decoration:underline;">tryafter5.app</a>
-                &middot; Curated date plans for Kelowna couples
-              </p>
-              <p style="margin:0;font-family:'Inter',sans-serif;font-size:11px;line-height:1.6;color:#8B8884;">
-                Don&rsquo;t want these weekly notes? <a href="${unsubUrl}" style="color:#8B8884;text-decoration:underline;">Unsubscribe</a> &mdash; one click.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body></html>`;
-
-  const text = `${greeting} — this week in After5.
-
-Three plans real Kelownans built this week:
+three plans real people built this week:
 ${planText || '(no new plans yet — be the first this week!)'}
 
 ──────────
@@ -200,16 +154,16 @@ ${spotlight.body}
 ${spotlight.cta_path ? `→ ${SITE_URL}${spotlight.cta_path}` : ''}
 
 ──────────
-Found a bug? Want a place added? Reply to this email or hit ${SITE_URL}/tell-us — I read every note.
+found a bug? want a place added? reply here or hit ${SITE_URL}/tell-us — i read every note.
 
-Plan tonight: ${SITE_URL}/plan
+plan tonight: ${SITE_URL}/plan
 
-Have a good week,
-Lucas
+later,
+lucas
 
 ──────────
-Don't want these weekly notes? Unsubscribe (one click): ${unsubUrl}
-tryafter5.app — Curated date plans for Kelowna couples`;
+don't want these weekly notes? unsubscribe (one click): ${unsubUrl}
+tryafter5.app — the dating app that's actually fun`;
 
   return {
     subject,
