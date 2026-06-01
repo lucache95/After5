@@ -1,9 +1,13 @@
 'use client';
 
 // Auth-aware nav widget. Drop into any header.
-//   - Signed out → "Sign in" link to /login
-//   - Signed in  → "My dates" link + avatar that opens a small menu
-//                  with profile name + sign-out action
+//   - Signed out → "sign in" link to /login
+//   - Signed in  → avatar that opens a small dating-IA menu
+//                  (profile + your nights + matches + messages + sign out)
+//
+// Barbiecore (DESIGN-SYSTEM §1–3): shell.* tokens, font-heading/font-body,
+// lowercase dry copy. The dropdown points at the live dating loop, NOT the
+// legacy planner. A discreet "plan a date" wedge link stays at the bottom.
 //
 // Two visual variants — `on-dark` for image-overlay headers (homepage hero
 // nav), `on-light` for standard light-bg headers.
@@ -18,6 +22,15 @@ interface SessionUser {
   email: string;
   firstName: string | null;
 }
+
+// Dating-app IA. Primary destinations are the live loop surfaces; the planner
+// link is the discreet wedge at the bottom, not part of the main nav.
+const MENU_ITEMS: { href: string; label: string }[] = [
+  { href: '/home', label: 'your profile' },
+  { href: '/my-nights', label: 'your nights' },
+  { href: '/matches', label: 'matches' },
+  { href: '/messages', label: 'messages' },
+];
 
 export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-light' }) {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -84,44 +97,32 @@ export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-l
       <Link
         href="/login"
         className={cn(
-          'text-sm font-medium transition-colors',
+          'font-body text-sm font-medium lowercase transition-colors',
           variant === 'on-dark'
             ? 'text-white/90 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.55)]'
-            : 'text-secondary hover:text-text',
+            : 'text-shell-ink/70 hover:text-shell-ink',
         )}
       >
-        Sign in
+        sign in
       </Link>
     );
   }
 
-  const displayName = user.firstName || user.email.split('@')[0] || 'You';
+  const displayName = (user.firstName || user.email.split('@')[0] || 'you').toLowerCase();
 
   return (
     <div ref={wrapRef} className="relative flex items-center gap-4">
-      {/* "My dates" text hidden on small screens — avatar alone takes you to
-          /account via the menu. Keeps the nav from wrapping on iPhone SE. */}
-      <Link
-        href="/account"
-        className={cn(
-          'hidden text-sm font-medium transition-colors sm:inline',
-          variant === 'on-dark'
-            ? 'text-white/95 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.55)]'
-            : 'text-secondary hover:text-text',
-        )}
-      >
-        My dates
-      </Link>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label="Account menu"
+        aria-label="account menu"
         aria-expanded={open}
         className={cn(
           'relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
           variant === 'on-dark'
             ? 'ring-2 ring-white/40 hover:ring-white/70'
-            : 'ring-2 ring-border hover:ring-text/40',
+            : 'ring-2 ring-shell-accent/30 hover:ring-shell-accent/60',
         )}
       >
         <Avatar name={displayName} size="md" className="!h-9 !w-9 !text-sm" />
@@ -129,40 +130,43 @@ export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-l
 
       {open && (
         <div
-          // Anchor near the avatar but constrain so it never overflows
-          // small viewports. -right-2 nudges it slightly past the avatar's
-          // right edge so the corner aligns with the trigger; the max-width
-          // clamp keeps it inside the screen on iPhone SE width.
-          className="absolute -right-2 top-12 z-50 w-[min(15rem,calc(100vw-2rem))] origin-top-right rounded-card border border-border bg-background py-2 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.18)]"
+          // Anchor near the avatar but constrain so it never overflows small
+          // viewports. -right-2 nudges it just past the avatar's right edge;
+          // the max-width clamp keeps it inside iPhone-SE width.
+          className="absolute -right-2 top-12 z-50 w-[min(15rem,calc(100vw-2rem))] origin-top-right rounded-3xl border-2 border-shell-ink/10 bg-shell-base py-2 shadow-fun"
           role="menu"
         >
-          <div className="border-b border-border px-4 py-3">
-            <p className="font-display text-sm font-semibold text-text">{displayName}</p>
-            <p className="mt-0.5 truncate text-xs text-secondary">{user.email}</p>
+          <div className="border-b border-shell-ink/10 px-4 py-3">
+            <p className="font-heading text-base lowercase text-shell-ink">{displayName}</p>
+            <p className="mt-0.5 truncate font-body text-xs text-shell-ink/60">{user.email}</p>
           </div>
-          <Link
-            href="/account"
-            onClick={() => setOpen(false)}
-            className="block px-4 py-2 text-sm text-text transition-colors hover:bg-surface"
-            role="menuitem"
-          >
-            My dates
-          </Link>
+          {MENU_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 font-body text-sm lowercase text-shell-ink transition-colors hover:bg-shell-pink/60"
+              role="menuitem"
+            >
+              {item.label}
+            </Link>
+          ))}
+          {/* discreet planner wedge — not part of the main dating IA */}
           <Link
             href="/plan"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2 text-sm text-text transition-colors hover:bg-surface"
+            className="block border-t border-shell-ink/10 px-4 py-2.5 font-body text-xs lowercase text-shell-ink/55 transition-colors hover:bg-shell-pink/60 hover:text-shell-ink/80"
             role="menuitem"
           >
-            Plan a date
+            plan a date
           </Link>
-          <form action="/auth/signout" method="post" className="border-t border-border">
+          <form action="/auth/signout" method="post" className="border-t border-shell-ink/10">
             <button
               type="submit"
-              className="block w-full px-4 py-2 text-left text-sm text-text transition-colors hover:bg-surface"
+              className="block w-full px-4 py-2.5 text-left font-body text-sm lowercase text-shell-ink transition-colors hover:bg-shell-pink/60"
               role="menuitem"
             >
-              Sign out
+              sign out
             </button>
           </form>
         </div>
