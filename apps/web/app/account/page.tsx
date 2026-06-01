@@ -1,27 +1,18 @@
-// Authenticated account + settings surface. Warm-cream canvas with polaroid
-// accents. NOTE: /home is the dating home (login lands there); /account holds
-// saved plans + profile + settings and links back INTO the dating loop so it's
-// never a planner-only dead-end.
-//
-// Sections:
-//   - Hero greeting (italic accent) + tonight sub-line + primary CTA
-//   - Dating loop nav: /home, /feed, /matches, /nights/new
-//   - Your Dates: polaroid grid of saved plans (or empty state)
-//   - Picks for this week: recent public itineraries
-//   - Inspiration board: themes
-//   - Your spot block + settings sub-section
+// Authenticated dating account / home surface (Barbiecore — DESIGN-SYSTEM §1–4).
+// Reframed from the legacy planner dashboard: shell.* tokens, font-heading/body,
+// lowercase dry copy, phone-width 420px, BottomTabShell. The dating loop is the
+// primary IA (your nights / matches / messages / post a night); saved plans +
+// the planner picks live below as the discreet wedge so this is never a
+// planner-only dead-end. Links all still work.
 
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, Heart, Compass, CalendarPlus, Sparkles } from 'lucide-react';
+import { ArrowRight, Heart, Compass, CalendarPlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { Polaroid } from '@/components/Polaroid';
-import { UserMenu } from '@/components/UserMenu';
-import { ProfileForm } from './ProfileForm';
+import { BottomTabShell } from '@/components/BottomTabShell';
+import { NotificationBell } from '@/components/NotificationBell';
 import { coverImageFor } from '@/lib/place-image';
-import { PLAN_THEMES } from '@/lib/themes';
 import { relativeTime } from '@/lib/relative-time';
 import type { Stop } from '@/lib/itinerary-types';
 
@@ -41,29 +32,12 @@ interface SavedRow {
   } | null;
 }
 
-interface PickRow {
-  id: string;
-  slug: string | null;
-  title: string | null;
-  hook: string | null;
-  total_cost_pp: number | null;
-  total_duration_min: number | null;
-  stops: unknown;
-  generated_at: string;
-  cover_image_url: string | null;
-}
-
-const EARLY_ACCESS_CAP = 100;
-
-// Per-theme background swatch — pulls from the existing /vibes images
-// so themes get real Okanagan photography in their preview tiles.
-const THEME_IMAGE: Record<string, string> = {
-  first_date_safe:    '/vibes/vibe-chill.jpg',
-  rom_com_night:      '/vibes/vibe-cozy.jpg',
-  main_character_day: '/vibes/vibe-boujee.jpg',
-  slow_sunday:        '/vibes/vibe-chill.jpg',
-  no_phones:          '/vibes/vibe-adventurous.jpg',
-};
+// Primary dating loop — these are the live surfaces, matching BottomTabShell.
+const LOOP: { href: string; label: string; desc: string; Icon: typeof Heart }[] = [
+  { href: '/feed', label: 'browse nights', desc: "see who's out", Icon: Compass },
+  { href: '/matches', label: 'your matches', desc: 'locked-in plans', Icon: Heart },
+  { href: '/my-nights', label: 'your nights', desc: 'nights you posted', Icon: CalendarPlus },
+];
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -73,18 +47,10 @@ export default async function AccountPage() {
     redirect('/login?next=/account');
   }
 
-  // Subscribers count needs the admin client — RLS on subscribers only
-  // permits INSERT for anon/authed users, so a user-context SELECT
-  // returns 0 (which made "Your spot" misalign with the banner).
-  const admin = createAdminClient();
-
-  // Parallel data fetch — profile, saved plans (preview only), saved count,
-  // picks, total signups. The dashboard shows 8 polaroids max so the page
-  // doesn't drown in chaos at scale; full collection lives at /account/saved.
-  const [profileRes, savedRes, savedCountRes, picksRes, countRes] = await Promise.all([
+  const [profileRes, savedRes, savedCountRes] = await Promise.all([
     supabase
       .from('profiles')
-      .select('first_name, city, neighborhood, created_at')
+      .select('first_name')
       .eq('id', user.id)
       .maybeSingle(),
     supabase
@@ -92,399 +58,163 @@ export default async function AccountPage() {
       .select('id, saved_at, itinerary:itineraries(id, slug, title, total_cost_pp, total_duration_min, stops, cover_image_url)')
       .eq('user_id', user.id)
       .order('saved_at', { ascending: false })
-      .limit(8),
+      .limit(6),
     supabase
       .from('saved_plans')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id),
-    supabase
-      .from('itineraries')
-      .select('id, slug, title, hook, total_cost_pp, total_duration_min, stops, generated_at, cover_image_url')
-      .eq('is_public', true)
-      .not('slug', 'is', null)
-      .order('generated_at', { ascending: false })
-      .limit(4),
-    admin
-      .from('subscribers')
-      .select('*', { count: 'exact', head: true }),
   ]);
 
   const profile = profileRes.data;
   const saved = (savedRes.data ?? []) as unknown as SavedRow[];
   const savedTotal = savedCountRes.count ?? saved.length;
-  const picks = (picksRes.data ?? []) as unknown as PickRow[];
-  const claimed = countRes.count ?? 0;
-  const remaining = Math.max(0, EARLY_ACCESS_CAP - claimed);
 
-  const firstName = profile?.first_name || user.email?.split('@')[0] || 'there';
-  const totalSavedCount = saved.length;
+  const firstName = (profile?.first_name || user.email?.split('@')[0] || 'you').toLowerCase();
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
-      {/* Ambient warm gradient */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-32 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-amber-200/45 via-orange-200/25 to-transparent blur-3xl" />
-        <div className="absolute -right-40 top-72 h-[520px] w-[520px] rounded-full bg-gradient-to-tl from-rose-200/45 via-amber-100/25 to-transparent blur-3xl" />
-      </div>
-
-      <header className="relative z-20 border-b border-border bg-background/85 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
-          <Link href="/" className="font-display text-xl font-semibold tracking-tight text-text">
-            After5
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/plan"
-              className="hidden items-center gap-2 rounded-pill bg-text px-5 py-2 text-sm font-medium text-background transition-transform hover:-translate-y-0.5 sm:inline-flex"
-            >
-              Plan a date
-            </Link>
-            <UserMenu variant="on-light" />
-          </div>
+    <main className="min-h-dvh bg-shell-base">
+      <header className="sticky top-0 z-30 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
+        <nav aria-label="masthead" className="mx-auto flex w-full max-w-[420px] items-center justify-between px-5 py-3.5">
+          <Link href="/" className="font-heading text-2xl lowercase text-shell-accent">after5</Link>
+          <NotificationBell />
         </nav>
       </header>
 
-      <div className="relative z-10 mx-auto max-w-content px-6 pb-20 pt-12 md:px-10 md:pb-28 md:pt-16">
-        {/* HERO GREETING */}
-        <section className="grid grid-cols-1 gap-10 md:grid-cols-[1.3fr_1fr] md:gap-14">
-          <div>
-            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-              Your account
-            </p>
-            <h1 className="font-display text-[44px] font-bold leading-[1.02] tracking-[-0.03em] text-text md:text-[60px]">
-              Hello,{' '}
-              <span className="italic font-semibold text-accent">{firstName}</span>
-              .
-            </h1>
-            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-secondary md:text-base">
-              {totalSavedCount > 0
-                ? `You've saved ${totalSavedCount} ${totalSavedCount === 1 ? 'plan' : 'plans'}. Tonight in Kelowna is wide open — want to add one more?`
-                : "You haven't saved any plans yet. Let's fix that."}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <Link
-                href="/plan"
-                className="inline-flex items-center gap-2 rounded-pill bg-text px-7 py-3.5 text-base font-medium text-background transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.4)]"
-              >
-                Plan tonight
-                <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
-              </Link>
-              <Link
-                href="/dates"
-                className="text-sm font-medium text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
-              >
-                Browse what others built
-              </Link>
-            </div>
-          </div>
+      <div className="mx-auto w-full max-w-[420px] px-5 pb-28 pt-8">
+        {/* HELLO */}
+        <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">
+          hey {firstName}
+        </h1>
+        <p className="mt-2 font-body text-sm text-shell-ink/60">
+          your dating home. pick up where you left off.
+        </p>
 
-          {/* Polaroid stack accent */}
-          <div className="relative hidden min-h-[280px] md:block">
-            <div className="absolute right-12 top-0">
-              <Polaroid
-                src="/pins/couple-trail.jpg"
-                alt="Okanagan trail"
-                label="KELOWNA · 26"
-                size="lg"
-                rotation={-6}
-              />
-            </div>
-            <div className="absolute right-0 top-32">
-              <Polaroid
-                src="/pins/couple-lake-kiss.jpg"
-                alt="Lake Okanagan"
-                label="LAKESIDE"
-                size="md"
-                rotation={8}
-              />
-            </div>
-          </div>
+        {/* DATING LOOP — primary IA */}
+        <section aria-label="your dating loop" className="mt-7 space-y-3">
+          {LOOP.map(({ href, label, desc, Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-4 rounded-3xl border-2 border-shell-ink/10 bg-white p-4 transition hover:border-shell-ink/25 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none"
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-shell-pink">
+                <Icon className="h-5 w-5 text-shell-accent" strokeWidth={2.25} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-heading text-xl lowercase leading-tight text-shell-ink">{label}</p>
+                <p className="mt-0.5 font-body text-xs text-shell-ink/60">{desc}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-shell-ink/40" strokeWidth={2.25} aria-hidden />
+            </Link>
+          ))}
         </section>
 
-        {/* DATING LOOP NAV — /home is the dating home; these are the live loop surfaces */}
-        <section className="mt-14 md:mt-16">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-            {[
-              { href: '/home', label: 'Dating home', desc: "Tonight's nights", Icon: Sparkles },
-              { href: '/feed', label: 'Browse nights', desc: "See who's out", Icon: Compass },
-              { href: '/matches', label: 'Your matches', desc: 'Locked-in plans', Icon: Heart },
-              { href: '/nights/new', label: 'Post a night', desc: 'Turn a plan into a date', Icon: CalendarPlus },
-            ].map(({ href, label, desc, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex flex-col gap-2 rounded-[16px] border border-amber-100/80 bg-white/85 p-4 backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[0_16px_40px_-16px_rgba(80,40,20,0.22)]"
-              >
-                <Icon className="h-5 w-5 text-accent" strokeWidth={2} aria-hidden />
-                <div>
-                  <p className="font-display text-sm font-semibold leading-tight text-text">{label}</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-secondary">{desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+        {/* POST A NIGHT — primary CTA */}
+        <Link
+          href="/nights/new"
+          className="mt-4 flex items-center justify-center gap-2 rounded-full bg-shell-accent px-6 py-3.5 font-body font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none motion-reduce:hover:scale-100"
+        >
+          post a night
+          <ArrowRight className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+        </Link>
 
-        {/* YOUR DATES */}
-        <section className="mt-20 md:mt-28">
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-                Your collection
-              </p>
-              <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-text md:text-3xl">
-                Saved dates
-              </h2>
-            </div>
+        {/* SAVED PLANS — the planner wedge, secondary */}
+        <section aria-label="saved plans" className="mt-12">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="font-heading text-2xl lowercase text-shell-ink">saved plans</h2>
             {savedTotal > 0 && (
-              <p className="text-xs text-muted [font-variant-numeric:tabular-nums]">
-                {savedTotal} {savedTotal === 1 ? 'plan' : 'plans'}
-              </p>
+              <span className="font-body text-xs text-shell-ink/50 [font-variant-numeric:tabular-nums]">
+                {savedTotal}
+              </span>
             )}
           </div>
+          <p className="mt-1 font-body text-xs text-shell-ink/60">
+            ideas you tucked away. turn one into a night.
+          </p>
 
           {saved.length === 0 ? (
-            <EmptyDates />
+            <div className="mt-5 rounded-3xl border-2 border-dashed border-shell-ink/15 bg-white/60 p-6 text-center">
+              <p className="font-heading text-xl lowercase text-shell-ink">nothing saved yet</p>
+              <p className="mt-1.5 font-body text-sm text-shell-ink/60">
+                build a plan, hit the heart, and it lands here.
+              </p>
+              <Link
+                href="/plan"
+                className="mt-4 inline-block rounded-full border-2 border-shell-ink/15 px-5 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-accent/50 hover:text-shell-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+              >
+                plan a date
+              </Link>
+            </div>
           ) : (
             <>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
-              {saved.map((s, i) => {
-                if (!s.itinerary) return null;
-                const stops = (Array.isArray(s.itinerary.stops) ? s.itinerary.stops : []) as Stop[];
-                const cover = coverImageFor(stops, { itineraryCover: s.itinerary.cover_image_url });
-                const hr = Math.round(((s.itinerary.total_duration_min ?? 0) / 60) * 10) / 10;
-                return (
-                  <article key={s.id} className="group relative">
-                    <Polaroid
-                      src={cover}
-                      alt={s.itinerary.title ?? 'Saved plan'}
-                      label={(s.itinerary.title ?? 'KELOWNA').toUpperCase().slice(0, 18)}
-                      size="lg"
-                      rotation={(i % 2 === 0 ? -1 : 1) * (3 + (i % 4))}
-                      href={s.itinerary.slug ? `/dates/${s.itinerary.slug}` : `/plan/i/${s.itinerary.id}`}
-                    />
-                    <div className="mt-3 px-2">
-                      <p className="line-clamp-2 text-[13px] font-medium text-text">
-                        {s.itinerary.title}
-                      </p>
-                      <p className="mt-1 text-[11px] text-muted [font-variant-numeric:tabular-nums]">
-                        ${Math.round(s.itinerary.total_cost_pp ?? 0)} · {hr} hr · saved {relativeTime(s.saved_at)}
-                      </p>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            {savedTotal > saved.length && (
-              <div className="mt-10 flex justify-center">
+              <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-8">
+                {saved.map((s, i) => {
+                  if (!s.itinerary) return null;
+                  const stops = (Array.isArray(s.itinerary.stops) ? s.itinerary.stops : []) as Stop[];
+                  const cover = coverImageFor(stops, { itineraryCover: s.itinerary.cover_image_url });
+                  const hr = Math.round(((s.itinerary.total_duration_min ?? 0) / 60) * 10) / 10;
+                  return (
+                    <article key={s.id} className="min-w-0">
+                      <Polaroid
+                        src={cover}
+                        alt={s.itinerary.title ?? 'saved plan'}
+                        label={(s.itinerary.title ?? 'saved').toLowerCase().slice(0, 18)}
+                        size="md"
+                        tone="dating"
+                        rotation={(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}
+                        href={s.itinerary.slug ? `/dates/${s.itinerary.slug}` : `/plan/i/${s.itinerary.id}`}
+                      />
+                      <div className="mt-2 px-1">
+                        <p className="line-clamp-2 font-body text-[13px] font-medium text-shell-ink">
+                          {s.itinerary.title}
+                        </p>
+                        <p className="mt-0.5 font-body text-[11px] text-shell-ink/50 [font-variant-numeric:tabular-nums]">
+                          ${Math.round(s.itinerary.total_cost_pp ?? 0)} · {hr} hr · {relativeTime(s.saved_at)}
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              {savedTotal > saved.length && (
                 <Link
                   href="/account/saved"
-                  className="inline-flex items-center gap-2 rounded-pill border border-border bg-background px-6 py-3 text-sm font-medium text-text transition-colors hover:bg-surface"
+                  className="mt-6 flex items-center justify-center gap-2 rounded-full border-2 border-shell-ink/15 px-5 py-3 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-accent/50 hover:text-shell-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
                 >
-                  View all {savedTotal} saved plans
-                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                  see all {savedTotal} saved
+                  <ArrowRight className="h-4 w-4" strokeWidth={2.25} aria-hidden />
                 </Link>
-              </div>
-            )}
+              )}
             </>
           )}
         </section>
 
-        {/* PICKS FOR THIS WEEK */}
-        {picks.length > 0 && (
-          <section className="mt-20 md:mt-28">
-            <div className="mb-8">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-                Curated by After5
-              </p>
-              <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-text md:text-3xl">
-                Picks for this week
-              </h2>
-              <p className="mt-3 max-w-prose text-sm leading-relaxed text-secondary">
-                Fresh plans we loved. New ones every Sunday.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-              {picks.slice(0, 4).map((p) => {
-                const stops = (Array.isArray(p.stops) ? p.stops : []) as Stop[];
-                const cover = coverImageFor(stops, { itineraryCover: p.cover_image_url });
-                const hr = Math.round(((p.total_duration_min ?? 0) / 60) * 10) / 10;
-                return (
-                  <Link
-                    key={p.id}
-                    href={p.slug ? `/dates/${p.slug}` : '/dates'}
-                    className="group flex gap-5 rounded-[16px] border border-amber-100/80 bg-white/85 p-3 backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[0_16px_40px_-16px_rgba(80,40,20,0.22)]"
-                  >
-                    <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[10px] bg-surface md:h-32 md:w-32">
-                      <Image
-                        src={cover}
-                        alt=""
-                        fill
-                        sizes="128px"
-                        className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.04]"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1 py-1">
-                      <h3 className="line-clamp-2 font-display text-base font-semibold leading-tight text-text">
-                        {p.title}
-                      </h3>
-                      {p.hook && (
-                        <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-secondary">
-                          {p.hook}
-                        </p>
-                      )}
-                      <p className="mt-3 text-[11px] text-muted [font-variant-numeric:tabular-nums]">
-                        ${Math.round(p.total_cost_pp ?? 0)} · {hr} hr · {stops.length} stops
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* INSPIRATION BOARD */}
-        <section className="mt-20 md:mt-28">
-          <div className="mb-8">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-              Inspiration board
-            </p>
-            <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-text md:text-3xl">
-              Pick a vibe.{' '}
-              <span className="italic font-semibold text-accent">We&apos;ll do the rest.</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-            {PLAN_THEMES.map((t) => {
-              const img = THEME_IMAGE[t.id] ?? '/vibes/vibe-chill.jpg';
-              return (
-                <Link
-                  key={t.id}
-                  href={`/plan?theme=${t.id}`}
-                  className="group block overflow-hidden rounded-[14px] border border-amber-100/60 bg-white/80 transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-[0_16px_36px_-16px_rgba(80,40,20,0.25)]"
-                >
-                  <div className="relative aspect-[5/4] overflow-hidden bg-surface">
-                    <Image
-                      src={img}
-                      alt=""
-                      fill
-                      sizes="(max-width: 768px) 50vw, 20vw"
-                      className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.04]"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-display text-sm font-semibold leading-tight text-text">
-                      {t.label}
-                    </p>
-                    <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-secondary">
-                      {t.desc}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* YOUR SPOT */}
-        <section className="mt-20 md:mt-28">
-          <div className="rounded-[20px] border border-amber-100 bg-gradient-to-br from-amber-50/90 via-white/80 to-rose-50/70 p-7 backdrop-blur-md md:p-10">
-            <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-[1fr_auto] md:gap-10">
-              <div>
-                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-amber-900/80">
-                  Your spot
-                </p>
-                <h2 className="font-display text-2xl font-bold leading-tight text-text md:text-3xl">
-                  You&apos;re #{Math.min(claimed, EARLY_ACCESS_CAP)} of the first 100.
-                </h2>
-                <p className="mt-3 max-w-md text-sm leading-relaxed text-secondary">
-                  Forever free. We&apos;ll never charge you for plans, ever. Thanks for being early.
-                </p>
-                <div className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full bg-amber-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-rose-400 to-amber-500 transition-all"
-                    style={{ width: `${Math.min(100, (claimed / EARLY_ACCESS_CAP) * 100)}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[11px] font-medium tracking-wide text-amber-900/70 [font-variant-numeric:tabular-nums]">
-                  {claimed} claimed · {remaining} {remaining === 1 ? 'spot' : 'spots'} remaining
-                </p>
-              </div>
-              {/* Polaroid accent */}
-              <div className="hidden md:block">
-                <Polaroid
-                  src="/pins/couple-wakeboard.jpg"
-                  alt="Okanagan sunset"
-                  label="EARLY · CIRCLE"
-                  size="md"
-                  rotation={5}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SETTINGS / PROFILE */}
-        <section className="mt-20 md:mt-28">
-          <div className="mb-8">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-              Profile
-            </p>
-            <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-text md:text-3xl">
-              How we know you.
-            </h2>
-            <p className="mt-3 text-sm text-secondary">
-              Signed in as <span className="text-text">{user.email}</span>.
-            </p>
-          </div>
-
-          <div className="max-w-xl">
-            <ProfileForm
-              initial={{
-                first_name: profile?.first_name ?? '',
-                city: profile?.city ?? '',
-                neighborhood: profile?.neighborhood ?? '',
-              }}
-            />
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-function EmptyDates() {
-  return (
-    <div className="relative overflow-hidden rounded-[20px] border border-amber-100/80 bg-white/70 p-8 backdrop-blur-md md:p-12">
-      <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[auto_1fr] md:gap-12">
-        <div className="flex justify-center">
-          <Polaroid
-            src="/pins/couple-field.jpg"
-            alt="Saved plans land here"
-            label="YOUR FIRST"
-            size="lg"
-            rotation={-4}
-          />
-        </div>
-        <div>
-          <p className="font-display text-xl font-semibold leading-snug text-text md:text-2xl">
-            Your saved dates will live here.
+        {/* SETTINGS / SIGNED-IN AS */}
+        <section aria-label="account" className="mt-12 border-t border-shell-ink/10 pt-8">
+          <h2 className="font-heading text-2xl lowercase text-shell-ink">your account</h2>
+          <p className="mt-2 font-body text-sm text-shell-ink/60">
+            signed in as <span className="text-shell-ink">{user.email}</span>.
           </p>
-          <p className="mt-3 max-w-md text-[14px] leading-relaxed text-secondary">
-            Built a plan you like? Hit the heart on the plan page and it&apos;ll appear in this collection — like polaroids tucked into a journal.
-          </p>
+          {/* profile edit lives on its own surface (owned elsewhere) */}
           <Link
-            href="/plan"
-            className="mt-6 inline-flex items-center gap-2 rounded-pill bg-text px-6 py-3 text-sm font-medium text-background transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.4)]"
+            href="/account/profile"
+            className="mt-4 inline-flex items-center gap-2 font-body text-sm lowercase text-shell-accent underline decoration-shell-accent/30 underline-offset-4 transition hover:decoration-shell-accent"
           >
-            Build your first
-            <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+            edit profile
+            <ArrowRight className="h-4 w-4" strokeWidth={2.25} aria-hidden />
           </Link>
-        </div>
+          <form action="/auth/signout" method="post" className="mt-6">
+            <button
+              type="submit"
+              className="rounded-full border-2 border-shell-ink/15 px-5 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+            >
+              sign out
+            </button>
+          </form>
+        </section>
       </div>
-    </div>
+
+      <BottomTabShell />
+    </main>
   );
 }
