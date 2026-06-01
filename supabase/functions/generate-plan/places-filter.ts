@@ -2,7 +2,7 @@
 // Pure data layer — no scoring, no LLM. Just "what's plausible for this date?"
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import type { PlanInputs, Place } from './types.ts';
+import type { PlanInputs, Place, CityRecord } from './types.ts';
 
 // Map a numeric per-person budget to allowed price tiers.
 // Always allow $ AND $$ unless the user explicitly wants the premium pool —
@@ -34,9 +34,16 @@ function currentSeason(): string {
   return 'winter';
 }
 
+// M1: city-scoped. The caller passes the resolved CityRecord; the centroid +
+// default radius come from the city (no more hardcoded Kelowna constants).
+// approvalStatuses is parameterized so KelownaProvider stays curated-only
+// (['live']) while the on-the-fly path can serve just-warmed 'auto' rows
+// (['live','auto']).
 export async function filterPlaces(
   supabase: SupabaseClient,
-  inputs: PlanInputs
+  inputs: PlanInputs,
+  city: CityRecord,
+  approvalStatuses: string[] = ['live'],
 ): Promise<Place[]> {
   const tiers = allowedTiers(inputs.budget_per_person);
   const season = currentSeason();
@@ -45,10 +52,11 @@ export async function filterPlaces(
   const query = supabase
     .from('places')
     .select(
-      'id,name,slug,address,neighborhood,drive_cluster,type,vibe_tags,pairing_tags,effort,time_of_day,weather_dependent,seasonality,typical_duration_min,price_tier,typical_per_person,reservation_required,reservation_url,photo_url,photo_time_of_day,photo_season,photo_has_snow,lat,lng,opens,closes,quality_score,feedback_score,local_insight,notes,is_active,at_home,friction_score,perceived_value,created_at,total_appearances,is_delighter'
+      'id,name,slug,address,neighborhood,drive_cluster,type,vibe_tags,pairing_tags,effort,time_of_day,weather_dependent,seasonality,typical_duration_min,price_tier,typical_per_person,reservation_required,reservation_url,photo_url,photo_time_of_day,photo_season,photo_has_snow,lat,lng,opens,closes,quality_score,feedback_score,local_insight,notes,is_active,at_home,friction_score,perceived_value,created_at,total_appearances,is_delighter,city_id,source'
     )
     .eq('is_active', true)
-    .eq('approval_status', 'live')
+    .in('approval_status', approvalStatuses)
+    .eq('city_id', city.id)
     .eq('at_home', wantsHome)
     .in('price_tier', tiers)
     .or(`seasonality.cs.{year_round},seasonality.cs.{${season}}`);
@@ -60,19 +68,28 @@ export async function filterPlaces(
   // Radius filter — done client-side because Postgres earth_distance / postgis
   // isn't enabled and we don't want to make this query rely on it. With ~170
   // places the in-memory haversine pass is trivial.
-  const maxKm = inputs.max_radius_km ?? 30;
-  const filtered = (data as Place[]).filter((p) => {
-    if (typeof p.lat !== 'number' || typeof p.lng !== 'number') return true;
-    return haversineKm(p.lat, p.lng, KELOWNA_LAT, KELOWNA_LNG) <= maxKm;
-  });
+  const maxKm = inputs.max_radius_km ?? city.default_radius_km ?? 30;
+  const filtered = (data as Place[]).filter((p) =>
+    withinRadius(p.lat, p.lng, city.centroid_lat, city.centroid_lng, maxKm)
+  );
 
   // Post-filter: must-include type satisfaction is checked at template-fill time,
   // not at this stage — we just need a broad candidate pool.
   return filtered;
 }
 
-const KELOWNA_LAT = 49.888;
-const KELOWNA_LNG = -119.496;
+// Pure radius predicate (testable). Places with unknown coords always pass —
+// we'd rather keep a candidate with missing geo than silently drop it.
+export function withinRadius(
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+  centroidLat: number,
+  centroidLng: number,
+  maxKm: number,
+): boolean {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return true;
+  return haversineKm(lat, lng, centroidLat, centroidLng) <= maxKm;
+}
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;

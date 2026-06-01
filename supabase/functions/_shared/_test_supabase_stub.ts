@@ -46,6 +46,41 @@ export class SupabaseClient {
     const r = c.rpc?.[name] ?? { data: null, error: null };
     return Promise.resolve({ data: r.data ?? null, error: r.error ?? null });
   }
+  // Minimal `.from()` surface. The stub deliberately does NOT model query
+  // semantics — it exists only so modules that reference `.from()` (e.g.
+  // places-filter.ts) type-check and import under `deno test`. Per Constraint
+  // C2, DB-query behavior is NOT unit-tested through this stub; only pure
+  // functions are. Every chainable returns `this`; awaiting resolves to an
+  // empty result so an accidental call degrades to "no rows" instead of
+  // throwing.
+  from(_table: string): QueryBuilderStub {
+    return new QueryBuilderStub();
+  }
+}
+
+type QueryResult = { data: unknown[]; error: { message: string } | null; count: number | null };
+
+class QueryBuilderStub implements PromiseLike<QueryResult> {
+  select(..._a: unknown[]): this { return this; }
+  insert(..._a: unknown[]): this { return this; }
+  update(..._a: unknown[]): this { return this; }
+  upsert(..._a: unknown[]): this { return this; }
+  delete(..._a: unknown[]): this { return this; }
+  eq(..._a: unknown[]): this { return this; }
+  in(..._a: unknown[]): this { return this; }
+  or(..._a: unknown[]): this { return this; }
+  gte(..._a: unknown[]): this { return this; }
+  lt(..._a: unknown[]): this { return this; }
+  limit(..._a: unknown[]): this { return this; }
+  contains(..._a: unknown[]): this { return this; }
+  maybeSingle(..._a: unknown[]): this { return this; }
+  single(..._a: unknown[]): this { return this; }
+  then<TResult1 = QueryResult, TResult2 = never>(
+    onfulfilled?: ((value: QueryResult) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    return Promise.resolve<QueryResult>({ data: [], error: null, count: null }).then(onfulfilled, onrejected);
+  }
 }
 
 export function createClient(_url: string, _key: string, _opts?: unknown): SupabaseClient {
