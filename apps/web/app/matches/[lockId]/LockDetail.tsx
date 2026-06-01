@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { Polaroid } from '@/components/Polaroid';
+import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import { cancelLock, MatchError, messageForCode } from '@/lib/after5/match';
 import { CancelWithReasonPicker, type CancelReason } from '@/app/dates/[slug]/interested/CancelWithReasonPicker';
@@ -22,10 +23,7 @@ export interface LockDetailProps {
   justLocked: boolean;
 }
 
-function whenLabel(iso: string | null): string {
-  if (!iso) return 'date tbd';
-  return new Date(iso).toLocaleString(undefined, { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
+const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
 
 export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked }: LockDetailProps) {
   const router = useRouter();
@@ -57,9 +55,7 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
         <Polaroid src={counterpart.clear_photo_url ?? ''} alt={name} size="md" tone="dating" />
         <div className="min-w-0">
           <h1 className="truncate font-heading text-3xl lowercase text-shell-ink">{name}</h1>
-          {/* suppressHydrationWarning: server renders UTC, client renders local
-              time — intentional; avoids React hydration error #418. */}
-          <p suppressHydrationWarning className="font-body text-shell-ink/70">{whenLabel(startsAt)}</p>
+          <LocalTime iso={startsAt} opts={WHEN_OPTS} fallback="date tbd" className="block font-body text-shell-ink/70" />
         </div>
       </header>
 

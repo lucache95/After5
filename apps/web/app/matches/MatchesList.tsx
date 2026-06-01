@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { Polaroid } from '@/components/Polaroid';
 import { cn } from '@/lib/cn';
+import { LocalTime } from '@/components/LocalTime';
 import { lockStatusLabel, type LockRowWithParties, type PartyProfile } from './lock-view';
 
 export interface MatchCard {
@@ -11,10 +12,7 @@ export interface MatchCard {
   startsAt: string | null;
 }
 
-function whenLabel(iso: string | null): string {
-  if (!iso) return 'date tbd';
-  return new Date(iso).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
+const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
 
 function Card({ card }: { card: MatchCard }) {
   const name = card.counterpart?.first_name ?? 'someone';
@@ -31,10 +29,7 @@ function Card({ card }: { card: MatchCard }) {
       <Polaroid src={card.counterpart?.clear_photo_url ?? ''} alt={name} size="sm" tone="dating" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-heading text-xl lowercase text-shell-ink">{name}</p>
-        {/* suppressHydrationWarning: toLocaleString renders the server's UTC time
-            but the client's local time — an intentional, desirable difference.
-            Without this the divergent text trips React hydration error #418. */}
-        <p suppressHydrationWarning className="truncate font-body text-sm text-shell-ink/65">{whenLabel(card.startsAt)}</p>
+        <LocalTime iso={card.startsAt} opts={WHEN_OPTS} fallback="date tbd" className="block truncate font-body text-sm text-shell-ink/65" />
       </div>
       <span className="shrink-0 rounded-full bg-shell-pink px-3 py-1 font-body text-xs font-semibold lowercase text-shell-ink">
         {lockStatusLabel(card.status)}
