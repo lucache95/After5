@@ -18,32 +18,30 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-content flex-col justify-center px-6 py-32 md:px-10">
-      <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-        Something didn't land
+    <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col items-center justify-center bg-shell-base px-8 text-center">
+      <p className="mb-3 font-body text-sm font-semibold uppercase tracking-wide text-shell-ink/45">
+        hiccup
       </p>
-      <h1 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-text md:text-4xl">
-        We hit a snag.
+      <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">
+        give that another tap
       </h1>
-      <p className="mt-6 max-w-prose text-base text-secondary">
-        Not your fault. Try again — most things resolve on a retry. If it persists,
-        email hello@tryafter5.app and I'll fix it directly.
+      <p className="mt-4 max-w-prose font-body text-lg text-shell-ink/70">
+        something blinked out for a second. most things sort themselves on a retry. if it sticks,
+        email hello@tryafter5.app and i&apos;ll fix it.
       </p>
-      <div className="mt-12 flex flex-wrap gap-6">
-        <button
-          type="button"
-          onClick={reset}
-          className="rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85"
-        >
-          Try again
-        </button>
-        <a
-          href="/"
-          className="text-base text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
-        >
-          Go home
-        </a>
-      </div>
+      <button
+        type="button"
+        onClick={reset}
+        className="mt-8 rounded-full bg-shell-accent px-7 py-3.5 font-body font-semibold lowercase text-white transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+      >
+        try again
+      </button>
+      <a
+        href="/home"
+        className="mt-4 font-body text-sm text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 transition-colors hover:text-shell-ink"
+      >
+        back to home
+      </a>
     </main>
   );
 }
