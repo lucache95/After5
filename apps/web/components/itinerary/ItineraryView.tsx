@@ -51,15 +51,15 @@ export function ItineraryView({
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_auto] md:items-start md:gap-12">
           <div className="min-w-0">
             {itinerary.template_name && (
-              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-                {itinerary.template_name} · Kelowna
+              <p className="mb-3 font-body text-[11px] font-medium lowercase tracking-[0.22em] text-shell-ink/55">
+                {itinerary.template_name.toLowerCase()}
               </p>
             )}
-            <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl lg:text-[56px]">
-              {itinerary.title}
+            <h1 className="font-heading text-4xl lowercase leading-[1.02] text-shell-ink md:text-5xl lg:text-[56px]">
+              {itinerary.title?.toLowerCase()}
             </h1>
             {itinerary.hook && (
-              <p className="mt-5 max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
+              <p className="mt-5 max-w-prose font-body text-lg leading-relaxed text-shell-ink/75 md:text-xl">
                 {itinerary.hook}
               </p>
             )}
@@ -71,30 +71,31 @@ export function ItineraryView({
             <Polaroid
               src={coverImageFor(itinerary.stops, { itineraryCover: itinerary.cover_image_url })}
               alt={itinerary.title}
-              label="KELOWNA · 26"
+              label="tonight"
               size="md"
               rotation={5}
+              tone="dating"
             />
           </div>
         </div>
 
         {/* Compact meta row — cost · duration · stops · vibes */}
-        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary [font-variant-numeric:tabular-nums]">
-          <span className="font-medium text-text">${Math.round(itinerary.total_cost_pp)}</span>
-          <span className="text-border">·</span>
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 font-body text-sm lowercase text-shell-ink/70 [font-variant-numeric:tabular-nums]">
+          <span className="font-semibold text-shell-ink">${Math.round(itinerary.total_cost_pp)}</span>
+          <span className="text-shell-ink/30">·</span>
           <span>{totalHr} hr</span>
-          <span className="text-border">·</span>
+          <span className="text-shell-ink/30">·</span>
           <span>{itinerary.stops.length} stops</span>
           {itinerary.vibe.length > 0 && (
             <>
-              <span className="text-border">·</span>
+              <span className="text-shell-ink/30">·</span>
               <div className="inline-flex flex-wrap items-center gap-1.5">
                 {itinerary.vibe.slice(0, 3).map((v) => (
                   <span
                     key={v}
-                    className="rounded-pill bg-surface px-2.5 py-0.5 text-[11px] font-medium text-secondary"
+                    className="rounded-full bg-shell-pink px-2.5 py-0.5 font-body text-[11px] font-semibold lowercase text-shell-ink"
                   >
-                    {v}
+                    {v.toLowerCase()}
                   </span>
                 ))}
               </div>
@@ -106,27 +107,27 @@ export function ItineraryView({
             when we actually have signal (≥3 feedbacks). Order: guest favourite
             badge first if earned, then star score, then would-do %, then top stop. */}
         {stats && stats.reviewCount >= 3 && (
-          <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="mt-5 flex flex-wrap items-center gap-2 font-body lowercase">
             {stats.isGuestFavourite && (
-              <span className="inline-flex items-center gap-1.5 rounded-pill bg-amber-100 px-3 py-1 text-[11px] font-semibold tracking-wide text-amber-950 ring-1 ring-amber-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-shell-accent px-3 py-1 text-[11px] font-semibold tracking-wide text-white">
                 <span aria-hidden>★</span>
-                Guest favourite
+                crowd favourite
               </span>
             )}
             {stats.qualityScore !== null && (
-              <span className="inline-flex items-center gap-1.5 rounded-pill bg-surface px-3 py-1 text-[11px] font-semibold tracking-wide text-text ring-1 ring-border [font-variant-numeric:tabular-nums]">
-                <span aria-hidden className="text-amber-600">★</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-shell-pink px-3 py-1 text-[11px] font-semibold tracking-wide text-shell-ink [font-variant-numeric:tabular-nums]">
+                <span aria-hidden className="text-shell-accent">★</span>
                 {stats.qualityScore.toFixed(1)} · {stats.reviewCount} {stats.reviewCount === 1 ? 'review' : 'reviews'}
               </span>
             )}
             {stats.wouldDoPct !== null && stats.wouldDoPct >= 75 && (
-              <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-900 ring-1 ring-emerald-200 [font-variant-numeric:tabular-nums]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-shell-pink px-3 py-1 text-[11px] font-semibold tracking-wide text-shell-ink [font-variant-numeric:tabular-nums]">
                 {stats.wouldDoPct}% would do this
               </span>
             )}
             {stats.topStop && (
-              <span className="inline-flex items-center gap-1.5 rounded-pill bg-rose-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-rose-900 ring-1 ring-rose-200">
-                Top stop · {stats.topStop}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-shell-pink px-3 py-1 text-[11px] font-semibold tracking-wide text-shell-ink">
+                top stop · {stats.topStop.toLowerCase()}
               </span>
             )}
           </div>
@@ -140,10 +141,10 @@ export function ItineraryView({
             {/* Story */}
             {itinerary.why_it_works && (
               <section id="why" className="scroll-mt-24">
-                <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                  Why this works
+                <p className="mb-3 font-body text-xs font-medium lowercase tracking-[0.18em] text-shell-ink/55">
+                  why this one
                 </p>
-                <p className="max-w-prose text-base leading-relaxed text-text md:text-lg">
+                <p className="max-w-prose font-body text-base leading-relaxed text-shell-ink md:text-lg">
                   {itinerary.why_it_works}
                 </p>
               </section>
@@ -159,16 +160,16 @@ export function ItineraryView({
 
             {/* Map */}
             <div id="route" className="mt-12 scroll-mt-24">
-              <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                The route
+              <p className="mb-4 font-body text-xs font-medium lowercase tracking-[0.18em] text-shell-ink/55">
+                the route
               </p>
               <ItineraryMap stops={itinerary.stops} />
             </div>
 
             {/* Timeline — id anchors the gallery's "All N stops" CTA */}
             <div id="timeline" className="mt-16 scroll-mt-24">
-              <p className="mb-6 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                Timeline · {TIMEZONE_LABEL}
+              <p className="mb-6 font-body text-xs font-medium lowercase tracking-[0.18em] text-shell-ink/55">
+                the night · {TIMEZONE_LABEL.toLowerCase()}
               </p>
               <ol className="space-y-10">
                 {itinerary.stops.map((s, i) => (
@@ -199,20 +200,20 @@ export function ItineraryView({
           {/* Sticky right rail — Airbnb's reserve card analog. Floats while
               the user scrolls so the primary actions never disappear. */}
           <aside className="md:sticky md:top-6 md:self-start">
-            <div className="rounded-[16px] border border-border bg-background p-6 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.12)] md:p-7">
+            <div className="rounded-3xl border border-shell-ink/10 bg-shell-base p-6 shadow-fun md:p-7">
               {/* Headline mirrors the price-first treatment of Airbnb's card */}
               <div className="flex items-baseline justify-between gap-3">
-                <p className="font-display text-2xl font-bold leading-none text-text [font-variant-numeric:tabular-nums]">
+                <p className="font-heading text-3xl lowercase leading-none text-shell-ink [font-variant-numeric:tabular-nums]">
                   ${Math.round(itinerary.total_cost_pp)}
-                  <span className="ml-1.5 text-sm font-normal text-secondary">/ pp</span>
+                  <span className="ml-1.5 font-body text-sm font-normal text-shell-ink/70">/ pp</span>
                 </p>
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
+                <p className="font-body text-xs font-medium lowercase tracking-[0.16em] text-shell-ink/55">
                   {totalHr} hr
                 </p>
               </div>
 
-              <div className="mt-2 text-xs text-secondary">
-                Final price depends on what you order. We use mid-range estimates.
+              <div className="mt-2 font-body text-xs lowercase text-shell-ink/70">
+                final price depends on what you order. these are mid-range guesses.
               </div>
 
               {/* Save toggle — first action so it sits highest. Auth-aware:
@@ -223,13 +224,13 @@ export function ItineraryView({
                 </div>
               )}
 
-              <div className="mt-3 border-t border-border pt-5">
+              <div className="mt-3 border-t border-shell-ink/10 pt-5">
                 <ItineraryActions itinerary={itinerary} />
               </div>
 
               {/* Reassurance line — Airbnb's "you won't be charged yet" analog */}
-              <p className="mt-4 text-center text-[11px] text-muted">
-                Free to view · No booking · No fees
+              <p className="mt-4 text-center font-body text-[11px] lowercase text-shell-ink/55">
+                free to view · no booking · no fees
               </p>
             </div>
 
