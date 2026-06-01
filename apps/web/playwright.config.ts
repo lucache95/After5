@@ -16,8 +16,9 @@ const LOCAL_SECRET_KEY =
 
 export default defineConfig({
   testDir: './e2e',
-  // 5b-* = the dating loop suite; chat-* = the Phase 7 chat suite.
-  testMatch: /(5b-|chat-).*\.spec\.ts$/,
+  // 5b-* = the dating loop suite; chat-* = the Phase 7 chat suite; m5-* = the
+  // get_night_detail blind-safe detail-sheet suite.
+  testMatch: /(5b-|chat-|m5-).*\.spec\.ts$/,
   // Shared DB state across the two-context flow → run serially.
   fullyParallel: false,
   workers: 1,
