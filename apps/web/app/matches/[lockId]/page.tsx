@@ -31,7 +31,8 @@ export default async function LockPage({
       id, status, locked_at, rating_closed_at, cancel_reason, creator_id, matched_user_id, date_instance_id,
       creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags ),
       matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags ),
-      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range )
+      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range ),
+      thread:chat_threads!chat_threads_lock_id_fkey ( id )
     `)
     .eq('id', lockId)
     .maybeSingle();
@@ -48,6 +49,11 @@ export default async function LockPage({
     );
   }
 
+  // chat_threads.lock_id is a one-to-one back-reference; the embed comes back as an
+  // array (or object) — normalize to the single promoted thread for this lock.
+  const threadEmbed = (row as unknown as { thread?: { id: string } | { id: string }[] | null }).thread;
+  const threadId = Array.isArray(threadEmbed) ? threadEmbed[0]?.id ?? null : threadEmbed?.id ?? null;
+
   const counterpart = pickCounterpart(lock, user.id);
   if (!counterpart) {
     return (
@@ -62,6 +68,7 @@ export default async function LockPage({
       lockId={lock.id}
       status={lock.status}
       counterpart={counterpart}
+      threadId={threadId}
       startsAt={lock.instance?.starts_at ?? null}
       ratingOpen={isRatingOpen(lock.instance)}
       justLocked={just === '1'}

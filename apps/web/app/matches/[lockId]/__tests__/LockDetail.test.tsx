@@ -34,7 +34,7 @@ const counterpart: PartyProfile = {
 
 function props(over: Partial<LockDetailProps> = {}): LockDetailProps {
   return {
-    lockId: 'lock-1', status: 'active', counterpart,
+    lockId: 'lock-1', status: 'active', counterpart, threadId: 'thread-1',
     startsAt: '2026-06-01T19:00:00Z', ratingOpen: false, justLocked: false, ...over,
   };
 }
@@ -48,9 +48,17 @@ describe('LockDetail', () => {
     expect(screen.getByText('jamie, 28')).toBeInTheDocument();
   });
 
-  it('renders the phase-7 placeholder', () => {
-    render(<LockDetail {...props()} />);
-    expect(screen.getByRole('region', { name: 'messages' })).toBeInTheDocument();
+  it('links to the conversation thread instead of the old phase-7 placeholder', () => {
+    render(<LockDetail {...props({ threadId: 'thread-1' })} />);
+    const link = screen.getByRole('link', { name: /message jamie/i });
+    expect(link).toHaveAttribute('href', '/messages/thread-1');
+    expect(screen.queryByText(/coming with phase 7/i)).not.toBeInTheDocument();
+  });
+
+  it('falls back to a quiet note when no thread exists', () => {
+    render(<LockDetail {...props({ threadId: null })} />);
+    expect(screen.queryByRole('link', { name: /message jamie/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/chat will open up here/i)).toBeInTheDocument();
   });
 
   it('hides the rate CTA when ratingOpen is false', () => {
