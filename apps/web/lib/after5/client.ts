@@ -19,4 +19,7 @@ export {
   getMyProfile, upsertProfile, savePreferences, getMyBadge,
   startVerification, confirmPhone, advanceOnboarding, registerDevice,
 } from '@after5/api-client';
-export { postNight, browseFeed, recordSwipe, type FeedNight } from '@after5/api-client';
+export {
+  postNight, browseFeed, recordSwipe, getNightDetail,
+  type FeedNight, type NightDetailNight, type NightDetailStop,
+} from '@after5/api-client';

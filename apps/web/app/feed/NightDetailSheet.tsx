@@ -1,10 +1,14 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Drawer } from 'vaul';
 import { MapPin, Clock, Wallet, Sparkles, Heart, X } from 'lucide-react';
 import { vibePalette } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
-import type { FeedNight } from '@/lib/after5/client';
+import {
+  browserAfter5Client, getNightDetail,
+  type FeedNight, type NightDetailNight, type NightDetailStop,
+} from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 
@@ -13,15 +17,16 @@ import { cn } from '@/lib/cn';
 // can read the full plan before deciding — then swipe right/left from inside.
 //
 // BLIND CONTRACT (matches the feed's existing model): this renders ONLY the
-// blind-safe FeedNight fields. There is NO host name, NO host photo, NO precise
-// venue address, NO minute-precise time — same projection browse_feed_for_viewer
+// blind-safe fields. There is NO host name, NO host photo, NO precise venue
+// address, NO minute-precise time — same projection browse_feed_for_viewer
 // already exposes. We show the DATE, not the person.
 //
-// DATA NOTE: FeedNight carries no per-stop list / cost / story today (the feed
-// RPC returns the thin projection only). Full stop-level detail needs a
-// blind-safe `get_night_detail(p_instance)` RPC — flagged as a GATED prod
-// migration, NOT invented here. This sheet shows the maximum the existing
-// blind data path allows.
+// On open, the sheet fetches get_night_detail(p_instance) (the blind-safe FULL
+// detail RPC, shipped in migration 20260601210000) and renders the real
+// itinerary: the stops timeline, total cost, and the story. The RPC scrubs any
+// per-stop reservation_url and never returns itinerary_id/creator_id/venue_id,
+// so identity stays hidden. The blind FeedNight summary renders immediately as
+// the instant fallback while detail loads (or if the fetch fails).
 
 function km(distanceM: number | null): string | null {
   if (distanceM == null) return null;
@@ -44,6 +49,24 @@ export function NightDetailSheet({
   onOpenChange: (open: boolean) => void;
   onCommit: (direction: 'left' | 'right') => void;
 }) {
+  const [detail, setDetail] = useState<NightDetailNight | null>(null);
+  const instanceId = night?.date_instance_id ?? null;
+
+  useEffect(() => {
+    if (!open || !instanceId) return;
+    let cancelled = false;
+    setDetail(null);
+    getNightDetail(browserAfter5Client(), instanceId)
+      .then((d) => { if (!cancelled) setDetail(d); })
+      .catch((err) => {
+        // Fall back to the blind summary, but log so a broken RPC doesn't degrade silently in prod.
+        // eslint-disable-next-line no-console
+        console.warn('[night-detail] get_night_detail failed; showing blind summary', err);
+        if (!cancelled) setDetail(null);
+      });
+    return () => { cancelled = true; };
+  }, [open, instanceId]);
+
   if (!night) return null;
   const pal = vibePalette(night.vibe_tags);
   const distance = km(night.distance_m);
@@ -181,6 +204,41 @@ export function NightDetailSheet({
                 </dl>
               </div>
 
+              {detail && (
+                <>
+                  {(detail.why_it_works || detail.hook) && (
+                    <div>
+                      <p className="mb-1 font-body text-xs lowercase tracking-[0.14em] opacity-60">
+                        the story
+                      </p>
+                      <p className="font-body text-[16px] leading-relaxed opacity-90">
+                        {(detail.why_it_works ?? detail.hook ?? '').toLowerCase()}
+                      </p>
+                    </div>
+                  )}
+
+                  {detail.stops.length > 0 && (
+                    <div>
+                      <p className="mb-2 font-body text-xs lowercase tracking-[0.14em] opacity-60">
+                        the night
+                      </p>
+                      <ol className="flex flex-col gap-3">
+                        {detail.stops.map((s, idx) => (
+                          <StopRow key={`${s.name}-${idx}`} stop={s} index={idx} accent={pal.accent} bg={pal.bg} />
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {detail.total_cost_pp != null && detail.total_cost_pp > 0 && (
+                    <div className="flex items-center gap-2.5 font-body text-[15px] opacity-90">
+                      <Wallet className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                      <span>around ${Math.round(detail.total_cost_pp)} each</span>
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Blind reassurance — sets the expectation that identity stays hidden. */}
               <p className="font-body text-[13px] leading-relaxed opacity-60">
                 you’re swiping on the night, not the person. who’s hosting stays a
@@ -223,5 +281,53 @@ export function NightDetailSheet({
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+  );
+}
+
+// Blind-safe stop renderer: name, type, what_to_do, cost, local insight, and a
+// name-query "map" link (same pattern the public StopCard uses). NO slug link,
+// NO reservation_url — the RPC already scrubbed identity vectors.
+function StopRow({
+  stop, index, accent, bg,
+}: { stop: NightDetailStop; index: number; accent: string; bg: string }) {
+  const directions = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.name)}`;
+  return (
+    <li className="flex gap-3 rounded-2xl bg-current/5 p-3">
+      <span
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-heading text-sm"
+        style={{ background: accent, color: bg }}
+      >
+        {index + 1}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-heading text-lg lowercase leading-tight">{stop.name.toLowerCase()}</p>
+        {(stop.neighborhood || stop.type) && (
+          <p className="mt-0.5 font-body text-xs lowercase tracking-[0.1em] opacity-55">
+            {[stop.neighborhood, stop.type?.replace(/_/g, ' ')].filter(Boolean).join(' · ').toLowerCase()}
+          </p>
+        )}
+        {stop.what_to_do && (
+          <p className="mt-2 font-body text-[14px] leading-relaxed opacity-85">{stop.what_to_do}</p>
+        )}
+        {stop.local_insight && (
+          <p className="mt-2 font-body text-[13px] leading-relaxed opacity-70">
+            tip: {stop.local_insight}
+          </p>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-body text-xs opacity-70">
+          {stop.cost_pp != null && (
+            <span>{stop.cost_pp > 0 ? `$${Math.round(stop.cost_pp)} pp` : 'free'}</span>
+          )}
+          <a
+            href={directions}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 underline decoration-2 underline-offset-2"
+          >
+            <MapPin className="h-3 w-3" aria-hidden /> map
+          </a>
+        </div>
+      </div>
+    </li>
   );
 }

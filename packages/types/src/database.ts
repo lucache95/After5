@@ -3144,6 +3144,25 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_night_detail: {
+        Args: { p_instance: string }
+        Returns: {
+          cover_image_url: string
+          date_instance_id: string
+          hook: string
+          is_seed: boolean
+          pay_setting: string
+          stops: Json
+          time_window_start: string
+          title: string
+          total_cost_pp: number
+          total_duration_min: number
+          venue_neighborhood: string
+          vibe_tags: string[]
+          why_it_works: string
+          why_note: string
+        }[]
+      }
       gettransactionid: { Args: never; Returns: unknown }
       longtransactionsenabled: { Args: never; Returns: boolean }
       mark_notification_delivered: {

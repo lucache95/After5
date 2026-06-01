@@ -67,4 +67,7 @@ export async function listPublicItineraries(client: After5Client, limit = 20) {
 export * from './profile';
 
 // ─── Phase 5a: feed helpers ────────────────────────────────────────────
-export { postNight, browseFeed, recordSwipe, type FeedNight } from './feed';
+export {
+  postNight, browseFeed, recordSwipe, getNightDetail,
+  type FeedNight, type NightDetailNight, type NightDetailStop,
+} from './feed';

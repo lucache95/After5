@@ -95,8 +95,24 @@ export async function seedTwoUsersAndNight(): Promise<SeedResult> {
     .insert({
       user_id: hostId,
       inputs: { e2e: true, neighborhood: 'Downtown Kelowna' },
-      stops: [{ name: 'E2E Stop 1', type: 'cocktail_bar' }],
+      // Rich generated-shape stop + an identifying-looking reservation_url so the
+      // blind-leak assertion is meaningful (the RPC must scrub it). Additive: the
+      // 5b tests only read the thin feed card, which is unaffected.
+      stops: [{
+        place_name: 'The Train Station Pub', place_type: 'cocktail_bar', start_time: '19:00',
+        duration_min: 90, estimated_cost_pp: 28, what_to_do: 'split the charcuterie',
+        neighborhood: 'Downtown', lat: 49.888, lng: -119.496,
+        local_insight: 'ask for the corner booth',
+        reservation_url: 'https://instagram.com/the-secret-host',
+      }],
       title: `E2E night ${runId}`,
+      hook: 'a slow burn',
+      why_it_works: 'walkable, low-key, and actually fun',
+      why_note: 'walkable and low-key',
+      total_cost_pp: 56,
+      total_duration_min: 180,
+      cover_image_url: null,
+      pay_setting: 'split',
       city_id: cityId,
       is_public: false,
       vibe_tags: ['cozy', 'creative'],
