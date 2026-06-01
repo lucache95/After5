@@ -82,3 +82,28 @@ export function subscribeLockInserts(
     client.removeChannel(ch);
   };
 }
+
+export type MessageRow = Database['public']['Tables']['messages']['Row'];
+
+// Phase 7 conversation view. One channel per thread (`chat:<threadId>:<uuid>`); the
+// unique suffix avoids topic-reuse collisions on double-mount, like the other
+// subscribers above. RLS (messages_party_read) gates which inserts the socket
+// delivers; we add an explicit thread_id filter as belt. Caller appends the new row
+// (deduping by id, since the sender also receives the echo of their own insert).
+export function subscribeThreadMessages(
+  threadId: string,
+  onInsert: (row: MessageRow) => void,
+): () => void {
+  const client = browserAfter5Client();
+  const ch = client
+    .channel(`chat:${threadId}:${crypto.randomUUID()}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
+      (payload: { new: MessageRow }) => onInsert(payload.new),
+    )
+    .subscribe();
+  return () => {
+    client.removeChannel(ch);
+  };
+}

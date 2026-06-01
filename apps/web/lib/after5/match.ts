@@ -16,12 +16,14 @@ export type MatchErrorName =
   | 'feature_disabled' | 'auth_mismatch' | 'account_gated'
   | 'offer_already_active' | 'time_conflict' | 'chat_not_ready'
   | 'offer_expired' | 'reciprocal_pending' | 'reciprocal_stale'
+  | 'chat_not_party' | 'chat_closed' | 'cannot_report'
   | 'server_error' | 'bad_request';
 
 // Raw PG errcodes, carried in `errcode` for debugging/telemetry.
 export type MatchErrcode =
   | 'P5000' | 'P5001' | 'P5002' | 'P5003' | 'P5004'
-  | 'P5005' | 'P5007' | 'P5008' | 'P5009';
+  | 'P5005' | 'P5007' | 'P5008' | 'P5009'
+  | 'P5010' | 'P5011' | 'P5012';
 
 export type DemandBucket = 'quiet' | 'warming_up' | 'filling_up' | 'almost_full';
 
@@ -54,6 +56,9 @@ const MESSAGES: Record<MatchErrorName, string> = {
   offer_expired: 'that offer already expired.',
   reciprocal_pending: 'this date needs a reciprocal decision first.',
   reciprocal_stale: 'both dates were cancelled.',
+  chat_not_party: "this conversation isn't yours.",
+  chat_closed: 'this chat is closed.',
+  cannot_report: "you can't report that message.",
   server_error: "that didn't go through. try again?",
   bad_request: "that didn't go through. try again?",
 };
