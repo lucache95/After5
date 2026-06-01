@@ -22,7 +22,6 @@ vi.mock('framer-motion', () => ({
 import { MatchesList, type MatchCard } from '../../MatchesList';
 import { LockDetail } from '../LockDetail';
 import { RevealModal } from '../RevealModal';
-import { Phase7Placeholder } from '../Phase7Placeholder';
 import { MatchConfirmation } from '../MatchConfirmation';
 import { RatingForm } from '../rate/RatingForm';
 import type { PartyProfile } from '../../lock-view';
@@ -46,18 +45,13 @@ describe('matches surfaces a11y', () => {
 
   it('LockDetail has no violations', async () => {
     const { container } = render(
-      <LockDetail lockId="lock-1" status="active" counterpart={person} startsAt={card.startsAt} ratingOpen justLocked={false} />,
+      <LockDetail lockId="lock-1" status="active" counterpart={person} threadId="thread-1" startsAt={card.startsAt} ratingOpen justLocked={false} />,
     );
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it('RevealModal (open) has no violations', async () => {
     const { container } = render(<RevealModal open onOpenChange={vi.fn()} person={person} />);
-    expect(await axe(container)).toHaveNoViolations();
-  });
-
-  it('Phase7Placeholder has no violations', async () => {
-    const { container } = render(<Phase7Placeholder />);
     expect(await axe(container)).toHaveNoViolations();
   });
 

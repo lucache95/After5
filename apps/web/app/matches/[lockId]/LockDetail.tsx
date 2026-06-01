@@ -10,13 +10,13 @@ import { cancelLock, MatchError, messageForCode } from '@/lib/after5/match';
 import { CancelWithReasonPicker, type CancelReason } from '@/app/dates/[slug]/interested/CancelWithReasonPicker';
 import type { LockRowWithParties, PartyProfile } from '../lock-view';
 import { RevealModal } from './RevealModal';
-import { Phase7Placeholder } from './Phase7Placeholder';
 import { MatchConfirmation } from './MatchConfirmation';
 
 export interface LockDetailProps {
   lockId: string;
   status: LockRowWithParties['status'];
   counterpart: PartyProfile;
+  threadId: string | null;
   startsAt: string | null;
   ratingOpen: boolean;
   justLocked: boolean;
@@ -27,7 +27,7 @@ function whenLabel(iso: string | null): string {
   return new Date(iso).toLocaleString(undefined, { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-export function LockDetail({ lockId, status, counterpart, startsAt, ratingOpen, justLocked }: LockDetailProps) {
+export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -72,7 +72,18 @@ export function LockDetail({ lockId, status, counterpart, startsAt, ratingOpen, 
       </button>
       <RevealModal open={revealOpen} onOpenChange={setRevealOpen} person={counterpart} />
 
-      <Phase7Placeholder />
+      {threadId ? (
+        <Link
+          href={`/messages/${threadId}`}
+          className="block w-full rounded-full bg-shell-accent px-6 py-3 text-center font-body font-semibold lowercase text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+        >
+          message {name}
+        </Link>
+      ) : (
+        <p className="rounded-3xl bg-shell-ink/5 p-4 text-center font-body text-sm text-shell-ink/60">
+          chat will open up here.
+        </p>
+      )}
 
       {ratingOpen && status !== 'cancelled' && (
         <Link
