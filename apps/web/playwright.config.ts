@@ -5,6 +5,14 @@ import { defineConfig, devices } from '@playwright/test';
 const LOCAL_SUPABASE_URL = 'http://127.0.0.1:54321';
 const LOCAL_PUBLISHABLE_KEY =
   process.env.LOCAL_SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
+// Service-role / secret key for the LOCAL stack. `supabase status -o env` emits it as
+// SERVICE_ROLE_KEY (classic JWT) and/or SECRET_KEY (new sb_secret format); CI pipes those
+// into $GITHUB_ENV and _all_5b.sh evals them before invoking playwright. Without this the
+// spawned Next process has no SUPABASE_SECRET_KEY, so createAdminClient() throws and
+// /auth/callback dies before flushing the session cookie → every authed nav bounces to
+// /login and the suite can never log in.
+const LOCAL_SECRET_KEY =
+  process.env.SERVICE_ROLE_KEY ?? process.env.SECRET_KEY ?? process.env.SUPABASE_SECRET_KEY ?? '';
 
 export default defineConfig({
   testDir: './e2e',
@@ -48,6 +56,10 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_SUPABASE_URL: LOCAL_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: LOCAL_PUBLISHABLE_KEY,
+      // Admin client (createAdminClient) reads SUPABASE_SECRET_KEY — point it at the
+      // local stack's service-role key so /auth/callback's post-exchange side effects
+      // (subscriber mirror, welcome email, itinerary claim) run against local, not prod.
+      SUPABASE_SECRET_KEY: LOCAL_SECRET_KEY,
     },
   },
 });

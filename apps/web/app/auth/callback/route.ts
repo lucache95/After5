@@ -58,11 +58,18 @@ export async function GET(request: NextRequest) {
       (data.session.user.user_metadata?.first_name as string | undefined)
       ?? (data.session.user.user_metadata?.full_name as string | undefined)?.split(' ')[0]
       ?? null;
-    await ensureWelcomeSent({
-      email: data.session.user.email,
-      firstName,
-      admin: createAdminClient(),
-    }).catch((err) => console.error('[auth/callback] welcome email failed', err));
+    // createAdminClient() throws synchronously when the service-role key is absent.
+    // Build it inside the try so a missing admin client never crashes the session
+    // exchange — login must succeed even if the welcome email can't be sent.
+    try {
+      await ensureWelcomeSent({
+        email: data.session.user.email,
+        firstName,
+        admin: createAdminClient(),
+      });
+    } catch (err) {
+      console.error('[auth/callback] welcome email failed', err);
+    }
   }
 
   // Claim any anonymously-generated itineraries that were tagged with this

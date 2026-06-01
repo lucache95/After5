@@ -79,12 +79,11 @@ test('non-party is walled off the thread list, the conversation page, and direct
   await sb.from('messages').delete().eq('id', msg!.id);
 });
 
-// BLOCKED BY A REAL SHIPPED BUG (reported, NOT fixed here): chat_send_message REVOKEs
-// execute from `authenticated` and never re-grants it, yet chat-send-message invokes
-// it via the authed client -> every call returns 42501 "permission denied for
-// function" BEFORE the in-function party check (P5010) is ever reached. This test
-// asserts the INTENDED denial; flip .fixme back to test() once the grant lands.
-test.fixme('non-party send through the edge fn is denied (chat_not_party / P5010)', async ({ browser }) => {
+// The grant that once blocked this landed in 20260601100600 (chat_send_message is
+// now EXECUTE-able by `authenticated`, like match_make_offer / chat_mark_read), so the
+// edge fn now reaches the in-function party check: a non-party send returns P5010
+// (chat_not_party) instead of a 42501 permission-denied. Active again.
+test('non-party send through the edge fn is denied (chat_not_party / P5010)', async ({ browser }) => {
   const outsiderContext = await browser.newContext();
   await loginAs(outsiderContext, seed.outsiderEmail);
   const token = await accessToken(outsiderContext);
@@ -100,12 +99,10 @@ test.fixme('non-party send through the edge fn is denied (chat_not_party / P5010
   await outsiderContext.close();
 });
 
-// BLOCKED BY THE SAME SHIPPED BUG (reported, NOT fixed here): report_message REVOKEs
-// execute from `authenticated` and never re-grants it, yet chat-report-message
-// invokes it via the authed client -> 42501 "permission denied for function" before
-// the own-message / party checks (P5012) run. This test asserts the INTENDED
-// behavior (own -> P5012; counterpart -> ok); flip .fixme back to test() post-grant.
-test.fixme('report: own message rejected (P5012), counterpart message accepted', async ({ browser }) => {
+// Same grant (20260601100600) re-enabled report_message for `authenticated`, so
+// chat-report-message now reaches its own-message / party checks: reporting your own
+// message returns P5012 and a counterpart's message is accepted. Active again.
+test('report: own message rejected (P5012), counterpart message accepted', async ({ browser }) => {
   // Seed one message from EACH party so the candidate can report their own (reject)
   // and the host's (accept).
   const sb = admin();

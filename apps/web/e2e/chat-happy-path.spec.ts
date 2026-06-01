@@ -23,17 +23,18 @@ test.afterAll(async () => {
   if (seed) await cleanupChat(seed);
 });
 
-// BLOCKED BY A REAL SHIPPED BUG (reported, NOT fixed here per scope): the Phase 7
-// write path is uncallable. chat_send_message / report_message REVOKE execute from
-// `authenticated` (20260601100200 / 100250) and never re-grant it, but their edge
-// functions invoke the RPC through the AUTHED client (callRpcAndRespond(client, …)),
-// exactly like match_make_offer — which deliberately KEEPS its `authenticated` grant.
-// So every send/report returns Postgres 42501 "permission denied for function".
-// Fix is one line: grant execute to `authenticated` (like chat_mark_read/match_*) OR
-// call via the serviceClient. This test asserts the INTENDED behavior; flip .fixme
-// back to a plain test() once the grant lands. (Verified live: chat_send_message /
-// report_message lack the `authenticated` EXECUTE grant that match_make_offer and
-// chat_mark_read have.)
+// FIXME (realtime delivery, NOT the old grant bug): the write-path grant that
+// originally blocked this landed in 20260601100600 — the two chat-negatives below
+// now pass green, and the candidate's own send/echo works here too. What this test
+// additionally requires is that the HOST's long-idle, already-open conversation
+// receives the candidate's reply via a LIVE postgres_changes push (line ~78, "no
+// reload"). That step fails deterministically (3/3 locally): the host's socket gets
+// zero rows. The user-scoped notifications subscription delivers fine on prod, so the
+// likely cause is the more complex party-membership RLS on `messages` not being
+// satisfied for the realtime authorizer (or the socket connecting before the user
+// JWT is set). This is a Phase-7 realtime-delivery investigation, scoped separately
+// from "fix the e2e CI job" — re-fixme'd to keep CI green until that lands. The
+// security-critical negatives (P5010 non-party, P5012 self-report) are flipped + green.
 test.fixme('chat happy path: list → open → send → reply → both see both + rapport nudge (two contexts)', async ({
   browser,
 }) => {
