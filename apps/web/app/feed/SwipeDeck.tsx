@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   motion,
@@ -14,6 +14,7 @@ import { Heart, X } from 'lucide-react';
 import { browserAfter5Client, recordSwipe, type FeedNight } from '@/lib/after5/client';
 import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
+import { NightDetailSheet } from './NightDetailSheet';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { cn } from '@/lib/cn';
 
@@ -29,6 +30,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
   const [deck] = useState(initial);
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const reduceMotion = useReducedMotion();
 
   const current = deck[i];
@@ -41,6 +43,7 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
     setBusy(true);
     try {
       await recordSwipe(browserAfter5Client(), current.date_instance_id, direction);
+      setDetailOpen(false); // close the detail sheet if the swipe came from inside it
       setI((n) => n + 1);
       return true;
     } catch {
@@ -77,8 +80,17 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
             busy={busy}
             reduceMotion={!!reduceMotion}
             onCommit={commit}
+            onOpenDetail={() => setDetailOpen(true)}
           />
         </div>
+
+        <NightDetailSheet
+          night={current}
+          open={detailOpen}
+          busy={busy}
+          onOpenChange={setDetailOpen}
+          onCommit={(direction) => void commit(direction)}
+        />
 
         <div className="mt-6 flex items-center justify-center gap-6">
           <button
@@ -143,13 +155,19 @@ function ActiveCard({
   busy,
   reduceMotion,
   onCommit,
+  onOpenDetail,
 }: {
   night: FeedNight;
   busy: boolean;
   reduceMotion: boolean;
   onCommit: (direction: Direction) => Promise<boolean>;
+  onOpenDetail: () => void;
 }) {
   const x = useMotionValue(0);
+  // Tap-vs-drag: record where the pointer went down; if it lifts within a few
+  // px we treat it as a tap-to-read (open the detail sheet) rather than a swipe.
+  const downPoint = useRef<{ x: number; y: number } | null>(null);
+  const TAP_SLOP = 8; // px of movement still counts as a tap, not a drag
   const rotate = useTransform(x, [-200, 200], reduceMotion ? [0, 0] : [-12, 12]);
   const likeOpacity = useTransform(x, [10, SWIPE_THRESHOLD], [0, 1]);
   const nopeOpacity = useTransform(x, [-SWIPE_THRESHOLD, -10], [1, 0]);
@@ -196,8 +214,27 @@ function ActiveCard({
 
   return (
     <motion.div
-      className="absolute inset-0 z-10 cursor-grab touch-pan-y active:cursor-grabbing"
+      className="absolute inset-0 z-10 cursor-grab touch-pan-y rounded-3xl active:cursor-grabbing focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
       style={{ x, rotate }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${night.title ?? 'a night out'} — tap to read the full plan before you swipe`}
+      onPointerDown={(e) => {
+        downPoint.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e) => {
+        const start = downPoint.current;
+        downPoint.current = null;
+        if (!start || busy) return;
+        const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+        if (moved <= TAP_SLOP) onOpenDetail();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpenDetail();
+        }
+      }}
       // Drag stays enabled under reduced motion (it's the primary interaction);
       // the rotate/fly flourish is what gets neutralised, not the gesture.
       drag="x"

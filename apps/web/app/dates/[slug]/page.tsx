@@ -177,25 +177,25 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-shell-base">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
-      <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-shell-ink/10 bg-shell-base/85 backdrop-blur-md">
         <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-text"
+            className="font-heading text-xl lowercase tracking-tight text-shell-accent"
           >
-            After5
+            after5
           </Link>
           <Link
             href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-text px-5 py-2.5 text-sm font-medium text-background transition-transform hover:-translate-y-0.5 md:px-6"
+            className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-5 py-2.5 font-body text-sm lowercase text-white transition-transform hover:-translate-y-0.5 md:px-6"
           >
-            Plan your own — free
+            plan your own — free
             <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
           </Link>
         </nav>
@@ -218,19 +218,19 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
 
       <OtherDates excludeId={row.id} />
 
-      <footer className="border-t border-border">
+      <footer className="border-t border-shell-ink/10">
         <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
-          <p className="text-xs text-muted">
-            Built in Kelowna. Coming to Kamloops, Vernon, Penticton.
+          <p className="font-body text-xs lowercase text-shell-ink/55">
+            made for people who actually go out.
           </p>
-          <div className="flex items-center gap-6 text-xs text-muted">
-            <Link href="/privacy" className="transition-colors hover:text-text">
-              Privacy
+          <div className="flex items-center gap-6 font-body text-xs lowercase text-shell-ink/55">
+            <Link href="/privacy" className="transition-colors hover:text-shell-accent">
+              privacy
             </Link>
-            <Link href="/terms" className="transition-colors hover:text-text">
-              Terms
+            <Link href="/terms" className="transition-colors hover:text-shell-accent">
+              terms
             </Link>
-            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-text">
+            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-shell-accent">
               hello@tryafter5.app
             </a>
           </div>
