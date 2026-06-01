@@ -23,19 +23,14 @@ test.afterAll(async () => {
   if (seed) await cleanupChat(seed);
 });
 
-// FIXME (realtime delivery, NOT the old grant bug): the write-path grant that
-// originally blocked this landed in 20260601100600 — the two chat-negatives below
-// now pass green, and the candidate's own send/echo works here too. What this test
-// additionally requires is that the HOST's long-idle, already-open conversation
-// receives the candidate's reply via a LIVE postgres_changes push (line ~78, "no
-// reload"). That step fails deterministically (3/3 locally): the host's socket gets
-// zero rows. The user-scoped notifications subscription delivers fine on prod, so the
-// likely cause is the more complex party-membership RLS on `messages` not being
-// satisfied for the realtime authorizer (or the socket connecting before the user
-// JWT is set). This is a Phase-7 realtime-delivery investigation, scoped separately
-// from "fix the e2e CI job" — re-fixme'd to keep CI green until that lands. The
-// security-critical negatives (P5010 non-party, P5012 self-report) are flipped + green.
-test.fixme('chat happy path: list → open → send → reply → both see both + rapport nudge (two contexts)', async ({
+// Full bidirectional realtime chat. Exercises the live postgres_changes path: the
+// HOST's long-idle, already-open conversation must receive the candidate's reply with
+// NO reload (line ~78). This was .fixme'd through two bugs, both now fixed: (1) the
+// write-path grant (20260601100600), and (2) the realtime socket joining as anon —
+// subscribeThreadMessages now setAuth's the session JWT onto the socket BEFORE
+// subscribing (joinAuthed), so the RLS authorizer recognises the party member and
+// delivers the insert. Without the fix the host received zero rows (3/3 deterministic).
+test('chat happy path: list → open → send → reply → both see both + rapport nudge (two contexts)', async ({
   browser,
 }) => {
   const hostContext = await browser.newContext();

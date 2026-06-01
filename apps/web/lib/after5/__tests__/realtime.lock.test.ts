@@ -5,8 +5,10 @@ const on = vi.fn(() => ({ subscribe }));
 const channel = vi.fn(() => ({ on }));
 const removeChannel = vi.fn();
 
+const getSession = vi.fn(async () => ({ data: { session: { access_token: 'jwt' } } }));
+const setAuth = vi.fn();
 vi.mock('@/lib/after5/client', () => ({
-  browserAfter5Client: () => ({ channel, removeChannel }),
+  browserAfter5Client: () => ({ channel, removeChannel, auth: { getSession }, realtime: { setAuth } }),
 }));
 
 import { subscribeLockInserts } from '../realtime';

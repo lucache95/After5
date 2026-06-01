@@ -5,8 +5,24 @@
 // postgres_changes stream to this instance's queue_entries inserts; RLS still
 // gates what rows the socket may deliver.
 'use client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { browserAfter5Client } from '@/lib/after5/client';
+import type { After5Client } from '@after5/api-client';
 import type { Database } from '@after5/types';
+
+// Realtime postgres_changes is RLS-gated: the Realtime authorizer evaluates each
+// table's RLS policy using the SOCKET's JWT. createBrowserClient (@supabase/ssr) does
+// not reliably push the session token onto the realtime socket before a mount-effect
+// subscribe fires, so the socket joins as anon → the authorizer denies every row →
+// an idle subscriber silently receives NOTHING (proven on prod: chat recipients only
+// saw new messages on reload). Fix: read the current session and setAuth the token
+// onto the socket BEFORE joining the channel. See task #59 / chat-happy-path E2E.
+async function joinAuthed(client: After5Client, channel: RealtimeChannel): Promise<void> {
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (token) client.realtime.setAuth(token);
+  channel.subscribe();
+}
 
 export type QueueEntryRow = Database['public']['Tables']['queue_entries']['Row'];
 
@@ -31,8 +47,8 @@ export function subscribeQueueInserts(
         filter: `date_instance_id=eq.${instanceId}`,
       },
       (payload: { new: QueueEntryRow }) => onInsert(payload.new),
-    )
-    .subscribe();
+    );
+  void joinAuthed(client, ch);
   return () => {
     client.removeChannel(ch);
   };
@@ -54,8 +70,8 @@ export function subscribeNotifications(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
       (payload: { new: NotificationRow }) => onInsert(payload.new),
-    )
-    .subscribe();
+    );
+  void joinAuthed(client, ch);
   return () => { client.removeChannel(ch); };
 }
 
@@ -76,8 +92,8 @@ export function subscribeLockInserts(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'locks' },
       (payload: { new: LockRow }) => onInsert(payload.new),
-    )
-    .subscribe();
+    );
+  void joinAuthed(client, ch);
   return () => {
     client.removeChannel(ch);
   };
@@ -101,8 +117,8 @@ export function subscribeThreadMessages(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
       (payload: { new: MessageRow }) => onInsert(payload.new),
-    )
-    .subscribe();
+    );
+  void joinAuthed(client, ch);
   return () => {
     client.removeChannel(ch);
   };
