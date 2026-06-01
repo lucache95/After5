@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import type { InsiderTask, LeaderboardEntry } from './page';
+import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -217,9 +218,11 @@ export function InsidersDashboard({ profile, tasks, leaderboard }: Props) {
                       +{task.points_reward} pts
                     </span>
                     {task.completed_at && (
-                      <span className="text-xs text-muted">
-                        {new Date(task.completed_at).toLocaleDateString()}
-                      </span>
+                      <LocalTime
+                        iso={task.completed_at}
+                        opts={{ dateStyle: 'medium' }}
+                        className="text-xs text-muted"
+                      />
                     )}
                   </div>
                 );

@@ -10,13 +10,19 @@ interface LocalTimeProps {
   iso: string | null;
   /** Intl.DateTimeFormat options passed to toLocaleString. */
   opts?: Intl.DateTimeFormatOptions;
+  /**
+   * Optional custom formatter. When provided, called with the parsed Date and
+   * its return value is rendered instead of toLocaleString(undefined, opts).
+   * Still wrapped in suppressHydrationWarning, still respects the fallback.
+   */
+  format?: (d: Date) => string;
   /** Rendered when iso is null or cannot be parsed. Defaults to "date tbd". */
   fallback?: string;
   /** Optional className forwarded to the wrapping <span>. */
   className?: string;
 }
 
-export function LocalTime({ iso, opts, fallback = 'date tbd', className }: LocalTimeProps) {
+export function LocalTime({ iso, opts, format, fallback = 'date tbd', className }: LocalTimeProps) {
   if (!iso) return <span className={className}>{fallback}</span>;
 
   const d = new Date(iso);
@@ -24,7 +30,7 @@ export function LocalTime({ iso, opts, fallback = 'date tbd', className }: Local
 
   return (
     <span suppressHydrationWarning className={className}>
-      {d.toLocaleString(undefined, opts)}
+      {format ? format(d) : d.toLocaleString(undefined, opts)}
     </span>
   );
 }

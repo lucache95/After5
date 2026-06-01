@@ -10,16 +10,13 @@ import { toast } from 'sonner';
 import { Polaroid } from '@/components/Polaroid';
 import { cn } from '@/lib/cn';
 import { resolveReciprocal, MatchError, messageForCode } from '@/lib/after5/match';
+import { LocalTime } from '@/components/LocalTime';
 
 export interface ReciprocalInstance {
   id: string;
   title: string;
   starts_at: string;
   cover_image_url: string | null;
-}
-
-function whenCopy(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
 export function ReciprocalChooser({
@@ -67,7 +64,11 @@ export function ReciprocalChooser({
                 <Polaroid src={inst.cover_image_url ?? '/places/place-walk.jpg'} alt={inst.title} size="md" tone="dating" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-heading text-2xl lowercase text-shell-ink">{inst.title.toLowerCase()}</p>
-                  <p className="font-body text-sm text-shell-ink/65">{whenCopy(inst.starts_at)}</p>
+                  <LocalTime
+                    iso={inst.starts_at}
+                    opts={{ weekday: 'short', hour: 'numeric', minute: '2-digit' }}
+                    className="font-body text-sm text-shell-ink/65"
+                  />
                 </div>
               </div>
               <button

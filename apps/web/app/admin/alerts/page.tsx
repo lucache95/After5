@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { relativeTime } from '@/lib/relative-time';
 import { formatAlertKind } from '@/lib/admin-alerts';
+import { LocalTime } from '@/components/LocalTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,11 +85,11 @@ export default async function AdminAlertsPage() {
                   {formatAlertKind(r.kind)}
                 </span>
                 <span className="text-xs text-muted [font-variant-numeric:tabular-nums]">
-                  {relativeTime(r.created_at)} · {new Date(r.created_at).toLocaleString()}
+                  {relativeTime(r.created_at)} · <LocalTime iso={r.created_at} />
                 </span>
                 {r.resolved_at && (
                   <span className="ml-auto text-xs text-muted">
-                    resolved {new Date(r.resolved_at).toLocaleString()}
+                    resolved <LocalTime iso={r.resolved_at} />
                   </span>
                 )}
               </div>

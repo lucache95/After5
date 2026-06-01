@@ -11,6 +11,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import type { VenueRow, FeedbackRow, PairingRow } from './page';
+import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
 // Constants (match database enums)
@@ -317,9 +318,11 @@ export function VenueEditPanel({
                       ) : (
                         <SkipForward className="h-3 w-3 text-amber-400" />
                       )}
-                      <span className="text-muted">
-                        {new Date(f.created_at).toLocaleDateString()}
-                      </span>
+                      <LocalTime
+                        iso={f.created_at}
+                        opts={{ dateStyle: 'medium' }}
+                        className="text-muted"
+                      />
                       {f.pacing_rating && (
                         <span className="text-secondary">pacing: {f.pacing_rating}</span>
                       )}

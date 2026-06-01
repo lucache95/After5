@@ -6,6 +6,7 @@
 // the conversation at /messages/[threadId].
 import Link from 'next/link';
 import { Polaroid } from '@/components/Polaroid';
+import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import type { ThreadSummary } from './thread-view';
 
@@ -34,9 +35,12 @@ function Row({ thread }: { thread: ThreadSummary }) {
             />
           )}
         </div>
-        {/* suppressHydrationWarning: the date label is formatted server-side in UTC
-            and client-side in local time — an intentional divergence (React #418). */}
-        <p suppressHydrationWarning className="truncate font-body text-xs text-shell-ink/55">{thread.dateLabel}</p>
+        <LocalTime
+          iso={thread.startsAt}
+          opts={{ weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }}
+          fallback="date tbd"
+          className="truncate font-body text-xs text-shell-ink/55"
+        />
         <p
           className={cn(
             'truncate font-body text-sm',

@@ -11,7 +11,8 @@ export interface ThreadSummary {
   threadId: string;
   counterpartName: string | null;
   counterpartPhotoUrl: string | null;
-  dateLabel: string; // e.g. "fri, jun 6 · 7:00 pm" (the night, not the guy)
+  /** Raw ISO from date_instances.starts_at — formatted to local time in ThreadList via LocalTime. */
+  startsAt: string | null;
   lastMessage: string | null;
   lastAt: string | null;
   unread: number;

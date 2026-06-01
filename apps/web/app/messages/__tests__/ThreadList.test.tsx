@@ -6,7 +6,7 @@ import type { ThreadSummary } from '../thread-view';
 
 const thread = (over: Partial<ThreadSummary>): ThreadSummary => ({
   threadId: 't1', counterpartName: 'robin', counterpartPhotoUrl: null,
-  dateLabel: 'fri · pottery', lastMessage: 'see you there', lastAt: '2026-06-01T00:00:00Z',
+  startsAt: '2026-06-06T19:00:00Z', lastMessage: 'see you there', lastAt: '2026-06-01T00:00:00Z',
   unread: 0, messageable: true, ...over,
 });
 
