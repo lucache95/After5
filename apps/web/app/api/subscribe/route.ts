@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ensureWelcomeSent } from '@/lib/email/welcome';
+import { normalizeSubscribeInput, upsertSubscriber } from '@/lib/create/subscribe';
 
 // Captures emails from the plan flow gate. Idempotent on (email, source) so
 // repeat submissions don't fail. Returns 200 either way to avoid leaking
@@ -22,13 +23,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const email = (body.email ?? '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const n = normalizeSubscribeInput({
+    email: body.email,
+    city: body.city,
+    first_name: body.first_name,
+    source: body.source,
+  });
+  if (!n.valid) {
     return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
   }
-
-  const city = body.city ? body.city.trim().slice(0, 80) : null;
-  const firstName = body.first_name ? body.first_name.trim().slice(0, 40) : null;
 
   // Service-role client — bypasses RLS so the upsert can update existing
   // rows on the second/third email-gate substep. Validation above covers
@@ -36,18 +39,16 @@ export async function POST(req: Request) {
   const supabase = createAdminClient();
   const userAgent = req.headers.get('user-agent') ?? null;
 
-  const { error } = await supabase.from('subscribers').upsert(
-    {
-      email,
-      source: body.source ?? 'plan_gate',
-      location: body.location ?? null,
-      itinerary_id: body.itinerary_id ?? null,
-      city,
-      first_name: firstName,
-      user_agent: userAgent,
-    },
-    { onConflict: 'email,source', ignoreDuplicates: false },
-  );
+  // Idempotent upsert + itinerary attribution (claim_email + social-proof
+  // fields) so /auth/callback can attach the itineraries once the magic link
+  // is clicked. Shared helper — see lib/create/subscribe.ts.
+  const ids = body.itinerary_ids ?? (body.itinerary_id ? [body.itinerary_id] : []);
+  const { error } = await upsertSubscriber(supabase, n, {
+    userAgent,
+    location: body.location ?? null,
+    itineraryId: body.itinerary_id ?? null,
+    itineraryIds: ids,
+  });
 
   if (error) {
     console.error('subscribe error', error);
@@ -55,30 +56,9 @@ export async function POST(req: Request) {
     // Fire welcome email asap. Idempotent — checks subscribers.welcome_sent_at,
     // skips if already sent. Non-blocking: a Resend hiccup must not fail the
     // gate flow. Runs after the response in the background via void.
-    void ensureWelcomeSent({ email, firstName, admin: supabase }).then((res) => {
+    void ensureWelcomeSent({ email: n.email, firstName: n.first_name, admin: supabase }).then((res) => {
       if (res.error) console.error('[subscribe] welcome', res.error);
     });
-  }
-
-  // Attribute the just-generated itineraries with the user's first name +
-  // neighborhood (powers the social-proof toast) AND with claim_email so
-  // /auth/callback can attach them to the user once they click the magic
-  // link. Only write fields we actually have.
-  const ids = body.itinerary_ids ?? (body.itinerary_id ? [body.itinerary_id] : []);
-  if (ids.length > 0) {
-    const patch: {
-      built_by_name?: string;
-      built_by_neighborhood?: string;
-      claim_email?: string;
-    } = { claim_email: email };
-    if (firstName) patch.built_by_name = firstName;
-    if (city) patch.built_by_neighborhood = city;
-    const { error: attrErr } = await supabase
-      .from('itineraries')
-      .update(patch)
-      .in('id', ids)
-      .is('user_id', null);
-    if (attrErr) console.error('attribution error', attrErr);
   }
 
   return NextResponse.json({ ok: true });
