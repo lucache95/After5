@@ -9,6 +9,8 @@ vi.mock('@/lib/after5/client', () => ({
   // NightDetailSheet (rendered by SwipeDeck) now fetches get_night_detail on open.
   // Return null so the sheet shows the blind-summary fallback these tests assert.
   getNightDetail: vi.fn().mockResolvedValue(null),
+  // M4: SwipeDeck resolves each card's ambient path to a public URL.
+  ambientSoundUrl: (p: string | null) => (p ? `https://x/${p}` : null),
 }));
 // vaul's pointer-drag dismissal reads real CSS transform matrices that jsdom
 // doesn't compute, so we stub the Drawer primitives to plain DOM. The blind
@@ -21,7 +23,7 @@ vi.mock('vaul', () => {
 });
 import { SwipeDeck } from '../SwipeDeck';
 const night = (id: string, over: Partial<ReturnType<typeof base>> = {}) => ({ ...base(id), ...over });
-const base = (id: string) => ({ date_instance_id: id, city_id: 'c', time_window_start: new Date(Date.now()+86400000).toISOString(), itinerary_id: 'i', pay_setting: null, vibe_tags: [] as string[], why_note: 'w', cover_image_url: null, title: 'T', venue_neighborhood: null, is_seed: false, distance_m: 1000 });
+const base = (id: string) => ({ date_instance_id: id, city_id: 'c', time_window_start: new Date(Date.now()+86400000).toISOString(), itinerary_id: 'i', pay_setting: null, vibe_tags: [] as string[], why_note: 'w', cover_image_url: null, title: 'T', venue_neighborhood: null, is_seed: false, distance_m: 1000, ambient_sound_path: null as string | null, ambient_sound_name: null as string | null });
 
 beforeEach(() => recordSwipe.mockClear());
 

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
   motion,
@@ -10,13 +10,16 @@ import {
   type PanInfo,
 } from 'framer-motion';
 import { toast } from 'sonner';
-import { Heart, X } from 'lucide-react';
-import { browserAfter5Client, recordSwipe, type FeedNight } from '@/lib/after5/client';
+import { Heart, X, Volume2, VolumeX } from 'lucide-react';
+import { browserAfter5Client, recordSwipe, ambientSoundUrl, type FeedNight } from '@/lib/after5/client';
 import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
 import { NightDetailSheet } from './NightDetailSheet';
+import { useAmbientDeck } from './useAmbientDeck';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { cn } from '@/lib/cn';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 
 // Tier-1 shell screen (DESIGN-SYSTEM §1/§4): Barbiecore pink page, phone-width column.
 // The swipe stack is the primary interaction; buttons are an accessible fallback (§6).
@@ -32,6 +35,14 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
   const [busy, setBusy] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  // Ambient deck: resolve each card's relative ambient path to a public URL, then
+  // crossfade as the active index advances. Default muted; the pill is the gesture.
+  const urls = useMemo(
+    () => deck.map((n) => ambientSoundUrl(n.ambient_sound_path, SUPABASE_URL)),
+    [deck],
+  );
+  const { unmuted, toggleMute } = useAmbientDeck(urls, i, { reduceMotion: !!reduceMotion });
 
   const current = deck[i];
   const next = deck[i + 1];
@@ -64,9 +75,27 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
         <header className="mb-5 flex items-baseline justify-between">
           <h1 className="font-heading text-3xl lowercase text-shell-ink">tonight</h1>
-          <p className="font-body text-sm text-shell-ink/75" aria-live="polite">
-            {remaining} left
-          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-pressed={unmuted}
+              aria-label={unmuted ? 'mute the soundtrack' : 'tap to unmute the soundtrack'}
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-shell-ink shadow-subtle transition',
+                'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                'motion-reduce:transition-none motion-reduce:hover:scale-100',
+                unmuted && 'bg-shell-accent text-white',
+              )}
+            >
+              {unmuted
+                ? <Volume2 className="h-4 w-4" aria-hidden />
+                : <VolumeX className="h-4 w-4" aria-hidden />}
+            </button>
+            <p className="font-body text-sm text-shell-ink/75" aria-live="polite">
+              {remaining} left
+            </p>
+          </div>
         </header>
 
         <div className="relative flex-1">
