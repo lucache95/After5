@@ -14,6 +14,21 @@ update places
    set city_id = (select id from cities where slug = 'kelowna')
  where city_id is null;
 
+-- Dedupe accidental double-ingestions before the unique index. The discovery
+-- script ingested 3 places twice on prod (6 rows, 3 redundant, 0 referenced as a
+-- date_instances.venue_id — verified 2026-06-01). Keep one row per google_place_id
+-- (prefer a curated 'live', active row; deterministic tiebreak by id) and drop the
+-- extras. Idempotent + a NO-OP where there are no dupes (local/CI).
+delete from places p using (
+  select id, row_number() over (
+    partition by google_place_id
+    order by (approval_status = 'live') desc, is_active desc, id asc
+  ) as rn
+  from places
+  where google_place_id is not null
+) d
+where p.id = d.id and d.rn > 1;
+
 -- Required by the on-the-fly warmer's upsert (onConflict: 'google_place_id').
 -- Idempotent: local already has this index; prod does not (pre-flight).
 create unique index if not exists places_google_place_id_key
