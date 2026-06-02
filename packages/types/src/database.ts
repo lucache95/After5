@@ -267,6 +267,8 @@ export type Database = {
       cities: {
         Row: {
           centroid: unknown
+          centroid_lat: number | null
+          centroid_lng: number | null
           country: string
           created_at: string
           default_radius_km: number
@@ -280,6 +282,8 @@ export type Database = {
         }
         Insert: {
           centroid?: unknown
+          centroid_lat?: number | null
+          centroid_lng?: number | null
           country?: string
           created_at?: string
           default_radius_km?: number
@@ -293,6 +297,8 @@ export type Database = {
         }
         Update: {
           centroid?: unknown
+          centroid_lat?: number | null
+          centroid_lng?: number | null
           country?: string
           created_at?: string
           default_radius_km?: number
@@ -1671,6 +1677,7 @@ export type Database = {
           booking_phone: string | null
           booking_url: string | null
           category_group: string | null
+          city_id: string | null
           closed_days: number[]
           closes: string | null
           created_at: string
@@ -1723,6 +1730,7 @@ export type Database = {
           reviews: Json | null
           seasonality: string[]
           slug: string
+          source: string
           source_query: string | null
           time_of_day: string[]
           total_appearances: number
@@ -1747,6 +1755,7 @@ export type Database = {
           booking_phone?: string | null
           booking_url?: string | null
           category_group?: string | null
+          city_id?: string | null
           closed_days?: number[]
           closes?: string | null
           created_at?: string
@@ -1799,6 +1808,7 @@ export type Database = {
           reviews?: Json | null
           seasonality?: string[]
           slug: string
+          source?: string
           source_query?: string | null
           time_of_day?: string[]
           total_appearances?: number
@@ -1823,6 +1833,7 @@ export type Database = {
           booking_phone?: string | null
           booking_url?: string | null
           category_group?: string | null
+          city_id?: string | null
           closed_days?: number[]
           closes?: string | null
           created_at?: string
@@ -1875,6 +1886,7 @@ export type Database = {
           reviews?: Json | null
           seasonality?: string[]
           slug?: string
+          source?: string
           source_query?: string | null
           time_of_day?: string[]
           total_appearances?: number
@@ -1890,7 +1902,15 @@ export type Database = {
           weather_works_in?: Database["public"]["Enums"]["weather_works_in"]
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "places_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_feedback: {
         Row: {
@@ -2014,6 +2034,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profile_photos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       profile_prompts: {
@@ -2072,8 +2099,8 @@ export type Database = {
           prompt_answers: Json
           pronouns: string | null
           reliability_score: number | null
-          socials: Json
           rollover_frozen: boolean
+          socials: Json
           standing: Database["public"]["Enums"]["standing_state"]
           updated_at: string
           verification: Database["public"]["Enums"]["verification_state"]
@@ -2107,8 +2134,8 @@ export type Database = {
           prompt_answers?: Json
           pronouns?: string | null
           reliability_score?: number | null
-          socials?: Json
           rollover_frozen?: boolean
+          socials?: Json
           standing?: Database["public"]["Enums"]["standing_state"]
           updated_at?: string
           verification?: Database["public"]["Enums"]["verification_state"]
@@ -2142,8 +2169,8 @@ export type Database = {
           prompt_answers?: Json
           pronouns?: string | null
           reliability_score?: number | null
-          socials?: Json
           rollover_frozen?: boolean
+          socials?: Json
           standing?: Database["public"]["Enums"]["standing_state"]
           updated_at?: string
           verification?: Database["public"]["Enums"]["verification_state"]
@@ -3382,16 +3409,26 @@ export type Database = {
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
-      post_night: {
-        Args: {
-          p_ambient_sound_id?: string
-          p_duration_min?: number
-          p_itinerary: string
-          p_starts_at: string
-          p_venue?: string
-        }
-        Returns: string
-      }
+      post_night:
+        | {
+            Args: {
+              p_duration_min?: number
+              p_itinerary: string
+              p_starts_at: string
+              p_venue?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_ambient_sound_id?: string
+              p_duration_min?: number
+              p_itinerary: string
+              p_starts_at: string
+              p_venue?: string
+            }
+            Returns: string
+          }
       postgis_constraint_dims: {
         Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: number
@@ -4136,7 +4173,7 @@ export type Database = {
       occasion: "date" | "solo" | "friends"
       offer_status: "active" | "accepted" | "passed" | "expired"
       payment_preference: "i_pay" | "they_pay" | "split"
-      place_approval_status: "draft" | "live" | "rejected"
+      place_approval_status: "draft" | "live" | "rejected" | "auto"
       place_type:
         | "restaurant"
         | "cafe"
@@ -4403,7 +4440,7 @@ export const Constants = {
       occasion: ["date", "solo", "friends"],
       offer_status: ["active", "accepted", "passed", "expired"],
       payment_preference: ["i_pay", "they_pay", "split"],
-      place_approval_status: ["draft", "live", "rejected"],
+      place_approval_status: ["draft", "live", "rejected", "auto"],
       place_type: [
         "restaurant",
         "cafe",
