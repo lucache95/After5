@@ -14,6 +14,15 @@ export interface PartyProfile {
   neighborhood: string | null;
   clear_photo_url: string | null;
   vibe_tags: string[];
+  // M6 reveal additions. prompt_answers is the raw jsonb; pronouns is plain text.
+  prompt_answers?: { prompt_id: string; answer: string }[];
+  pronouns?: string | null;
+}
+
+// A prompt answer joined to its (active) prompt label, ready for the ProfileCard.
+export interface RevealPrompt {
+  label: string;
+  answer: string;
 }
 
 export interface LockRowWithParties {

@@ -51,7 +51,7 @@ describe('matches surfaces a11y', () => {
   });
 
   it('RevealModal (open) has no violations', async () => {
-    const { container } = render(<RevealModal open onOpenChange={vi.fn()} person={person} />);
+    const { container } = render(<RevealModal open onOpenChange={vi.fn()} person={person} photos={[]} prompts={[]} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 

@@ -6,6 +6,11 @@ import {
   PromptAnswerSchema,
   PersonaWebhookEventSchema,
   GenderSchema,
+  PROMPT_IDS,
+  PronounsSchema,
+  ExpandedProfileSchema,
+  PhotoMetaSchema,
+  MAX_PHOTOS,
 } from '../index';
 
 describe('PreferencesInputSchema', () => {
@@ -71,5 +76,24 @@ describe('GenderSchema', () => {
   it('enumerates the allowed identities', () => {
     expect(() => GenderSchema.parse('woman')).not.toThrow();
     expect(() => GenderSchema.parse('alien')).toThrow();
+  });
+});
+
+describe('M6 expanded profile', () => {
+  it('accepts up to 3 prompt answers and rejects 4', () => {
+    const a = { prompt_id: PROMPT_IDS[0], answer: 'hi' };
+    expect(ProfileInputSchema.safeParse({ first_name: 'a', prompts: [a, a, a] }).success).toBe(true);
+    expect(ProfileInputSchema.safeParse({ first_name: 'a', prompts: [a, a, a, a] }).success).toBe(false);
+  });
+  it('validates pronouns and optional expanded fields', () => {
+    expect(PronounsSchema.safeParse('she/her').success).toBe(true);
+    const ok = ExpandedProfileSchema.safeParse({ height_cm: 170, occupation: 'barista', socials: { spotify: 'x' } });
+    expect(ok.success).toBe(true);
+    expect(ExpandedProfileSchema.safeParse({ height_cm: 400 }).success).toBe(false);
+  });
+  it('caps the gallery at MAX_PHOTOS and validates a photo row', () => {
+    expect(MAX_PHOTOS).toBe(6);
+    const p = PhotoMetaSchema.safeParse({ id: '11111111-1111-1111-1111-111111111111', sort_order: 0, is_primary: true });
+    expect(p.success).toBe(true);
   });
 });

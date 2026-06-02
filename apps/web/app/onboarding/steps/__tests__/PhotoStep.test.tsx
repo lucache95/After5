@@ -9,7 +9,12 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 const upload = vi.fn();
 const invoke = vi.fn();
 const advanceOnboarding = vi.fn();
-const fakeClient = { storage: { from: () => ({ upload }) }, functions: { invoke } };
+const insertPhoto = vi.fn().mockResolvedValue({ error: null });
+const fakeClient = {
+  storage: { from: () => ({ upload }) },
+  functions: { invoke },
+  from: vi.fn(() => ({ insert: insertPhoto })),
+};
 vi.mock('@/lib/after5/client', () => ({
   browserAfter5Client: () => fakeClient,
   advanceOnboarding: (...a: unknown[]) => advanceOnboarding(...a),
@@ -44,7 +49,10 @@ function pickFile() {
   return new File(['x'], 'me.jpg', { type: 'image/jpeg' });
 }
 
-beforeEach(() => { push.mockReset(); upload.mockReset(); invoke.mockReset(); advanceOnboarding.mockReset(); });
+beforeEach(() => {
+  push.mockReset(); upload.mockReset(); invoke.mockReset(); advanceOnboarding.mockReset();
+  insertPhoto.mockReset().mockResolvedValue({ error: null });
+});
 
 describe('PhotoStep', () => {
   it('empty: upload button disabled until a file is chosen', () => {
@@ -63,6 +71,11 @@ describe('PhotoStep', () => {
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => expect(upload).toHaveBeenCalledWith('u1/clear.jpg', expect.any(Blob), expect.objectContaining({ upsert: true })));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('generate-blur', expect.anything()));
+    // M6: onboarding seeds a primary profile_photos row so the photo appears in
+    // the editor gallery + reveal carousel.
+    await waitFor(() => expect(insertPhoto).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'u1', clear_path: 'u1/clear.jpg', is_primary: true }),
+    ));
     await waitFor(() => expect(advanceOnboarding).toHaveBeenCalledWith(fakeClient, 'preferences'));
     expect(push).toHaveBeenCalledWith('/onboarding/preferences');
   });

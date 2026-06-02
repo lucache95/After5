@@ -9,7 +9,7 @@ import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import { cancelLock, MatchError, messageForCode } from '@/lib/after5/match';
 import { CancelWithReasonPicker, type CancelReason } from '@/app/dates/[slug]/interested/CancelWithReasonPicker';
-import type { LockRowWithParties, PartyProfile } from '../lock-view';
+import type { LockRowWithParties, PartyProfile, RevealPrompt } from '../lock-view';
 import { RevealModal } from './RevealModal';
 import { MatchConfirmation } from './MatchConfirmation';
 
@@ -21,11 +21,17 @@ export interface LockDetailProps {
   startsAt: string | null;
   ratingOpen: boolean;
   justLocked: boolean;
+  // M6: signed clear-photo URLs (primary first) + prompt answers joined to
+  // their labels, both prepared server-side on the reveal page. The header
+  // thumbnail uses photos[0] (a real signed URL — fixes the long-standing
+  // raw-private-path bug where the reveal photo never loaded).
+  photos?: string[];
+  prompts?: RevealPrompt[];
 }
 
 const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
 
-export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked }: LockDetailProps) {
+export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], prompts = [] }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -52,7 +58,7 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
       <MatchConfirmation name={name} show={justLocked} />
 
       <header className="flex items-center gap-4">
-        <Polaroid src={counterpart.clear_photo_url ?? ''} alt={name} size="md" tone="dating" />
+        <Polaroid src={photos[0] ?? ''} alt={name} size="md" tone="dating" />
         <div className="min-w-0">
           <h1 className="truncate font-heading text-3xl lowercase text-shell-ink">{name}</h1>
           <LocalTime iso={startsAt} opts={WHEN_OPTS} fallback="date tbd" className="block font-body text-shell-ink/70" />
@@ -66,7 +72,7 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
       >
         see their profile
       </button>
-      <RevealModal open={revealOpen} onOpenChange={setRevealOpen} person={counterpart} />
+      <RevealModal open={revealOpen} onOpenChange={setRevealOpen} person={counterpart} photos={photos} prompts={prompts} />
 
       {threadId ? (
         <Link
