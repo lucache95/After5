@@ -5,7 +5,20 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.40.0';
 import type { Itinerary, PlanInputs, Place } from './types.ts';
 
-const SYSTEM_PROMPT = `You are After5's resident local. Your voice: confident, warm, never sappy, never marketing-speak. You write date plans the way a friend with great taste would describe them — specific, sensory, never generic.
+// M1: city-parameterized system prompt. Kelowna keeps its exact Okanagan
+// sensory line (the established city loses nothing); any other city gets a
+// generic local-specificity instruction so copy still feels grounded.
+export interface PromptCity {
+  name: string;
+  region: string | null;
+}
+
+export function buildSystemPrompt(city: PromptCity): string {
+  const localSpecificity = city.name === 'Kelowna'
+    ? 'Lean into Okanagan specificity: lake light, vineyards, the bridge, the bluffs, sunset over the West side.'
+    : `Lean into ${city.name} specificity — name real neighborhoods, local landmarks, the feel of the place.`;
+  const regionSuffix = city.region ? `, ${city.region}` : '';
+  return `You are After5's resident local. Your voice: confident, warm, never sappy, never marketing-speak. You write date plans the way a friend with great taste would describe them — specific, sensory, never generic.
 
 Hard rules:
 - Output ONLY valid JSON matching the schema below. No prose outside the JSON.
@@ -18,8 +31,8 @@ Hard rules:
 - Per-stop "what_to_do": MANDATORY for every stop — never empty. 2 to 3 short sentences that tell the reader what to actually do here: what to order or try, where to sit or look, a specific sensory detail, and how this stop connects to the next. Ground it in the place name — "At Sandrine, share the canelé and a flat white — the counter seats by the window catch the morning light. Finish quick so you can walk the lake path before the tourists arrive." No "enjoy", no "savor", no "experience".
 
 Brand tone calibration:
-- This is for couples in Kelowna. Most are mid-20s to late-30s. They want to feel like someone with taste planned this — not like an algorithm did.
-- Lean into Okanagan specificity: lake light, vineyards, the bridge, the bluffs, sunset over the West side.
+- This is for couples in ${city.name}${regionSuffix}. Most are mid-20s to late-30s. They want to feel like someone with taste planned this — not like an algorithm did.
+- ${localSpecificity}
 - Avoid generic AI tells: no "embark on a journey", no "indulge in", no "this experience".
 
 Output schema (one object per itinerary, in an array of length 3):
@@ -36,6 +49,7 @@ Output schema (one object per itinerary, in an array of length 3):
 ]
 
 Critical: preserve place_id values exactly as given (they are UUIDs). Every stop in every itinerary must have a what_to_do string.`;
+}
 
 interface WritingPassInput {
   inputs: PlanInputs;
@@ -43,6 +57,8 @@ interface WritingPassInput {
   placesById: Map<string, Place>;
   /** Editorial pack voice note — injected into the user message to set tone. */
   packVoiceNote?: string | null;
+  /** M1: the city this generation is for. Threads into system + user copy. */
+  city: PromptCity;
 }
 
 interface LLMItineraryWriting {
@@ -119,7 +135,7 @@ async function callLLMWritingPass(
     system: [
       {
         type: 'text',
-        text: SYSTEM_PROMPT,
+        text: buildSystemPrompt(input.city),
         cache_control: { type: 'ephemeral' },
       },
     ],
@@ -223,11 +239,12 @@ function buildFallbackWhatToDo(placeName: string, localInsight: string | null): 
   return `Stop by ${placeName} — a local favourite worth checking out on its own.`;
 }
 
-function buildUserMessage(input: WritingPassInput): string {
-  const { inputs, itineraries, placesById } = input;
+export function buildUserMessage(input: WritingPassInput): string {
+  const { inputs, itineraries, placesById, city } = input;
 
   const lines: string[] = [];
   lines.push(`User context:`);
+  lines.push(`- City: ${city.name}${city.region ? `, ${city.region}` : ''} (write for couples in ${city.name})`);
   lines.push(`- Occasion: ${inputs.occasion}`);
   lines.push(`- Vibe: ${inputs.vibe.join(', ')}`);
   lines.push(`- Budget: ~$${inputs.budget_per_person}/person`);

@@ -43,7 +43,7 @@ echo "==> 4. Deno edge tests (stubbed — no functions-serve needed)"
 # start-verification) carry pre-existing TS errors that would fail the run.
 deno test --allow-env --allow-net \
   --import-map=supabase/functions/_shared/_test_import_map.json \
-  supabase/functions/match-*/ supabase/functions/_shared/
+  supabase/functions/match-*/ supabase/functions/generate-plan/ supabase/functions/_shared/
 
 echo "==> 5. Web Vitest (D + E + F + G)"
 pnpm --filter @after5/web test

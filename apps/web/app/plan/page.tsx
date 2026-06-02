@@ -103,6 +103,9 @@ interface Inputs {
   // are open + LLM tone. 'all_day' implies a long duration; 'morning' /
   // 'evening' are the typical patterns.
   time_of_day: 'morning' | 'evening' | 'all_day';
+  // M1: which city to generate for. Default 'kelowna' — threaded into the
+  // generate-plan body so a no-override request behaves exactly as before.
+  city_slug: string;
 }
 
 const PRONOUN_OPTIONS: { id: Pronouns; label: string }[] = [
@@ -294,6 +297,7 @@ function PlanFlow() {
     future_date: '',
     intent: '',
     time_of_day: 'evening',
+    city_slug: 'kelowna',
     ...(themePreset ?? {}),
   } as Inputs);
   const [results, setResults] = useState<Itinerary[]>([]);

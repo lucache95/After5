@@ -23,6 +23,26 @@ export interface PlanInputs {
   future_date?: string;
   intent?: 'impress' | 'chill' | 'reconnect' | 'try_something_new' | '';
   time_of_day?: 'morning' | 'evening' | 'all_day';
+  // Explicit slot-start override (legacy / API users) — ISO datetime string.
+  start_at?: string;
+  // Anonymous claim flow — lowercased email tagged onto generated itineraries.
+  claim_email?: string;
+  // M1: additive + optional. Resolves which city's places + provider to use.
+  // Absent ⇒ 'kelowna' (byte-identical to pre-M1 behavior).
+  city_slug?: string;
+}
+
+// M1: the city a generation is scoped to. centroid_lat/lng are scalar
+// (from cities.centroid via migration) because filterPlaces does JS haversine.
+export interface CityRecord {
+  id: string;
+  slug: string;
+  name: string;
+  region: string | null;
+  timezone: string;
+  centroid_lat: number;
+  centroid_lng: number;
+  default_radius_km: number;
 }
 
 export interface Place {

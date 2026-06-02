@@ -1,5 +1,6 @@
 {
   "imports": {
-    "https://esm.sh/@supabase/supabase-js@2.45.0": "./_test_supabase_stub.ts"
+    "https://esm.sh/@supabase/supabase-js@2.45.0": "./_test_supabase_stub.ts",
+    "npm:@anthropic-ai/sdk@^0.40.0": "./_test_anthropic_stub.ts"
   }
 }
