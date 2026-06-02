@@ -40,13 +40,22 @@ export const OnTheFlyProvider: DateGenerationProvider = {
       const settled = await Promise.allSettled(queries.map((q) =>
         searchText(q, { apiKey: env.googleKey!, lat: city.centroid_lat, lng: city.centroid_lng, radiusKm: city.default_radius_km })));
       const results: GoogleResult[] = [];
-      for (const s of settled) if (s.status === 'fulfilled') results.push(...s.value);
-      const rows = buildWarmRows(results, city, env.googleKey);
-      if (rows.length > 0) {
-        // Idempotent: upsert on google_place_id (C7).
-        await supabase.from('places').upsert(rows, { onConflict: 'google_place_id', ignoreDuplicates: true });
+      const searchErrors: string[] = [];
+      for (const s of settled) {
+        if (s.status === 'fulfilled') results.push(...s.value);
+        else searchErrors.push(String((s.reason as Error)?.message ?? s.reason));
       }
-      ctx.log.warm = { city: city.slug, queried: queries.length, raw: results.length, inserted: rows.length };
+      const rows = buildWarmRows(results, city, env.googleKey);
+      let upsertError: string | null = null;
+      if (rows.length > 0) {
+        // Idempotent: upsert on google_place_id (C7). Requires a NON-partial unique
+        // index on places.google_place_id — a partial index (WHERE ... IS NOT NULL)
+        // is not a valid ON CONFLICT arbiter (see 20260602160000). Surface any error
+        // into the warm log instead of silently warming nothing.
+        const { error } = await supabase.from('places').upsert(rows, { onConflict: 'google_place_id', ignoreDuplicates: true });
+        if (error) upsertError = error.message;
+      }
+      ctx.log.warm = { city: city.slug, queried: queries.length, raw: results.length, inserted: rows.length, searchErrors, upsertError };
     }
     // Reuse the shared pipeline, accepting freshly-warmed 'auto' rows.
     return runPipeline(ctx, { approvalStatuses: ['live', 'auto'] });
