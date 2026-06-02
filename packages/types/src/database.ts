@@ -58,6 +58,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ambient_sounds: {
+        Row: {
+          attribution: string | null
+          created_at: string
+          duration_sec: number
+          id: string
+          is_active: boolean
+          license: string
+          name: string
+          sort_order: number
+          storage_path: string
+          vibe_tags: string[]
+        }
+        Insert: {
+          attribution?: string | null
+          created_at?: string
+          duration_sec: number
+          id?: string
+          is_active?: boolean
+          license?: string
+          name: string
+          sort_order?: number
+          storage_path: string
+          vibe_tags?: string[]
+        }
+        Update: {
+          attribution?: string | null
+          created_at?: string
+          duration_sec?: number
+          id?: string
+          is_active?: boolean
+          license?: string
+          name?: string
+          sort_order?: number
+          storage_path?: string
+          vibe_tags?: string[]
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           actor_id: string | null
@@ -269,6 +308,7 @@ export type Database = {
       }
       date_instances: {
         Row: {
+          ambient_sound_id: string | null
           city_id: string
           created_at: string
           creator_id: string
@@ -284,6 +324,7 @@ export type Database = {
           venue_id: string | null
         }
         Insert: {
+          ambient_sound_id?: string | null
           city_id: string
           created_at?: string
           creator_id: string
@@ -299,6 +340,7 @@ export type Database = {
           venue_id?: string | null
         }
         Update: {
+          ambient_sound_id?: string | null
           city_id?: string
           created_at?: string
           creator_id?: string
@@ -314,6 +356,13 @@ export type Database = {
           venue_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "date_instances_ambient_sound_id_fkey"
+            columns: ["ambient_sound_id"]
+            isOneToOne: false
+            referencedRelation: "ambient_sounds"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "date_instances_city_id_fkey"
             columns: ["city_id"]
@@ -2920,6 +2969,8 @@ export type Database = {
           p_viewer?: string
         }
         Returns: {
+          ambient_sound_name: string
+          ambient_sound_path: string
           city_id: string
           cover_image_url: string
           date_instance_id: string
@@ -3283,6 +3334,7 @@ export type Database = {
         | { Args: { use_typmod?: boolean }; Returns: string }
       post_night: {
         Args: {
+          p_ambient_sound_id?: string
           p_duration_min?: number
           p_itinerary: string
           p_starts_at: string
