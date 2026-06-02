@@ -11,6 +11,11 @@ interface SendArgs {
   text?: string;
   /** Tag for Resend dashboard analytics — e.g., 'welcome', 'magic_link' */
   tag?: string;
+  /**
+   * Optional file attachments. The Resend REST API expects `content` as a
+   * base64 string, so Buffer/Uint8Array is encoded before send.
+   */
+  attachments?: { filename: string; content: Buffer | Uint8Array }[];
 }
 
 export async function sendEmail(args: SendArgs): Promise<{ id: string } | null> {
@@ -40,6 +45,14 @@ export async function sendEmail(args: SendArgs): Promise<{ id: string } | null> 
         ...(args.text ? { text: args.text } : {}),
         ...(replyTo ? { reply_to: replyTo } : {}),
         ...(args.tag ? { tags: [{ name: 'category', value: args.tag }] } : {}),
+        ...(args.attachments && args.attachments.length > 0
+          ? {
+              attachments: args.attachments.map((a) => ({
+                filename: a.filename,
+                content: Buffer.from(a.content).toString('base64'),
+              })),
+            }
+          : {}),
       }),
     });
 
