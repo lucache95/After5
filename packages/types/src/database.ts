@@ -312,6 +312,67 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_venue_submissions: {
+        Row: {
+          created_at: string
+          google_place_id: string | null
+          id: string
+          itinerary_id: string | null
+          lat: number | null
+          lng: number | null
+          name: string
+          raw: Json
+          status: string
+          submitted_by: string
+        }
+        Insert: {
+          created_at?: string
+          google_place_id?: string | null
+          id?: string
+          itinerary_id?: string | null
+          lat?: number | null
+          lng?: number | null
+          name: string
+          raw?: Json
+          status?: string
+          submitted_by: string
+        }
+        Update: {
+          created_at?: string
+          google_place_id?: string | null
+          id?: string
+          itinerary_id?: string | null
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          raw?: Json
+          status?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_venue_submissions_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_venue_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_venue_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_card"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       date_instances: {
         Row: {
           ambient_sound_id: string | null
@@ -3397,6 +3458,12 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
+      mk_instance: {
+        Args: { p_creator: string; p_itin: string; p_starts: string }
+        Returns: string
+      }
+      mk_itinerary: { Args: { p_user: string }; Returns: string }
+      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]

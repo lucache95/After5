@@ -10,9 +10,12 @@ import { toast } from 'sonner';
 import { updateItineraryStops } from '@after5/api-client';
 import { browserAfter5Client } from '@/lib/after5/client';
 import type { Stop } from '@/lib/itinerary-types';
+import type { Json } from '@after5/types';
 import { addBlankStop, patchStop, removeStop, validateStopsForSave } from '@/lib/itinerary/edit';
+import { googlePlaceToSubmission } from '@/lib/places/normalize';
 import { EditableStopCard } from './EditableStopCard';
 import { CoverPicker } from './CoverPicker';
+import { CustomVenueSearch } from './CustomVenueSearch';
 
 // Stable drag keys decoupled from stop content (place_id can be blank on a new
 // stop), so Reorder identity survives renames + reorders.
@@ -65,6 +68,42 @@ export function ItineraryEditor({
 
   function handleReorder(next: Row[]) {
     setRows(next);
+  }
+
+  // Append a custom venue (from the Google Places proxy) as an inline stop, then
+  // best-effort record the pick to the admin promotion queue (owner RLS). A queue
+  // failure is non-fatal — the stop still adds. We DON'T write to the curated
+  // `places` table; the stop carries a `custom:<googleId>` id.
+  async function handleAddCustom(stop: Stop) {
+    setRows((prev) => [...prev, { key: `s${nextKey}`, stop }]);
+    setNextKey((k) => k + 1);
+
+    const googleId = stop.place_id.startsWith('custom:') ? stop.place_id.slice('custom:'.length) : stop.place_id;
+    try {
+      const client = browserAfter5Client();
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return;
+      const row = googlePlaceToSubmission(
+        {
+          id: googleId,
+          displayName: { text: stop.place_name },
+          formattedAddress: stop.address ?? undefined,
+          location:
+            stop.lat != null && stop.lng != null
+              ? { latitude: stop.lat, longitude: stop.lng }
+              : undefined,
+          types: stop.place_type ? [stop.place_type] : undefined,
+        },
+        itineraryId,
+      );
+      await client.from('custom_venue_submissions').insert({
+        ...row,
+        raw: row.raw as unknown as Json,
+        submitted_by: user.id,
+      });
+    } catch {
+      // non-fatal: the stop is already on the plan.
+    }
   }
 
   async function handleSave() {
@@ -139,6 +178,13 @@ export function ItineraryEditor({
           <Plus className="h-4 w-4 text-shell-accent" aria-hidden />
           add a stop
         </button>
+
+        <div className="mt-5 rounded-2xl border border-shell-ink/10 bg-shell-ink/[0.02] p-4">
+          <h3 className="mb-2 font-heading text-sm lowercase text-shell-ink">
+            add a place we don’t have yet
+          </h3>
+          <CustomVenueSearch onAdd={handleAddCustom} />
+        </div>
       </section>
 
       {photos.length > 0 && (
