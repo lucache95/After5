@@ -1929,6 +1929,44 @@ export type Database = {
           },
         ]
       }
+      profile_photos: {
+        Row: {
+          blurred_path: string | null
+          clear_path: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          blurred_path?: string | null
+          clear_path: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          blurred_path?: string | null
+          clear_path?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_photos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_prompts: {
         Row: {
           created_at: string
@@ -1972,16 +2010,20 @@ export type Database = {
           first_name: string | null
           gender: string | null
           gender_preferences: string[]
+          height_cm: number | null
           id: string
           insider_approved_at: string | null
           insider_points: number
           insider_role: string | null
           neighborhood: string | null
+          occupation: string | null
           onboarding_completed_at: string | null
           onboarding_step: string
           primary_city_id: string | null
           prompt_answers: Json
+          pronouns: string | null
           reliability_score: number | null
+          socials: Json
           rollover_frozen: boolean
           standing: Database["public"]["Enums"]["standing_state"]
           updated_at: string
@@ -2003,16 +2045,20 @@ export type Database = {
           first_name?: string | null
           gender?: string | null
           gender_preferences?: string[]
+          height_cm?: number | null
           id: string
           insider_approved_at?: string | null
           insider_points?: number
           insider_role?: string | null
           neighborhood?: string | null
+          occupation?: string | null
           onboarding_completed_at?: string | null
           onboarding_step?: string
           primary_city_id?: string | null
           prompt_answers?: Json
+          pronouns?: string | null
           reliability_score?: number | null
+          socials?: Json
           rollover_frozen?: boolean
           standing?: Database["public"]["Enums"]["standing_state"]
           updated_at?: string
@@ -2034,16 +2080,20 @@ export type Database = {
           first_name?: string | null
           gender?: string | null
           gender_preferences?: string[]
+          height_cm?: number | null
           id?: string
           insider_approved_at?: string | null
           insider_points?: number
           insider_role?: string | null
           neighborhood?: string | null
+          occupation?: string | null
           onboarding_completed_at?: string | null
           onboarding_step?: string
           primary_city_id?: string | null
           prompt_answers?: Json
+          pronouns?: string | null
           reliability_score?: number | null
+          socials?: Json
           rollover_frozen?: boolean
           standing?: Database["public"]["Enums"]["standing_state"]
           updated_at?: string

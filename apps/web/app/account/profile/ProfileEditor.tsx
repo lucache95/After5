@@ -13,10 +13,17 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ImageUp, X } from 'lucide-react';
 import Image from 'next/image';
-import { ProfileInputSchema } from '@after5/validators';
+import { ProfileInputSchema, ExpandedProfileSchema, type DynamicPromptAnswer, type ExpandedProfile } from '@after5/validators';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, upsertProfile } from '@/lib/after5/client';
 import { PhotoCropper } from '@/app/onboarding/steps/PhotoCropper';
+import {
+  addPhoto, listMyPhotos, removePhoto as removePhotoRow, reorderPhotos, setPrimary,
+  toReorderPayload, signClearUrls,
+} from '@/lib/after5/photos';
+import { PromptsSection, type PromptDef } from './sections/PromptsSection';
+import { ExpandedSection } from './sections/ExpandedSection';
+import { PhotoManager, type ManagedPhoto } from './sections/PhotoManager';
 
 const MAX_TAGS = 8;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png'];
@@ -28,6 +35,11 @@ export interface ProfileEditorInitial {
   instagram_handle: string;
   vibe_tags: string[];
   photo_url: string | null;
+  // M6 additions (optional → existing callers/tests stay valid).
+  photos?: ManagedPhoto[];
+  prompt_answers?: DynamicPromptAnswer[];
+  expanded?: ExpandedProfile;
+  available_prompts?: PromptDef[];
 }
 
 type Phase = 'idle' | 'saving' | 'error';
@@ -59,6 +71,83 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [cropping, setCropping] = useState(false);
   const [photoUrl] = useState<string | null>(initial.photo_url);
+
+  // M6 sections.
+  const [photos, setPhotos] = useState<ManagedPhoto[]>(initial.photos ?? []);
+  const [prompts, setPrompts] = useState<DynamicPromptAnswer[]>(initial.prompt_answers ?? []);
+  const [expanded, setExpanded] = useState<ExpandedProfile>(initial.expanded ?? {});
+  const availablePrompts = initial.available_prompts ?? [];
+  const hasGallery = photos.length > 0 || availablePrompts.length > 0 || (initial.photos !== undefined);
+
+  // Re-hydrate the gallery from the DB (rows + fresh signed urls) after a mutation.
+  async function refreshPhotos() {
+    try {
+      const client = browserAfter5Client();
+      const rows = await listMyPhotos(client, userId);
+      const urls = await signClearUrls(client, rows.map((r) => r.clear_path));
+      setPhotos(rows.map((r, i) => ({
+        id: r.id, clear_path: r.clear_path, url: urls[i] ?? null,
+        is_primary: r.is_primary, sort_order: r.sort_order,
+      })));
+    } catch (e) {
+      console.error('[ProfileEditor] refreshPhotos failed', e);
+    }
+  }
+
+  async function handleAddPhoto(blob: Blob) {
+    try {
+      await addPhoto(browserAfter5Client(), userId, blob);
+      await refreshPhotos();
+      toast.success('photo added.');
+    } catch (e) {
+      console.error('[ProfileEditor] addPhoto failed', e);
+      toast.error(e instanceof Error && e.message === 'photo_limit_reached' ? 'that’s the max.' : 'couldn’t add that photo.');
+    }
+  }
+
+  async function handleRemovePhoto(id: string) {
+    const target = photos.find((p) => p.id === id);
+    if (!target) return;
+    const prev = photos;
+    setPhotos((cur) => cur.filter((p) => p.id !== id));
+    try {
+      await removePhotoRow(browserAfter5Client(), userId, {
+        id: target.id, user_id: userId, clear_path: target.clear_path,
+        blurred_path: null, sort_order: target.sort_order, is_primary: target.is_primary,
+        created_at: '',
+      });
+      await refreshPhotos();
+    } catch (e) {
+      console.error('[ProfileEditor] removePhoto failed', e);
+      setPhotos(prev);
+      toast.error('couldn’t remove that.');
+    }
+  }
+
+  async function handleReorderPhotos(ordered: ManagedPhoto[]) {
+    const prev = photos;
+    setPhotos(ordered);
+    try {
+      await reorderPhotos(browserAfter5Client(), userId, toReorderPayload(ordered));
+    } catch (e) {
+      console.error('[ProfileEditor] reorder failed', e);
+      setPhotos(prev);
+      toast.error('couldn’t save that order.');
+    }
+  }
+
+  async function handleSetPrimary(id: string) {
+    const prev = photos;
+    setPhotos((cur) => cur.map((p) => ({ ...p, is_primary: p.id === id })));
+    try {
+      await setPrimary(browserAfter5Client(), userId, id);
+      await refreshPhotos();
+    } catch (e) {
+      console.error('[ProfileEditor] setPrimary failed', e);
+      setPhotos(prev);
+      toast.error('couldn’t set the main photo.');
+    }
+  }
 
   const canSave = firstName.trim().length > 0 && phase !== 'saving';
 
@@ -125,11 +214,31 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
       const client = browserAfter5Client();
       const handle = normalizeHandle(instagram);
 
-      // profiles columns (own row only via RLS).
+      // Expanded fields: validate (anti-Tinder, all optional). Strip empty socials.
+      const expandedParsed = ExpandedProfileSchema.safeParse(expanded);
+      if (!expandedParsed.success) {
+        setErrorMsg(expandedParsed.error.issues[0]?.message ?? 'check the extra fields.');
+        setPhase('error');
+        return;
+      }
+      const exp = expandedParsed.data;
+
+      // profiles columns (own row only via RLS). Includes M6 prompt_answers +
+      // expanded fields. prompt_id is validated dynamically against the active
+      // profile_prompts (availablePrompts), not a hardcoded enum.
+      const validPromptIds = new Set(availablePrompts.map((p) => p.id));
+      const cleanPrompts = prompts.filter(
+        (p) => p.answer.trim().length > 0 && (validPromptIds.size === 0 || validPromptIds.has(p.prompt_id)),
+      );
       await upsertProfile(client, userId, {
         first_name: parsed.data.first_name,
         neighborhood: neighborhood.trim() || null,
         vibe_tags: parsed.data.vibe_tags,
+        prompt_answers: cleanPrompts,
+        pronouns: exp.pronouns ?? null,
+        height_cm: exp.height_cm ?? null,
+        occupation: exp.occupation ?? null,
+        socials: exp.socials ?? {},
       });
 
       // profiles_private (bio + instagram_handle). Column-level grants block a
@@ -177,14 +286,73 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
   );
   const labelClass = 'mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink';
 
+  const sectionHeadingClass = 'font-heading text-2xl lowercase text-shell-ink';
+
   return (
-    <div>
-      {/* PHOTO */}
-      <div>
-        <p className={labelClass}>your photo</p>
-        <p className="mb-3 font-body text-[13px] leading-relaxed text-shell-ink/60">
-          blurred in the feed. the clear one shows once you both lock in a night.
+    <div className="space-y-9">
+      {/* PHOTOS */}
+      <section>
+        <h2 className={sectionHeadingClass}>photos</h2>
+        <p className="mb-3 mt-1 font-body text-[13px] leading-relaxed text-shell-ink/60">
+          blurred in the feed. the clear ones show once you both lock in a night.
         </p>
+        {hasGallery ? (
+          <PhotoManager
+            photos={photos}
+            onAdd={handleAddPhoto}
+            onRemove={handleRemovePhoto}
+            onReorder={handleReorderPhotos}
+            onSetPrimary={handleSetPrimary}
+          />
+        ) : (
+          <LegacyPhotoBlock />
+        )}
+      </section>
+
+      {/* THE BASICS */}
+      <section>
+        <h2 className={sectionHeadingClass}>the basics</h2>
+        <div className="mt-4 space-y-5">{renderBasics()}</div>
+      </section>
+
+      {/* PROMPTS */}
+      <section>
+        <h2 className={sectionHeadingClass}>prompts</h2>
+        <div className="mt-3">
+          <PromptsSection prompts={availablePrompts} value={prompts} onChange={setPrompts} />
+        </div>
+      </section>
+
+      {/* MORE ABOUT YOU */}
+      <section>
+        <h2 className={sectionHeadingClass}>more about you</h2>
+        <div className="mt-3">
+          <ExpandedSection value={expanded} onChange={setExpanded} />
+        </div>
+      </section>
+
+      {phase === 'error' && (
+        <div role="alert" className="rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
+      )}
+
+      <button
+        type="button" onClick={handleSave} disabled={!canSave} aria-busy={phase === 'saving'}
+        className={cn(
+          'flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+          !canSave ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95',
+        )}
+      >
+        {phase === 'saving' ? 'saving…' : 'save'}
+      </button>
+    </div>
+  );
+
+  // Legacy single-photo replace block — only when there is no gallery state at all
+  // (pre-M6 grace; replaced by PhotoManager once profile_photos rows exist).
+  function LegacyPhotoBlock() {
+    return (
+      <div>
         {cropping && pickedFile ? (
           <PhotoCropper
             file={pickedFile}
@@ -220,8 +388,14 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
           </div>
         )}
       </div>
+    );
+  }
 
-      <div className="mt-7 space-y-5">
+  // The basics fields (name/bio/neighborhood/instagram/vibe), rendered inside the
+  // "the basics" section above.
+  function renderBasics() {
+    return (
+      <>
         {/* FIRST NAME */}
         <div>
           <label htmlFor="first_name" className={labelClass}>first name</label>
@@ -302,22 +476,7 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
             <span>{tags.length}/{MAX_TAGS}</span>
           </p>
         </div>
-      </div>
-
-      {phase === 'error' && (
-        <div role="alert" className="mt-5 rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
-      )}
-
-      <button
-        type="button" onClick={handleSave} disabled={!canSave} aria-busy={phase === 'saving'}
-        className={cn(
-          'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
-          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
-          !canSave ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95',
-        )}
-      >
-        {phase === 'saving' ? 'saving…' : 'save'}
-      </button>
-    </div>
-  );
+      </>
+    );
+  }
 }

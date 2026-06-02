@@ -7,7 +7,10 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
+import type { DynamicPromptAnswer, ExpandedProfile } from '@after5/validators';
 import { ProfileEditor, type ProfileEditorInitial } from './ProfileEditor';
+import type { ManagedPhoto } from './sections/PhotoManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,18 +19,35 @@ export default async function ProfileEditPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/account/profile');
 
-  const [{ data: profile }, { data: priv }] = await Promise.all([
-    supabase.from('profiles').select('first_name, neighborhood, vibe_tags, clear_photo_url').eq('id', user.id).maybeSingle(),
+  const [{ data: profile }, { data: priv }, { data: promptDefs }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('first_name, neighborhood, vibe_tags, clear_photo_url, prompt_answers, pronouns, height_cm, occupation, socials')
+      .eq('id', user.id)
+      .maybeSingle(),
     supabase.from('profiles_private').select('bio, instagram_handle').eq('user_id', user.id).maybeSingle(),
+    supabase.from('profile_prompts').select('id, label, placeholder').eq('is_active', true).order('sort_order', { ascending: true }),
   ]);
 
-  // The clear photo lives in a private bucket; a short-lived signed URL lets the
-  // editor preview it without exposing the object publicly.
+  // M6 gallery: rows + fresh signed clear URLs (owner read passes the RLS policy).
+  let photos: ManagedPhoto[] = [];
+  try {
+    const rows = await listMyPhotos(supabase, user.id);
+    const urls = await signClearUrls(supabase, rows.map((r) => r.clear_path));
+    photos = rows.map((r, i) => ({
+      id: r.id, clear_path: r.clear_path, url: urls[i] ?? null,
+      is_primary: r.is_primary, sort_order: r.sort_order,
+    }));
+  } catch {
+    photos = [];
+  }
+
+  // Legacy single-photo preview (pre-M6 grace, only used when no gallery rows).
   let photoUrl: string | null = null;
-  if (profile?.clear_photo_url) {
+  if (photos.length === 0 && profile?.clear_photo_url) {
     const { data: signed } = await supabase.storage
       .from('profile-photos')
-      .createSignedUrl(`${user.id}/clear.jpg`, 60 * 10);
+      .createSignedUrl(profile.clear_photo_url as string, 60 * 10);
     photoUrl = signed?.signedUrl ?? null;
   }
 
@@ -38,6 +58,15 @@ export default async function ProfileEditPage() {
     instagram_handle: priv?.instagram_handle ?? '',
     vibe_tags: (profile?.vibe_tags as string[] | null) ?? [],
     photo_url: photoUrl,
+    photos,
+    prompt_answers: ((profile?.prompt_answers as DynamicPromptAnswer[] | null) ?? []),
+    expanded: {
+      pronouns: (profile?.pronouns as ExpandedProfile['pronouns']) ?? undefined,
+      height_cm: (profile?.height_cm as number | null) ?? undefined,
+      occupation: (profile?.occupation as string | null) ?? undefined,
+      socials: (profile?.socials as ExpandedProfile['socials']) ?? undefined,
+    },
+    available_prompts: (promptDefs ?? []) as { id: string; label: string; placeholder?: string | null }[],
   };
 
   return (

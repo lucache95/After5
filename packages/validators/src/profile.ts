@@ -41,6 +41,16 @@ export const PromptAnswerSchema = z.object({
 });
 export type PromptAnswer = z.infer<typeof PromptAnswerSchema>;
 
+// M6 open-question resolution: prompt_id is validated DYNAMICALLY against the
+// active profile_prompts rows (not a hardcoded enum), so the UI/storage shape
+// uses a plain-string id. DynamicPromptAnswerSchema mirrors the jsonb stored on
+// profiles.prompt_answers and is what the editor sections + ProfileCard consume.
+export const DynamicPromptAnswerSchema = z.object({
+  prompt_id: z.string().min(1).max(64),
+  answer: z.string().min(1).max(200),
+});
+export type DynamicPromptAnswer = z.infer<typeof DynamicPromptAnswerSchema>;
+
 // ─── M6: comprehensive customizable profile ──────────────────────────
 // Multi-photo gallery cap (storage + RLS one-row-per-photo).
 export const MAX_PHOTOS = 6;

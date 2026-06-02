@@ -5,7 +5,7 @@
 // [{ prompt_id, answer }]. Tier-1 shell chrome, lowercase, >=44px targets.
 import { Plus, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import type { PromptAnswer } from '@after5/validators';
+import type { DynamicPromptAnswer } from '@after5/validators';
 
 export interface PromptDef {
   id: string;
@@ -22,8 +22,8 @@ export function PromptsSection({
   onChange,
 }: {
   prompts: PromptDef[];
-  value: PromptAnswer[];
-  onChange: (next: PromptAnswer[]) => void;
+  value: DynamicPromptAnswer[];
+  onChange: (next: DynamicPromptAnswer[]) => void;
 }) {
   const selectedIds = new Set(value.map((v) => v.prompt_id));
   const atCap = value.length >= MAX_PROMPTS;
