@@ -1,3 +1,4 @@
+import type { Json } from '@after5/types';
 import type { After5Client } from './index';
 
 export interface FeedNight {
@@ -23,6 +24,30 @@ export async function postNight(client: After5Client, input: {
     p_itinerary: input.itinerary_id, p_starts_at: input.starts_at,
     p_venue: input.venue_id ?? undefined, p_duration_min: input.duration_min ?? 150,
     p_ambient_sound_id: input.ambient_sound_id ?? undefined,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// M3: the host edit wire shape (structurally compatible with the web `Stop` type).
+export interface EditableStop {
+  place_id?: string; place_name: string; place_slug?: string; place_type?: string;
+  start_time: string; duration_min: number; estimated_cost_pp: number;
+  what_to_do?: string; drive_to_next_min?: number; photo_url?: string | null;
+  address?: string | null; neighborhood?: string; lat?: number | null; lng?: number | null;
+  local_insight?: string | null; reservation_url?: string | null; reservation_required?: boolean;
+}
+
+export async function updateItineraryStops(
+  client: After5Client,
+  input: { itinerary_id: string; stops: EditableStop[]; title?: string; why_note?: string; cover_image_url?: string },
+): Promise<string> {
+  const { data, error } = await client.rpc('update_itinerary_stops', {
+    p_itinerary: input.itinerary_id,
+    p_stops: input.stops as unknown as Json,
+    p_title: input.title ?? undefined,
+    p_why_note: input.why_note ?? undefined,
+    p_cover_image_url: input.cover_image_url ?? undefined,
   });
   if (error) throw error;
   return data as string;

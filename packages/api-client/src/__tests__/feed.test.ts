@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { postNight, browseFeed, ambientSoundUrl, type FeedNight } from '../feed';
+import { postNight, browseFeed, ambientSoundUrl, updateItineraryStops, type FeedNight } from '../feed';
 
 function mockClient(result: { data: unknown; error: unknown }) {
   return { rpc: vi.fn().mockResolvedValue(result) } as never;
@@ -47,5 +47,21 @@ describe('browseFeed', () => {
     const out = await browseFeed(c);
     expect(out[0]?.ambient_sound_path).toBe('lofi/calm.m4a');
     expect(out[0]?.ambient_sound_name).toBe('calm');
+  });
+});
+
+describe('updateItineraryStops', () => {
+  it('calls the RPC with mapped params and returns the id', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 'itin-1', error: null });
+    const client = { rpc } as never;
+    const id = await updateItineraryStops(client, {
+      itinerary_id: 'itin-1',
+      stops: [{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 90, estimated_cost_pp: 35 }],
+      title: 'pottery + ramen',
+    });
+    expect(id).toBe('itin-1');
+    expect(rpc).toHaveBeenCalledWith('update_itinerary_stops', expect.objectContaining({
+      p_itinerary: 'itin-1', p_title: 'pottery + ramen',
+    }));
   });
 });

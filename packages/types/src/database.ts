@@ -3409,26 +3409,16 @@ export type Database = {
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
-      post_night:
-        | {
-            Args: {
-              p_duration_min?: number
-              p_itinerary: string
-              p_starts_at: string
-              p_venue?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_ambient_sound_id?: string
-              p_duration_min?: number
-              p_itinerary: string
-              p_starts_at: string
-              p_venue?: string
-            }
-            Returns: string
-          }
+      post_night: {
+        Args: {
+          p_ambient_sound_id?: string
+          p_duration_min?: number
+          p_itinerary: string
+          p_starts_at: string
+          p_venue?: string
+        }
+        Returns: string
+      }
       postgis_constraint_dims: {
         Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: number
@@ -4092,6 +4082,16 @@ export type Database = {
         Returns: unknown
       }
       unlockrows: { Args: { "": string }; Returns: number }
+      update_itinerary_stops: {
+        Args: {
+          p_cover_image_url?: string
+          p_itinerary: string
+          p_stops: Json
+          p_title?: string
+          p_why_note?: string
+        }
+        Returns: string
+      }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
