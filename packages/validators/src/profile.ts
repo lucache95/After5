@@ -41,6 +41,42 @@ export const PromptAnswerSchema = z.object({
 });
 export type PromptAnswer = z.infer<typeof PromptAnswerSchema>;
 
+// ─── M6: comprehensive customizable profile ──────────────────────────
+// Multi-photo gallery cap (storage + RLS one-row-per-photo).
+export const MAX_PHOTOS = 6;
+
+// Small, brand-fit pronoun vocab. Stored as plain text on profiles.
+export const PronounsSchema = z.enum([
+  'she/her', 'he/him', 'they/them', 'she/they', 'he/they', 'ask me',
+]);
+export type Pronouns = z.infer<typeof PronounsSchema>;
+
+// Brand-fit, anti-Tinder: every field optional, nothing identity-sensitive
+// (no religion/politics/ethnicity). Single source of truth for editor +
+// onboarding + the save patch.
+export const ExpandedProfileSchema = z.object({
+  pronouns: PronounsSchema.optional(),
+  height_cm: z.number().int().min(120).max(230).optional(),
+  occupation: z.string().max(60).optional(),
+  socials: z
+    .object({
+      spotify: z.string().max(60).optional(),
+      tiktok: z.string().max(60).optional(),
+    })
+    .strict()
+    .partial()
+    .optional(),
+});
+export type ExpandedProfile = z.infer<typeof ExpandedProfileSchema>;
+
+// One gallery row's client-side metadata (id + ordering + primary flag).
+export const PhotoMetaSchema = z.object({
+  id: z.string().uuid(),
+  sort_order: z.number().int().min(0).max(MAX_PHOTOS - 1),
+  is_primary: z.boolean(),
+});
+export type PhotoMeta = z.infer<typeof PhotoMetaSchema>;
+
 export const ProfileInputSchema = z.object({
   first_name: z.string().min(1).max(40),
   bio: z.string().max(500).default(''),
