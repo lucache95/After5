@@ -13,6 +13,10 @@ export interface GatedStop extends Partial<ItineraryStop> {
 export interface GatedItinerary extends Omit<Itinerary, 'stops'> {
   stops: GatedStop[];
   locked: boolean;
+  // Present at runtime for the AUTHED path: the edge fn persists each itinerary
+  // and returns its DB id (persist.ts → withIds). Anon teasers omit it (and the
+  // publish CTA is gated off for anon anyway). Optional so the type is honest.
+  id?: string;
 }
 
 export function toTeaser(itineraries: Itinerary[], opts: { authed: boolean }): GatedItinerary[] {
