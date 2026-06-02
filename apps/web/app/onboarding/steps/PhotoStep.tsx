@@ -66,6 +66,19 @@ export function PhotoStep({ userId }: { userId: string }) {
       if (upErr) throw new Error(upErr.message);
       const { error: blurErr } = await client.functions.invoke('generate-blur', { body: {} });
       if (blurErr) throw new Error(blurErr.message ?? 'blur_failed');
+      // M6: seed a profile_photos row (primary) so the onboarding photo appears in
+      // the editor gallery + on the reveal carousel. Uses the legacy clear.jpg /
+      // blurred.jpg paths (generate-blur with an empty body already wrote the
+      // blurred sibling + the profiles mirror columns). Only insert once; a
+      // duplicate (23505) on re-upload is fine to ignore.
+      const { error: rowErr } = await client.from('profile_photos').insert({
+        user_id: userId,
+        clear_path: `${userId}/clear.jpg`,
+        blurred_path: `${userId}/blurred.jpg`,
+        sort_order: 0,
+        is_primary: true,
+      });
+      if (rowErr && rowErr.code !== '23505') throw new Error(rowErr.message);
       await advanceOnboarding(client, 'preferences');
       router.push('/onboarding/preferences');
     } catch (e) {
