@@ -32,9 +32,9 @@ export function ProfileCard({
   pronouns,
   occupation,
   height_cm,
-  photos,
-  vibe_tags,
-  prompts,
+  photos = [],
+  vibe_tags = [],
+  prompts = [],
   instagram_handle,
 }: ProfileCardProps) {
   const heading = age != null ? `${name}, ${age}` : name;

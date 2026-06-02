@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { LockDetail } from './LockDetail';
-import { pickCounterpart, isRatingOpen, type LockRowWithParties } from '../lock-view';
+import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
+import { pickCounterpart, isRatingOpen, type LockRowWithParties, type RevealPrompt } from '../lock-view';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,8 @@ export default async function LockPage({
     .from('locks')
     .select(`
       id, status, locked_at, rating_closed_at, cancel_reason, creator_id, matched_user_id, date_instance_id,
-      creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags ),
-      matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags ),
+      creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns ),
+      matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns ),
       instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range ),
       thread:chat_threads!chat_threads_lock_id_fkey ( id )
     `)
@@ -63,6 +64,40 @@ export default async function LockPage({
     );
   }
 
+  // M6 reveal data. The pair is locked, so profile_photos_revealed_read +
+  // profile_photos_clear_reveal_read (storage) pass for the counterpart's rows;
+  // signClearUrls mints short-lived signed URLs only because the RLS'd client
+  // is allowed to read them. This is the end-to-end fix for the broken reveal
+  // photo (clear_photo_url was a raw private path handed to next/image).
+  let photos: string[] = [];
+  try {
+    const rows = await listMyPhotos(supabase, counterpart.id);
+    photos = await signClearUrls(supabase, rows.map((r) => r.clear_path));
+    // Fallback: if no gallery rows yet (pre-M6 profiles), sign the legacy mirror.
+    if (photos.length === 0 && counterpart.clear_photo_url) {
+      const { data: signed } = await supabase.storage
+        .from('profile-photos')
+        .createSignedUrl(counterpart.clear_photo_url, 60 * 10);
+      if (signed?.signedUrl) photos = [signed.signedUrl];
+    }
+  } catch {
+    photos = [];
+  }
+
+  // Join the counterpart's prompt answers to active prompt labels (server-side).
+  let prompts: RevealPrompt[] = [];
+  const answers = counterpart.prompt_answers ?? [];
+  if (answers.length > 0) {
+    const { data: defs } = await supabase
+      .from('profile_prompts')
+      .select('id, label')
+      .in('id', answers.map((a) => a.prompt_id));
+    const labelById = new Map((defs ?? []).map((d) => [d.id, d.label]));
+    prompts = answers
+      .filter((a) => a.answer?.trim())
+      .map((a) => ({ label: labelById.get(a.prompt_id) ?? a.prompt_id, answer: a.answer }));
+  }
+
   return (
     <LockDetail
       lockId={lock.id}
@@ -72,6 +107,8 @@ export default async function LockPage({
       startsAt={lock.instance?.starts_at ?? null}
       ratingOpen={isRatingOpen(lock.instance)}
       justLocked={just === '1'}
+      photos={photos}
+      prompts={prompts}
     />
   );
 }
