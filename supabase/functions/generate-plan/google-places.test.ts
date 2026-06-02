@@ -70,4 +70,22 @@ Deno.test('googleResultToPlaceRow maps a result into a places row scoped to a ci
   assertEquals(row.lat, 49.88);
   assertEquals(typeof row.photo_url, 'string');
   assertEquals(row.slug.startsWith('the-test-cafe-'), true); // suffixed with id tail
+  // #70 sibling fix: a non-Kelowna city must NOT inherit Kelowna's lat/lng neighborhood
+  // buckets (which would mislabel a Vancouver venue 'west_kelowna' and leak into copy).
+  assertEquals(row.neighborhood, 'vernon');
+  assertEquals(row.drive_cluster, 'multiple');
+});
+
+Deno.test('googleResultToPlaceRow: Kelowna keeps its curated lat/lng neighborhood bucketing', () => {
+  const row = googleResultToPlaceRow(
+    {
+      id: 'k1', displayName: { text: 'Downtown Spot' }, formattedAddress: '1 Bernard Ave',
+      location: { latitude: 49.888, longitude: -119.496 }, types: ['restaurant'],
+      rating: 4.5, userRatingCount: 80, businessStatus: 'OPERATIONAL',
+    },
+    { id: 'kel-uuid', slug: 'kelowna' },
+    'GKEY',
+  );
+  assertEquals(row.neighborhood, 'downtown');
+  assertEquals(row.drive_cluster, 'downtown');
 });

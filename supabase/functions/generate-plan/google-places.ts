@@ -128,7 +128,12 @@ export interface CityForMapping { id: string; slug: string; }
 export function googleResultToPlaceRow(r: GoogleResult, city: CityForMapping, googleKey: string) {
   const lat = r.location?.latitude ?? null;
   const lng = r.location?.longitude ?? null;
-  const neighborhood = neighborhoodFromLatLng(lat, lng);
+  // neighborhoodFromLatLng's buckets are Kelowna-only — applying them to another
+  // city mislabels every venue (e.g. Vancouver coords → 'west_kelowna'), which then
+  // leaks into the LLM copy. For non-Kelowna (on-the-fly) cities, label the
+  // neighborhood with the city slug instead until a real geocoder lands (Railway).
+  const neighborhood = city.slug === 'kelowna' ? neighborhoodFromLatLng(lat, lng) : city.slug;
+  const driveCluster = city.slug === 'kelowna' ? driveClusterFromNeighborhood(neighborhood) : 'multiple';
   const type = mapGoogleTypes(r.types ?? []);
   const photoResource = r.photos?.[0]?.name;
   const hours = pickHours(r.regularOpeningHours ?? null);
@@ -138,7 +143,7 @@ export function googleResultToPlaceRow(r: GoogleResult, city: CityForMapping, go
     slug: `${slugify(name || r.id)}-${r.id.slice(-6).toLowerCase()}`,
     address: r.formattedAddress ?? null,
     neighborhood,
-    drive_cluster: driveClusterFromNeighborhood(neighborhood),
+    drive_cluster: driveCluster,
     type,
     // No per-place LLM augment in the stopgap — neutral defaults.
     vibe_tags: [] as string[],
