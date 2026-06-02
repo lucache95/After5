@@ -5,17 +5,44 @@ export interface FeedNight {
   pay_setting: string | null; vibe_tags: string[] | null;
   why_note: string | null; cover_image_url: string | null; title: string | null;
   venue_neighborhood: string | null; is_seed: boolean; distance_m: number | null;
+  // M4: resolved ambient pick (host's choice or vibe-auto fallback). Path is relative
+  // to the public 'ambient-sounds' bucket; prefix with ambientSoundUrl() client-side.
+  ambient_sound_path: string | null; ambient_sound_name: string | null;
+}
+
+/** A curated library entry for the host's optional soundtrack pick. */
+export interface AmbientSound {
+  id: string; name: string; storage_path: string; vibe_tags: string[]; duration_sec: number;
 }
 
 export async function postNight(client: After5Client, input: {
-  itinerary_id: string; starts_at: string; venue_id?: string | null; duration_min?: number;
+  itinerary_id: string; starts_at: string; venue_id?: string | null;
+  duration_min?: number; ambient_sound_id?: string | null;
 }): Promise<string> {
   const { data, error } = await client.rpc('post_night', {
     p_itinerary: input.itinerary_id, p_starts_at: input.starts_at,
     p_venue: input.venue_id ?? undefined, p_duration_min: input.duration_min ?? 150,
+    p_ambient_sound_id: input.ambient_sound_id ?? undefined,
   });
   if (error) throw error;
   return data as string;
+}
+
+// Build a public-bucket URL from a relative storage path. Returns null for null paths.
+export function ambientSoundUrl(path: string | null, supabaseUrl: string): string | null {
+  if (!path) return null;
+  return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/ambient-sounds/${path}`;
+}
+
+/** Active curated library, for the host picker (loaded server-side). */
+export async function listAmbientSounds(client: After5Client): Promise<AmbientSound[]> {
+  const { data, error } = await client
+    .from('ambient_sounds')
+    .select('id, name, storage_path, vibe_tags, duration_sec')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as AmbientSound[];
 }
 
 export async function browseFeed(client: After5Client, opts?: {

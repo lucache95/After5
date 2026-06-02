@@ -69,5 +69,6 @@ export * from './profile';
 // ─── Phase 5a: feed helpers ────────────────────────────────────────────
 export {
   postNight, browseFeed, recordSwipe, getNightDetail,
-  type FeedNight, type NightDetailNight, type NightDetailStop,
+  ambientSoundUrl, listAmbientSounds,
+  type FeedNight, type NightDetailNight, type NightDetailStop, type AmbientSound,
 } from './feed';

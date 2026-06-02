@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { listAmbientSounds } from '@after5/api-client';
 import { PostNightForm } from './PostNightForm';
 
 export const dynamic = 'force-dynamic';
@@ -20,5 +21,7 @@ export default async function NewNightPage() {
     .order('generated_at', { ascending: false })
     .limit(30);
 
-  return <PostNightForm plans={plans ?? []} />;
+  const ambientSounds = await listAmbientSounds(supabase as never);
+
+  return <PostNightForm plans={plans ?? []} ambientSounds={ambientSounds} />;
 }
