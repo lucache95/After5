@@ -1,0 +1,14 @@
+-- 20260602120700_m4_post_night_drop_4arg.sql
+-- M4 follow-up (ambiguity fix). The 5-arg post_night overload added in 20260602120300
+-- coexisted with the original 4-arg signature. That made any 4-argument call ambiguous:
+--   post_night(uuid, timestamptz, NULL, int)  -> "function post_night(...) is not unique"
+-- because the 5-arg's p_ambient_sound_id defaults to null, so both are candidates for a
+-- 4-arg call (and supabase-js omits an undefined p_ambient_sound_id, sending only 4 named
+-- args — so posting a night WITHOUT an ambient pick would 500 on prod with PGRST203).
+--
+-- The 5-arg is a behavior-preserving superset of the 4-arg (it adds an optional ambient
+-- pick that defaults to null + validates only when provided). So drop the 4-arg; every
+-- former 4-arg caller now binds unambiguously to the 5-arg with the ambient default.
+-- Idempotent. Dropping the 4-arg also drops its grants (the 5-arg keeps its own:
+-- authenticated execute, anon revoked via 20260602120600).
+drop function if exists post_night(uuid, timestamptz, uuid, integer);

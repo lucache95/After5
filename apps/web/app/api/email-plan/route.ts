@@ -1,4 +1,6 @@
+import { createElement, type ReactElement } from 'react';
 import { NextResponse } from 'next/server';
+import type { DocumentProps } from '@react-pdf/renderer';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email/resend';
 import { buildPlanEmail } from '@/lib/email/plan-pdf';
@@ -21,8 +23,8 @@ export async function POST(req: Request) {
     import('@react-pdf/renderer'),
     import('@/components/itinerary/PlanPDFDocument'),
   ]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdf = await renderToBuffer(PlanPDFDocument({ itinerary: body.itinerary }) as any);
+  const doc = createElement(PlanPDFDocument, { itinerary: body.itinerary }) as ReactElement<DocumentProps>;
+  const pdf = await renderToBuffer(doc);
 
   const { subject, html, text } = buildPlanEmail({ firstName: n.first_name, itineraryTitle: body.itinerary.title });
   await sendEmail({
