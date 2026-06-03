@@ -1,0 +1,29 @@
+{
+  "source_path": "/Users/lucas/Projects/After5/.planning/inbox/2026-06-03-chatgpt-mvp-reconciliation-audit.md",
+  "type": "PRD",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "After5 — MVP Reality Reconciliation Audit (external input, ChatGPT, 2026-06-03)",
+  "summary": "Audit brief defining the experience-first product vision, 12 audit categories, and required Section A–F output that drives the After5 MVP reconciliation roadmap.",
+  "scope": [
+    "feed experience",
+    "date detail",
+    "host identity system",
+    "business object system",
+    "discovery filters",
+    "navigation graph",
+    "date creator experience",
+    "night lifecycle",
+    "host marketplace",
+    "messaging system",
+    "profile system",
+    "marketplace state machine",
+    "ISSUE #15",
+    "progressive reveal",
+    "AI planner"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 2,
+  "notes": ""
+}

@@ -1,0 +1,33 @@
+{
+  "source_path": "/Users/lucas/Projects/After5/docs/superpowers/specs/2026-06-03-date-settings-and-filters-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Two-Sided Date Settings & Filters — Design Spec (2026-06-03)",
+  "summary": "Technical spec for two-sided date targeting, searcher feed filters, host customization canvas, and API-first backend contracts for After5 dating marketplace.",
+  "scope": [
+    "date_instances",
+    "feed_filters",
+    "browse_feed_for_viewer",
+    "post_night",
+    "update_itinerary_stops",
+    "reach_preview",
+    "PostNightForm",
+    "ItineraryEditor",
+    "EditableStopCard",
+    "CreateFlow",
+    "generate-plan edge function",
+    "RLS",
+    "indexes",
+    "cursor pagination",
+    "soft-boost",
+    "filter sheet",
+    "itinerary canvas"
+  ],
+  "cross_refs": [
+    "CreateFlow.tsx"
+  ],
+  "locked": false,
+  "precedence": 1,
+  "notes": ""
+}

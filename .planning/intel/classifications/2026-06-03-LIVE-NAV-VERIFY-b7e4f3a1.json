@@ -1,0 +1,34 @@
+{
+  "source_path": "/Users/lucas/Projects/After5/docs/superpowers/reports/2026-06-03-LIVE-NAV-VERIFY.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "After5 — Live-Nav Verification of MVP-AUDIT Dead-Ends & Broken Journeys",
+  "summary": "Live Playwright walk confirming MVP-AUDIT Sections C & D findings: 19 CONFIRMED, 2 WORSE, 1 NOT_REPRO, 7 UNREACHED, 6 new issues surfaced.",
+  "scope": [
+    "navigation",
+    "Playwright",
+    "dead-end routes",
+    "broken user journeys",
+    "marketplace RPCs",
+    "create_blank_itinerary",
+    "reject_candidate",
+    "update_night",
+    "cancel_night",
+    "inbox",
+    "messages",
+    "matches",
+    "offers",
+    "my-nights",
+    "account",
+    "feed",
+    "chat",
+    "local Supabase stack"
+  ],
+  "cross_refs": [
+    "docs/superpowers/reports/2026-06-03-MVP-AUDIT.md"
+  ],
+  "locked": false,
+  "precedence": 0,
+  "notes": ""
+}
