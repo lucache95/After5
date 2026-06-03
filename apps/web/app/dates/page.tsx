@@ -63,35 +63,35 @@ export default async function DatesIndexPage() {
   const items = ((data ?? []) as unknown) as DateRow[];
 
   return (
-    <main className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-[2px]">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-5 md:px-10">
+    <main className="min-h-screen bg-shell-base">
+      <header className="sticky top-0 z-50 border-b border-shell-ink/10 bg-shell-base/85 backdrop-blur-md">
+        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-text"
+            className="font-heading text-xl lowercase tracking-tight text-shell-accent"
           >
-            After5
+            after5
           </Link>
           <Link
             href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-primary px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+            className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-5 py-2.5 font-body text-sm lowercase text-white transition-transform hover:-translate-y-0.5 md:px-6"
           >
-            Plan my date — free
+            plan your own — free
             <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
           </Link>
         </nav>
       </header>
 
       <section className="mx-auto max-w-content px-6 pb-10 pt-16 md:px-10 md:pb-14 md:pt-24">
-        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-          The catalog · Kelowna · BC
+        <p className="mb-3 font-body text-xs lowercase tracking-[0.14em] text-shell-ink/55">
+          the catalog
         </p>
-        <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl">
-          Every Kelowna date plan we&apos;ve built.
+        <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink md:text-6xl">
+          every date plan we&apos;ve built
         </h1>
-        <p className="mt-6 max-w-prose text-base text-secondary md:text-lg">
-          {items.length} curated itineraries. Real places, real timing, real costs. Pick
-          one outright or use them as inspiration before you plan your own.
+        <p className="mt-6 max-w-prose font-body text-base text-shell-ink/70 md:text-lg">
+          {items.length} plans. real places, real timing, real costs. pick one or
+          steal an idea before you build your own.
         </p>
       </section>
 
@@ -103,27 +103,27 @@ export default async function DatesIndexPage() {
         <div className="mt-16 flex justify-center">
           <Link
             href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-primary px-8 py-4 text-base font-medium text-background transition-opacity hover:opacity-85"
+            className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-8 py-4 font-body text-base lowercase text-white shadow-fun transition-transform hover:-translate-y-0.5"
           >
-            Plan your own — free
+            build your own — free
             <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-border">
+      <footer className="border-t border-shell-ink/10">
         <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
-          <p className="text-xs text-muted">
-            Built in Kelowna. Coming to Kamloops, Vernon, Penticton.
+          <p className="font-body text-xs lowercase text-shell-ink/55">
+            made for people who actually go out.
           </p>
-          <div className="flex items-center gap-6 text-xs text-muted">
-            <Link href="/privacy" className="transition-colors hover:text-text">
-              Privacy
+          <div className="flex items-center gap-6 font-body text-xs lowercase text-shell-ink/55">
+            <Link href="/privacy" className="transition-colors hover:text-shell-accent">
+              privacy
             </Link>
-            <Link href="/terms" className="transition-colors hover:text-text">
-              Terms
+            <Link href="/terms" className="transition-colors hover:text-shell-accent">
+              terms
             </Link>
-            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-text">
+            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-shell-accent">
               hello@tryafter5.app
             </a>
           </div>
