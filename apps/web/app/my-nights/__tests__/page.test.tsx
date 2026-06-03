@@ -13,8 +13,10 @@ const { redirect, mockClient } = vi.hoisted(() => {
 vi.mock('next/navigation', () => ({ redirect: (p: string) => redirect(p) }));
 vi.mock('@/components/BottomTabShell', () => ({ BottomTabShell: () => <nav data-testid="bottom-nav" /> }));
 vi.mock('@/components/NotificationBell', () => ({ NotificationBell: () => <button data-testid="notif-bell" /> }));
-vi.mock('@/components/Polaroid', () => ({
-  Polaroid: ({ alt }: { alt: string }) => <div data-testid="polaroid" aria-label={alt} />,
+vi.mock('next/image', () => ({
+  // next/image needs a plain <img>-shaped stub in jsdom; alt is empty by design
+  // (decorative banner), so expose the src for assertions.
+  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} data-testid="cover" />,
 }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => mockClient.current }));
 
@@ -22,24 +24,36 @@ import Page from '../page';
 
 const eqSpy = vi.fn();
 
+interface NightFixture {
+  id: string;
+  starts_at: string;
+  status: string;
+  itinerary: { title: string | null; cover_image_url: string | null; inputs?: { vibe?: string[] } | null } | null;
+}
+
 function buildClient(opts: {
   userId: string | null;
-  nights?: Array<{ id: string; starts_at: string; status: string; itinerary: { title: string | null; cover_image_url: string | null } | null }>;
+  nights?: NightFixture[];
+  /** queue_entries rows the creator can read; tallied per date_instance_id. */
+  queue?: Array<{ date_instance_id: string }>;
 }) {
   const nights = opts.nights ?? [];
+  const queue = opts.queue ?? [];
 
   return {
     auth: {
       getUser: async () => ({ data: { user: opts.userId ? { id: opts.userId } : null } }),
     },
-    from: (_table: string) => ({
+    from: (table: string) => ({
       select: () => ({
+        // queue_entries query ends at .eq() and is awaited directly; make the
+        // returned object both thenable (for queue) and chainable (for nights).
         eq: (col: string, val: unknown) => {
           eqSpy(col, val);
+          const data = table === 'queue_entries' ? queue : nights;
           return {
-            order: () => ({
-              limit: async () => ({ data: nights }),
-            }),
+            order: () => ({ limit: async () => ({ data: nights }) }),
+            then: (resolve: (v: { data: unknown }) => unknown) => resolve({ data }),
           };
         },
       }),
@@ -69,8 +83,8 @@ describe('MyNightsPage', () => {
     mockClient.current = buildClient({ userId: 'host-1', nights: [] }) as Record<string, unknown>;
     const ui = await Page();
     render(ui);
-    expect(screen.getByText('no nights yet')).toBeInTheDocument();
-    const cta = screen.getByRole('link', { name: /post a night/i });
+    expect(screen.getByText('nothing posted yet')).toBeInTheDocument();
+    const cta = screen.getByRole('link', { name: /post your first night/i });
     expect(cta).toHaveAttribute('href', '/nights/new');
   });
 
@@ -95,7 +109,7 @@ describe('MyNightsPage', () => {
     expect(interestedLinks[1]).toHaveAttribute('href', '/dates/inst-2/interested');
   });
 
-  it('shows open status pill for seeking nights', async () => {
+  it('renders a cover banner image for each night', async () => {
     mockClient.current = buildClient({
       userId: 'host-1',
       nights: [
@@ -104,10 +118,58 @@ describe('MyNightsPage', () => {
     }) as Record<string, unknown>;
     const ui = await Page();
     render(ui);
-    expect(screen.getByText('open')).toBeInTheDocument();
+    const cover = screen.getByTestId('cover');
+    // place-image resolver never returns '' — a real local asset path is present.
+    expect(cover.getAttribute('src')).toMatch(/^\//);
   });
 
-  it('shows matched status pill for matched nights', async () => {
+  it('shows the interested count on the card and in the chip', async () => {
+    mockClient.current = buildClient({
+      userId: 'host-1',
+      nights: [
+        { id: 'inst-1', starts_at: '2026-06-10T19:00:00Z', status: 'seeking', itinerary: { title: 'a plan', cover_image_url: null } },
+      ],
+      queue: [
+        { date_instance_id: 'inst-1' },
+        { date_instance_id: 'inst-1' },
+        { date_instance_id: 'inst-1' },
+      ],
+    }) as Record<string, unknown>;
+    const ui = await Page();
+    render(ui);
+    // "3 interested" shows in both the meta row and the seeking chip.
+    expect(screen.getAllByText('3 interested').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('singularizes a count of one interested person', async () => {
+    mockClient.current = buildClient({
+      userId: 'host-1',
+      nights: [
+        { id: 'inst-1', starts_at: '2026-06-10T19:00:00Z', status: 'seeking', itinerary: { title: 'a plan', cover_image_url: null } },
+      ],
+      queue: [{ date_instance_id: 'inst-1' }],
+    }) as Record<string, unknown>;
+    const ui = await Page();
+    render(ui);
+    // appears in both meta row and chip when seeking with one person.
+    expect(screen.getAllByText('1 interested').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows open chip for a seeking night with no interest yet', async () => {
+    mockClient.current = buildClient({
+      userId: 'host-1',
+      nights: [
+        { id: 'inst-1', starts_at: '2026-06-10T19:00:00Z', status: 'seeking', itinerary: { title: 'a plan', cover_image_url: null } },
+      ],
+      queue: [],
+    }) as Record<string, unknown>;
+    const ui = await Page();
+    render(ui);
+    expect(screen.getByText('open')).toBeInTheDocument();
+    expect(screen.getByText('0 interested')).toBeInTheDocument();
+  });
+
+  it('shows matched chip for matched nights', async () => {
     mockClient.current = buildClient({
       userId: 'host-1',
       nights: [
