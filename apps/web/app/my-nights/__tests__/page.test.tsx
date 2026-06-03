@@ -20,6 +20,8 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: async () => mockClient.c
 
 import Page from '../page';
 
+const eqSpy = vi.fn();
+
 function buildClient(opts: {
   userId: string | null;
   nights?: Array<{ id: string; starts_at: string; status: string; itinerary: { title: string | null; cover_image_url: string | null } | null }>;
@@ -32,20 +34,35 @@ function buildClient(opts: {
     },
     from: (_table: string) => ({
       select: () => ({
-        order: () => ({
-          limit: async () => ({ data: nights }),
-        }),
+        eq: (col: string, val: unknown) => {
+          eqSpy(col, val);
+          return {
+            order: () => ({
+              limit: async () => ({ data: nights }),
+            }),
+          };
+        },
       }),
     }),
   };
 }
 
-beforeEach(() => { redirect.mockClear(); });
+beforeEach(() => { redirect.mockClear(); eqSpy.mockClear(); });
 
 describe('MyNightsPage', () => {
   it('redirects to login when signed out', async () => {
     mockClient.current = buildClient({ userId: null }) as Record<string, unknown>;
     await expect(Page()).rejects.toThrow(/REDIRECT:\/login\?next=\/my-nights/);
+  });
+
+  it('scopes the query to the viewer\'s own posted nights (bug #79)', async () => {
+    // Regression: date_instances ORs a creator policy with an offer-recipient
+    // SELECT policy, so without an explicit creator_id filter the list leaks
+    // nights the viewer only received an offer for — and tapping those hits the
+    // interested-list guard's "not your date" rejection.
+    mockClient.current = buildClient({ userId: 'host-1', nights: [] }) as Record<string, unknown>;
+    await Page();
+    expect(eqSpy).toHaveBeenCalledWith('creator_id', 'host-1');
   });
 
   it('renders empty state with CTA when no nights posted', async () => {

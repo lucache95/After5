@@ -88,11 +88,17 @@ export default async function MyNightsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/my-nights');
 
-  // RLS policy "date_instances_creator_all" scopes this to creator_id = auth.uid().
+  // Scope to the viewer's own posted nights. RLS on date_instances now ORs
+  // three permissive SELECT policies (creator_all, owner_select,
+  // select_offer_recipient added in migration 127500), so trusting RLS alone
+  // leaks nights the viewer only RECEIVED an offer for — tapping those routes
+  // to an interested list the guard correctly rejects ("not your date"). The
+  // explicit creator_id filter keeps this list to nights the viewer posted.
   // Join itinerary for title + cover. Columns confirmed from migration 120300.
   const { data: rows } = await supabase
     .from('date_instances')
     .select('id, starts_at, status, itinerary:itineraries(title, cover_image_url, inputs)')
+    .eq('creator_id', user.id)
     .order('starts_at', { ascending: false })
     .limit(50);
 
