@@ -1,6 +1,6 @@
 # Two-Sided Date Settings & Filters — Design Spec (2026-06-03)
 
-**Goal:** Let a host set the parameters of each individual date (who it's for, who pays, price, reach, time), and let searchers filter the feed for the kind of date they want — in a way that feels curated and alive, not like a database query, and that runs fast on web today and a native app later.
+**Goal:** Let a host reshape the AI-generated night into exactly what they want (a mobile-native customization canvas — §2A) and set the parameters of each date (who it's for, who pays, price, reach, time), and let searchers filter the feed for the kind of date they want — in a way that feels curated and alive, not like a database query, and that runs fast on web today and a native app later.
 
 **Status:** Design approved in brainstorm (owner, 2026-06-03). Next: implementation plan via writing-plans. NOT yet built.
 
@@ -80,6 +80,27 @@ Add **radius** + **who-pays** to vibe/budget/time/city. Nothing else. (Reconcile
 
 ---
 
+## 2A. Date customization — the canvas (host editing flow)
+
+**Decision (owner, 2026-06-03):** after the AI generates a night, the host customizes it on a **mobile-native "itinerary canvas"** — the chosen paradigm (option A) over swipe-stack (B) / studio-rail (C). Picked for most-bang-for-buck (M3's `ItineraryEditor`/`EditableStopCard` already implement most of it — this is a mobile-native reorg, not a rebuild), best legibility (whole night at a glance), and clean future expansion.
+
+**The canvas is a superset of today's M3 editor — all existing edits are RETAINED:**
+- **Cover image** — pick/change (from stop photos today).
+- **Swap a place/activity** — today: remove + add a real venue via Google Places search; **upgraded to one-tap "swap / ↻ regenerate this stop"** (the new magic).
+- **Add / remove stops** — "＋" between cards.
+- **Reorder** — drag grip to resequence.
+- **Per-stop details** — name, time, duration, cost-per-person, "what to do" note.
+- **Title** + **"the why"** (new setter, via `update_itinerary_stops`).
+- **Ambient soundtrack** pick (existing post-step control).
+
+**The only NEW build: per-stop regenerate/swap.** One tap → AI proposes a different venue for that single slot, everything else unchanged. Requires a small additive `generate-plan` capability to rebuild ONE slot (vs. the whole night). *Gated edge change.*
+
+**Entry point — the "+" (TikTok analogy):** MVP wires a bottom-nav **"+"** that opens the existing generate flow (vibe/budget/when/where) → generate → land on the **canvas** → post. Plants the "this is where you create" mental model now; familiar when the native app arrives.
+
+**Expands without changing the flow** — the canvas is just `[stop-cards] + post bar`, so future richness is additive: tap-a-card → swipe-focus drilldown (paradigm B) later; a studio quick-action rail (paradigm C) later; the §2 targeting/who-pays settings ride as a "who's this for" card at the top of the same canvas. None of these rearrange the shipped flow.
+
+---
+
 ## 3. Searcher UX
 
 - **Filter sheet** on the feed (`vaul` bottom-sheet, Barbiecore): 3 quick chips (budget · distance · who pays) + a "more" drawer (host gender/age, vibe, time buckets). Persists to `feed_filters`.
@@ -118,8 +139,11 @@ The eventual native app must reuse the same backend with no rework:
 ## 7. Phasing (each its own spec→plan→build) + fleet overlap
 1. **DB foundation** — columns, `feed_filters`, `post_night`/`update_itinerary_stops`/`browse_feed_for_viewer` signature changes, `reach_preview`, indexes, RLS, backfill. *(Gated prod migration; security advisor after DDL.)*
 2. **Host settings UI** — `/create` (+radius/who-pays) and the in-app full set + reach preview + "post again". **⚠ Overlaps the open-city scaffold the fleet is currently building into `CreateFlow.tsx`** — reconcile AFTER the fleet lands; do not double-edit concurrently.
-3. **Searcher filter sheet + feed query** — hybrid hard/soft, soft-boost, empty state, time buckets, cursor pagination.
-4. **Card labels + interested-list curation** — surface targeting + fit ranking.
+3. **Date-customization canvas (§2A)** — mobile-native reorg of M3's editor into the itinerary canvas + "+" entry point + per-stop **regenerate/swap** (incl. the additive single-slot `generate-plan` capability — *gated edge change*). Retains all M3 edits (cover/swap/add/reorder/details/title/why/soundtrack).
+4. **Searcher filter sheet + feed query** — hybrid hard/soft, soft-boost, empty state, time buckets, cursor pagination.
+5. **Card labels + interested-list curation** — surface targeting + fit ranking.
+
+MVP-first ordering within this arc: the §2A canvas + per-stop regenerate is the highest bang-for-buck (mostly reuse + the one magic add) and a strong standalone MVP; the §2 targeting/§3 filters layer on without reworking it.
 
 ## 8. Testing
 - DB: pgTAP/SQL tests for RLS (self-only `feed_filters`), `post_night`/`browse_feed_for_viewer` contract, soft-sort ordering, reach_preview counts, anon-EXECUTE revoked.
