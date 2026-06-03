@@ -420,7 +420,9 @@ if (!lock || (lock.creator_id !== user.id && lock.matched_user_id !== user.id)) 
 
 **A3 is the one to surface to the founder/planner:** turning dating OFF from the hub is a new capability not present today (the current button is ON-only). Its downstream effects (active offers, visibility in others' feeds) need a one-line product decision before build.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three resolved before planning. Q1 (dating-OFF cascade) → LOCKED in 01-CONTEXT D-09 / planner A3: OFF = `dating_enabled=false` only, no offer/lock cascade (implemented in 01-03). Q2 (self-view photo source) → full gallery via `listMyPhotos` (01-04 interfaces). Q3 (messages back target) → `/inbox` (01-02). Do not re-open during execution.
 
 1. **Does turning `dating_enabled` OFF need side-effect handling (withdraw active offers, hide from feeds)?**
    - What we know: `EnableDatingButton` only flips OFF→ON today; the DB age-gate trigger guards ON. Feed eligibility reads `dating_enabled`.
