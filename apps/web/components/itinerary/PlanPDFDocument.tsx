@@ -1,7 +1,9 @@
-'use client';
-
-// react-pdf document for After5 itineraries. Lazy-loaded by ItineraryActions
-// so the ~600kb library only ships when the user clicks Download PDF.
+// react-pdf document for After5 itineraries. NO 'use client' directive: this
+// module is rendered both client-side (ItineraryActions lazy-imports it for the
+// in-browser Download PDF) AND server-side (/api/email-plan renderToBuffers it
+// for the emailed PDF). A 'use client' component cannot be invoked as a function
+// from a server route in a production RSC build — that was the email-plan 500.
+// The library still only ships to the client via the dynamic import in callers.
 
 import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
 import { imageForStop } from '@/lib/place-image';
@@ -132,9 +134,15 @@ const styles = StyleSheet.create({
 });
 
 function absUrl(path: string): string {
-  if (typeof window === 'undefined') return path;
   if (path.startsWith('http')) return path;
-  return `${window.location.origin}${path}`;
+  // Browser: use the live origin. Server (the emailed-PDF render path): fall back
+  // to the deployed site URL so react-pdf can fetch the cover/stop photos —
+  // relative paths can't be fetched off-document, which would leave the PDF blank.
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tryafter5.app');
+  return `${origin}${path}`;
 }
 
 export function PlanPDFDocument({ itinerary }: { itinerary: Itinerary }) {
