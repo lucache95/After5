@@ -14,6 +14,7 @@ import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { StopCard } from '@/components/itinerary/StopCard';
 import { BlurGateOverlay } from './BlurGateOverlay';
 import { PublishToFeedButton } from './PublishToFeedButton';
+import { PolaroidLoader } from '@/components/create/PolaroidLoader';
 import type { GatedItinerary } from '@/lib/create/blur-gate';
 import type { KnownCity } from '@/lib/create/cities';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -152,6 +153,7 @@ export function CreateFlow({
             citySlug={citySlug}
             setCitySlug={setCitySlug}
             cities={cities}
+            cityName={cities.find((c) => c.slug === citySlug)?.name ?? citySlug}
             fellBack={showFallbackNote}
             canGenerate={canGenerate}
             loading={phase === 'loading'}
@@ -174,13 +176,23 @@ function InputScreen(props: {
   citySlug: string;
   setCitySlug: (s: string) => void;
   cities: KnownCity[];
+  cityName: string;
   fellBack: boolean;
   canGenerate: boolean;
   loading: boolean;
   errorMsg: string;
   onGenerate: () => void;
 }) {
-  const { vibe, toggleVibe, budget, setBudget, timeOfDay, setTimeOfDay, citySlug, setCitySlug, cities, fellBack, canGenerate, loading, errorMsg, onGenerate } = props;
+  const { vibe, toggleVibe, budget, setBudget, timeOfDay, setTimeOfDay, citySlug, setCitySlug, cities, cityName, fellBack, canGenerate, loading, errorMsg, onGenerate } = props;
+
+  // While a night generates, take over the screen with the polaroid loader.
+  if (loading) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <PolaroidLoader city={cityName} />
+      </div>
+    );
+  }
 
   return (
     <div>
