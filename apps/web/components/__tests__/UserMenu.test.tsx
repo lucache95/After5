@@ -50,10 +50,20 @@ describe('UserMenu — signed in (dating IA)', () => {
     await openMenu();
     const dest = (name: string) =>
       screen.getByRole('menuitem', { name }).getAttribute('href');
-    expect(dest('your profile')).toBe('/home');
+    expect(dest('your profile')).toBe('/account');
     expect(dest('your nights')).toBe('/my-nights');
     expect(dest('matches')).toBe('/matches');
     expect(dest('messages')).toBe('/messages');
+  });
+
+  it('repoints "your profile" to the real hub /account, never the teaser /home (D-05)', async () => {
+    await openMenu();
+    const profile = screen.getByRole('menuitem', { name: 'your profile' });
+    expect(profile).toHaveAttribute('href', '/account');
+    const homeLinks = screen
+      .getAllByRole('menuitem')
+      .filter((el) => el.getAttribute('href') === '/home');
+    expect(homeLinks).toHaveLength(0);
   });
 
   it('keeps a discreet planner wedge "plan a date" → /create', async () => {
