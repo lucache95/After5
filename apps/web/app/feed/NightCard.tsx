@@ -1,7 +1,8 @@
 import Image from 'next/image';
-import { MapPin, Clock, Wallet, Sparkles } from 'lucide-react';
+import { MapPin, Clock, Wallet } from 'lucide-react';
 import { vibePalette } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
+import { coverImageForNight } from '@/lib/place-image';
 import type { FeedNight } from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
 
@@ -29,6 +30,12 @@ export function NightCard({ night }: { night: FeedNight }) {
   const pal = vibePalette(night.vibe_tags);
   const distance = km(night.distance_m);
   const tags = (night.vibe_tags ?? []).filter(Boolean).slice(0, 4);
+  // Always resolve to a tasteful, on-theme image — never an empty pink panel.
+  const cover = coverImageForNight({
+    cover_image_url: night.cover_image_url,
+    vibe_tags: night.vibe_tags,
+    seedKey: night.date_instance_id ?? night.title,
+  });
 
   return (
     <article
@@ -42,21 +49,15 @@ export function NightCard({ night }: { night: FeedNight }) {
       }
     >
       <div className="relative h-[54%] w-full shrink-0 overflow-hidden bg-[var(--exp-accent)]/15">
-        {night.cover_image_url ? (
-          <Image
-            src={night.cover_image_url}
-            alt=""
-            fill
-            sizes="420px"
-            className="object-cover"
-            draggable={false}
-            priority
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Sparkles className="h-10 w-10 opacity-30" style={{ color: pal.accent }} aria-hidden />
-          </div>
-        )}
+        <Image
+          src={cover}
+          alt=""
+          fill
+          sizes="420px"
+          className="object-cover"
+          draggable={false}
+          priority
+        />
         {night.is_seed && (
           <span
             className="absolute left-3 top-3 rounded-full px-3 py-1 font-body text-xs font-semibold shadow-md"

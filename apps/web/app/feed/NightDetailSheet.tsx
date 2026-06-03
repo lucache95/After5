@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Drawer } from 'vaul';
-import { MapPin, Clock, Wallet, Sparkles, Heart, X } from 'lucide-react';
+import { MapPin, Clock, Wallet, Heart, X } from 'lucide-react';
 import { vibePalette } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
+import { coverImageForNight, imageForStop } from '@/lib/place-image';
 import {
   browserAfter5Client, getNightDetail,
   type FeedNight, type NightDetailNight, type NightDetailStop,
@@ -71,6 +72,15 @@ export function NightDetailSheet({
   const pal = vibePalette(night.vibe_tags);
   const distance = km(night.distance_m);
   const tags = (night.vibe_tags ?? []).filter(Boolean);
+  // Always resolve to a tasteful, on-theme hero. Once the detail RPC lands we
+  // can upgrade to a real stop photo; until then the vibe/lifestyle fallback
+  // keeps the hero from showing an empty pink panel.
+  const cover = coverImageForNight({
+    cover_image_url: night.cover_image_url,
+    vibe_tags: night.vibe_tags,
+    stops: detail?.stops.map((s) => ({ photo_url: s.photo_url, place_type: s.type })) ?? null,
+    seedKey: night.date_instance_id ?? night.title,
+  });
 
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
@@ -98,20 +108,14 @@ export function NightDetailSheet({
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--exp-accent)]/15">
-              {night.cover_image_url ? (
-                <Image
-                  src={night.cover_image_url}
-                  alt=""
-                  fill
-                  sizes="420px"
-                  className="object-cover"
-                  draggable={false}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Sparkles className="h-10 w-10 opacity-30" style={{ color: pal.accent }} aria-hidden />
-                </div>
-              )}
+              <Image
+                src={cover}
+                alt=""
+                fill
+                sizes="420px"
+                className="object-cover"
+                draggable={false}
+              />
               {night.is_seed && (
                 <span
                   className="absolute left-3 top-3 rounded-full px-3 py-1 font-body text-xs font-semibold shadow-md"
@@ -224,7 +228,14 @@ export function NightDetailSheet({
                       </p>
                       <ol className="flex flex-col gap-3">
                         {detail.stops.map((s, idx) => (
-                          <StopRow key={`${s.name}-${idx}`} stop={s} index={idx} accent={pal.accent} bg={pal.bg} />
+                          <StopRow
+                            key={`${s.name}-${idx}`}
+                            stop={s}
+                            index={idx}
+                            accent={pal.accent}
+                            bg={pal.bg}
+                            vibeTags={night.vibe_tags}
+                          />
                         ))}
                       </ol>
                     </div>
@@ -288,17 +299,38 @@ export function NightDetailSheet({
 // name-query "map" link (same pattern the public StopCard uses). NO slug link,
 // NO reservation_url — the RPC already scrubbed identity vectors.
 function StopRow({
-  stop, index, accent, bg,
-}: { stop: NightDetailStop; index: number; accent: string; bg: string }) {
+  stop, index, accent, bg, vibeTags,
+}: {
+  stop: NightDetailStop; index: number; accent: string; bg: string;
+  vibeTags: string[] | null;
+}) {
   const directions = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.name)}`;
+  // Per-stop thumbnail — real photo when present, else a type/vibe mood shot.
+  // Never an empty src; imageForStop always returns a shipped local asset.
+  const thumb = imageForStop({
+    photo_url: stop.photo_url,
+    place_type: stop.type,
+    vibe_tags: vibeTags,
+    seedKey: stop.name,
+  });
   return (
-    <li className="flex gap-3 rounded-2xl bg-current/5 p-3">
+    <li className="relative flex gap-3 rounded-2xl bg-current/5 p-3">
       <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-heading text-sm"
+        className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full font-heading text-xs shadow-md"
         style={{ background: accent, color: bg }}
       >
         {index + 1}
       </span>
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-current/10">
+        <Image
+          src={thumb}
+          alt=""
+          fill
+          sizes="64px"
+          className="object-cover"
+          draggable={false}
+        />
+      </div>
       <div className="min-w-0 flex-1">
         <p className="font-heading text-lg lowercase leading-tight">{stop.name.toLowerCase()}</p>
         {(stop.neighborhood || stop.type) && (

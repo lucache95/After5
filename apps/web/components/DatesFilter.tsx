@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { coverImageFor } from '@/lib/place-image';
+import { coverImageForNight } from '@/lib/place-image';
 import { cn } from '@/lib/cn';
 import { relativeTime } from '@/lib/relative-time';
 
@@ -161,7 +161,12 @@ export function DatesFilter({ items }: { items: DateRow[] }) {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
           {filtered.map((it) => {
             const stops = (Array.isArray(it.stops) ? it.stops : []) as Array<{ place_type?: string; photo_url?: string | null }>;
-            const cover = coverImageFor(stops, { itineraryCover: it.cover_image_url });
+            const cover = coverImageForNight({
+              cover_image_url: it.cover_image_url,
+              vibe_tags: it.inputs?.vibe,
+              stops,
+              seedKey: it.id,
+            });
             const totalHr =
               it.total_duration_min !== null
                 ? Math.round((it.total_duration_min / 60) * 10) / 10

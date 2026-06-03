@@ -11,6 +11,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { Polaroid } from '@/components/Polaroid';
 import { CalendarHeart } from 'lucide-react';
 import { LocalTime } from '@/components/LocalTime';
+import { coverImageForNight } from '@/lib/place-image';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ interface NightRow {
   itinerary: {
     title: string | null;
     cover_image_url: string | null;
+    inputs: { vibe?: string[] } | null;
   } | null;
 }
 
@@ -53,7 +55,12 @@ function pillColor(status: string): string {
 
 function NightCard({ night }: { night: NightRow }) {
   const title = night.itinerary?.title ?? 'your night out';
-  const cover = night.itinerary?.cover_image_url ?? '';
+  // Guarantee a tasteful, on-theme thumbnail — never a flat pink placeholder.
+  const cover = coverImageForNight({
+    cover_image_url: night.itinerary?.cover_image_url,
+    vibe_tags: night.itinerary?.inputs?.vibe,
+    seedKey: night.id,
+  });
 
   return (
     <Link
@@ -85,7 +92,7 @@ export default async function MyNightsPage() {
   // Join itinerary for title + cover. Columns confirmed from migration 120300.
   const { data: rows } = await supabase
     .from('date_instances')
-    .select('id, starts_at, status, itinerary:itineraries(title, cover_image_url)')
+    .select('id, starts_at, status, itinerary:itineraries(title, cover_image_url, inputs)')
     .order('starts_at', { ascending: false })
     .limit(50);
 
