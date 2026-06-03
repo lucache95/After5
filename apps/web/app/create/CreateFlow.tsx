@@ -7,6 +7,7 @@
 // BlurGateOverlay and an email-the-full-plan CTA. The blur-gate is enforced
 // server-side, so the locked copy never reaches this component for anon.
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/cn';
@@ -357,6 +358,14 @@ function Results({
               canPublish={canPublish}
               startsAt={defaultStartsAt()}
             />
+            {/* #85 — converge door 1 onto the same §2A canvas door 2 uses, so the host
+                can reshape the generated night before posting. */}
+            <Link
+              href={`/plans/${active.id}/edit`}
+              className="font-body text-sm lowercase text-shell-ink/60 underline decoration-shell-ink/25 underline-offset-4 transition hover:text-shell-ink"
+            >
+              or tweak it on the canvas first
+            </Link>
           </div>
         )}
       </div>

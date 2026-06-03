@@ -2,9 +2,14 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { initialCityText, type KnownCity } from '@/lib/create/cities';
 import { CreateFlow } from './CreateFlow';
+import { CreateChooser } from './CreateChooser';
 
 export const dynamic = 'force-dynamic';
 
+// #85 — /create is the "+" landing. Authed users get the two-door chooser (build it
+// for me vs. start from scratch). Anon users see door 1 only (the generate funnel) —
+// door 2 needs an owned itinerary + verification to post, so it stays behind sign-in.
+// Marketing links into /create therefore still drop anon straight onto the funnel.
 export default async function CreatePage() {
   const h = await headers();
   const supabase = await createClient();
@@ -12,26 +17,25 @@ export default async function CreatePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Curated cities power the quick-pick chips; the city field itself is free
-  // text now (open-city), so any typed city generates. When signed in we also
-  // load the dating-profile gate for publish-to-feed.
-  const [{ data: cityRows }, { data: profile }] = await Promise.all([
-    supabase.from('cities').select('slug,name').eq('is_active', true).order('name'),
-    user
-      ? supabase.from('profiles').select('dating_enabled, verification').eq('id', user.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  if (user) return <CreateChooser />;
+
+  // Anon: the free-try generate funnel (door 1). Curated cities power the quick-pick
+  // chips; the city field itself is free text (open-city), so any typed city generates.
+  const { data: cityRows } = await supabase
+    .from('cities')
+    .select('slug,name')
+    .eq('is_active', true)
+    .order('name');
 
   const cities: KnownCity[] = (cityRows as KnownCity[] | null) ?? [];
   const initialCity = initialCityText(h.get('x-vercel-ip-city'));
-  const canPublish = !!user && !!profile?.dating_enabled && profile.verification === 'verified';
 
   return (
     <CreateFlow
       initialCity={initialCity}
-      authed={!!user}
+      authed={false}
       cities={cities}
-      canPublish={canPublish}
+      canPublish={false}
     />
   );
 }

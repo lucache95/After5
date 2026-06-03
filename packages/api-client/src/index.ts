@@ -69,6 +69,6 @@ export * from './profile';
 // ─── Phase 5a: feed helpers ────────────────────────────────────────────
 export {
   postNight, browseFeed, recordSwipe, getNightDetail,
-  ambientSoundUrl, listAmbientSounds, updateItineraryStops,
+  ambientSoundUrl, listAmbientSounds, updateItineraryStops, createBlankItinerary,
   type FeedNight, type NightDetailNight, type NightDetailStop, type AmbientSound, type EditableStop,
 } from './feed';
