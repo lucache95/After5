@@ -192,7 +192,7 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
             after5
           </Link>
           <Link
-            href="/plan"
+            href="/create"
             className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-5 py-2.5 font-body text-sm lowercase text-white transition-transform hover:-translate-y-0.5 md:px-6"
           >
             plan your own — free

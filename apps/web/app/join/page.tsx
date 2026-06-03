@@ -1,103 +1,98 @@
-// /join — public application page for the After5 Insiders program.
+// /join — public application page for the after5 insiders program.
 // Server component renders the hero + role cards; JoinForm handles interactivity.
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MapPin, Star, Megaphone, Compass } from 'lucide-react';
+import { UserMenu } from '@/components/UserMenu';
 import { JoinForm } from './JoinForm';
 
 export const metadata: Metadata = {
-  title: 'Become an After5 Insider',
+  title: 'become an after5 insider',
   description:
-    'Help shape the best date experiences in Kelowna. Join the After5 Insiders program as a Scout, Tester, Curator, or Ambassador.',
+    'help shape the best date experiences near you. join the after5 insiders program as a scout, tester, curator, or ambassador.',
 };
 
 const ROLES = [
   {
-    name: 'Scout',
+    name: 'scout',
     icon: Compass,
-    description: 'Discover hidden gems and report back on new spots around Kelowna.',
+    description: 'find hidden gems and report back on new spots near you.',
   },
   {
-    name: 'Tester',
+    name: 'tester',
     icon: Star,
-    description: 'Go on dates from After5 and give honest feedback on the experience.',
+    description: 'go on dates from after5 and give honest feedback on the night.',
   },
   {
-    name: 'Curator',
+    name: 'curator',
     icon: MapPin,
-    description: 'Help write and polish venue descriptions, vibes, and local insights.',
+    description: 'help write venue descriptions, vibes, and local insight.',
   },
   {
-    name: 'Ambassador',
+    name: 'ambassador',
     icon: Megaphone,
-    description: 'Spread the word and represent After5 in your community.',
+    description: 'spread the word and rep after5 in your scene.',
   },
 ] as const;
 
 const PERKS = [
-  'Your name on every date plan you help create',
-  'Exclusive insider events and tastings',
-  'Partner perks from Kelowna venues',
-  'Early access to every new feature',
+  'your name on every date you help build',
+  'insider events and tastings',
+  'partner perks from local venues',
+  'early access to every new feature',
 ];
 
 export default function JoinPage() {
   return (
-    <main className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/90 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-3 md:px-10">
-          <Link
-            href="/"
-            className="font-display text-base font-semibold tracking-tight text-text"
-          >
-            After5
+    <main className="min-h-dvh bg-shell-base">
+      <header className="border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
+        <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-4">
+          <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">
+            after5
           </Link>
-          <Link
-            href="/plan"
-            className="rounded-pill bg-text px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-text/90"
-          >
-            Plan a date
-          </Link>
+          <div className="flex items-center gap-3">
+            <UserMenu variant="on-light" />
+            <Link
+              href="/create"
+              className="rounded-full bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95"
+            >
+              plan a night
+            </Link>
+          </div>
         </nav>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-3xl px-6 pb-12 pt-16 text-center md:px-10 md:pt-24">
-        <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.22em] text-accent">
-          Now accepting applications
+      {/* hero */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10 pt-14 text-center">
+        <p className="mb-3 font-body text-xs font-semibold lowercase tracking-[0.18em] text-shell-accent">
+          now taking applications
         </p>
-        <h1 className="font-display text-4xl font-bold tracking-[-0.02em] text-text md:text-5xl">
-          Become an After5{' '}
-          <em className="font-semibold italic text-accent">Insider</em>
+        <h1 className="font-heading text-4xl lowercase leading-[1.04] text-shell-ink md:text-5xl">
+          become an after5 insider
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-secondary">
-          After5 is built by one person, but the best dates come from a community
-          that knows Kelowna inside out. Join the Insiders and help shape the
-          date plans every couple in town relies on.
+        <p className="mx-auto mt-5 max-w-[420px] font-body text-[15px] leading-relaxed text-shell-ink/70">
+          the best nights come from people who know the area. join the insiders and help build the dates everyone swipes on.
         </p>
       </section>
 
-      {/* Role cards */}
-      <section className="mx-auto max-w-4xl px-6 pb-16 md:px-10">
+      {/* role cards */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10">
         <div className="grid gap-4 sm:grid-cols-2">
           {ROLES.map((role) => {
             const Icon = role.icon;
             return (
               <div
                 key={role.name}
-                className="rounded-card border border-border bg-background p-6 shadow-[0_4px_12px_-6px_rgba(0,0,0,0.08)]"
+                className="rounded-3xl border-2 border-shell-ink/10 bg-white p-6 shadow-fun"
               >
                 <div className="mb-3 flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-shell-pink text-shell-accent">
                     <Icon className="h-4 w-4" strokeWidth={2.5} />
                   </span>
-                  <h3 className="font-display text-lg font-semibold text-text">
-                    {role.name}
-                  </h3>
+                  <h3 className="font-heading text-lg lowercase text-shell-ink">{role.name}</h3>
                 </div>
-                <p className="text-sm leading-relaxed text-secondary">
+                <p className="font-body text-sm leading-relaxed text-shell-ink/65">
                   {role.description}
                 </p>
               </div>
@@ -106,19 +101,17 @@ export default function JoinPage() {
         </div>
       </section>
 
-      {/* What you get */}
-      <section className="border-t border-border bg-surface">
-        <div className="mx-auto max-w-3xl px-6 py-14 md:px-10">
-          <h2 className="mb-6 font-display text-2xl font-bold tracking-[-0.02em] text-text">
-            What you get
-          </h2>
-          <ul className="space-y-3">
+      {/* what you get */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10">
+        <div className="rounded-3xl bg-shell-pink/60 p-6 ring-1 ring-shell-accent/10">
+          <h2 className="font-heading text-2xl lowercase text-shell-ink">what you get</h2>
+          <ul className="mt-5 space-y-3">
             {PERKS.map((perk) => (
               <li
                 key={perk}
-                className="flex items-start gap-3 text-[15px] leading-relaxed text-text"
+                className="flex items-start gap-3 font-body text-[15px] leading-relaxed text-shell-ink/80"
               >
-                <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
+                <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-shell-accent" />
                 {perk}
               </li>
             ))}
@@ -126,27 +119,22 @@ export default function JoinPage() {
         </div>
       </section>
 
-      {/* Application form */}
-      <section className="mx-auto max-w-2xl px-6 py-16 md:px-10">
-        <h2 className="mb-2 font-display text-2xl font-bold tracking-[-0.02em] text-text">
-          Apply to join
-        </h2>
-        <p className="mb-8 text-sm text-secondary">
-          Takes about 2 minutes. We review every application by hand.
+      {/* application form */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-16">
+        <h2 className="font-heading text-2xl lowercase text-shell-ink">apply to join</h2>
+        <p className="mb-7 mt-1 font-body text-sm text-shell-ink/65">
+          takes about 2 minutes. we read every one by hand.
         </p>
         <JoinForm />
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border px-6 py-8 text-center text-xs text-muted">
-        <Link
-          href="/"
-          className="underline decoration-border hover:text-text hover:decoration-text"
-        >
-          tryafter5.app
-        </Link>
-        {' '}
-        &middot; Curated date plans for Kelowna couples
+      <footer className="mx-auto w-full max-w-[480px] px-6 pb-16 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-body text-xs lowercase text-shell-ink/45">
+          <Link href="/about" className="hover:text-shell-ink">about</Link>
+          <Link href="/privacy" className="hover:text-shell-ink">privacy</Link>
+          <Link href="/terms" className="hover:text-shell-ink">terms</Link>
+          <a href="mailto:hello@tryafter5.app" className="hover:text-shell-ink">hello@tryafter5.app</a>
+        </div>
       </footer>
     </main>
   );

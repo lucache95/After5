@@ -153,7 +153,7 @@ export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-l
           ))}
           {/* discreet planner wedge — not part of the main dating IA */}
           <Link
-            href="/plan"
+            href="/create"
             onClick={() => setOpen(false)}
             className="block border-t border-shell-ink/10 px-4 py-2.5 font-body text-xs lowercase text-shell-ink/55 transition-colors hover:bg-shell-pink/60 hover:text-shell-ink/80"
             role="menuitem"

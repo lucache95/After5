@@ -73,7 +73,7 @@ export default async function DatesIndexPage() {
             after5
           </Link>
           <Link
-            href="/plan"
+            href="/create"
             className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-5 py-2.5 font-body text-sm lowercase text-white transition-transform hover:-translate-y-0.5 md:px-6"
           >
             plan your own — free
@@ -102,7 +102,7 @@ export default async function DatesIndexPage() {
 
         <div className="mt-16 flex justify-center">
           <Link
-            href="/plan"
+            href="/create"
             className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-8 py-4 font-body text-base lowercase text-white shadow-fun transition-transform hover:-translate-y-0.5"
           >
             build your own — free

@@ -199,7 +199,7 @@ export function PostNightForm({
             go cook one first, then post it.
           </p>
           <Link
-            href="/plan"
+            href="/create"
             className="mt-6 inline-flex items-center justify-center rounded-full bg-shell-accent px-7 py-3 font-body text-[15px] font-semibold text-white shadow-fun transition hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none"
           >
             build a plan

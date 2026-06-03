@@ -38,7 +38,7 @@ export function LandingHero() {
         <Link href="/onboarding" className="rounded-full bg-shell-accent px-8 py-3.5 font-body text-[15px] font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none motion-reduce:hover:scale-100">
           let&apos;s go
         </Link>
-        <Link href="/plan" className="font-body text-sm lowercase text-shell-ink/55 underline decoration-shell-ink/25 underline-offset-4 transition hover:text-shell-ink">
+        <Link href="/create" className="font-body text-sm lowercase text-shell-ink/55 underline decoration-shell-ink/25 underline-offset-4 transition hover:text-shell-ink">
           or just plan a night
         </Link>
       </div>

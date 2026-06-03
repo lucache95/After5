@@ -139,7 +139,7 @@ export default async function AccountPage() {
                 build a plan, hit the heart, and it lands here.
               </p>
               <Link
-                href="/plan"
+                href="/create"
                 className="mt-4 inline-block rounded-full border-2 border-shell-ink/15 px-5 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-accent/50 hover:text-shell-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
               >
                 plan a date

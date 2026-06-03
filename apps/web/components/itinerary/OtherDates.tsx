@@ -53,7 +53,7 @@ export async function OtherDates({ excludeId }: { excludeId: string }) {
             </h2>
           </div>
           <Link
-            href="/plan"
+            href="/create"
             className="hidden text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text md:inline"
           >
             Plan your own
@@ -105,7 +105,7 @@ export async function OtherDates({ excludeId }: { excludeId: string }) {
 
         <div className="mt-12 flex items-center justify-center md:mt-14">
           <Link
-            href="/plan"
+            href="/create"
             className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85"
           >
             Plan your own — free

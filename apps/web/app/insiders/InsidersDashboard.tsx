@@ -29,11 +29,11 @@ const TASK_ICONS: Record<string, typeof MapPin> = {
 };
 
 const TASK_LABELS: Record<string, string> = {
-  visit_venue: 'Visit venue',
-  rate_date: 'Rate date',
-  take_photo: 'Take photo',
-  improve_copy: 'Improve copy',
-  business_outreach: 'Business outreach',
+  visit_venue: 'visit venue',
+  rate_date: 'rate date',
+  take_photo: 'take photo',
+  improve_copy: 'improve copy',
+  business_outreach: 'business outreach',
 };
 
 function roleBadge(role: string | null) {
@@ -43,10 +43,10 @@ function roleBadge(role: string | null) {
     curator: 'bg-emerald-100 text-emerald-900 ring-emerald-200',
     ambassador: 'bg-violet-100 text-violet-900 ring-violet-200',
   };
-  const tone = colors[role ?? ''] ?? 'bg-gray-100 text-gray-900 ring-gray-200';
+  const tone = colors[role ?? ''] ?? 'bg-shell-pink text-shell-ink ring-shell-accent/20';
   return (
     <span
-      className={`inline-flex items-center rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ring-1 ${tone}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 font-body text-[11px] font-semibold lowercase tracking-[0.12em] ring-1 ${tone}`}
     >
       {role ?? 'insider'}
     </span>
@@ -59,11 +59,11 @@ function statusBadge(status: string) {
     submitted: 'bg-amber-50 text-amber-800',
     approved: 'bg-emerald-50 text-emerald-800',
     rejected: 'bg-rose-50 text-rose-800',
-    open: 'bg-gray-50 text-gray-800',
+    open: 'bg-shell-pink/60 text-shell-ink',
   };
   return (
     <span
-      className={`rounded-pill px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+      className={`rounded-full px-2 py-0.5 font-body text-[10px] font-semibold lowercase tracking-[0.12em] ${
         colors[status] ?? colors.open
       }`}
     >
@@ -94,54 +94,51 @@ export function InsidersDashboard({ profile, tasks, leaderboard }: Props) {
   );
 
   return (
-    <main className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/90 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-3 md:px-10">
-          <Link
-            href="/"
-            className="font-display text-base font-semibold tracking-tight text-text"
-          >
-            After5
+    <main className="min-h-dvh bg-shell-base">
+      {/* header */}
+      <header className="border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
+        <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-4">
+          <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">
+            after5
           </Link>
           <Link
-            href="/account"
-            className="rounded-pill border border-border px-3 py-1.5 text-sm font-medium text-secondary transition-colors hover:bg-surface hover:text-text"
+            href="/home"
+            className="rounded-full border-2 border-shell-ink/15 px-4 py-1.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95"
           >
-            Dashboard
+            your profile
           </Link>
         </nav>
       </header>
 
-      <div className="mx-auto max-w-4xl px-6 py-12 md:px-10 md:py-16">
-        {/* Greeting */}
-        <div className="mb-10 flex flex-wrap items-center gap-4">
+      <div className="mx-auto w-full max-w-[480px] px-6 py-10">
+        {/* greeting */}
+        <div className="mb-9 flex flex-wrap items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold tracking-[-0.02em] text-text md:text-4xl">
-              Hey{profile.firstName ? ` ${profile.firstName}` : ''}
+            <h1 className="font-heading text-3xl lowercase text-shell-ink">
+              hey{profile.firstName ? ` ${profile.firstName.toLowerCase()}` : ''}
             </h1>
-            <p className="mt-1 text-sm text-secondary">
-              Your Insider dashboard
+            <p className="mt-1 font-body text-sm text-shell-ink/65">
+              your insider dashboard
             </p>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {roleBadge(profile.role)}
-            <span className="inline-flex items-center gap-1 rounded-pill bg-surface px-3 py-1.5 text-sm font-semibold text-text ring-1 ring-border">
-              <Trophy className="h-3.5 w-3.5 text-accent" />
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 font-body text-sm font-semibold text-shell-ink ring-1 ring-shell-ink/10">
+              <Trophy className="h-3.5 w-3.5 text-shell-accent" />
               {profile.points} pts
             </span>
           </div>
         </div>
 
-        {/* Your Tasks */}
-        <section className="mb-12">
-          <h2 className="mb-5 font-display text-xl font-bold tracking-[-0.02em] text-text">
-            Your tasks
+        {/* your tasks */}
+        <section className="mb-11">
+          <h2 className="mb-5 font-heading text-xl lowercase text-shell-ink">
+            your tasks
           </h2>
 
           {activeTasks.length === 0 && submittedTasks.length === 0 && (
-            <div className="rounded-card border border-border bg-surface p-8 text-center text-sm text-secondary">
-              No tasks assigned yet. Check back soon -- we add new tasks regularly.
+            <div className="rounded-3xl border-2 border-shell-ink/10 bg-white p-8 text-center font-body text-sm text-shell-ink/65">
+              nothing assigned yet. check back soon — we drop new tasks often.
             </div>
           )}
 
@@ -152,41 +149,41 @@ export function InsidersDashboard({ profile, tasks, leaderboard }: Props) {
           </div>
         </section>
 
-        {/* Leaderboard */}
-        <section className="mb-12">
-          <h2 className="mb-5 font-display text-xl font-bold tracking-[-0.02em] text-text">
-            Leaderboard
+        {/* leaderboard */}
+        <section className="mb-11">
+          <h2 className="mb-5 font-heading text-xl lowercase text-shell-ink">
+            leaderboard
           </h2>
           {leaderboard.length === 0 ? (
-            <div className="rounded-card border border-border bg-surface p-8 text-center text-sm text-secondary">
-              Be the first to earn points!
+            <div className="rounded-3xl border-2 border-shell-ink/10 bg-white p-8 text-center font-body text-sm text-shell-ink/65">
+              be the first to rack up points.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-card border border-border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-3xl border-2 border-shell-ink/10">
+              <table className="w-full font-body text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-surface text-left text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+                  <tr className="border-b border-shell-ink/10 bg-shell-pink/40 text-left font-body text-[11px] font-semibold lowercase tracking-[0.12em] text-shell-ink/60">
                     <th className="px-4 py-3">#</th>
-                    <th className="px-4 py-3">Insider</th>
-                    <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3 text-right">Tasks</th>
-                    <th className="px-4 py-3 text-right">Points</th>
+                    <th className="px-4 py-3">insider</th>
+                    <th className="px-4 py-3">role</th>
+                    <th className="px-4 py-3 text-right">tasks</th>
+                    <th className="px-4 py-3 text-right">points</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-shell-ink/10">
                   {leaderboard.map((entry, i) => (
-                    <tr key={entry.id} className="bg-background">
-                      <td className="px-4 py-3 text-muted [font-variant-numeric:tabular-nums]">
+                    <tr key={entry.id} className="bg-white">
+                      <td className="px-4 py-3 text-shell-ink/50 [font-variant-numeric:tabular-nums]">
                         {i + 1}
                       </td>
-                      <td className="px-4 py-3 font-medium text-text">
-                        {entry.first_name ?? 'Anonymous'}
+                      <td className="px-4 py-3 font-medium lowercase text-shell-ink">
+                        {(entry.first_name ?? 'anonymous').toLowerCase()}
                       </td>
                       <td className="px-4 py-3">{roleBadge(entry.insider_role)}</td>
-                      <td className="px-4 py-3 text-right text-secondary [font-variant-numeric:tabular-nums]">
+                      <td className="px-4 py-3 text-right text-shell-ink/65 [font-variant-numeric:tabular-nums]">
                         {entry.tasks_completed}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-text [font-variant-numeric:tabular-nums]">
+                      <td className="px-4 py-3 text-right font-semibold text-shell-ink [font-variant-numeric:tabular-nums]">
                         {entry.insider_points}
                       </td>
                     </tr>
@@ -197,11 +194,11 @@ export function InsidersDashboard({ profile, tasks, leaderboard }: Props) {
           )}
         </section>
 
-        {/* Completed Contributions */}
+        {/* completed contributions */}
         {completedTasks.length > 0 && (
           <section>
-            <h2 className="mb-5 font-display text-xl font-bold tracking-[-0.02em] text-text">
-              Your contributions
+            <h2 className="mb-5 font-heading text-xl lowercase text-shell-ink">
+              your contributions
             </h2>
             <div className="space-y-2">
               {completedTasks.map((task) => {
@@ -209,19 +206,19 @@ export function InsidersDashboard({ profile, tasks, leaderboard }: Props) {
                 return (
                   <div
                     key={task.id}
-                    className="flex items-center gap-3 rounded-card border border-border bg-surface/50 px-4 py-3"
+                    className="flex items-center gap-3 rounded-2xl border-2 border-shell-ink/10 bg-white/70 px-4 py-3"
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0 text-accent" />
-                    <span className="flex-1 text-sm text-text">{task.title}</span>
+                    <Icon className="h-4 w-4 flex-shrink-0 text-shell-accent" />
+                    <span className="flex-1 font-body text-sm lowercase text-shell-ink">{task.title}</span>
                     {statusBadge(task.status)}
-                    <span className="text-xs text-muted [font-variant-numeric:tabular-nums]">
+                    <span className="font-body text-xs text-shell-ink/50 [font-variant-numeric:tabular-nums]">
                       +{task.points_reward} pts
                     </span>
                     {task.completed_at && (
                       <LocalTime
                         iso={task.completed_at}
                         opts={{ dateStyle: 'medium' }}
-                        className="text-xs text-muted"
+                        className="font-body text-xs text-shell-ink/50"
                       />
                     )}
                   </div>
@@ -232,16 +229,14 @@ export function InsidersDashboard({ profile, tasks, leaderboard }: Props) {
         )}
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border px-6 py-8 text-center text-xs text-muted">
-        <Link
-          href="/"
-          className="underline decoration-border hover:text-text hover:decoration-text"
-        >
-          tryafter5.app
-        </Link>
-        {' '}
-        &middot; Curated date plans for Kelowna couples
+      {/* footer */}
+      <footer className="mx-auto w-full max-w-[480px] px-6 pb-16 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-body text-xs lowercase text-shell-ink/45">
+          <Link href="/about" className="hover:text-shell-ink">about</Link>
+          <Link href="/privacy" className="hover:text-shell-ink">privacy</Link>
+          <Link href="/terms" className="hover:text-shell-ink">terms</Link>
+          <a href="mailto:hello@tryafter5.app" className="hover:text-shell-ink">hello@tryafter5.app</a>
+        </div>
       </footer>
     </main>
   );
@@ -277,31 +272,31 @@ function TaskCard({ task }: { task: InsiderTask }) {
   }
 
   return (
-    <div className="rounded-card border border-border bg-background p-5 shadow-[0_4px_12px_-6px_rgba(0,0,0,0.08)]">
+    <div className="rounded-3xl border-2 border-shell-ink/10 bg-white p-5 shadow-fun">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+        <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-shell-pink text-shell-accent">
           <Icon className="h-4 w-4" strokeWidth={2.5} />
         </span>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <span className="font-body text-[10px] font-semibold lowercase tracking-[0.12em] text-shell-ink/50">
               {label}
             </span>
             {statusBadge(submitted ? 'submitted' : task.status)}
-            <span className="ml-auto text-xs font-semibold text-accent">
+            <span className="ml-auto font-body text-xs font-semibold text-shell-accent">
               +{task.points_reward} pts
             </span>
           </div>
-          <h3 className="mt-1 font-display text-base font-semibold text-text">
+          <h3 className="mt-1 font-heading text-base lowercase text-shell-ink">
             {task.title}
           </h3>
           {task.description && (
-            <p className="mt-1 text-sm leading-relaxed text-secondary">
+            <p className="mt-1 font-body text-sm leading-relaxed text-shell-ink/65">
               {task.description}
             </p>
           )}
           {task.venue_name && (
-            <p className="mt-2 inline-flex items-center gap-1 text-xs text-accent">
+            <p className="mt-2 inline-flex items-center gap-1 font-body text-xs text-shell-accent">
               <MapPin className="h-3 w-3" />
               {task.venue_name}
             </p>
@@ -309,16 +304,16 @@ function TaskCard({ task }: { task: InsiderTask }) {
         </div>
       </div>
 
-      {/* Mark Complete / Submission */}
+      {/* mark complete / submission */}
       {!submitted && task.status === 'assigned' && (
-        <div className="mt-4 border-t border-border pt-3">
+        <div className="mt-4 border-t border-shell-ink/10 pt-3">
           {!expanded ? (
             <button
               onClick={() => setExpanded(true)}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-text"
+              className="inline-flex items-center gap-1.5 font-body text-sm font-medium lowercase text-shell-accent transition-colors hover:text-shell-ink"
             >
               <CheckCircle2 className="h-4 w-4" />
-              Mark complete
+              mark complete
               <ChevronDown className="h-3 w-3" />
             </button>
           ) : (
@@ -327,27 +322,27 @@ function TaskCard({ task }: { task: InsiderTask }) {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                placeholder="Add any notes about what you did..."
-                className="w-full rounded-card border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                placeholder="notes on what you did..."
+                className="w-full rounded-2xl border-2 border-shell-ink/15 bg-white px-3 py-2 font-body text-sm text-shell-ink placeholder:text-shell-ink/40 focus:border-shell-accent focus:outline-none focus:ring-4 focus:ring-shell-accent/20"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 rounded-pill bg-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-shell-accent px-4 py-1.5 font-body text-sm font-semibold lowercase text-white transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
                 >
                   {submitting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <CheckCircle2 className="h-3.5 w-3.5" />
                   )}
-                  Submit
+                  submit
                 </button>
                 <button
                   onClick={() => setExpanded(false)}
-                  className="rounded-pill border border-border px-4 py-1.5 text-sm font-medium text-secondary transition-colors hover:bg-surface hover:text-text"
+                  className="rounded-full border-2 border-shell-ink/15 px-4 py-1.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95"
                 >
-                  Cancel
+                  cancel
                 </button>
               </div>
             </div>
@@ -356,8 +351,8 @@ function TaskCard({ task }: { task: InsiderTask }) {
       )}
 
       {submitted && (
-        <p className="mt-3 text-xs text-emerald-700">
-          Submitted -- pending review
+        <p className="mt-3 font-body text-xs lowercase text-emerald-700">
+          submitted — pending review
         </p>
       )}
     </div>

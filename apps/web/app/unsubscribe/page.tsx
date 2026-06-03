@@ -55,66 +55,60 @@ export default async function UnsubscribePage(props: {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-amber-200/45 via-orange-200/25 to-transparent blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-tl from-rose-200/45 via-amber-100/25 to-transparent blur-3xl" />
-      </div>
-
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-xl items-center px-6 py-16 md:px-10">
+    <main className="min-h-dvh bg-shell-base">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] items-center px-6 py-16">
         <div className="w-full text-center">
-          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-            Unsubscribe
+          <p className="mb-3 font-body text-xs font-semibold lowercase tracking-[0.18em] text-shell-accent">
+            unsubscribe
           </p>
 
           {status === 'ok' && (
             <>
-              <h1 className="font-display text-4xl font-bold leading-tight tracking-[-0.02em] text-text md:text-5xl">
-                You&apos;re <em className="font-display font-semibold not-italic text-accent" style={{ fontStyle: 'italic' }}>off</em> the list.
+              <h1 className="font-heading text-4xl lowercase leading-tight text-shell-ink md:text-5xl">
+                you&apos;re off the list
               </h1>
-              <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-secondary md:text-lg">
-                No more weekly notes. You&apos;ll still get account-related emails (sign-in links, etc.) since those aren&apos;t marketing.
+              <p className="mx-auto mt-5 max-w-[420px] font-body text-[15px] leading-relaxed text-shell-ink/70">
+                no more weekly notes. you&apos;ll still get account emails (sign-in links and the like) since those aren&apos;t marketing.
               </p>
-              <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-                Removed: <span className="text-text">{email}</span>
+              <p className="mx-auto mt-3 max-w-[420px] font-body text-sm text-shell-ink/50">
+                removed: <span className="text-shell-ink">{email}</span>
               </p>
             </>
           )}
 
           {status === 'already_off' && (
             <>
-              <h1 className="font-display text-4xl font-bold leading-tight tracking-[-0.02em] text-text md:text-5xl">
-                Already done.
+              <h1 className="font-heading text-4xl lowercase leading-tight text-shell-ink md:text-5xl">
+                already done
               </h1>
-              <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-secondary md:text-lg">
-                You&apos;re not on the weekly list. If you keep getting emails, hit
+              <p className="mx-auto mt-5 max-w-[420px] font-body text-[15px] leading-relaxed text-shell-ink/70">
+                you&apos;re not on the weekly list. if you keep getting emails, hit
                 {' '}
-                <Link href="/tell-us" className="text-accent underline decoration-accent/40 underline-offset-[4px]">tell-us</Link>
-                {' '}and I&apos;ll dig in.
+                <Link href="/tell-us" className="text-shell-accent underline decoration-shell-accent/40 underline-offset-4">tell-us</Link>
+                {' '}and i&apos;ll dig in.
               </p>
             </>
           )}
 
           {status === 'invalid' && (
             <>
-              <h1 className="font-display text-4xl font-bold leading-tight tracking-[-0.02em] text-text md:text-5xl">
-                Bad link.
+              <h1 className="font-heading text-4xl lowercase leading-tight text-shell-ink md:text-5xl">
+                bad link
               </h1>
-              <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-secondary md:text-lg">
-                That unsubscribe link doesn&apos;t look right — it might be cut off or expired.
-                Email{' '}
-                <a href="mailto:hello@tryafter5.app" className="text-accent underline decoration-accent/40 underline-offset-[4px]">hello@tryafter5.app</a>
-                {' '}and I&apos;ll remove you manually.
+              <p className="mx-auto mt-5 max-w-[420px] font-body text-[15px] leading-relaxed text-shell-ink/70">
+                that unsubscribe link doesn&apos;t look right — it might be cut off or expired. email{' '}
+                <a href="mailto:hello@tryafter5.app" className="text-shell-accent underline decoration-shell-accent/40 underline-offset-4">hello@tryafter5.app</a>
+                {' '}and i&apos;ll remove you by hand.
               </p>
             </>
           )}
 
-          <div className="mt-10 flex justify-center">
+          <div className="mt-9 flex justify-center">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-pill bg-text px-6 py-3 text-sm font-medium text-background transition-transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-6 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95"
             >
-              Back to After5
+              back to after5
               <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
             </Link>
           </div>

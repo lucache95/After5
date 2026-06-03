@@ -472,7 +472,7 @@ function ThankYou({ dateTitle }: { dateTitle: string }) {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              href="/plan"
+              href="/create"
               className="inline-flex items-center gap-2 rounded-pill bg-text px-6 py-2.5 text-sm font-medium text-background transition-transform hover:-translate-y-0.5"
             >
               Plan your next date

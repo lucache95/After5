@@ -165,7 +165,7 @@ export function HonestTestimonials() {
             Want to write a real one? You&apos;d need to actually try a plan first.
           </p>
           <Link
-            href="/plan"
+            href="/create"
             className="inline-flex items-center gap-2 rounded-pill bg-text px-6 py-3 text-sm font-medium text-background transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.4)]"
           >
             Build one tonight →

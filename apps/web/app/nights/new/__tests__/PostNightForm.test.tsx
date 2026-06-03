@@ -65,10 +65,10 @@ beforeEach(() => {
 });
 
 describe('PostNightForm', () => {
-  it('empty-state: shows dry copy and link to /plan when no plans', () => {
+  it('empty-state: shows dry copy and link to /create when no plans', () => {
     render(<PostNightForm plans={[]} />);
     expect(screen.getByText(/no plans yet/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /build a plan/i })).toHaveAttribute('href', '/plan');
+    expect(screen.getByRole('link', { name: /build a plan/i })).toHaveAttribute('href', '/create');
   });
 
   it('submit button is disabled until a plan and future time are chosen', () => {

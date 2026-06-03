@@ -22,32 +22,32 @@ interface KindCard {
 const KINDS: KindCard[] = [
   {
     id: 'bug',
-    label: 'Something broke',
-    hook: 'A photo, a closed restaurant, a button that won\'t — tell me what cracked.',
+    label: 'something broke',
+    hook: 'a photo, a closed spot, a button that won\'t — tell me what cracked.',
     icon: Bug,
     tilt: -3,
     bg: 'bg-rose-50/90',
   },
   {
     id: 'place_suggestion',
-    label: 'A spot we\'re missing',
-    hook: 'A coffee shop, a hike, a cocktail bar — somewhere you\'d send a friend.',
+    label: 'a spot we\'re missing',
+    hook: 'a coffee shop, a hike, a cocktail bar — somewhere you\'d send a friend.',
     icon: Coffee,
     tilt: 2,
     bg: 'bg-amber-50/90',
   },
   {
     id: 'feature',
-    label: 'A wish',
-    hook: 'A feature you want, a date format we don\'t cover, a city to expand to.',
+    label: 'a wish',
+    hook: 'a feature you want, a night format we don\'t cover, a city to add.',
     icon: Lightbulb,
     tilt: -2,
     bg: 'bg-emerald-50/90',
   },
   {
     id: 'other',
-    label: 'Just hi',
-    hook: 'A note, a thought, a hello. The catch-all.',
+    label: 'just hi',
+    hook: 'a note, a thought, a hello. the catch-all.',
     icon: MessageCircle,
     tilt: 3,
     bg: 'bg-violet-50/90',
@@ -95,21 +95,16 @@ export default function TellUsPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-amber-200/45 via-orange-200/25 to-transparent blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-tl from-rose-200/45 via-amber-100/25 to-transparent blur-3xl" />
-      </div>
-
-      <header className="relative z-20 border-b border-border bg-background/85 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
-          <Link href="/" className="font-display text-xl font-semibold tracking-tight text-text">
-            After5
+    <main className="min-h-dvh bg-shell-base">
+      <header className="border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
+        <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-4">
+          <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">
+            after5
           </Link>
         </nav>
       </header>
 
-      <div className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-12 md:px-10 md:pb-32 md:pt-20">
+      <div className="mx-auto w-full max-w-[480px] px-6 pb-24 pt-12">
         {done ? (
           <ThankYou onReset={() => { setDone(false); setKind(null); setBodyText(''); setSubject(''); }} />
         ) : !kind ? (
@@ -138,18 +133,17 @@ export default function TellUsPage() {
 function PickKind({ onPick }: { onPick: (k: Kind) => void }) {
   return (
     <>
-      <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-        Tell us
+      <p className="mb-3 font-body text-xs font-semibold lowercase tracking-[0.18em] text-shell-accent">
+        tell us
       </p>
-      <h1 className="font-display text-[44px] font-bold leading-[1.02] tracking-[-0.03em] text-text md:text-[64px]">
-        What&apos;s on your{' '}
-        <span className="italic font-semibold text-accent">mind</span>?
+      <h1 className="font-heading text-4xl lowercase leading-[1.04] text-shell-ink md:text-5xl">
+        what&apos;s on your mind?
       </h1>
-      <p className="mt-6 max-w-prose text-base leading-relaxed text-secondary md:text-lg">
-        Pick a card. We read every note — same day, by a real person (me).
+      <p className="mt-5 font-body text-[15px] leading-relaxed text-shell-ink/70">
+        pick a card. we read every note — same day, by a real person (me).
       </p>
 
-      <div className="mt-12 grid grid-cols-1 gap-5 md:mt-16 md:grid-cols-2">
+      <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
         {KINDS.map((k) => {
           const Icon = k.icon;
           return (
@@ -157,18 +151,18 @@ function PickKind({ onPick }: { onPick: (k: Kind) => void }) {
               key={k.id}
               type="button"
               onClick={() => onPick(k.id)}
-              className={`group relative rounded-[16px] border border-amber-100/80 ${k.bg} p-7 text-left backdrop-blur-md transition-transform duration-300 hover:-translate-y-1 hover:rotate-0 md:p-8`}
+              className={`group relative rounded-3xl border-2 border-shell-ink/10 ${k.bg} p-7 text-left shadow-fun transition-transform duration-300 hover:-translate-y-1 hover:rotate-0`}
               style={{ transform: `rotate(${k.tilt}deg)` }}
             >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-text ring-1 ring-amber-100">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-shell-accent ring-1 ring-shell-ink/10">
                 <Icon className="h-5 w-5" strokeWidth={2} />
               </span>
-              <h2 className="mt-5 font-display text-2xl font-bold leading-tight tracking-[-0.01em] text-text">
+              <h2 className="mt-5 font-heading text-xl lowercase leading-tight text-shell-ink">
                 {k.label}
               </h2>
-              <p className="mt-3 text-[14px] leading-relaxed text-secondary">{k.hook}</p>
-              <span className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-text">
-                Tell us about it
+              <p className="mt-3 font-body text-sm leading-relaxed text-shell-ink/65">{k.hook}</p>
+              <span className="mt-5 inline-flex items-center gap-1.5 font-body text-xs font-medium lowercase text-shell-ink">
+                tell us about it
                 <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} />
               </span>
             </button>
@@ -176,9 +170,9 @@ function PickKind({ onPick }: { onPick: (k: Kind) => void }) {
         })}
       </div>
 
-      <p className="mt-12 text-center text-xs text-muted">
-        Or just email{' '}
-        <a href="mailto:hello@tryafter5.app" className="text-accent underline decoration-accent/40 underline-offset-[4px] hover:decoration-accent">
+      <p className="mt-12 text-center font-body text-xs lowercase text-shell-ink/45">
+        or just email{' '}
+        <a href="mailto:hello@tryafter5.app" className="text-shell-accent underline decoration-shell-accent/40 underline-offset-4 hover:decoration-shell-accent">
           hello@tryafter5.app
         </a>
       </p>
@@ -215,58 +209,58 @@ function Compose({
 }) {
   const Icon = kindCard.icon;
   const placeholder =
-    kindCard.id === 'bug' ? 'What broke? Where? What were you trying to do?'
-    : kindCard.id === 'place_suggestion' ? 'Name, neighbourhood, why it should be on After5...'
-    : kindCard.id === 'feature' ? 'Describe the wish — bonus points for the use case.'
-    : 'Whatever you want to say.';
+    kindCard.id === 'bug' ? 'what broke? where? what were you trying to do?'
+    : kindCard.id === 'place_suggestion' ? 'name, neighbourhood, why it should be on after5...'
+    : kindCard.id === 'feature' ? 'describe the wish — bonus points for the use case.'
+    : 'whatever you want to say.';
 
   return (
     <>
       <button
         type="button"
         onClick={onBack}
-        className="mb-8 inline-flex items-center gap-1.5 text-sm text-secondary underline decoration-border decoration-1 underline-offset-[6px] transition-colors hover:text-text hover:decoration-text"
+        className="mb-7 inline-flex items-center gap-1.5 font-body text-sm lowercase text-shell-ink/55 underline decoration-shell-ink/25 underline-offset-4 transition hover:text-shell-ink"
       >
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
-        Pick a different card
+        pick a different card
       </button>
 
-      {/* Postcard surface — bone-white card with a "stamp" + handwritten address line */}
+      {/* postcard surface — a white card with a "stamp" */}
       <form
         onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
-        className="relative rounded-[18px] border border-amber-100/80 bg-white/90 p-7 backdrop-blur-md md:p-10"
+        className="relative rounded-3xl border-2 border-shell-ink/10 bg-white p-7 shadow-fun"
       >
-        {/* Stamp */}
+        {/* stamp */}
         <span
           aria-hidden
-          className="absolute right-7 top-7 hidden h-20 w-16 flex-col items-center justify-center gap-1 rounded-[6px] border-2 border-dashed border-amber-300 bg-amber-50 text-[9px] font-bold uppercase tracking-[0.18em] text-amber-900 md:flex"
+          className="absolute right-7 top-7 hidden h-20 w-16 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-shell-accent/40 bg-shell-pink/50 font-body text-[9px] font-bold lowercase tracking-[0.12em] text-shell-accent sm:flex"
           style={{ transform: 'rotate(6deg)' }}
         >
           <Icon className="h-5 w-5" strokeWidth={2} />
-          <span>To: Lucas</span>
+          <span>to: lucas</span>
         </span>
 
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted">
-          Re: {kindCard.label}
+        <p className="font-body text-[11px] font-semibold lowercase tracking-[0.18em] text-shell-accent">
+          re: {kindCard.label}
         </p>
 
         <label className="mt-6 block">
-          <span className="block text-xs font-medium text-secondary">
-            Subject <span className="text-muted">(optional)</span>
+          <span className="block font-body text-xs font-medium lowercase text-shell-ink/65">
+            subject <span className="text-shell-ink/40">(optional)</span>
           </span>
           <input
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="One-line summary"
+            placeholder="one-line summary"
             maxLength={200}
-            className="mt-1.5 w-full border-b border-border bg-transparent pb-2 text-base text-text outline-none transition-colors focus:border-accent"
+            className="mt-1.5 w-full border-b-2 border-shell-ink/15 bg-transparent pb-2 font-body text-base text-shell-ink placeholder:text-shell-ink/40 outline-none transition-colors focus:border-shell-accent"
           />
         </label>
 
         <label className="mt-7 block">
-          <span className="block text-xs font-medium text-secondary">
-            The note
+          <span className="block font-body text-xs font-medium lowercase text-shell-ink/65">
+            the note
           </span>
           <textarea
             value={bodyText}
@@ -275,22 +269,17 @@ function Compose({
             rows={8}
             maxLength={4000}
             required
-            className="mt-1.5 w-full resize-y rounded-card border border-transparent bg-amber-50/40 p-4 font-display text-[17px] leading-relaxed text-text outline-none ring-1 ring-amber-100 transition-colors focus:border-accent focus:ring-accent/40"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(to bottom, transparent, transparent 26px, rgba(180, 130, 70, 0.18) 26px, rgba(180, 130, 70, 0.18) 27px)',
-              lineHeight: '27px',
-            }}
+            className="mt-1.5 w-full resize-y rounded-2xl border-2 border-shell-ink/10 bg-shell-pink/20 p-4 font-body text-[15px] leading-relaxed text-shell-ink placeholder:text-shell-ink/40 outline-none transition-colors focus:border-shell-accent focus:ring-4 focus:ring-shell-accent/20"
             autoFocus
           />
-          <span className="mt-1 block text-[11px] text-muted [font-variant-numeric:tabular-nums]">
+          <span className="mt-1 block font-body text-[11px] text-shell-ink/45 [font-variant-numeric:tabular-nums]">
             {bodyText.length} / 4000
           </span>
         </label>
 
         <label className="mt-6 block">
-          <span className="block text-xs font-medium text-secondary">
-            Your email <span className="text-muted">(optional — only if you want a reply)</span>
+          <span className="block font-body text-xs font-medium lowercase text-shell-ink/65">
+            your email <span className="text-shell-ink/40">(optional — only if you want a reply)</span>
           </span>
           <input
             type="email"
@@ -298,26 +287,26 @@ function Compose({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="mt-1.5 w-full border-b border-border bg-transparent pb-2 text-base text-text outline-none transition-colors focus:border-accent"
+            className="mt-1.5 w-full border-b-2 border-shell-ink/15 bg-transparent pb-2 font-body text-base text-shell-ink placeholder:text-shell-ink/40 outline-none transition-colors focus:border-shell-accent"
           />
         </label>
 
         {error && (
-          <p className="mt-5 rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-            Couldn&apos;t send — {error}. Try again or email hello@tryafter5.app.
+          <p className="mt-5 rounded-2xl border-2 border-shell-accent/30 bg-shell-pink/50 px-4 py-3 font-body text-sm lowercase text-shell-ink">
+            couldn&apos;t send — {error}. try again or email hello@tryafter5.app.
           </p>
         )}
 
         <div className="mt-8 flex items-center justify-between gap-4">
-          <p className="text-xs text-muted">
-            Read same day. No newsletters, ever.
+          <p className="font-body text-xs lowercase text-shell-ink/45">
+            read same day. no newsletters, ever.
           </p>
           <button
             type="submit"
             disabled={!canSubmit}
-            className="inline-flex items-center gap-2 rounded-pill bg-text px-7 py-3 text-sm font-medium text-background transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-7 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? 'Sending…' : 'Drop in the mailbox'}
+            {submitting ? 'sending...' : 'send it'}
             <Send className="h-4 w-4" strokeWidth={2.25} />
           </button>
         </div>
@@ -329,29 +318,28 @@ function Compose({
 function ThankYou({ onReset }: { onReset: () => void }) {
   return (
     <div className="text-center">
-      <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 ring-2 ring-emerald-200">
+      <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-shell-pink text-shell-accent ring-2 ring-shell-accent/20">
         <Send className="h-6 w-6" strokeWidth={2.25} />
       </div>
-      <h1 className="mt-8 font-display text-4xl font-bold leading-tight tracking-[-0.02em] text-text md:text-5xl">
-        On its <em className="font-display font-semibold not-italic text-accent" style={{ fontStyle: 'italic' }}>way</em>.
+      <h1 className="mt-8 font-heading text-4xl lowercase leading-tight text-shell-ink md:text-5xl">
+        on its way
       </h1>
-      <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-secondary md:text-lg">
-        Thanks for the note. I read everything within a day or two — usually the same evening.
-        If you left an email, I&apos;ll reply.
+      <p className="mx-auto mt-5 max-w-[420px] font-body text-[15px] leading-relaxed text-shell-ink/70">
+        thanks for the note. i read everything within a day or two — usually the same evening. if you left an email, i&apos;ll reply.
       </p>
-      <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+      <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <button
           type="button"
           onClick={onReset}
-          className="rounded-pill border border-border bg-background px-6 py-2.5 text-sm font-medium text-text transition-colors hover:bg-surface"
+          className="rounded-full border-2 border-shell-ink/15 px-6 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95"
         >
-          Send another
+          send another
         </button>
         <Link
-          href="/plan"
-          className="inline-flex items-center gap-2 rounded-pill bg-text px-6 py-2.5 text-sm font-medium text-background transition-transform hover:-translate-y-0.5"
+          href="/create"
+          className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-6 py-2.5 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95"
         >
-          Back to planning
+          back to planning
           <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
         </Link>
       </div>

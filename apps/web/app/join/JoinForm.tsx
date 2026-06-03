@@ -19,6 +19,9 @@ const INITIAL: FormState = {
   best_date_spot: '',
 };
 
+const fieldClass =
+  'w-full rounded-2xl border-2 border-shell-ink/15 bg-white px-4 py-2.5 font-body text-sm text-shell-ink placeholder:text-shell-ink/40 focus:border-shell-accent focus:outline-none focus:ring-4 focus:ring-shell-accent/20';
+
 export function JoinForm() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
@@ -45,19 +48,19 @@ export function JoinForm() {
         const data = await res.json().catch(() => ({}));
         const msg =
           data.error === 'duplicate'
-            ? 'Looks like you already applied. We\'ll be in touch!'
+            ? 'looks like you already applied. we\'ll be in touch.'
             : data.error === 'rate_limited'
-              ? 'Too many submissions. Try again tomorrow.'
+              ? 'too many tries. come back tomorrow.'
               : data.issues
                 ? data.issues.map((i: { message: string }) => i.message).join('. ')
-                : 'Something went wrong. Please try again.';
+                : 'something broke. try again.';
         setError(msg);
         return;
       }
 
       setSubmitted(true);
     } catch {
-      setError('Network error. Check your connection and try again.');
+      setError('network error. check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -65,13 +68,13 @@ export function JoinForm() {
 
   if (submitted) {
     return (
-      <div className="rounded-card border border-border bg-surface p-10 text-center">
-        <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-emerald-600" />
-        <h3 className="font-display text-xl font-semibold text-text">
-          Application received!
+      <div className="rounded-3xl bg-shell-pink/60 p-10 text-center ring-1 ring-shell-accent/10">
+        <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-shell-accent" />
+        <h3 className="font-heading text-xl lowercase text-shell-ink">
+          you&apos;re in the pile
         </h3>
-        <p className="mt-2 text-sm text-secondary">
-          We review every application by hand. Expect to hear back within 48 hours.
+        <p className="mt-2 font-body text-sm text-shell-ink/65">
+          we read every one by hand. expect to hear back within 48 hours.
         </p>
       </div>
     );
@@ -79,13 +82,10 @@ export function JoinForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* First name */}
+      {/* first name */}
       <div>
-        <label
-          htmlFor="first_name"
-          className="mb-1.5 block text-sm font-medium text-text"
-        >
-          First name <span className="text-accent">*</span>
+        <label htmlFor="first_name" className="mb-1.5 block font-body text-sm font-medium lowercase text-shell-ink">
+          first name <span className="text-shell-accent">*</span>
         </label>
         <input
           id="first_name"
@@ -93,18 +93,15 @@ export function JoinForm() {
           required
           value={form.first_name}
           onChange={(e) => set('first_name', e.target.value)}
-          className="w-full rounded-card border border-border bg-background px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-          placeholder="Your first name"
+          className={fieldClass}
+          placeholder="your first name"
         />
       </div>
 
-      {/* Email */}
+      {/* email */}
       <div>
-        <label
-          htmlFor="email"
-          className="mb-1.5 block text-sm font-medium text-text"
-        >
-          Email <span className="text-accent">*</span>
+        <label htmlFor="email" className="mb-1.5 block font-body text-sm font-medium lowercase text-shell-ink">
+          email <span className="text-shell-accent">*</span>
         </label>
         <input
           id="email"
@@ -112,37 +109,30 @@ export function JoinForm() {
           required
           value={form.email}
           onChange={(e) => set('email', e.target.value)}
-          className="w-full rounded-card border border-border bg-background px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          className={fieldClass}
           placeholder="you@example.com"
         />
       </div>
 
-      {/* Instagram */}
+      {/* instagram */}
       <div>
-        <label
-          htmlFor="instagram"
-          className="mb-1.5 block text-sm font-medium text-text"
-        >
-          Instagram handle{' '}
-          <span className="font-normal text-muted">(optional)</span>
+        <label htmlFor="instagram" className="mb-1.5 block font-body text-sm font-medium lowercase text-shell-ink">
+          instagram <span className="font-normal text-shell-ink/45">(optional)</span>
         </label>
         <input
           id="instagram"
           type="text"
           value={form.instagram}
           onChange={(e) => set('instagram', e.target.value)}
-          className="w-full rounded-card border border-border bg-background px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          className={fieldClass}
           placeholder="@yourhandle"
         />
       </div>
 
-      {/* Motivation */}
+      {/* motivation */}
       <div>
-        <label
-          htmlFor="motivation"
-          className="mb-1.5 block text-sm font-medium text-text"
-        >
-          Why do you want to help? <span className="text-accent">*</span>
+        <label htmlFor="motivation" className="mb-1.5 block font-body text-sm font-medium lowercase text-shell-ink">
+          why do you want to help? <span className="text-shell-accent">*</span>
         </label>
         <textarea
           id="motivation"
@@ -152,22 +142,19 @@ export function JoinForm() {
           rows={3}
           value={form.motivation}
           onChange={(e) => set('motivation', e.target.value)}
-          className="w-full rounded-card border border-border bg-background px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-          placeholder="Tell us what excites you about helping shape Kelowna's date scene..."
+          className={fieldClass}
+          placeholder="tell us what gets you about building the local date scene..."
         />
-        <p className="mt-1 text-xs text-muted">
-          {form.motivation.length}/500 characters (min 50)
+        <p className="mt-1 font-body text-xs text-shell-ink/45">
+          {form.motivation.length}/500 (min 50)
         </p>
       </div>
 
-      {/* Best date spot */}
+      {/* best date spot */}
       <div>
-        <label
-          htmlFor="best_date_spot"
-          className="mb-1.5 block text-sm font-medium text-text"
-        >
-          What's the best date spot in Kelowna most people don't know about?{' '}
-          <span className="text-accent">*</span>
+        <label htmlFor="best_date_spot" className="mb-1.5 block font-body text-sm font-medium lowercase text-shell-ink">
+          best date spot near you most people don&apos;t know about?{' '}
+          <span className="text-shell-accent">*</span>
         </label>
         <textarea
           id="best_date_spot"
@@ -177,34 +164,34 @@ export function JoinForm() {
           rows={2}
           value={form.best_date_spot}
           onChange={(e) => set('best_date_spot', e.target.value)}
-          className="w-full rounded-card border border-border bg-background px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-          placeholder="Name the spot and tell us why it's special..."
+          className={fieldClass}
+          placeholder="name the spot and why it slaps..."
         />
-        <p className="mt-1 text-xs text-muted">
-          {form.best_date_spot.length}/300 characters (min 20)
+        <p className="mt-1 font-body text-xs text-shell-ink/45">
+          {form.best_date_spot.length}/300 (min 20)
         </p>
       </div>
 
-      {/* Error */}
+      {/* error */}
       {error && (
-        <div className="rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-2xl border-2 border-shell-accent/30 bg-shell-pink/50 px-4 py-3 font-body text-sm lowercase text-shell-ink">
           {error}
         </div>
       )}
 
-      {/* Submit */}
+      {/* submit */}
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex items-center gap-2 rounded-pill bg-text px-8 py-3 font-display text-sm font-semibold tracking-wide text-background transition-colors hover:bg-text/90 disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-8 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {submitting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Submitting...
+            sending...
           </>
         ) : (
-          'Submit application'
+          'send it'
         )}
       </button>
     </form>

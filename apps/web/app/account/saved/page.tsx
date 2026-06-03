@@ -77,7 +77,7 @@ export default async function SavedPlansPage(props: {
             Back to dashboard
           </Link>
           <Link
-            href="/plan"
+            href="/create"
             className="inline-flex items-center gap-2 rounded-pill bg-text px-5 py-2 text-sm font-medium text-background transition-transform hover:-translate-y-0.5"
           >
             Plan a new one
@@ -113,7 +113,7 @@ export default async function SavedPlansPage(props: {
               Tap the heart on any plan to keep it here for later.
             </p>
             <Link
-              href="/plan"
+              href="/create"
               className="mt-6 inline-flex items-center gap-2 rounded-pill bg-text px-6 py-2.5 text-sm font-medium text-background"
             >
               Plan tonight
