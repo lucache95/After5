@@ -142,7 +142,7 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const { slug } = await props.params;
   const p = await loadPlace(slug);
-  if (!p) return { title: 'Place not found · After5' };
+  if (!p) return { title: 'place not found · after5' };
 
   const cover = imageForStop({ photo_url: p.photo_url, generated_photo_url: p.generated_photo_url, place_type: p.type });
   const ogImage = cover.startsWith('http') ? cover : `${SITE}${cover}`;
@@ -154,14 +154,14 @@ export async function generateMetadata(props: {
   ).slice(0, 160);
 
   return {
-    title: `${p.name} — ${TYPE_LABEL[p.type] ?? 'Spot'} in ${p.neighborhood} Kelowna | After5`,
+    title: `${p.name} — ${(TYPE_LABEL[p.type] ?? 'spot').toLowerCase()} in ${p.neighborhood.toLowerCase()} kelowna · after5`,
     description: desc,
     alternates: { canonical: `${SITE}/places/${p.slug}` },
     openGraph: {
       title: p.name,
       description: desc,
       url: `${SITE}/places/${p.slug}`,
-      siteName: 'After5',
+      siteName: 'after5',
       images: [{ url: ogImage, width: 1200, height: 900, alt: p.name }],
       type: 'website',
     },

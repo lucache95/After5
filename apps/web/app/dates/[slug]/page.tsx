@@ -57,20 +57,22 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const { slug } = await props.params;
   const row = await loadBySlug(slug);
-  if (!row) return { title: 'After5' };
+  if (!row) return { title: 'after5' };
 
   const stops = (Array.isArray(row.stops) ? row.stops : []) as Stop[];
   const stopNames = stops.map((s) => s.place_name).filter(Boolean);
+  // Per-date cover when there's a real stop image; otherwise fall through to
+  // the code-generated opengraph-image route (omit images entirely).
   const cover = stops[0]
     ? imageForStop({ photo_url: stops[0].photo_url, place_type: stops[0].place_type })
-    : '/og.jpg';
-  const ogImage = cover.startsWith('http') ? cover : `${SITE_URL}${cover}`;
+    : null;
+  const ogImage = cover ? (cover.startsWith('http') ? cover : `${SITE_URL}${cover}`) : null;
 
-  const title = row.title ?? 'A Kelowna date plan';
+  const title = row.title ?? 'a kelowna date plan';
   const desc = [
     row.hook,
-    stopNames.length > 0 ? `Stops: ${stopNames.join(' · ')}.` : null,
-    `Curated by After5 — date plans built by people who actually live in Kelowna.`,
+    stopNames.length > 0 ? `stops: ${stopNames.join(' · ')}.` : null,
+    `built by people who actually live in kelowna.`,
   ]
     .filter(Boolean)
     .join(' ');
@@ -78,15 +80,15 @@ export async function generateMetadata(props: {
   const canonical = `${SITE_URL}/dates/${slug}`;
 
   return {
-    title: `${title} — A Kelowna date plan | After5`,
+    title: `${title} — a kelowna date plan · after5`,
     description: desc.slice(0, 160),
     alternates: { canonical },
     openGraph: {
       title,
       description: desc.slice(0, 200),
       url: canonical,
-      siteName: 'After5',
-      images: [{ url: ogImage, width: 1200, height: 900, alt: title }],
+      siteName: 'after5',
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 900, alt: title }] } : {}),
       locale: 'en_CA',
       type: 'article',
     },
@@ -94,7 +96,7 @@ export async function generateMetadata(props: {
       card: 'summary_large_image',
       title,
       description: desc.slice(0, 200),
-      images: [ogImage],
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   };
 }

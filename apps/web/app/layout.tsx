@@ -57,13 +57,14 @@ export const metadata: Metadata = {
     siteName: 'after5',
     locale: 'en_CA',
     type: 'website',
-    images: [{ url: '/og.jpg', width: 1920, height: 1080, alt: 'after5 — match on the night, not the guy' }],
+    // images intentionally omitted — the app/opengraph-image.tsx file
+    // convention auto-wires the code-generated Barbiecore share image.
   },
   twitter: {
     card: 'summary_large_image',
     title: 'after5',
     description: 'match on the night, not the guy.',
-    images: ['/og.jpg'],
+    // images auto-wired by app/twitter-image.tsx.
   },
 };
 

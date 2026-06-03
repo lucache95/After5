@@ -15,19 +15,19 @@ export const revalidate = 60;
 const SITE_URL = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
-  title: 'Every Kelowna date plan we\'ve built | After5',
+  title: 'every kelowna date plan we\'ve built · after5',
   description:
-    'Browse hundreds of curated Kelowna date plans — romantic, chill, adventurous, cozy. Real places, real timing, real costs. Pick one or plan your own.',
+    'browse hundreds of kelowna date plans: romantic, chill, adventurous, cozy. real places, real timing, real costs. pick one or plan your own.',
   alternates: { canonical: `${SITE_URL}/dates` },
   openGraph: {
-    title: 'Every Kelowna date plan we\'ve built',
+    title: 'every kelowna date plan we\'ve built',
     description:
-      'Browse hundreds of curated Kelowna date plans — romantic, chill, adventurous, cozy.',
+      'browse hundreds of kelowna date plans: romantic, chill, adventurous, cozy.',
     url: `${SITE_URL}/dates`,
-    siteName: 'After5',
+    siteName: 'after5',
     locale: 'en_CA',
     type: 'website',
-    images: [{ url: `${SITE_URL}/og.jpg`, width: 1920, height: 1080 }],
+    // images omitted — inherits the code-generated opengraph-image route.
   },
 };
 

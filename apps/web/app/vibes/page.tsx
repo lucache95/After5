@@ -6,8 +6,8 @@ import { VIBES } from '@/lib/taxonomy';
 const SITE = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
-  title: 'Date vibes in Kelowna — romantic, chill, adventurous, more | After5',
-  description: 'Browse Kelowna date plans and places by vibe — romantic, chill, adventurous, boujee, cozy, spontaneous.',
+  title: 'date vibes in kelowna · after5',
+  description: 'browse kelowna date plans and places by vibe: romantic, chill, adventurous, boujee, cozy, spontaneous.',
   alternates: { canonical: `${SITE}/vibes` },
 };
 

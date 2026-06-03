@@ -16,8 +16,8 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const n = findNeighborhood(slug);
   if (!n) return {};
   return {
-    title: `Things to do in ${n.label}, Kelowna — places + dates | After5`,
-    description: `${n.blurb} Hand-curated ${n.label} restaurants, bars, walks, and date plans.`,
+    title: `things to do in ${n.label.toLowerCase()}, kelowna · after5`,
+    description: `${n.blurb} hand-picked ${n.label.toLowerCase()} restaurants, bars, walks, and date plans.`,
     alternates: { canonical: `${SITE}/neighborhoods/${n.slug}` },
   };
 }

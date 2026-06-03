@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Privacy',
-  description: 'How After5 handles your data.',
+  title: 'privacy · after5',
+  description: 'how after5 handles your data.',
 };
 
 export default function PrivacyPage() {

@@ -16,8 +16,8 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const t = findPlaceType(slug);
   if (!t) return {};
   return {
-    title: `Best ${t.label.toLowerCase()} in Kelowna | After5`,
-    description: `Every ${t.label.toLowerCase().replace(/s$/, '')} we plan dates around in Kelowna — hand-curated by locals.`,
+    title: `best ${t.label.toLowerCase()} in kelowna · after5`,
+    description: `every ${t.label.toLowerCase().replace(/s$/, '')} we plan dates around in kelowna, hand-picked by locals.`,
     alternates: { canonical: `${SITE}/types/${t.slug}` },
   };
 }

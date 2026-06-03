@@ -26,9 +26,26 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/svg+xml',
         purpose: 'maskable',
       },
-      // TODO(follow-up): add rasterized PNG icons (192x192, 512x512, and a
-      // 512 maskable). Some Android launchers and install prompts prefer PNGs
-      // over SVG. Generate from the SVGs below and add entries here.
+      // Rasterized PNGs for Android launchers / install prompts that prefer
+      // PNG over SVG. Generated from the SVGs above (sharp).
+      {
+        src: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
     ],
   };
 }
