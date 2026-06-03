@@ -10,11 +10,12 @@ import {
   type PanInfo,
 } from 'framer-motion';
 import { toast } from 'sonner';
-import { Heart, X, Volume2, VolumeX } from 'lucide-react';
+import { Heart, X, Volume2, VolumeX, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { browserAfter5Client, recordSwipe, ambientSoundUrl, type FeedNight } from '@/lib/after5/client';
 import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
 import { NightDetailSheet } from './NightDetailSheet';
+import { FilterSheet } from './FilterSheet';
 import { useAmbientDeck } from './useAmbientDeck';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { cn } from '@/lib/cn';
@@ -29,12 +30,27 @@ type Direction = 'left' | 'right';
 const SWIPE_THRESHOLD = 110; // px of horizontal travel to commit
 const VELOCITY_THRESHOLD = 600; // px/s flick to commit even on a short drag
 
+// Day-scope stub (spec 2026-06-03 §3 "coarse time buckets"). Tapping the feed
+// title cycles the scope label; the actual feed query isn't filtered by scope
+// yet (that's the later filter phase), so this sets the heading + intent only.
+const DAY_SCOPES = [
+  { key: 'tonight', label: 'tonight' },
+  { key: 'weekend', label: 'this weekend' },
+  { key: 'any', label: 'pick a day' },
+] as const;
+
 export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; tier?: FeedTier }) {
   const [deck] = useState(initial);
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [scopeIdx, setScopeIdx] = useState(0);
   const reduceMotion = useReducedMotion();
+  const scopeLabel = DAY_SCOPES[scopeIdx].label;
+  function cycleScope() {
+    setScopeIdx((n) => (n + 1) % DAY_SCOPES.length);
+  }
 
   // Ambient deck: resolve each card's relative ambient path to a public URL, then
   // crossfade as the active index advances. Default muted; the pill is the gesture.
@@ -73,9 +89,33 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
   return (
     <main className="flex min-h-dvh flex-col bg-shell-base px-5 pb-24 pt-7">
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
-        <header className="mb-5 flex items-baseline justify-between">
-          <h1 className="font-heading text-3xl lowercase text-shell-ink">tonight</h1>
+        <header className="mb-5 flex items-center justify-between">
+          {/* Tappable day-scope (spec §3): cycles tonight → this weekend → pick a
+              day. The chevron signals it toggles; the heading stays the h1. */}
+          <h1>
+            <button
+              type="button"
+              onClick={cycleScope}
+              aria-label={`showing ${scopeLabel}. tap to change the day`}
+              className="flex items-center gap-1.5 font-heading text-3xl lowercase text-shell-ink transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 rounded-lg motion-reduce:transition-none motion-reduce:active:scale-100"
+            >
+              {scopeLabel}
+              <ChevronDown className="h-5 w-5 text-shell-accent" aria-hidden />
+            </button>
+          </h1>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              aria-label="filters"
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-shell-ink shadow-subtle transition',
+                'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                'motion-reduce:transition-none motion-reduce:hover:scale-100',
+              )}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden />
+            </button>
             <button
               type="button"
               onClick={toggleMute}
@@ -120,6 +160,8 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
           onOpenChange={setDetailOpen}
           onCommit={(direction) => void commit(direction)}
         />
+
+        <FilterSheet open={filterOpen} onOpenChange={setFilterOpen} />
 
         <div className="mt-6 flex items-center justify-center gap-6">
           <button

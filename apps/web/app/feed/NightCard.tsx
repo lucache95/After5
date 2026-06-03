@@ -1,15 +1,21 @@
+'use client';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { MapPin, Clock, Wallet } from 'lucide-react';
 import { vibePalette } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
 import { coverImageForNight } from '@/lib/place-image';
+import { formatDistanceAway, formatReach } from '@/lib/distance';
 import type { FeedNight } from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
 
-// Tier-2 experience surface (DESIGN-SYSTEM §1). The card carries the *experience's*
-// vibe palette, not the global pink — derived from vibe_tags via vibePalette() and
-// applied as inline CSS vars so Tailwind arbitrary values can read them.
-// BLIND CONTRACT: FeedNight has no creator identity and we never render one.
+// Tier-2 experience surface (DESIGN-SYSTEM §1/§5): the PHOTOGRAPH leads. The cover
+// fills the card behind a bottom scrim; the title sits on the scrim. The card
+// still carries the experience's vibe palette (from vibe_tags via vibePalette())
+// for the chips + accents, applied as inline CSS vars.
+// BLIND CONTRACT: FeedNight has no creator identity and we never render one. The
+// meta row stays coarse — weekday + hour bucket, city/area, rounded distance and
+// reach radius — never a precise minute or address.
 
 // Coarse, blind-by-design time: weekday + hour bucket only. Never a precise minute.
 function coarseTime(iso: string): string {
@@ -20,16 +26,34 @@ function coarseTime(iso: string): string {
   return `${weekday} · ${hour}`;
 }
 
+// Back-compat km helper (kept for callers/tests that imported it from here).
 function km(distanceM: number | null): string | null {
-  if (distanceM == null) return null;
-  const value = distanceM / 1000;
-  return value < 1 ? `${Math.max(0.1, Math.round(value * 10) / 10)} km away` : `${Math.round(value)} km away`;
+  return formatDistanceAway(distanceM);
 }
+
+// The feed RPC doesn't expose a human city name or this date's reach radius yet
+// (FeedNight carries only city_id + distance_m — see report's gated follow-up).
+// Read them defensively so the card lights up the moment the RPC adds them,
+// without changing the contract today.
+type MaybeGeoFields = { city_name?: string | null; reach_radius_km?: number | null };
 
 export function NightCard({ night }: { night: FeedNight }) {
   const pal = vibePalette(night.vibe_tags);
-  const distance = km(night.distance_m);
   const tags = (night.vibe_tags ?? []).filter(Boolean).slice(0, 4);
+
+  // Locale-aware distance + reach. Resolve on the client after mount so SSR and
+  // hydration agree (the server has no viewer locale); pre-mount uses the km
+  // default, which the post-mount value then reconciles.
+  const [locale, setLocale] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') setLocale(navigator.language);
+  }, []);
+
+  const distance = formatDistanceAway(night.distance_m, locale);
+  const geo = night as FeedNight & MaybeGeoFields;
+  const city = geo.city_name?.trim().toLowerCase() || night.venue_neighborhood?.toLowerCase() || null;
+  const reach = formatReach(geo.reach_radius_km ?? null, locale);
+
   // Always resolve to a tasteful, on-theme image — never an empty pink panel.
   const cover = coverImageForNight({
     cover_image_url: night.cover_image_url,
@@ -39,7 +63,7 @@ export function NightCard({ night }: { night: FeedNight }) {
 
   return (
     <article
-      className="flex h-full flex-col overflow-hidden rounded-3xl bg-[var(--exp-bg)] text-[var(--exp-ink)] shadow-fun"
+      className="relative flex h-full flex-col overflow-hidden rounded-3xl bg-[var(--exp-bg)] text-[var(--exp-ink)] shadow-fun"
       style={
         {
           '--exp-bg': pal.bg,
@@ -48,37 +72,35 @@ export function NightCard({ night }: { night: FeedNight }) {
         } as React.CSSProperties
       }
     >
-      <div className="relative h-[54%] w-full shrink-0 overflow-hidden bg-[var(--exp-accent)]/15">
-        <Image
-          src={cover}
-          alt=""
-          fill
-          sizes="420px"
-          className="object-cover"
-          draggable={false}
-          priority
-        />
-        {night.is_seed && (
-          <span
-            className="absolute left-3 top-3 rounded-full px-3 py-1 font-body text-xs font-semibold shadow-md"
-            style={{ background: pal.accent, color: pal.bg, transform: `rotate(${stickerRotation('curated')}deg)` }}
-          >
-            ★ curated
-          </span>
-        )}
-      </div>
+      {/* PHOTO LEADS — full-bleed cover behind a bottom scrim (DESIGN-SYSTEM §5). */}
+      <Image
+        src={cover}
+        alt=""
+        fill
+        sizes="420px"
+        className="object-cover"
+        draggable={false}
+        priority
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,0.78) 100%)' }}
+        aria-hidden
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-5">
-        <h2 className="font-heading text-3xl lowercase leading-[1.05]">
-          {night.title?.toLowerCase() ?? 'a night out'}
-        </h2>
+      {night.is_seed && (
+        <span
+          className="absolute left-3 top-3 rounded-full px-3 py-1 font-body text-xs font-semibold text-white shadow-md"
+          style={{ background: pal.accent, transform: `rotate(${stickerRotation('curated')}deg)` }}
+        >
+          ★ curated
+        </span>
+      )}
 
-        {night.why_note && (
-          <p className="font-body text-[15px] leading-relaxed opacity-80">{night.why_note}</p>
-        )}
-
+      {/* CONTENT — sits on the scrim, pinned to the bottom of the photo. */}
+      <div className="relative mt-auto flex flex-col gap-2.5 p-5 text-white">
         {tags.length > 0 && (
-          <ul className="flex flex-wrap gap-2 pt-0.5">
+          <ul className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <li
                 key={tag}
@@ -95,7 +117,17 @@ export function NightCard({ night }: { night: FeedNight }) {
           </ul>
         )}
 
-        <dl className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 font-body text-[13px] opacity-80">
+        <h2 className="font-heading text-3xl lowercase leading-[1.02] drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+          {night.title?.toLowerCase() ?? 'a night out'}
+        </h2>
+
+        {night.why_note && (
+          <p className="line-clamp-2 font-body text-[15px] leading-snug text-white/85">
+            {night.why_note}
+          </p>
+        )}
+
+        <dl className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-0.5 font-body text-[13px] text-white/90">
           {night.time_window_start && (
             <div className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 shrink-0" aria-hidden />
@@ -113,17 +145,17 @@ export function NightCard({ night }: { night: FeedNight }) {
               </dd>
             </div>
           )}
-          {night.venue_neighborhood && (
+          {city && (
             <div className="flex items-center gap-1.5">
               <MapPin className="h-4 w-4 shrink-0" aria-hidden />
               <dt className="sr-only">where</dt>
-              <dd>{night.venue_neighborhood.toLowerCase()}</dd>
+              <dd>{city}</dd>
             </div>
           )}
-          {distance && (
+          {(distance || reach) && (
             <div className="flex items-center gap-1.5">
-              <dt className="sr-only">distance</dt>
-              <dd>{distance}</dd>
+              <dt className="sr-only">{reach ? 'distance and reach' : 'distance'}</dt>
+              <dd>{[distance, reach].filter(Boolean).join(' · ')}</dd>
             </div>
           )}
           {night.pay_setting && (
