@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { resolveCitySlug, type KnownCity } from '@/lib/create/cities';
+import { initialCityText, type KnownCity } from '@/lib/create/cities';
 import { CreateFlow } from './CreateFlow';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +12,9 @@ export default async function CreatePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Load generatable cities + (when signed in) the dating-profile gate for
-  // publish-to-feed. canPublish = authed && dating_enabled && verified.
+  // Curated cities power the quick-pick chips; the city field itself is free
+  // text now (open-city), so any typed city generates. When signed in we also
+  // load the dating-profile gate for publish-to-feed.
   const [{ data: cityRows }, { data: profile }] = await Promise.all([
     supabase.from('cities').select('slug,name').eq('is_active', true).order('name'),
     user
@@ -21,14 +22,13 @@ export default async function CreatePage() {
       : Promise.resolve({ data: null }),
   ]);
 
-  const cities: KnownCity[] = (cityRows as KnownCity[] | null) ?? [{ slug: 'kelowna', name: 'Kelowna' }];
-  const { slug, fellBack } = resolveCitySlug(h.get('x-vercel-ip-city'), cities);
+  const cities: KnownCity[] = (cityRows as KnownCity[] | null) ?? [];
+  const initialCity = initialCityText(h.get('x-vercel-ip-city'));
   const canPublish = !!user && !!profile?.dating_enabled && profile.verification === 'verified';
 
   return (
     <CreateFlow
-      initialCity={slug}
-      fellBack={fellBack}
+      initialCity={initialCity}
       authed={!!user}
       cities={cities}
       canPublish={canPublish}

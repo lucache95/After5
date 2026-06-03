@@ -69,13 +69,11 @@ function asStop(s: GatedItinerary['stops'][number]): Stop {
 
 export function CreateFlow({
   initialCity,
-  fellBack,
   authed,
   cities,
   canPublish = false,
 }: {
   initialCity: string;
-  fellBack: boolean;
   authed: boolean;
   cities: KnownCity[];
   canPublish?: boolean;
@@ -84,20 +82,20 @@ export function CreateFlow({
   const [vibe, setVibe] = useState<string[]>([]);
   const [budget, setBudget] = useState(50);
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'evening' | 'all_day'>('evening');
-  const [citySlug, setCitySlug] = useState(initialCity);
-  const [showFallbackNote, setShowFallbackNote] = useState(fellBack);
+  const [city, setCity] = useState(initialCity);
   const [itineraries, setItineraries] = useState<GatedItinerary[]>([]);
   const [resultAuthed, setResultAuthed] = useState(authed);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const canGenerate = vibe.length >= 1 && phase !== 'loading';
+  const canGenerate = vibe.length >= 1 && city.trim().length >= 2 && phase !== 'loading';
 
   function toggleVibe(id: string) {
     setVibe((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   }
 
   async function generate() {
-    if (vibe.length === 0) return;
+    const cityText = city.trim();
+    if (vibe.length === 0 || cityText.length < 2) return;
     setPhase('loading');
     setErrorMsg('');
     try {
@@ -108,7 +106,7 @@ export function CreateFlow({
           vibe,
           budget_per_person: budget,
           time_of_day: timeOfDay,
-          city_slug: citySlug,
+          city_query: cityText,
           occasion: 'date',
           duration_min: timeOfDay === 'all_day' ? 360 : 180,
         }),
@@ -118,12 +116,10 @@ export function CreateFlow({
         itineraries: GatedItinerary[];
         authed: boolean;
         city: string;
-        fellBack: boolean;
       } = await res.json();
       if (!data.itineraries?.length) throw new Error('no_itineraries');
       setItineraries(data.itineraries);
       setResultAuthed(data.authed);
-      setShowFallbackNote(data.fellBack);
       setPhase('results');
     } catch {
       setErrorMsg('that one slipped away. try again?');
@@ -139,7 +135,7 @@ export function CreateFlow({
             itineraries={itineraries}
             authed={resultAuthed}
             canPublish={canPublish}
-            firstNameCity={citySlug}
+            firstNameCity={city.trim()}
             onRedo={() => setPhase('input')}
           />
         ) : (
@@ -150,11 +146,9 @@ export function CreateFlow({
             setBudget={setBudget}
             timeOfDay={timeOfDay}
             setTimeOfDay={setTimeOfDay}
-            citySlug={citySlug}
-            setCitySlug={setCitySlug}
+            city={city}
+            setCity={setCity}
             cities={cities}
-            cityName={cities.find((c) => c.slug === citySlug)?.name ?? citySlug}
-            fellBack={showFallbackNote}
             canGenerate={canGenerate}
             loading={phase === 'loading'}
             errorMsg={errorMsg}
@@ -173,23 +167,21 @@ function InputScreen(props: {
   setBudget: (n: number) => void;
   timeOfDay: 'morning' | 'evening' | 'all_day';
   setTimeOfDay: (t: 'morning' | 'evening' | 'all_day') => void;
-  citySlug: string;
-  setCitySlug: (s: string) => void;
+  city: string;
+  setCity: (s: string) => void;
   cities: KnownCity[];
-  cityName: string;
-  fellBack: boolean;
   canGenerate: boolean;
   loading: boolean;
   errorMsg: string;
   onGenerate: () => void;
 }) {
-  const { vibe, toggleVibe, budget, setBudget, timeOfDay, setTimeOfDay, citySlug, setCitySlug, cities, cityName, fellBack, canGenerate, loading, errorMsg, onGenerate } = props;
+  const { vibe, toggleVibe, budget, setBudget, timeOfDay, setTimeOfDay, city, setCity, cities, canGenerate, loading, errorMsg, onGenerate } = props;
 
   // While a night generates, take over the screen with the polaroid loader.
   if (loading) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
-        <PolaroidLoader city={cityName} />
+        <PolaroidLoader city={city.trim() || 'your city'} />
       </div>
     );
   }
@@ -276,24 +268,41 @@ function InputScreen(props: {
         ))}
       </div>
 
-      {/* city selector */}
+      {/* city — free text, geocoded edge-side. any city works. */}
       <p className="mt-9 font-body text-xs font-semibold lowercase tracking-[0.18em] text-shell-ink/55">
         where?
       </p>
-      <select
-        value={citySlug}
-        onChange={(e) => setCitySlug(e.target.value)}
+      <input
+        type="text"
+        value={city}
+        onChange={(e) => setCity(e.target.value)}
+        placeholder="city, state"
         aria-label="city"
-        className="mt-3 block w-full rounded-pill border border-shell-ink/15 bg-shell-base px-5 py-3 font-body text-sm lowercase text-shell-ink outline-none transition-colors focus:border-shell-accent"
-      >
-        {cities.map((c) => (
-          <option key={c.slug} value={c.slug}>{c.name.toLowerCase()}</option>
-        ))}
-      </select>
-      {fellBack && (
-        <p className="mt-3 rounded-3xl bg-shell-pink px-4 py-3 font-body text-sm lowercase text-shell-ink">
-          we&apos;re only in kelowna right now — building you a kelowna night.
-        </p>
+        autoComplete="address-level2"
+        className="mt-3 block w-full rounded-pill border border-shell-ink/15 bg-shell-base px-5 py-3 font-body text-sm lowercase text-shell-ink outline-none transition-colors placeholder:text-shell-ink/35 focus:border-shell-accent"
+      />
+      {cities.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {cities.map((c) => {
+            const on = city.trim().toLowerCase() === c.name.toLowerCase();
+            return (
+              <button
+                key={c.slug}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setCity(c.name)}
+                className={cn(
+                  'rounded-pill border px-3.5 py-2 font-body text-xs lowercase transition-colors',
+                  on
+                    ? 'border-shell-accent bg-shell-accent text-white'
+                    : 'border-shell-ink/15 bg-shell-base text-shell-ink/70 hover:border-shell-accent/50',
+                )}
+              >
+                {c.name.toLowerCase()}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {errorMsg && (

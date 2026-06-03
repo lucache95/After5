@@ -1,22 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCitySlug } from '../cities';
+import { initialCityText } from '../cities';
 
-const known = [
-  { slug: 'kelowna', name: 'Kelowna' },
-  { slug: 'vancouver', name: 'Vancouver' },
-];
-
-describe('resolveCitySlug', () => {
-  it('matches a known city case-insensitively from the geo header', () => {
-    expect(resolveCitySlug('Vancouver', known)).toEqual({ slug: 'vancouver', fellBack: false });
+describe('initialCityText', () => {
+  it('seeds the input from the geo header', () => {
+    expect(initialCityText('Vancouver')).toBe('Vancouver');
   });
   it('url-decodes the header value', () => {
-    expect(resolveCitySlug('Kelowna', known)).toEqual({ slug: 'kelowna', fellBack: false });
+    expect(initialCityText('New%20York')).toBe('New York');
   });
-  it('falls back to kelowna for an unknown city', () => {
-    expect(resolveCitySlug('Toronto', known)).toEqual({ slug: 'kelowna', fellBack: true });
-  });
-  it('falls back to kelowna when the header is missing', () => {
-    expect(resolveCitySlug(null, known)).toEqual({ slug: 'kelowna', fellBack: true });
+  it('returns empty when the header is missing', () => {
+    expect(initialCityText(null)).toBe('');
+    expect(initialCityText(undefined)).toBe('');
   });
 });

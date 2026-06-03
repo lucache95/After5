@@ -20,7 +20,9 @@ import { z } from 'npm:zod@3.23.8';
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { selectProvider } from './providers/select.ts';
+import { OnTheFlyProvider } from './providers/onthefly.ts';
 import { PipelineError } from './providers/pipeline.ts';
+import { resolveOpenCity, OpenCityError } from './open-city.ts';
 import { persist } from './persist.ts';
 import type { CityRecord } from './types.ts';
 
@@ -57,6 +59,10 @@ const InputSchema = z.object({
   // M1: additive + optional. Resolves which city's places + provider to use.
   // Absent ⇒ 'kelowna' (byte-identical to pre-M1).
   city_slug: z.string().min(1).max(60).default('kelowna'),
+  // Open-city: a free-text city/state the user typed. Only used when city_slug
+  // does NOT match a curated cities row — then we geocode it, mint an ad-hoc
+  // city around that center, and warm it on the fly. Curated callers ignore it.
+  city_query: z.string().trim().min(1).max(120).optional(),
 });
 
 // ─── Rate-limit config ────────────────────────────────────────────────
@@ -119,6 +125,16 @@ serve(async (req: Request) => {
       );
     }
 
+    // Build the generation env once (used by both city-resolution geocoding
+    // and the providers).
+    const env = {
+      anthropicKey: Deno.env.get('ANTHROPIC_API_KEY')!,
+      anthropicModel: Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-6',
+      googleKey: Deno.env.get('GOOGLE_PLACES_API_KEY'),
+      railwayUrl: Deno.env.get('RAILWAY_GENERATOR_URL'),
+      railwayToken: Deno.env.get('RAILWAY_API_TOKEN'),
+    };
+
     // 3. Resolve the city (M1). Default 'kelowna' keeps a no-city_slug request
     //    byte-identical to today.
     const citySlug = inputs.city_slug ?? 'kelowna';
@@ -127,20 +143,29 @@ serve(async (req: Request) => {
       .select('id,slug,name,region,timezone,centroid_lat,centroid_lng,default_radius_km')
       .eq('slug', citySlug)
       .maybeSingle();
-    if (!cityRow) {
+
+    // 3b. Open-city: the slug didn't match a curated row but the caller sent a
+    //     free-text city. Geocode it + mint an ad-hoc city, then force the
+    //     on-the-fly provider (curated providers have no data for it). The
+    //     frozen city_slug path (cityRow present) is untouched.
+    let city: CityRecord;
+    let provider;
+    if (cityRow) {
+      city = cityRow as CityRecord;
+      provider = await selectProvider(citySlug, supabase);
+    } else if (inputs.city_query) {
+      try {
+        city = await resolveOpenCity(inputs.city_query, supabase, { googleKey: env.googleKey });
+      } catch (e) {
+        if (e instanceof OpenCityError) {
+          return jsonResponse({ error: e.code, message: e.message }, e.httpStatus, extraHeaders);
+        }
+        throw e;
+      }
+      provider = OnTheFlyProvider;
+    } else {
       return jsonResponse({ error: 'unknown_city', message: `No city '${citySlug}'.` }, 422);
     }
-    const city = cityRow as CityRecord;
-
-    // 4. Build the generation env + select the provider for this city.
-    const env = {
-      anthropicKey: Deno.env.get('ANTHROPIC_API_KEY')!,
-      anthropicModel: Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-6',
-      googleKey: Deno.env.get('GOOGLE_PLACES_API_KEY'),
-      railwayUrl: Deno.env.get('RAILWAY_GENERATOR_URL'),
-      railwayToken: Deno.env.get('RAILWAY_API_TOKEN'),
-    };
-    const provider = await selectProvider(citySlug, supabase);
 
     // 5. Generate (provider runs the shared pipeline; on-the-fly warms first).
     const sharedLog: Record<string, unknown> = {};

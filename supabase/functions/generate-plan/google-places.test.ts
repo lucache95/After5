@@ -6,6 +6,7 @@ import {
   pickHours,
   passesQualityFloor,
   googleResultToPlaceRow,
+  radiusFromViewport,
 } from './google-places.ts';
 
 Deno.test('mapGoogleTypes: first-match-wins, falls back to activity', () => {
@@ -74,6 +75,17 @@ Deno.test('googleResultToPlaceRow maps a result into a places row scoped to a ci
   // buckets (which would mislabel a Vancouver venue 'west_kelowna' and leak into copy).
   assertEquals(row.neighborhood, 'vernon');
   assertEquals(row.drive_cluster, 'multiple');
+});
+
+Deno.test('radiusFromViewport: half the box diagonal, clamped to 8..60 km', () => {
+  // Missing viewport → default.
+  assertEquals(radiusFromViewport(undefined), 25);
+  // Tiny town → clamped up to the 8 km floor.
+  const tiny = { low: { latitude: 49.99, longitude: -119.49 }, high: { latitude: 50.0, longitude: -119.48 } };
+  assertEquals(radiusFromViewport(tiny), 8);
+  // Sprawling metro → clamped down to the 60 km ceiling.
+  const huge = { low: { latitude: 33.3, longitude: -118.7 }, high: { latitude: 34.5, longitude: -117.3 } };
+  assertEquals(radiusFromViewport(huge), 60);
 });
 
 Deno.test('googleResultToPlaceRow: Kelowna keeps its curated lat/lng neighborhood bucketing', () => {

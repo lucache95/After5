@@ -30,6 +30,9 @@ export interface PlanInputs {
   // M1: additive + optional. Resolves which city's places + provider to use.
   // Absent ⇒ 'kelowna' (byte-identical to pre-M1 behavior).
   city_slug?: string;
+  // Open-city: free-text city/state typed by the user. Used only when city_slug
+  // doesn't match a curated cities row — geocoded into an ad-hoc city.
+  city_query?: string;
 }
 
 // M1: the city a generation is scoped to. centroid_lat/lng are scalar

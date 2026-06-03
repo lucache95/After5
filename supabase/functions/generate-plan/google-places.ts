@@ -107,6 +107,10 @@ export interface GoogleResult {
   displayName?: { text?: string };
   formattedAddress?: string;
   location?: { latitude?: number; longitude?: number };
+  viewport?: {
+    low?: { latitude?: number; longitude?: number };
+    high?: { latitude?: number; longitude?: number };
+  };
   types?: string[];
   priceLevel?: string;
   rating?: number;
@@ -115,6 +119,77 @@ export interface GoogleResult {
   photos?: { name: string }[];
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   websiteUri?: string;
+}
+
+// ─── Geocoding (open-city) ──────────────────────────────────────────────
+// Turn a free-text city/state string into a center + radius using the SAME
+// Places Text Search endpoint + key the warmer already uses (no second Google
+// API to enable). We bias the search to localities, read the top result's
+// `location` (center) and `viewport` (bounding box), and derive a radius from
+// the box so the warmer covers the city without overreaching.
+
+export interface GeocodedCity {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  /** Cleaned display name Google echoes back (e.g. "Portland, OR, USA"). */
+  name: string;
+}
+
+// Haversine distance in km between two lat/lng points.
+function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Derive a warm radius (km) from a Google viewport. Half the box diagonal
+// covers the locality; clamp to a sane band so a tiny town still gets a useful
+// search and a sprawling metro doesn't pull in three counties.
+export function radiusFromViewport(vp: GoogleResult['viewport']): number {
+  const lowLat = vp?.low?.latitude;
+  const lowLng = vp?.low?.longitude;
+  const highLat = vp?.high?.latitude;
+  const highLng = vp?.high?.longitude;
+  if (lowLat == null || lowLng == null || highLat == null || highLng == null) {
+    return 25; // no viewport → a reasonable default
+  }
+  const diagKm = haversineKm(lowLat, lowLng, highLat, highLng);
+  const radius = Math.round(diagKm / 2);
+  return Math.min(60, Math.max(8, radius));
+}
+
+// Geocode one free-text city query. Returns null when the query yields no
+// usable result (caller surfaces a clean error). Reuses the Places Text Search
+// endpoint with a locality-leaning field mask.
+export async function geocodeCity(query: string, opts: { apiKey: string }): Promise<GeocodedCity | null> {
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': opts.apiKey,
+      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.viewport',
+    },
+    body: JSON.stringify({ textQuery: query, maxResultCount: 1 }),
+  });
+  if (!res.ok) throw new Error(`Google geocode ${res.status}: ${await res.text()}`);
+  const top = ((await res.json()).places ?? [])[0] as GoogleResult | undefined;
+  const lat = top?.location?.latitude;
+  const lng = top?.location?.longitude;
+  if (top == null || lat == null || lng == null) return null;
+  return {
+    lat,
+    lng,
+    radiusKm: radiusFromViewport(top.viewport),
+    name: top.formattedAddress ?? top.displayName?.text ?? query,
+  };
 }
 
 export function passesQualityFloor(r: { rating?: number; userRatingCount?: number; businessStatus?: string }): boolean {

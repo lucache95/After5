@@ -24,7 +24,7 @@ describe('POST /api/create-plan', () => {
   it('anon: returns a gated teaser (why stripped, later stop silhouetted)', async () => {
     getUser.mockResolvedValue({ data: { user: null } });
     invoke.mockResolvedValue({ data: { itineraries: [itin] }, error: null });
-    const res = await POST(req({ vibe: ['v'], city_slug: 'kelowna' }));
+    const res = await POST(req({ vibe: ['v'], city_query: 'Portland, OR' }));
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.authed).toBe(false);
@@ -36,27 +36,43 @@ describe('POST /api/create-plan', () => {
   it('authed: returns full itineraries', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     invoke.mockResolvedValue({ data: { itineraries: [itin] }, error: null });
-    const res = await POST(req({ vibe: ['v'] }));
+    const res = await POST(req({ vibe: ['v'], city_query: 'Austin, TX' }));
     const body = await res.json();
     expect(body.authed).toBe(true);
     expect(body.itineraries[0].why_it_works).toBe('WHY');
+    expect(body.city).toBe('Austin, TX');
   });
 
-  it('falls back to kelowna when the city is unknown', async () => {
+  it('forwards the free-text city_query to the edge fn (no closed-city fallback)', async () => {
     getUser.mockResolvedValue({ data: { user: null } });
-    invoke
-      .mockResolvedValueOnce({ data: null, error: { context: { status: 422 } } })
-      .mockResolvedValueOnce({ data: { itineraries: [itin] }, error: null });
-    const res = await POST(req({ vibe: ['v'], city_slug: 'narnia' }));
+    invoke.mockResolvedValue({ data: { itineraries: [itin] }, error: null });
+    const res = await POST(req({ vibe: ['v'], city_query: 'Narnia' }));
     const body = await res.json();
-    expect(body.fellBack).toBe(true);
+    expect(res.status).toBe(200);
+    expect(body.city).toBe('Narnia');
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke.mock.calls[0][1].body.city_query).toBe('Narnia');
+  });
+
+  it('still accepts a legacy city_slug', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    invoke.mockResolvedValue({ data: { itineraries: [itin] }, error: null });
+    const res = await POST(req({ vibe: ['v'], city_slug: 'kelowna' }));
+    const body = await res.json();
+    expect(res.status).toBe(200);
     expect(body.city).toBe('kelowna');
-    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(invoke.mock.calls[0][1].body.city_slug).toBe('kelowna');
   });
 
   it('rejects an empty vibe (the one required input)', async () => {
     getUser.mockResolvedValue({ data: { user: null } });
-    const res = await POST(req({ vibe: [] }));
+    const res = await POST(req({ vibe: [], city_query: 'x' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects when no city is given', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const res = await POST(req({ vibe: ['v'] }));
     expect(res.status).toBe(400);
   });
 });
