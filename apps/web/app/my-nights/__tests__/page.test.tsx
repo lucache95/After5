@@ -12,7 +12,9 @@ const { redirect, mockClient } = vi.hoisted(() => {
 
 vi.mock('next/navigation', () => ({ redirect: (p: string) => redirect(p) }));
 vi.mock('@/components/BottomTabShell', () => ({ BottomTabShell: () => <nav data-testid="bottom-nav" /> }));
-vi.mock('@/components/NotificationBell', () => ({ NotificationBell: () => <button data-testid="notif-bell" /> }));
+// The header bell was retired (#84); the page now mounts the headless toast. Mock
+// it so the page's transitive useRouter import doesn't need the navigation mock.
+vi.mock('@/components/NotificationToast', () => ({ NotificationToast: () => null }));
 vi.mock('@/components/Polaroid', () => ({
   Polaroid: ({ alt }: { alt: string }) => <div data-testid="polaroid" aria-label={alt} />,
 }));

@@ -7,7 +7,7 @@
 import {
   Heart, Clock, X, Undo2, ArrowUp, Sparkles, HeartHandshake, MessageCircle,
   CalendarCheck, Star, CalendarX, RefreshCw, ShieldCheck, ShieldAlert,
-  User, Gavel, BadgeCheck, BadgeAlert, Scale, type LucideIcon,
+  User, Gavel, BadgeCheck, BadgeAlert, Scale, Flame, Eye, type LucideIcon,
 } from 'lucide-react';
 import type { Database } from '@after5/types';
 
@@ -60,6 +60,34 @@ export const NOTIF_META: Record<NotificationType, NotifMeta> = {
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIF_META) as NotificationType[];
+
+// Gated inbox types (unified inbox #84, spec §2). These two notification_type
+// values ship behind a GATED migration (20260603120000_gated_inbox_notification_types.sql)
+// and are NOT yet in the generated enum, so they live here as string-keyed meta
+// rather than in the enum-exhaustive NOTIF_META above. When the migration is
+// applied + types regenerate, these move into NOTIF_META and this overlay drops.
+// Until then the inbox tolerates them by resolving meta through metaFor().
+//   interest_received → grouped "someone's into your night" row; group key is
+//     payload.date_instance_id; deep-links the host to their nights surface.
+//   identity_revealed → single "you can see them now" row; deep-links the lock.
+export const GATED_INBOX_TYPES = ['interest_received', 'identity_revealed'] as const;
+export type GatedInboxType = (typeof GATED_INBOX_TYPES)[number];
+
+const GATED_NOTIF_META: Record<GatedInboxType, NotifMeta> = {
+  interest_received: { label: "someone's into your night", Icon: Flame, category: 'matches', hrefFor: () => '/my-nights' },
+  identity_revealed: { label: 'you can see them now',       Icon: Eye,   category: 'matches', hrefFor: lockHref },
+};
+
+// Resolve render meta for any type string — covers both the enum-backed types
+// and the gated overlay. Falls back to a quiet account row for an unknown value
+// so a future type never crashes the inbox before its meta lands.
+const ACCOUNT_FALLBACK: NotifMeta = { label: 'account update', Icon: User, category: 'account', hrefFor: account };
+
+export function metaFor(type: string): NotifMeta {
+  if (type in NOTIF_META) return NOTIF_META[type as NotificationType];
+  if (type in GATED_NOTIF_META) return GATED_NOTIF_META[type as GatedInboxType];
+  return ACCOUNT_FALLBACK;
+}
 
 export function hrefForNotification(type: NotificationType, payload: Payload): string {
   return NOTIF_META[type].hrefFor(payload);

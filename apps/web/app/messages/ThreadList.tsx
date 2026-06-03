@@ -10,12 +10,15 @@ import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import type { ThreadSummary } from './thread-view';
 
-function Row({ thread }: { thread: ThreadSummary }) {
+// Exported so the unified inbox (#84) can render the same row under its own base
+// path. `basePath` re-homes the conversation link so back-nav stays in-tab
+// (/inbox/[threadId] vs the standalone /messages/[threadId]); defaults to messages.
+export function ThreadRow({ thread, basePath = '/messages' }: { thread: ThreadSummary; basePath?: string }) {
   const name = thread.counterpartName ?? 'someone';
   const hasUnread = thread.unread > 0;
   return (
     <Link
-      href={`/messages/${thread.threadId}`}
+      href={`${basePath}/${thread.threadId}`}
       aria-label={`chat with ${name}${hasUnread ? `, ${thread.unread} unread` : ''}`}
       className={cn(
         'flex min-h-[44px] items-center gap-4 rounded-3xl border-2 border-shell-ink/10 bg-white p-3 transition',
@@ -76,7 +79,7 @@ export function ThreadList({ threads }: { threads: ThreadSummary[] }) {
       <ul aria-label="conversations" className="space-y-3">
         {threads.map((t) => (
           <li key={t.threadId}>
-            <Row thread={t} />
+            <ThreadRow thread={t} />
           </li>
         ))}
       </ul>

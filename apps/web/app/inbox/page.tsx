@@ -1,0 +1,168 @@
+// apps/web/app/inbox/page.tsx
+// Unified inbox (#84, spec §1). One tab, two zones over data we already write:
+//   zone 1 — activity: grouped rows over the `notifications` table (the bell's
+//            data, lifted out of the vaul sheet), newest first, top 5 inline.
+//   zone 2 — messages: today's ThreadList, verbatim, recency-sorted.
+// Both reads are RLS-bound under the viewer's SSR client (notifications:
+// recipient-read; chat_threads: party-read). No new tables, no new write surface
+// — the inbox is a read view. Mark-read still only touches `read_at` via the
+// existing POST /api/notifications.
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { BottomTabShell } from '@/components/BottomTabShell';
+import { NotificationToast } from '@/components/NotificationToast';
+import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { groupActivity, type RawNotification } from '@/lib/after5/inbox-activity';
+import { ActivityList } from './ActivityList';
+import { ThreadRow } from '../messages/ThreadList';
+import {
+  sortThreadsByRecency,
+  unreadCount,
+  lastMessagePreview,
+  isMessageable,
+  type ThreadSummary,
+  type MessageRow,
+} from '../messages/thread-view';
+
+export const dynamic = 'force-dynamic';
+
+const ACTIVITY_SEED_LIMIT = 30;
+
+type ProfileLite = { id: string; first_name: string | null; clear_photo_url: string | null };
+type ThreadRow = {
+  id: string;
+  state: string;
+  revoked_at: string | null;
+  offer: {
+    creator_id: string;
+    candidate_id: string;
+    creator: ProfileLite | ProfileLite[] | null;
+    candidate: ProfileLite | ProfileLite[] | null;
+    instance: { starts_at: string | null } | { starts_at: string | null }[] | null;
+  } | null;
+};
+
+function one<T>(v: T | T[] | null | undefined): T | null {
+  if (Array.isArray(v)) return v[0] ?? null;
+  return v ?? null;
+}
+
+export default async function InboxPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login?next=/inbox');
+
+  if (!(await isMatchEnabledForViewer(supabase))) return <ComingSoonBanner />;
+
+  // Zone 1 seed — same RLS-bound, keyset-ordered select the activity route uses,
+  // grouped server-side so the first paint already shows collapsed rows.
+  const { data: notifRows } = await supabase
+    .from('notifications')
+    .select('id,type,payload,read_at,created_at')
+    .eq('user_id', user.id)
+    .neq('type', 'new_message')
+    .order('created_at', { ascending: false })
+    .limit(ACTIVITY_SEED_LIMIT + 1);
+
+  const rawNotifs = (notifRows ?? []) as RawNotification[];
+  const hasMoreActivity = rawNotifs.length > ACTIVITY_SEED_LIMIT;
+  const activityPage = hasMoreActivity ? rawNotifs.slice(0, ACTIVITY_SEED_LIMIT) : rawNotifs;
+  const activityItems = groupActivity(activityPage);
+  const activityCursor = hasMoreActivity ? activityPage[activityPage.length - 1]?.created_at ?? null : null;
+
+  // Zone 2 — the messages tab query, verbatim (chat_threads party-read RLS scopes
+  // to the viewer; counterpart Tier-3 read via the reveal-safe offer embed).
+  const { data: rows } = await supabase
+    .from('chat_threads')
+    .select(`
+      id, state, revoked_at,
+      offer:offers!chat_threads_offer_id_fkey (
+        creator_id, candidate_id,
+        creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
+        candidate:profiles!offers_candidate_id_fkey ( id, first_name, clear_photo_url ),
+        instance:date_instances!offers_date_instance_id_fkey ( starts_at )
+      )
+    `);
+
+  const threadRows = (rows ?? []) as unknown as ThreadRow[];
+  const threadIds = threadRows.map((r) => r.id);
+  let byThread = new Map<string, MessageRow[]>();
+  if (threadIds.length > 0) {
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('*')
+      .in('thread_id', threadIds)
+      .order('created_at', { ascending: true });
+    byThread = (msgs ?? []).reduce((acc, m) => {
+      const list = acc.get(m.thread_id) ?? [];
+      list.push(m as MessageRow);
+      acc.set(m.thread_id, list);
+      return acc;
+    }, new Map<string, MessageRow[]>());
+  }
+
+  const summaries: ThreadSummary[] = threadRows.map((r) => {
+    const offer = r.offer;
+    const counterpartIsCreator = offer ? offer.candidate_id === user.id : false;
+    const counterpart = offer ? one(counterpartIsCreator ? offer.creator : offer.candidate) : null;
+    const instance = offer ? one(offer.instance) : null;
+    const msgs = byThread.get(r.id) ?? [];
+    const preview = lastMessagePreview(msgs);
+    return {
+      threadId: r.id,
+      counterpartName: counterpart?.first_name ?? null,
+      counterpartPhotoUrl: counterpart?.clear_photo_url ?? null,
+      startsAt: instance?.starts_at ?? null,
+      lastMessage: preview?.body ?? null,
+      lastAt: preview?.at ?? null,
+      unread: unreadCount(msgs, user.id),
+      messageable: isMessageable(r.state, r.revoked_at),
+    };
+  });
+  const threads = sortThreadsByRecency(summaries);
+
+  const bothEmpty = activityItems.length === 0 && threads.length === 0;
+
+  return (
+    <main className="min-h-dvh bg-shell-base">
+      <NotificationToast userId={user.id} />
+      <div className="mx-auto w-full max-w-[420px] px-4 pb-28 pt-6">
+        <h1 className="mb-5 font-heading text-4xl lowercase text-shell-ink">inbox</h1>
+
+        {bothEmpty ? (
+          <div className="px-2 py-16 text-center">
+            <p className="font-heading text-3xl lowercase leading-tight text-shell-ink">quiet in here</p>
+            <p className="mt-3 font-body text-shell-ink/70">go lock eyes on a night.</p>
+            <Link
+              href="/feed"
+              className="mt-6 inline-block rounded-full bg-shell-accent px-6 py-3 font-body font-semibold lowercase text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+            >
+              browse dates
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <ActivityList userId={user.id} initialItems={activityItems} initialCursor={activityCursor} />
+            {threads.length > 0 && (
+              <section aria-labelledby="inbox-messages-heading" className="space-y-3">
+                <h2 id="inbox-messages-heading" className="px-1 font-heading text-2xl lowercase text-shell-ink">
+                  💬 messages
+                </h2>
+                <ul aria-label="conversations" className="space-y-3">
+                  {threads.map((t) => (
+                    <li key={t.threadId}>
+                      <ThreadRow thread={t} basePath="/inbox" />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        )}
+      </div>
+      <BottomTabShell />
+    </main>
+  );
+}
