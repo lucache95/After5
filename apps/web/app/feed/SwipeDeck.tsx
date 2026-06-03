@@ -151,9 +151,6 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
             <Heart className="h-7 w-7" strokeWidth={2.5} fill="currentColor" aria-hidden />
           </button>
         </div>
-        <p className="mt-3 text-center font-body text-xs text-shell-ink/75">
-          swipe right if you’re in · left to skip
-        </p>
       </div>
       <BottomTabShell />
     </main>
