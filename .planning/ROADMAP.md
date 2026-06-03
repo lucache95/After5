@@ -42,7 +42,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The "profile" tab lands on a real profile hub, and the "dates" tab reaches the user's matched dates (`/matches`), not `/my-nights`.
   3. The profile hub shows the user's identity, dating profile, stats, an "as others see it" self-view, and links to edit/preferences/notifications — with no marketing/onboarding teaser content.
   4. A logged-in user can edit age range, distance, gender, dealbreakers, and toggle dating on/off from the profile hub after signup.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 01-01-PLAN.md — Fix bottom-nav semantics: dates tab to /matches, profile tab to /account (+ Wave-0 reconcile gate) (REQ-E2)
+- [ ] 01-02-PLAN.md — DeepRouteHeader primitive + mount on 6 deep routes + every guard/error terminal (REQ-E1)
+- [ ] 01-03-PLAN.md — Editable /account/preferences via extracted mode-aware PreferencesForm + relocated dating on/off (REQ-E4)
+- [ ] 01-04-PLAN.md — Enhance /account into an identity-forward profile hub with ProfileCard self-view (REQ-E3)
 **UI hint**: yes
 
 ### Phase 2: Loop Closure & Host Controls (P0)
@@ -130,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Navigation & Profile Spine | 0/TBD | Not started | - |
+| 1. Navigation & Profile Spine | 0/4 | Not started | - |
 | 2. Loop Closure & Host Controls | 0/TBD | Not started | - |
 | 3. Marketplace Completeness | 0/TBD | Not started | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |
