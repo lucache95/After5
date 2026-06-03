@@ -93,6 +93,29 @@ describe('ItineraryEditor', () => {
     expect(updateItineraryStops).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itinerary_id: 'itin-1' }));
   });
 
+  // #85 door 2 — a blank canvas opens on one empty stop with no title.
+  it('shows the blank-canvas prompt and lets you add a manual + a places stop', async () => {
+    from.mockClear(); insert.mockClear();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ results: [customStop] }), { status: 200 }),
+    );
+    render(<ItineraryEditor itineraryId="blank-1" initialTitle={null} initialCover={null}
+      initialStops={[{ place_id: '', place_name: '', start_time: '19:00', duration_min: 60, estimated_cost_pp: 0 }]} />);
+    // dry blank-state copy, not "edit your night"
+    expect(screen.getByText(/what.s the move\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/add your first spot/i)).toBeInTheDocument();
+    expect(screen.queryByText(/edit your night/i)).not.toBeInTheDocument();
+    // manual add appends a blank stop
+    await userEvent.click(screen.getByRole('button', { name: /add a stop/i }));
+    await waitFor(() => expect(screen.getAllByLabelText(/^name$/i)).toHaveLength(2));
+    // places add appends a real venue
+    await userEvent.type(screen.getByLabelText(/search for a place/i), 'coffee');
+    await userEvent.click(screen.getByRole('button', { name: /^search$/i }));
+    await waitFor(() => expect(screen.getByText(/quiet coffee/i)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /add to plan/i }));
+    await waitFor(() => expect(screen.getAllByLabelText(/^name$/i)).toHaveLength(3));
+  });
+
   it('adds a custom venue stop and records it to the queue', async () => {
     from.mockClear(); insert.mockClear();
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

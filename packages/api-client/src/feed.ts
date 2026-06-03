@@ -53,6 +53,16 @@ export async function updateItineraryStops(
   return data as string;
 }
 
+// #85 door 2 ("start from scratch"): create an empty, private, owner-scoped itinerary
+// (one blank stop) and return its id so the §2A canvas can open on it. No AI call.
+// Native reuses this verbatim. Gated RPC create_blank_itinerary — see migration
+// 20260603120000_m85_create_blank_itinerary.sql (NOT yet applied to prod).
+export async function createBlankItinerary(client: After5Client): Promise<string> {
+  const { data, error } = await client.rpc('create_blank_itinerary');
+  if (error) throw error;
+  return data as string;
+}
+
 // Build a public-bucket URL from a relative storage path. Returns null for null paths.
 export function ambientSoundUrl(path: string | null, supabaseUrl: string): string | null {
   if (!path) return null;

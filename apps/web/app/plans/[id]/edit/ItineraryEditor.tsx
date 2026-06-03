@@ -46,6 +46,14 @@ export function ItineraryEditor({
     .map((s) => s.photo_url)
     .filter((u): u is string => Boolean(u));
 
+  // #85 door 2 — a blank canvas opens on a single empty stop (no name, no title).
+  // Swap the editor's "edit your night" framing for a dry first-stop prompt so the
+  // host isn't staring at an unexplained empty card.
+  const isBlankCanvas =
+    !title.trim() &&
+    rows.length <= 1 &&
+    stops.every((s) => !s.place_name?.trim() && !s.place_id);
+
   function setStops(next: Stop[]) {
     setRows((prev) =>
       next.map((stop, i) => ({ key: prev[i]?.key ?? `s${i}`, stop })),
@@ -131,9 +139,13 @@ export function ItineraryEditor({
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-4 py-6 font-body text-shell-ink">
-      <h1 className="font-heading text-3xl lowercase text-shell-ink">edit your night</h1>
+      <h1 className="font-heading text-3xl lowercase text-shell-ink">
+        {isBlankCanvas ? 'what’s the move?' : 'edit your night'}
+      </h1>
       <p className="mt-1 font-body text-sm text-shell-ink/60">
-        reorder, rewrite, retime. your call.
+        {isBlankCanvas
+          ? 'add your first spot — search a place or type it in.'
+          : 'reorder, rewrite, retime. your call.'}
       </p>
 
       <label className="mt-6 block">

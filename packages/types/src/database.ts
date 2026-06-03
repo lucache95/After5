@@ -3174,6 +3174,7 @@ export type Database = {
       close_chat_thread: { Args: { p_offer: string }; Returns: undefined }
       close_rating_window: { Args: { p_lock: string }; Returns: undefined }
       complete_job: { Args: { p_id: string }; Returns: undefined }
+      create_blank_itinerary: { Args: never; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
       dispatch_notification: {
         Args: {
