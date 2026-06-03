@@ -16,6 +16,16 @@ export function OnboardingShell({ step, children }: { step: number; children: Re
           >
             after5
           </Link>
+          {/* Let someone bail out of onboarding without being trapped signed-in.
+              Plain server-action form → POST /auth/signout (signs out + redirects to /). */}
+          <form action="/auth/signout" method="post">
+            <button
+              type="submit"
+              className="font-body text-sm lowercase text-shell-ink/60 transition-colors hover:text-shell-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full px-2 py-1"
+            >
+              log out
+            </button>
+          </form>
         </nav>
       </header>
       <div className="mx-auto max-w-[420px] px-5 pb-24 pt-8">
