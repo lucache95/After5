@@ -24,6 +24,16 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+  async redirects() {
+    return [
+      // Retire the legacy date-PLANNER routes (old brand: serif After5,
+      // cream/black/rust). /create is the Barbiecore replacement.
+      { source: '/plan', destination: '/create', permanent: true },
+      { source: '/plan/i/:id', destination: '/create', permanent: true },
+      { source: '/templates/:id', destination: '/create', permanent: true },
+      { source: '/wow/:id', destination: '/create', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
