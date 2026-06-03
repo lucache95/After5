@@ -19,9 +19,9 @@ type Tab = { key: string; label: string; href: string; icon: LucideIcon; badge?:
 
 const TABS: Tab[] = [
   { key: 'discover', label: 'discover', href: '/feed', icon: Compass },
-  { key: 'dates', label: 'dates', href: '/my-nights', icon: CalendarHeart },
+  { key: 'dates', label: 'dates', href: '/matches', icon: CalendarHeart },
   { key: 'inbox', label: 'inbox', href: '/inbox', icon: Inbox, badge: true },
-  { key: 'profile', label: 'profile', href: '/home', icon: UserRound },
+  { key: 'profile', label: 'profile', href: '/account', icon: UserRound },
 ];
 
 function isActive(pathname: string, href: string): boolean {

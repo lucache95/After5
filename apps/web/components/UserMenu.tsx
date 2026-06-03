@@ -26,7 +26,7 @@ interface SessionUser {
 // Dating-app IA. Primary destinations are the live loop surfaces; the planner
 // link is the discreet wedge at the bottom, not part of the main nav.
 const MENU_ITEMS: { href: string; label: string }[] = [
-  { href: '/home', label: 'your profile' },
+  { href: '/account', label: 'your profile' },
   { href: '/my-nights', label: 'your nights' },
   { href: '/matches', label: 'matches' },
   { href: '/messages', label: 'messages' },
