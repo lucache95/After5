@@ -51,15 +51,16 @@ export default async function VibePage(props: { params: Promise<{ vibe: string }
     .filter((d) => d.inputs?.vibe?.includes(v.slug))
     .slice(0, 9);
 
+  const lower = v.label.toLowerCase();
   return (
     <AggregatorView
-      eyebrow={`Vibe · ${v.label.toLowerCase()}`}
-      title={`${v.label} in Kelowna.`}
+      eyebrow={`vibe · ${lower}`}
+      title={lower}
       blurb={v.blurb}
-      ctaHref={`/plan?vibe=${v.slug}`}
-      ctaLabel={`Plan a ${v.label.toLowerCase()} date`}
-      placesHeading={`${v.label} spots`}
-      datesHeading={`${v.label} date plans`}
+      ctaHref="/create"
+      ctaLabel="build a date here"
+      placesHeading={`${lower} spots`}
+      datesHeading={`${lower} nights`}
       places={places}
       dates={dates}
     />

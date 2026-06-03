@@ -239,50 +239,50 @@ export default async function PlacePage(props: {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-dvh bg-shell-base">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
 
       <header className="absolute inset-x-0 top-0 z-50">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-6 md:px-10 md:py-7">
-          <div className="flex items-center gap-5">
+        <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="font-display text-xl font-semibold tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
+              className="font-heading text-xl lowercase tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
             >
-              After5
+              after5
             </Link>
             {safeBackHref && (
               <Link
                 href={safeBackHref}
-                className="hidden items-center gap-1.5 rounded-pill bg-white/15 px-3.5 py-1.5 text-xs font-medium text-white backdrop-blur-md transition-colors hover:bg-white/25 sm:inline-flex"
+                className="hidden items-center gap-1.5 rounded-pill bg-white/15 px-3.5 py-1.5 font-body text-xs lowercase text-white backdrop-blur-md transition-colors hover:bg-white/25 sm:inline-flex"
               >
-                ← Back to your plan
+                ← back to your plan
               </Link>
             )}
           </div>
           <Link
-            href="/plan"
-            className="inline-flex items-center gap-2 rounded-pill bg-white px-5 py-2.5 text-sm font-medium text-text transition-transform hover:-translate-y-0.5 md:px-6 md:py-3"
+            href="/create"
+            className="inline-flex items-center gap-1.5 rounded-pill bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
           >
-            Plan a date — free
-            <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+            build a date here
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </Link>
         </nav>
       </header>
 
       {/* Hero */}
-      <section className="relative isolate min-h-[60vh] w-full overflow-hidden bg-surface md:min-h-[70vh]">
+      <section className="relative isolate min-h-[58vh] w-full overflow-hidden bg-shell-pink/50">
         <Image src={cover} alt="" fill priority sizes="100vw" className="object-cover" />
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
-        <div className="relative mx-auto flex h-full min-h-[60vh] w-full max-w-content flex-col justify-end px-6 pb-12 pt-32 md:min-h-[70vh] md:px-10 md:pb-16 md:pt-40">
-          <p className="mb-4 text-xs font-medium uppercase tracking-[0.22em] text-white/85">
-            {p.neighborhood.replace(/_/g, ' ')} · Kelowna
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-shell-ink/90 via-shell-ink/40 to-shell-ink/15" />
+        <div className="relative mx-auto flex h-full min-h-[58vh] w-full max-w-[480px] flex-col justify-end px-6 pb-10 pt-32">
+          <p className="mb-3 font-body text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
+            {p.neighborhood.replace(/_/g, ' ')} · kelowna
           </p>
-          <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-[-0.025em] text-white md:text-6xl">
+          <h1 className="font-heading text-4xl lowercase leading-[1.02] text-white">
             {p.name}
           </h1>
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-base text-white/90">
-            <span>{TYPE_LABEL[p.type] ?? p.type.replace(/_/g, ' ')}</span>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-body text-sm lowercase text-white/90">
+            <span>{(TYPE_LABEL[p.type] ?? p.type.replace(/_/g, ' ')).toLowerCase()}</span>
             <span aria-hidden className="text-white/50">·</span>
             <span>{p.price_tier}</span>
             {p.rating && (
@@ -297,8 +297,8 @@ export default async function PlacePage(props: {
             {openNow !== null && (
               <>
                 <span aria-hidden className="text-white/50">·</span>
-                <span className={openNow ? 'text-emerald-300' : 'text-rose-300'}>
-                  {openNow ? 'Open now' : 'Closed now'}
+                <span className={openNow ? 'font-semibold text-white' : 'text-white/70'}>
+                  {openNow ? 'open now' : 'closed now'}
                 </span>
               </>
             )}
@@ -306,25 +306,25 @@ export default async function PlacePage(props: {
         </div>
       </section>
 
-      <div className="mx-auto max-w-content px-6 py-16 md:px-10 md:py-20">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1fr_320px] md:gap-16">
+      <div className="mx-auto w-full max-w-[480px] px-6 py-12">
+        <div className="flex flex-col gap-10">
           <div>
             {/* Story */}
             {summary && (
-              <p className="max-w-prose text-lg leading-relaxed text-secondary md:text-xl">
+              <p className="font-body text-base leading-relaxed text-shell-ink/75">
                 {summary}
               </p>
             )}
 
             {/* Local insight */}
             {p.local_insight && (
-              <div className="mt-10 flex gap-4 rounded-card border border-accent/30 bg-accent-soft/60 p-5 md:p-6">
-                <Lightbulb className="mt-1 h-5 w-5 shrink-0 text-accent" strokeWidth={2} />
+              <div className="mt-8 flex gap-4 rounded-3xl bg-shell-pink/60 p-5 ring-1 ring-shell-accent/10">
+                <Lightbulb className="mt-1 h-5 w-5 shrink-0 text-shell-accent" strokeWidth={2} />
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
-                    Local tip
+                  <p className="font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-accent">
+                    local tip
                   </p>
-                  <p className="mt-2 text-base leading-relaxed text-text md:text-lg">
+                  <p className="mt-2 font-body text-base leading-relaxed text-shell-ink">
                     {p.local_insight}
                   </p>
                 </div>
@@ -332,31 +332,31 @@ export default async function PlacePage(props: {
             )}
 
             {/* What to know — vibe + duration + effort + energy */}
-            <div className="mt-12 grid grid-cols-2 gap-6 border-y border-border py-8 md:grid-cols-4">
-              <Stat label="Visit time" value={`${p.typical_duration_min} min`} />
+            <div className="mt-10 grid grid-cols-2 gap-6 border-y border-shell-ink/10 py-8">
+              <Stat label="visit time" value={`${p.typical_duration_min} min`} />
               <Stat
-                label="Per person"
+                label="per person"
                 value={
                   p.typical_per_person && p.typical_per_person > 0
                     ? `~$${Math.round(p.typical_per_person)}`
-                    : 'Free'
+                    : 'free'
                 }
               />
-              <Stat label="Effort" value={p.effort} />
-              <Stat label="Energy" value={p.energy} />
+              <Stat label="effort" value={p.effort} />
+              <Stat label="energy" value={p.energy} />
             </div>
 
             {/* Vibe + pairing chips */}
             {(p.vibe_tags.length > 0 || p.pairing_tags.length > 0) && (
-              <div className="mt-10">
-                <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                  The vibe
+              <div className="mt-9">
+                <p className="mb-4 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
+                  the vibe
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {p.vibe_tags.map((v) => (
                     <span
                       key={v}
-                      className="rounded-pill border border-border bg-surface px-3 py-1 text-sm text-text"
+                      className="rounded-pill bg-white/70 px-3 py-1 font-body text-sm lowercase text-shell-ink ring-1 ring-shell-ink/10"
                     >
                       {v}
                     </span>
@@ -364,7 +364,7 @@ export default async function PlacePage(props: {
                   {p.pairing_tags.map((v) => (
                     <span
                       key={v}
-                      className="rounded-pill border border-accent/30 bg-accent-soft/40 px-3 py-1 text-sm text-text"
+                      className="rounded-pill bg-shell-pink/60 px-3 py-1 font-body text-sm lowercase text-shell-ink ring-1 ring-shell-accent/15"
                     >
                       {v.replace(/_/g, ' ')}
                     </span>
@@ -375,16 +375,16 @@ export default async function PlacePage(props: {
 
             {/* Hours table — irrelevant for at-home things (always "open"). */}
             {!p.at_home && p.hours_week && p.hours_week.length > 0 && (
-              <div className="mt-10">
-                <p className="mb-4 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              <div className="mt-9">
+                <p className="mb-4 flex items-center gap-2 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
                   <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-                  Hours
+                  hours
                 </p>
-                <ul className="space-y-2 text-sm text-secondary">
+                <ul className="space-y-2 font-body text-sm text-shell-ink/70">
                   {p.hours_week.map((line, i) => (
                     <li key={i} className="grid grid-cols-[120px_1fr] gap-3">
-                      <span className="text-text">{line.split(':')[0]}</span>
-                      <span className="text-secondary [font-variant-numeric:tabular-nums]">
+                      <span className="text-shell-ink">{line.split(':')[0]}</span>
+                      <span className="text-shell-ink/70 [font-variant-numeric:tabular-nums]">
                         {line.split(':').slice(1).join(':').trim()}
                       </span>
                     </li>
@@ -395,16 +395,16 @@ export default async function PlacePage(props: {
 
             {/* Reviews */}
             {p.reviews && p.reviews.length > 0 && (
-              <div className="mt-12">
-                <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                  What people say · via Google
+              <div className="mt-10">
+                <p className="mb-5 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
+                  what people say · via google
                 </p>
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4">
                   {p.reviews.slice(0, 4).map((r, i) => (
-                    <div key={i} className="rounded-card border border-border bg-background p-5">
+                    <div key={i} className="rounded-3xl bg-white/70 p-5 ring-1 ring-shell-ink/10">
                       <div className="flex items-baseline justify-between">
-                        <p className="text-sm font-medium text-text">{r.author}</p>
-                        <p className="text-xs text-muted">{r.relative_time}</p>
+                        <p className="font-body text-sm font-semibold text-shell-ink">{r.author}</p>
+                        <p className="font-body text-xs lowercase text-shell-ink/50">{r.relative_time}</p>
                       </div>
                       {r.rating !== null && (
                         <div className="mt-1 inline-flex items-center gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
@@ -413,15 +413,15 @@ export default async function PlacePage(props: {
                               key={n}
                               className={
                                 n < Math.round(r.rating!)
-                                  ? 'h-3.5 w-3.5 fill-accent text-accent'
-                                  : 'h-3.5 w-3.5 fill-border text-border'
+                                  ? 'h-3.5 w-3.5 fill-shell-accent text-shell-accent'
+                                  : 'h-3.5 w-3.5 fill-shell-ink/15 text-shell-ink/15'
                               }
                               strokeWidth={0}
                             />
                           ))}
                         </div>
                       )}
-                      <p className="mt-3 line-clamp-6 text-sm leading-relaxed text-secondary">
+                      <p className="mt-3 line-clamp-6 font-body text-sm leading-relaxed text-shell-ink/70">
                         {r.text}
                       </p>
                     </div>
@@ -432,9 +432,9 @@ export default async function PlacePage(props: {
 
             {/* Photo gallery */}
             {p.photos && p.photos.length > 0 && (
-              <div className="mt-12">
-                <p className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                  More photos · via Google
+              <div className="mt-10">
+                <p className="mb-5 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
+                  more photos · via google
                 </p>
                 <PhotoLightbox
                   photos={p.photos}
@@ -444,31 +444,30 @@ export default async function PlacePage(props: {
             )}
           </div>
 
-          {/* Side rail — different for at-home vs out-of-the-house. At-home
-              has no address/maps/phone; just a "plan a date" CTA. */}
-          <aside className="md:sticky md:top-8 md:self-start">
-            <div className="space-y-3 rounded-card border border-border bg-surface p-6 md:p-7">
+          {/* Action rail — different for at-home vs out-of-the-house. At-home
+              has no address/maps/phone; just a build-a-date CTA. */}
+          <aside>
+            <div className="space-y-3 rounded-3xl bg-white/70 p-6 ring-1 ring-shell-ink/10">
               {p.at_home ? (
                 <>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
-                    At-home idea
+                  <p className="font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
+                    at-home idea
                   </p>
-                  <p className="text-sm leading-relaxed text-secondary">
-                    No reservations, no driving. Everything you need is at your
-                    place — or a quick stop on the way home.
+                  <p className="font-body text-sm leading-relaxed text-shell-ink/70">
+                    no reservations, no driving. everything you need is at your place, or a quick stop on the way home.
                   </p>
                   <Link
-                    href="/plan"
-                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-primary px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                    href="/create"
+                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-shell-accent px-5 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
                   >
                     <Sparkles className="h-4 w-4" strokeWidth={2} />
-                    Plan a date with this idea
+                    build a date with this idea
                   </Link>
                 </>
               ) : (
                 <>
                   {p.address && (
-                    <p className="mb-1 text-sm leading-relaxed text-secondary">
+                    <p className="mb-1 font-body text-sm leading-relaxed text-shell-ink/70">
                       {p.address}
                     </p>
                   )}
@@ -476,26 +475,26 @@ export default async function PlacePage(props: {
                     href={directionsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-primary px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-shell-accent px-5 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
                   >
                     <MapPin className="h-4 w-4" strokeWidth={2} />
-                    Open in Maps
+                    open in maps
                   </a>
                   {p.website && (
                     <a
                       href={p.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+                      className="flex w-full items-center justify-center gap-2 rounded-pill bg-white px-5 py-3 font-body text-sm font-semibold lowercase text-shell-ink ring-1 ring-shell-ink/15 transition active:scale-95 hover:ring-shell-ink/30"
                     >
                       <Globe className="h-4 w-4" strokeWidth={2} />
-                      Visit website
+                      visit website
                     </a>
                   )}
                   {p.phone && (
                     <a
                       href={`tel:${p.phone.replace(/[^+\d]/g, '')}`}
-                      className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40"
+                      className="flex w-full items-center justify-center gap-2 rounded-pill bg-white px-5 py-3 font-body text-sm font-semibold lowercase text-shell-ink ring-1 ring-shell-ink/15 transition active:scale-95 hover:ring-shell-ink/30"
                     >
                       <Phone className="h-4 w-4" strokeWidth={2} />
                       {p.phone}
@@ -506,18 +505,18 @@ export default async function PlacePage(props: {
                       href={p.reservation_url ?? p.website ?? directionsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-pill bg-text px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                      className="flex w-full items-center justify-center gap-2 rounded-pill bg-shell-ink px-5 py-3 font-body text-sm font-semibold lowercase text-white transition active:scale-95 hover:opacity-90"
                     >
-                      Book — required
+                      book — required
                       <ExternalLink className="h-4 w-4" strokeWidth={2} />
                     </a>
                   )}
                   <Link
-                    href="/plan"
-                    className="flex w-full items-center justify-center gap-2 rounded-pill border border-accent/40 bg-accent-soft/60 px-5 py-3 text-sm font-medium text-text transition-colors hover:bg-accent-soft"
+                    href="/create"
+                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-shell-pink/70 px-5 py-3 font-body text-sm font-semibold lowercase text-shell-ink ring-1 ring-shell-accent/20 transition active:scale-95 hover:bg-shell-pink"
                   >
-                    <Sparkles className="h-4 w-4 text-accent" strokeWidth={2} />
-                    Plan a date with this spot
+                    <Sparkles className="h-4 w-4 text-shell-accent" strokeWidth={2} />
+                    build a date with this spot
                   </Link>
                 </>
               )}
@@ -528,16 +527,16 @@ export default async function PlacePage(props: {
 
       {/* Cross-link to dates featuring this place */}
       {dates.length > 0 && (
-        <section className="border-t border-border bg-surface">
-          <div className="mx-auto max-w-content px-6 py-20 md:px-10 md:py-28">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
-              Date plans featuring {p.name}
+        <section className="border-t border-shell-ink/10">
+          <div className="mx-auto w-full max-w-[480px] px-6 py-16">
+            <p className="mb-2 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
+              nights featuring {p.name.toLowerCase()}
             </p>
-            <h2 className="font-display text-2xl font-bold leading-tight tracking-[-0.01em] text-text md:text-3xl">
-              Build a night around it.
+            <h2 className="font-heading text-3xl lowercase leading-tight text-shell-ink">
+              build a night around it
             </h2>
 
-            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
+            <div className="mt-8 grid grid-cols-1 gap-6">
               {dates.map((it) => {
                 const stops = (Array.isArray(it.stops) ? it.stops : []) as StopLite[];
                 // Exclude the current place so each card shows a DIFFERENT
@@ -549,24 +548,24 @@ export default async function PlacePage(props: {
                   : 0;
                 return (
                   <Link key={it.id} href={`/dates/${it.slug}`} className="group flex flex-col">
-                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-background">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl bg-shell-pink/50">
                       <Image
                         src={cover2}
                         alt=""
                         fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.03]"
+                        sizes="(max-width: 480px) 100vw, 420px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                       />
                     </div>
-                    <h3 className="mt-4 font-display text-lg font-semibold leading-tight text-text md:text-xl">
+                    <h3 className="mt-4 font-heading text-xl lowercase leading-tight text-shell-ink">
                       {it.title}
                     </h3>
-                    {it.hook && <p className="mt-1 line-clamp-2 text-sm text-secondary">{it.hook}</p>}
-                    <p className="mt-3 text-sm text-muted [font-variant-numeric:tabular-nums]">
-                      <span className="text-text">${Math.round(it.total_cost_pp ?? 0)}</span>
-                      <span className="mx-1.5 text-border">·</span>
+                    {it.hook && <p className="mt-1 line-clamp-2 font-body text-sm text-shell-ink/70">{it.hook}</p>}
+                    <p className="mt-3 font-body text-sm lowercase text-shell-ink/55 [font-variant-numeric:tabular-nums]">
+                      <span className="text-shell-ink">${Math.round(it.total_cost_pp ?? 0)}</span>
+                      <span className="mx-1.5 text-shell-ink/30">·</span>
                       <span>{totalHr} hr</span>
-                      <span className="mx-1.5 text-border">·</span>
+                      <span className="mx-1.5 text-shell-ink/30">·</span>
                       <span>{stops.length} stops</span>
                     </p>
                   </Link>
@@ -574,29 +573,25 @@ export default async function PlacePage(props: {
               })}
             </div>
 
-            <div className="mt-12 flex justify-center">
+            <div className="mt-10 flex justify-center">
               <Link
-                href="/plan"
-                className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-3.5 text-base font-medium text-background transition-opacity hover:opacity-85"
+                href="/create"
+                className="inline-flex items-center gap-2 rounded-pill bg-shell-accent px-7 py-3.5 font-body text-base font-semibold lowercase text-white shadow-fun transition active:scale-95"
               >
-                Plan a date around {p.name}
-                <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                build a date around {p.name.toLowerCase()}
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </Link>
             </div>
           </div>
         </section>
       )}
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
-          <p className="text-xs text-muted">
-            Built in Kelowna. Coming to Kamloops, Vernon, Penticton.
-          </p>
-          <div className="flex items-center gap-6 text-xs text-muted">
-            <Link href="/privacy" className="transition-colors hover:text-text">Privacy</Link>
-            <Link href="/terms" className="transition-colors hover:text-text">Terms</Link>
-            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-text">hello@tryafter5.app</a>
-          </div>
+      <footer className="mx-auto w-full max-w-[480px] px-6 pb-16 pt-10">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-body text-xs lowercase text-shell-ink/45">
+          <Link href="/about" className="hover:text-shell-ink">about</Link>
+          <Link href="/privacy" className="hover:text-shell-ink">privacy</Link>
+          <Link href="/terms" className="hover:text-shell-ink">terms</Link>
+          <a href="mailto:hello@tryafter5.app" className="hover:text-shell-ink">hello@tryafter5.app</a>
         </div>
       </footer>
     </main>
@@ -606,8 +601,8 @@ export default async function PlacePage(props: {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">{label}</p>
-      <p className="mt-1.5 font-display text-lg font-semibold capitalize text-text md:text-xl">
+      <p className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-shell-ink/55">{label}</p>
+      <p className="mt-1.5 font-heading text-lg lowercase text-shell-ink">
         {value}
       </p>
     </div>

@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { imageForStop, coverImageFor } from '@/lib/place-image';
 
-// Shared layout for /vibes/[v], /neighborhoods/[n], /types/[t], /wow/[id],
-// /templates/[id]. Each takes a hero (eyebrow, title, blurb), an optional
-// places grid, an optional dates grid, and a primary CTA href.
+// Shared barbiecore layout for /vibes/[v], /neighborhoods/[n], /types/[t].
+// Each takes a hero (eyebrow, title, blurb), an optional places grid, an
+// optional dates grid, and a primary CTA into /create. SEO browse content is
+// preserved; only the chrome is restyled.
 
 export interface PlaceCardData {
   id: string;
@@ -50,67 +51,69 @@ export function AggregatorView({
   ctaLabel,
   places = [],
   dates = [],
-  placesHeading = 'The spots',
-  datesHeading = 'Dates that fit',
-  emptyNote = 'Nothing here yet — generate a few and they\'ll show up.',
+  placesHeading = 'the spots',
+  datesHeading = 'dates that fit',
+  emptyNote = 'nothing here yet. check back soon.',
 }: Props) {
   const showEmpty = places.length === 0 && dates.length === 0;
   return (
-    <main className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-[2px]">
-        <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-5 md:px-10">
-          <Link href="/" className="font-display text-xl font-semibold tracking-tight text-text">
-            After5
+    <main className="min-h-dvh bg-shell-base">
+      <header className="sticky top-0 z-50 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-[2px]">
+        <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-4">
+          <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">
+            after5
           </Link>
           <Link
             href={ctaHref}
-            className="inline-flex items-center gap-2 rounded-pill bg-primary px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85"
+            className="inline-flex items-center gap-1.5 rounded-pill bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
           >
             {ctaLabel}
-            <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </Link>
         </nav>
       </header>
 
-      <section className="mx-auto max-w-content px-6 pb-10 pt-16 md:px-10 md:pb-14 md:pt-24">
-        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">{eyebrow}</p>
-        <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text md:text-5xl">
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-8 pt-10">
+        <p className="mb-3 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-accent">
+          {eyebrow}
+        </p>
+        <h1 className="font-heading text-4xl lowercase leading-[1.02] text-shell-ink">
           {title}
         </h1>
-        <p className="mt-6 max-w-prose text-base text-secondary md:text-lg">{blurb}</p>
+        <p className="mt-5 font-body text-base leading-relaxed text-shell-ink/70">{blurb}</p>
       </section>
 
       {showEmpty && (
-        <section className="mx-auto max-w-content px-6 pb-20 md:px-10">
-          <p className="rounded-card border border-dashed border-border bg-surface px-6 py-12 text-center text-base text-muted">
+        <section className="mx-auto w-full max-w-[480px] px-6 pb-16">
+          <p className="rounded-3xl border border-dashed border-shell-ink/15 bg-shell-pink/40 px-6 py-12 text-center font-body text-base text-shell-ink/65">
             {emptyNote}
           </p>
         </section>
       )}
 
       {places.length > 0 && (
-        <section className="mx-auto max-w-content px-6 pb-12 md:px-10 md:pb-16">
-          <p className="mb-6 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+        <section className="mx-auto w-full max-w-[480px] px-6 pb-10">
+          <p className="mb-5 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
             {placesHeading} · {places.length}
           </p>
-          <div className="grid grid-cols-2 gap-5 md:grid-cols-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-4">
             {places.map((p) => {
               const cover = imageForStop({ photo_url: p.photo_url, place_type: p.type });
               return (
                 <Link key={p.id} href={`/places/${p.slug}`} className="group flex flex-col">
-                  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-surface">
+                  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-shell-pink/50">
                     <Image
                       src={cover}
                       alt=""
                       fill
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                      className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.04]"
+                      sizes="(max-width: 480px) 50vw, 240px"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                     />
                   </div>
-                  <h3 className="mt-3 font-display text-sm font-semibold leading-tight text-text md:text-base">
+                  <h3 className="mt-3 font-body text-sm font-semibold leading-tight text-shell-ink">
                     {p.name}
                   </h3>
-                  <p className="mt-0.5 text-xs text-muted">
+                  <p className="mt-0.5 font-body text-xs lowercase text-shell-ink/55">
                     {[p.neighborhood?.replace(/_/g, ' '), p.price_tier].filter(Boolean).join(' · ')}
                   </p>
                 </Link>
@@ -121,11 +124,11 @@ export function AggregatorView({
       )}
 
       {dates.length > 0 && (
-        <section className="mx-auto max-w-content border-t border-border px-6 py-16 md:px-10 md:py-24">
-          <p className="mb-6 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+        <section className="mx-auto w-full max-w-[480px] border-t border-shell-ink/10 px-6 py-10">
+          <p className="mb-5 font-body text-xs font-semibold uppercase tracking-[0.18em] text-shell-ink/55">
             {datesHeading} · {dates.length}
           </p>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">
+          <div className="grid grid-cols-1 gap-6">
             {dates.map((it) => {
               const cover = coverImageFor(it.stops, { itineraryCover: it.cover_image_url });
               const totalHr = it.total_duration_min !== null
@@ -133,24 +136,24 @@ export function AggregatorView({
                 : 0;
               return (
                 <Link key={it.id} href={`/dates/${it.slug}`} className="group flex flex-col">
-                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-surface">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl bg-shell-pink/50">
                     <Image
                       src={cover}
                       alt=""
                       fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.03]"
+                      sizes="(max-width: 480px) 100vw, 420px"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                     />
                   </div>
-                  <h3 className="mt-4 font-display text-lg font-semibold leading-tight text-text md:text-xl">
+                  <h3 className="mt-4 font-heading text-xl lowercase leading-tight text-shell-ink">
                     {it.title}
                   </h3>
-                  {it.hook && <p className="mt-1 line-clamp-2 text-sm text-secondary">{it.hook}</p>}
-                  <p className="mt-3 text-sm text-muted [font-variant-numeric:tabular-nums]">
-                    <span className="text-text">${Math.round(it.total_cost_pp ?? 0)}</span>
-                    <span className="mx-1.5 text-border">·</span>
+                  {it.hook && <p className="mt-1 line-clamp-2 font-body text-sm text-shell-ink/70">{it.hook}</p>}
+                  <p className="mt-3 font-body text-sm lowercase text-shell-ink/55 [font-variant-numeric:tabular-nums]">
+                    <span className="text-shell-ink">${Math.round(it.total_cost_pp ?? 0)}</span>
+                    <span className="mx-1.5 text-shell-ink/30">·</span>
                     <span>{totalHr} hr</span>
-                    <span className="mx-1.5 text-border">·</span>
+                    <span className="mx-1.5 text-shell-ink/30">·</span>
                     <span>{it.stops.length} stops</span>
                   </p>
                 </Link>
@@ -160,26 +163,24 @@ export function AggregatorView({
         </section>
       )}
 
-      <section className="border-t border-border">
-        <div className="mx-auto max-w-content px-6 py-20 text-center md:px-10 md:py-28">
+      <section className="border-t border-shell-ink/10">
+        <div className="mx-auto w-full max-w-[480px] px-6 py-16 text-center">
           <Link
             href={ctaHref}
-            className="inline-flex items-center gap-2 rounded-pill bg-primary px-8 py-4 text-base font-medium text-background transition-opacity hover:opacity-85"
+            className="inline-flex items-center gap-2 rounded-pill bg-shell-accent px-8 py-4 font-body text-base font-semibold lowercase text-white shadow-fun transition active:scale-95"
           >
             {ctaLabel}
-            <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-6 py-12 md:flex-row md:justify-between md:px-10 md:py-16">
-          <p className="text-xs text-muted">Built in Kelowna. Coming to Kamloops, Vernon, Penticton.</p>
-          <div className="flex items-center gap-6 text-xs text-muted">
-            <Link href="/privacy" className="transition-colors hover:text-text">Privacy</Link>
-            <Link href="/terms" className="transition-colors hover:text-text">Terms</Link>
-            <a href="mailto:hello@tryafter5.app" className="transition-colors hover:text-text">hello@tryafter5.app</a>
-          </div>
+      <footer className="mx-auto w-full max-w-[480px] px-6 pb-16 pt-6">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-body text-xs lowercase text-shell-ink/45">
+          <Link href="/about" className="hover:text-shell-ink">about</Link>
+          <Link href="/privacy" className="hover:text-shell-ink">privacy</Link>
+          <Link href="/terms" className="hover:text-shell-ink">terms</Link>
+          <a href="mailto:hello@tryafter5.app" className="hover:text-shell-ink">hello@tryafter5.app</a>
         </div>
       </footer>
     </main>

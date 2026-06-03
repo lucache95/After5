@@ -55,15 +55,17 @@ export default async function TypePage(props: { params: Promise<{ slug: string }
     })
     .slice(0, 9);
 
+  const lower = t.label.toLowerCase();
+  const singular = lower.replace(/s$/, '');
   return (
     <AggregatorView
-      eyebrow={`Type · Kelowna`}
-      title={`Kelowna ${t.label.toLowerCase()}.`}
-      blurb={`Every ${t.label.toLowerCase().replace(/s$/, '')} we plan dates around. Pick one or browse the dates that feature them.`}
-      ctaHref="/plan"
-      ctaLabel="Plan a date"
-      placesHeading={t.label}
-      datesHeading={`Dates featuring a ${t.label.toLowerCase().replace(/s$/, '')}`}
+      eyebrow="by category"
+      title={lower}
+      blurb={`every ${singular} we build dates around. pick one or browse the nights that feature them.`}
+      ctaHref="/create"
+      ctaLabel="build a date here"
+      placesHeading={lower}
+      datesHeading={`nights featuring a ${singular}`}
       places={places}
       dates={dates}
     />

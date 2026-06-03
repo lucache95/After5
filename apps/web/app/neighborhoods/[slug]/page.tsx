@@ -57,15 +57,16 @@ export default async function NeighborhoodPage(props: { params: Promise<{ slug: 
     })
     .slice(0, 9);
 
+  const lower = n.label.toLowerCase();
   return (
     <AggregatorView
-      eyebrow={`Neighborhood · Kelowna`}
-      title={`${n.label}, Kelowna.`}
+      eyebrow="by area"
+      title={lower}
       blurb={n.blurb}
-      ctaHref="/plan"
-      ctaLabel={`Plan a ${n.label} date`}
-      placesHeading={`${n.label} spots`}
-      datesHeading={`Dates featuring ${n.label}`}
+      ctaHref="/create"
+      ctaLabel="build a date here"
+      placesHeading={`${lower} spots`}
+      datesHeading={`nights featuring ${lower}`}
       places={places}
       dates={dates}
     />
