@@ -41,14 +41,17 @@ function Avatar({ src, name, dimmed }: { src: string | null; name: string; dimme
   );
 }
 
-function Row({ thread }: { thread: ThreadSummary }) {
+// Exported so the unified inbox (#84) can render the same row under its own base
+// path. `basePath` re-homes the conversation link so back-nav stays in-tab
+// (/inbox/[threadId] vs the standalone /messages/[threadId]); defaults to messages.
+export function ThreadRow({ thread, basePath = '/messages' }: { thread: ThreadSummary; basePath?: string }) {
   const name = thread.counterpartName ?? 'someone';
   const hasUnread = thread.unread > 0;
   const count = thread.unread > 9 ? '9+' : String(thread.unread);
   const preview = thread.lastMessage ?? 'no messages yet, say hey';
   return (
     <Link
-      href={`/messages/${thread.threadId}`}
+      href={`${basePath}/${thread.threadId}`}
       aria-label={`chat with ${name}${hasUnread ? `, ${thread.unread} unread` : ''}`}
       className={cn(
         'flex min-h-[44px] items-center gap-3 rounded-2xl px-3 py-2.5 transition',
@@ -126,7 +129,7 @@ export function ThreadList({ threads }: { threads: ThreadSummary[] }) {
       <ul aria-label="conversations" className="mt-4 space-y-0.5">
         {threads.map((t) => (
           <li key={t.threadId}>
-            <Row thread={t} />
+            <ThreadRow thread={t} />
           </li>
         ))}
       </ul>

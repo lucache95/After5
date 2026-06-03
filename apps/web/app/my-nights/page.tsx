@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { BottomTabShell } from '@/components/BottomTabShell';
-import { NotificationBell } from '@/components/NotificationBell';
+import { NotificationToast } from '@/components/NotificationToast';
 import { CalendarHeart, Heart, Sparkles } from 'lucide-react';
 import { LocalTime } from '@/components/LocalTime';
 import { coverImageForNight } from '@/lib/place-image';
@@ -164,7 +164,6 @@ export default async function MyNightsPage() {
       <header className="sticky top-0 z-30 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
         <nav aria-label="masthead" className="mx-auto flex w-full max-w-[420px] items-center justify-between px-5 py-3.5">
           <Link href="/" className="font-heading text-2xl lowercase text-shell-accent">after5</Link>
-          <NotificationBell />
         </nav>
       </header>
 
@@ -197,7 +196,8 @@ export default async function MyNightsPage() {
         )}
       </div>
 
-      <BottomTabShell />
+      <NotificationToast userId={user.id} />
+      <BottomTabShell userId={user.id} />
     </main>
   );
 }
