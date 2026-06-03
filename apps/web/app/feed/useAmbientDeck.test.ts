@@ -26,10 +26,15 @@ class FakeAudioContext {
   constructor() { instances.push(this); }
 }
 
+const fetched: string[] = [];
 beforeEach(() => {
   instances.length = 0;
+  fetched.length = 0;
   (globalThis as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
-  globalThis.fetch = vi.fn(async () => ({ arrayBuffer: async () => new ArrayBuffer(8) })) as never;
+  globalThis.fetch = vi.fn(async (url: string) => {
+    fetched.push(url);
+    return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  }) as never;
   localStorage.clear();
 });
 
@@ -87,6 +92,33 @@ describe('useAmbientDeck', () => {
     const gains = (ctx.createGain as unknown as { mock: { results: { value: FakeGain }[] } }).mock.results.map((r) => r.value);
     const usedCurve = gains.some((g) => g.gain.setValueCurveAtTime.mock.calls.length > 0);
     expect(usedCurve).toBe(true);
+  });
+
+  it('falls back to the shipped bed when the active card url is null (bug #78)', async () => {
+    const { result } = renderHook(() => useAmbientDeck([null], 0, { reduceMotion: false }));
+    await act(async () => { result.current.toggleMute(); });
+    // A null card url must still fetch (and play) the committed fallback asset.
+    expect(fetched.some((u) => u.includes('/ambient/after5-ambient-loop'))).toBe(true);
+    const ctx = instances[0]!;
+    // a real source was started for the fallback buffer (not silence).
+    const sources = (ctx.createBufferSource as unknown as { mock: { results: { value: FakeSource }[] } }).mock.results;
+    expect(sources.some((r) => r.value.start.mock.calls.length > 0)).toBe(true);
+  });
+
+  it('falls back to the shipped bed when the card url 404s', async () => {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      fetched.push(url);
+      // the card url 404s (placeholder bucket path); the fallback asset is ok.
+      const ok = url.includes('/ambient/after5-ambient-loop');
+      return { ok, arrayBuffer: async () => new ArrayBuffer(8) };
+    }) as never;
+    const { result } = renderHook(() => useAmbientDeck(['cozy/PLACEHOLDER.m4a'], 0, { reduceMotion: false }));
+    await act(async () => { result.current.toggleMute(); });
+    expect(fetched).toContain('cozy/PLACEHOLDER.m4a');
+    expect(fetched.some((u) => u.includes('/ambient/after5-ambient-loop'))).toBe(true);
+    const ctx = instances[0]!;
+    const sources = (ctx.createBufferSource as unknown as { mock: { results: { value: FakeSource }[] } }).mock.results;
+    expect(sources.some((r) => r.value.start.mock.calls.length > 0)).toBe(true);
   });
 
   it('closes the context on unmount', async () => {

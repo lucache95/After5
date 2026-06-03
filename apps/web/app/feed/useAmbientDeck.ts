@@ -18,6 +18,13 @@ const STORAGE_KEY = 'after5:ambient-unmuted';
 const FADE_SEC = 0.6;
 const CURVE_STEPS = 32;
 
+// Committed, always-reachable fallback bed (bug #78). The per-card soundtrack is
+// the host's pick or a vibe-auto match resolved server-side; until the curated
+// loops are uploaded to the public bucket, those paths 404 (placeholder seed) and
+// a null pick has no url at all. Either way we fall back to this shipped asset so
+// unmuting always plays something. .m4a (AAC) first, .mp3 if AAC decode fails.
+const FALLBACK_URLS = ['/ambient/after5-ambient-loop.m4a', '/ambient/after5-ambient-loop.mp3'];
+
 // Precomputed equal-power crossfade curves (cos out, sin in over [0,1]).
 function fadeCurves(): { out: Float32Array; in: Float32Array } {
   const out = new Float32Array(CURVE_STEPS);
@@ -56,22 +63,48 @@ export function useAmbientDeck(
   const reduceRef = useRef(reduceMotion);
   reduceRef.current = reduceMotion;
 
-  // Decode + cache a buffer for a URL (null → silence). Failures swallowed.
-  const loadBuffer = useCallback(async (url: string | null): Promise<AudioBuffer | null> => {
+  // Decode + cache one URL. Returns null (cached as null) on fetch/decode failure
+  // or a non-ok response — no fallback at this level, no recursion.
+  const decodeUrl = useCallback(async (url: string): Promise<AudioBuffer | null> => {
     const ctx = ctxRef.current;
-    if (!ctx || !url) return null;
+    if (!ctx) return null;
     if (bufferCache.current.has(url)) return bufferCache.current.get(url) ?? null;
     try {
       const res = await fetch(url);
+      // A 404 on a placeholder bucket path still resolves with res.ok === false;
+      // treat it as a decode failure so we fall through to the shipped bed.
+      if ('ok' in res && (res as Response).ok === false) throw new Error('not ok');
       const arr = await res.arrayBuffer();
       const buf = await ctx.decodeAudioData(arr);
       bufferCache.current.set(url, buf);
       return buf;
     } catch {
-      bufferCache.current.set(url, null); // remember the failure as silence
+      bufferCache.current.set(url, null); // remember the failure
       return null;
     }
   }, []);
+
+  // Decode the shipped fallback bed (first format that decodes), cached.
+  const loadFallback = useCallback(async (): Promise<AudioBuffer | null> => {
+    for (const url of FALLBACK_URLS) {
+      const buf = await decodeUrl(url);
+      if (buf) return buf;
+    }
+    return null;
+  }, [decodeUrl]);
+
+  // Resolve a playable buffer for a card url: the card's own soundtrack when it
+  // decodes, else the always-reachable fallback bed. A null/absent or 404 url
+  // therefore still plays the bed instead of silence (bug #78).
+  const loadBuffer = useCallback(async (url: string | null): Promise<AudioBuffer | null> => {
+    const ctx = ctxRef.current;
+    if (!ctx) return null;
+    if (url) {
+      const own = await decodeUrl(url);
+      if (own) return own;
+    }
+    return loadFallback();
+  }, [decodeUrl, loadFallback]);
 
   // Start a buffer (looped) on the given lane; replaces any current source there.
   const startLane = useCallback((laneIdx: number, buf: AudioBuffer | null) => {
