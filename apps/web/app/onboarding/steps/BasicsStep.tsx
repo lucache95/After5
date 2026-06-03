@@ -6,7 +6,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
-import { ProfileInputSchema } from '@after5/validators';
+import { ProfileInputSchema, MAX_BIO } from '@after5/validators';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, upsertProfile, advanceOnboarding } from '@/lib/after5/client';
 
@@ -140,7 +140,7 @@ export function BasicsStep({ userId, initial }: { userId: string; initial: Basic
         <div>
           <label htmlFor="bio" className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink">short bio</label>
           <textarea
-            id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={4}
+            id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={MAX_BIO} rows={4}
             placeholder="grew up on the lake, still finding new trails. pitch me a patio at sunset and i'm in."
             className={inputClass}
           />

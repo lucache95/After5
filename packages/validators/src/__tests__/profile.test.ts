@@ -6,6 +6,7 @@ import {
   PromptAnswerSchema,
   PersonaWebhookEventSchema,
   GenderSchema,
+  MAX_BIO,
   PROMPT_IDS,
   PronounsSchema,
   ExpandedProfileSchema,
@@ -45,7 +46,9 @@ describe('PreferencesInputSchema', () => {
 
 describe('ProfileInputSchema', () => {
   it('caps bio length and prompt count', () => {
-    expect(() => ProfileInputSchema.parse({ first_name: 'Lee', bio: 'x'.repeat(501), prompts: [] })).toThrow();
+    // 500 is now comfortably under the cap (raised to MAX_BIO); over-cap still rejects.
+    expect(() => ProfileInputSchema.parse({ first_name: 'Lee', bio: 'x'.repeat(500), prompts: [] })).not.toThrow();
+    expect(() => ProfileInputSchema.parse({ first_name: 'Lee', bio: 'x'.repeat(MAX_BIO + 1), prompts: [] })).toThrow();
     const tooMany = Array.from({ length: 4 }, () => ({ prompt_id: 'two_truths', answer: 'a' }));
     expect(() => ProfileInputSchema.parse({ first_name: 'Lee', bio: 'hi', prompts: tooMany })).toThrow();
   });

@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ImageUp, X } from 'lucide-react';
 import Image from 'next/image';
-import { ProfileInputSchema, ExpandedProfileSchema, type DynamicPromptAnswer, type ExpandedProfile } from '@after5/validators';
+import { ProfileInputSchema, ExpandedProfileSchema, MAX_BIO, type DynamicPromptAnswer, type ExpandedProfile } from '@after5/validators';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, upsertProfile } from '@/lib/after5/client';
 import { PhotoCropper } from '@/app/onboarding/steps/PhotoCropper';
@@ -406,7 +406,7 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
         <div>
           <label htmlFor="bio" className={labelClass}>short bio</label>
           <textarea
-            id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={4}
+            id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={MAX_BIO} rows={4}
             placeholder="grew up on the lake, still finding new trails. pitch me a patio at sunset and i'm in."
             className={inputClass}
           />

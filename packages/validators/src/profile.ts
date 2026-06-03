@@ -9,6 +9,10 @@ export type Gender = z.infer<typeof GenderSchema>;
 export const MIN_AGE = 18;
 export const MAX_AGE = 99;
 
+// Short-bio character cap. Single source of truth — the onboarding + profile-editor
+// textareas import this so the UI maxLength and this schema never drift apart.
+export const MAX_BIO = 1500;
+
 // Known dealbreaker tags. text[] in the DB; this enum keeps the UI/contract honest.
 export const DealbreakerSchema = z.enum([
   'smoking', 'wants_kids', 'no_kids', 'drinks_alcohol', 'no_alcohol', 'has_pets', 'no_pets',
@@ -89,7 +93,7 @@ export type PhotoMeta = z.infer<typeof PhotoMetaSchema>;
 
 export const ProfileInputSchema = z.object({
   first_name: z.string().min(1).max(40),
-  bio: z.string().max(500).default(''),
+  bio: z.string().max(MAX_BIO).default(''),
   vibe_tags: z.array(z.string().max(24)).max(8).default([]),
   prompts: z.array(PromptAnswerSchema).max(3).default([]),
 });
