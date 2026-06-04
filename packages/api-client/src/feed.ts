@@ -9,6 +9,10 @@ export interface FeedNight {
   // M4: resolved ambient pick (host's choice or vibe-auto fallback). Path is relative
   // to the public 'ambient-sounds' bucket; prefix with ambientSoundUrl() client-side.
   ambient_sound_path: string | null; ambient_sound_name: string | null;
+  // E10 (REQ-E10 / D-03): pure targeting signal (date_fits_viewer only), never gated by
+  // the soft feed-filter score. True even when the viewer has empty feed_filters, so a
+  // perfectly targeted night still shows the fit pill. Source: browse_feed_for_viewer.
+  fit: boolean;
 }
 
 /** A curated library entry for the host's optional soundtrack pick. */
@@ -171,6 +175,30 @@ export async function browseFeed(client: After5Client, opts?: {
   });
   if (error) throw error;
   return (data ?? []) as FeedNight[];
+}
+
+// E10 (REQ-E10): the host pre-post reach nudge. Calls the DEFINER aggregate-count RPC
+// reach_preview(p_target_genders text[], p_target_age_range int4range, p_city uuid,
+// p_radius_km numeric) -> integer. target_age_range is a Postgres int4range literal
+// string (e.g. '[25,40)'); omitting any param sends undefined, which the RPC normalizes
+// to the open/everyone default. Returns only an aggregate count (never row identity).
+export async function reachPreview(
+  client: After5Client,
+  input: {
+    target_genders?: string[];
+    target_age_range?: string | null;
+    city: string;
+    radius_km?: number | null;
+  },
+): Promise<number> {
+  const { data, error } = await client.rpc('reach_preview', {
+    p_target_genders: input.target_genders ?? undefined,
+    p_target_age_range: input.target_age_range ?? undefined,
+    p_city: input.city,
+    p_radius_km: input.radius_km ?? undefined,
+  } as never);
+  if (error) throw error;
+  return (data as number) ?? 0;
 }
 
 export async function recordSwipe(client: After5Client, instanceId: string, direction: 'left' | 'right'): Promise<void> {

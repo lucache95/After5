@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { postNight, browseFeed, ambientSoundUrl, updateItineraryStops, cancelNight, updateNight, type FeedNight } from '../feed';
+import { postNight, browseFeed, ambientSoundUrl, updateItineraryStops, cancelNight, updateNight, reachPreview, type FeedNight } from '../feed';
 
 function mockClient(result: { data: unknown; error: unknown }) {
   return { rpc: vi.fn().mockResolvedValue(result) } as never;
@@ -100,6 +100,58 @@ describe('updateNight', () => {
   it('throws when the RPC returns an error', async () => {
     const c = mockAuthedClient('host-1', { data: null, error: { message: 'not_cancellable', code: 'P0001' } });
     await expect(updateNight(c, { instance_id: 'inst-9', duration_min: 90 })).rejects.toBeTruthy();
+  });
+});
+
+describe('browseFeed fit column', () => {
+  it('carries the targeting-only fit boolean from the RPC payload', async () => {
+    const row: Partial<FeedNight> & { fit: boolean } = { date_instance_id: 'd1', fit: true };
+    const c = mockClient({ data: [row], error: null });
+    const out = await browseFeed(c);
+    expect(out[0]?.fit).toBe(true);
+  });
+});
+
+describe('reachPreview', () => {
+  it('calls reach_preview with the real signature and returns the count', async () => {
+    const c = mockClient({ data: 7, error: null });
+    const n = await reachPreview(c, {
+      target_genders: ['woman'],
+      target_age_range: '[25,40)',
+      city: 'city-1',
+      radius_km: 25,
+    });
+    expect(n).toBe(7);
+    expect((c as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith(
+      'reach_preview',
+      expect.objectContaining({
+        p_target_genders: ['woman'],
+        p_target_age_range: '[25,40)',
+        p_city: 'city-1',
+        p_radius_km: 25,
+      }),
+    );
+  });
+  it('sends undefined for omitted optional params (open default)', async () => {
+    const c = mockClient({ data: 0, error: null });
+    await reachPreview(c, { city: 'city-1' });
+    expect((c as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith(
+      'reach_preview',
+      expect.objectContaining({
+        p_target_genders: undefined,
+        p_target_age_range: undefined,
+        p_city: 'city-1',
+        p_radius_km: undefined,
+      }),
+    );
+  });
+  it('throws when the RPC returns an error', async () => {
+    const c = mockClient({ data: null, error: { message: 'denied', code: '42501' } });
+    await expect(reachPreview(c, { city: 'city-1' })).rejects.toBeTruthy();
+  });
+  it('coerces a null/absent count to 0', async () => {
+    const c = mockClient({ data: null, error: null });
+    expect(await reachPreview(c, { city: 'city-1' })).toBe(0);
   });
 });
 
