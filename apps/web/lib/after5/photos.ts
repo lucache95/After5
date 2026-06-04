@@ -130,3 +130,15 @@ export async function signClearUrls(client: After5Client, paths: string[], ttl =
   if (error) throw new Error(error.message);
   return (data ?? []).map((d) => d.signedUrl).filter((u): u is string => !!u);
 }
+
+// Sign BLURRED-photo paths (the reveal-ladder rung 1/2 host hint). Mechanically
+// identical to signClearUrls, but blurred reads need NO reveal gate: any
+// authenticated viewer is authorized by storage policy profile_photos_blurred_read_v2.
+// The blurred asset IS the privacy artifact (already downscaled to 64px), so it is
+// safe to sign pre-match — NEVER sign the clear path on a pre-lock surface.
+export async function signBlurredUrls(client: After5Client, paths: string[], ttl = 600): Promise<string[]> {
+  if (paths.length === 0) return [];
+  const { data, error } = await client.storage.from(BUCKET).createSignedUrls(paths, ttl);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((d) => d.signedUrl).filter((u): u is string => !!u);
+}

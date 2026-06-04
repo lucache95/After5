@@ -13,6 +13,12 @@ export interface FeedNight {
   // the soft feed-filter score. True even when the viewer has empty feed_filters, so a
   // perfectly targeted night still shows the fit pill. Source: browse_feed_for_viewer.
   fit: boolean;
+  // E15 (REQ-E15 / D-01): limited host hint — the blind contract preserved minus these 3.
+  // The RPC returns the relative blurred PATH; feed/page.tsx signs it into a URL (RPCs
+  // cannot mint signed urls). NEVER the clear photo, full name, or DOB.
+  host_blurred_photo_url: string | null; // signed blurred-photo url (NOT clear)
+  host_first_name: string | null;        // first name only — never full name
+  host_age: number | null;               // age only — never DOB
 }
 
 /** A curated library entry for the host's optional soundtrack pick. */
