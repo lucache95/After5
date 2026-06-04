@@ -32,6 +32,12 @@ Make the core loop terminate and give hosts the controls to run their nights. De
 ### E9 — Poison-loop cleanup
 - **D-08:** REMOVE the dead job handlers and any enqueue paths now (`reconfirm_timeout`, `stale_date_close`, `expire_pending`/`pending_expiry`, `process_deletion`, and the `day_of_reconfirm`/`safety_checkin` handlers that have no producers/RPCs). The fail-closed test already prevents queue crashes; this removes dead branches that read as real. Safety flows (day_of_reconfirm/safety_checkin) are rebuilt properly in E19/Phase 6. Sequence E9 cleanup BEFORE E5 schedules any new cron jobs (per the audit dep note).
 
+### Resolved research questions (locked 2026-06-03)
+- **D-09 (notif types):** E6 cancel + E7 material-change notify interested candidates via TWO new additive notification_type enum values `night_cancelled` + `night_changed` (with their own copy + deep-links in notif-map.ts). Additive, non-destructive migration.
+- **D-10 (seeking sweep state):** Add an additive `expired` value to `date_match_status`; the D-02 past-dated unmatched seeking sweep sets `date_match_status='expired'` (distinct from `completed`/a date that happened) so E17/Phase 6 trust math stays clean. (`lock_status` already has `no_show` for the matched-but-didn't-happen path.)
+- **D-11 (E9 scope):** Remove ONLY the 6 D-08 dead handlers (`reconfirm_timeout`, `stale_date_close`, `pending_expiry`, `process_deletion`, `day_of_reconfirm`, `safety_checkin`) + their two coupled Deno test files. LEAVE `chat_purge`/`analytics_relay` (dead but owned by later phases P6/P11). Do NOT drop `job_type` enum values (destructive in Postgres; orphans are harmless).
+- **Apply protocol reminder:** additive enum migrations + RPCs apply to LOCAL only this phase; regen types (`pnpm db:types`) before TS typecheck; run security advisor after DDL; PROD APPLY STAYS GATED (owner-approved).
+
 ### Claude's Discretion
 - Exact grace-buffer durations (completion + expiry sweep); cron schedule/cadence (reuse the existing Vercel Cron + process-jobs pattern).
 - Throttle threshold/digest window for E8 email/push.
