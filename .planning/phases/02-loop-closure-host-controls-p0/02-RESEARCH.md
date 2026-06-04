@@ -384,7 +384,9 @@ END $$;
 | A5 | No-show flag is a NEW DEFINER RPC with membership auth (`creator OR matched`) | Pitfall 5 | If folded into the sweep instead, auth model differs (D leaves this to discretion) |
 | A6 | Cancel/material-change notifications reuse an existing `notification_type` (no new enum value) — exact type TBD | E6 example / Open Q | A new `night_cancelled`/`night_changed` enum value would need an additive migration |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All resolved in 02-CONTEXT before planning: Q1 (E6/E7 notif types) → D-09 add `night_cancelled`+`night_changed`; Q2 (seeking-sweep state) → D-10 add `expired` to `date_match_status`; Q3 (E9 scope) → D-11 remove only the 6 D-08 handlers, keep `chat_purge`/`analytics_relay`. Plans 02-02/02-03/02-01 implement these. Do not re-open.
 
 1. **Which `notification_type` for cancel (E6) and material-change (E7)?**
    - What we know: `interest_received` exists; `lock_cancelled_frozen`/`lock_cancelled_rolled` exist but are LOCK-level (post-match), not pre-match night cancellation. `account` is generic.
