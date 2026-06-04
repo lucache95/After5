@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Navigation & Profile Spine (P0)** - Never-trap nav chrome, correct tab semantics, real profile hub, editable preferences
 - [x] **Phase 2: Loop Closure & Host Controls (P0)** - Lock-completed + sweep, cancel/edit night, interest notification, poison-loop cleanup
 - [x] **Phase 3: Marketplace Completeness (P1)** - Creator controls, host reject, plan-on-match/offer, offer delivery (completed 2026-06-04)
-- [ ] **Phase 4: Discoverability — Feed Filters & Targeting (P1)** - Per-date targeting + searcher filters + soft-boost feed
+- [x] **Phase 4: Discoverability — Feed Filters & Targeting (P1)** - Per-date targeting + searcher filters + soft-boost feed (completed 2026-06-04)
 - [ ] **Phase 5: Progressive Reveal (P2)** - The "swipe on the date, not the face" ladder + reveal ceremony
 - [ ] **Phase 6: Trust & Safety (P2)** - Reliability aggregation, chat↔profile↔night wiring, safety check-ins
 - [ ] **Phase 7: Enhancements & Polish (P3)** - Map/route, venues-into-loop, ranking, proximity, standby UI, polish + legacy cleanup
@@ -135,8 +135,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-03-PLAN.md — searcher UI: real FilterSheet (persist+requery) + 3 quick chips + filtered-vs-genuine empty state + e2e (REQ-E10)
-- [ ] 04-04-PLAN.md — hint UI: fit pill on NightCard + live reach-preview line on PostNightForm (REQ-E10)
+- [x] 04-03-PLAN.md — searcher UI: real FilterSheet (persist+requery) + 3 quick chips + filtered-vs-genuine empty state + e2e (REQ-E10)
+- [x] 04-04-PLAN.md — hint UI: fit pill on NightCard + live reach-preview line on PostNightForm (REQ-E10)
 
 **UI hint**: yes
 
@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
-| 4. Feed Filters & Targeting | 2/4 | In Progress|  |
+| 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 0/TBD | Not started | - |
 | 6. Trust & Safety | 0/TBD | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
