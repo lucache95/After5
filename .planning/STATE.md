@@ -42,9 +42,9 @@ LOW findings (non-blocking, optional cleanup):
   - InterestedList offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages); pre-existing, accepted row fine in prod via lock.
   - LockDetail H1 may clip very long real first names (seed name made it visible); verify with a long name.
 
-  ⏳ DEFERRED (gated, not failures): batched prod-apply of Phase-3 migrations (20260605120000-120300) + match-reject-candidate edge deploy + RESEND_API_KEY-in-Vercel confirm + Supabase security advisor on prod. + push (38+ commits ahead of origin/main).
+  ✓ GATED PROD-APPLY DONE (2026-06-04): batched Phase 2 (E5-E8 + e2 enums) + Phase 3 (E11 targeting cols/post_night extend, E12 queue enum/reject_candidate) — 9 migrations applied to prod ufufmcpnysvwtutpbian via MCP apply_migration in dependency order. Verified on prod: 8-arg post_night + 7-arg update_itinerary_stops (old 5-arg dropped), reject_candidate/cancel_night/update_night/sweep_loop_terminus/flag_no_show present, queue_status+passed_by_host, date_match_status+expired, date_instances targeting cols. Security advisor: NO new findings (my fns pin search_path=public, no USING(true); DEFINER-executable warnings are the app's established accepted pattern shared by all match_* RPCs). match-reject-candidate edge fn deployed (CLI, verify_jwt=true, 401 unauthed). RESEND_API_KEY confirmed in Vercel prod. NOTE: prod migration ledger uses MCP-assigned versions (drift vs local filenames — pre-existing reconciliation pattern; local files remain source of truth).
 
-Progress: [████░░░░░░] 43% (Phase 3: 7/7 plans complete + fully verified; prod-apply gated/batched; ready for Phase 4 or gated deploy)
+Progress: [████░░░░░░] 43% (Phase 3: 7/7 complete + verified + PROD-APPLIED; pushing to origin)
 
 ## Performance Metrics
 
