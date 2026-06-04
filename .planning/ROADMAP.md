@@ -131,7 +131,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — api-client: FeedNight.fit + reachPreview() + FeedFilters + saveFeedFilters() (REQ-E10)
+- [x] 04-02-PLAN.md — api-client: FeedNight.fit + reachPreview() + FeedFilters + saveFeedFilters() (REQ-E10)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
-| 4. Feed Filters & Targeting | 1/4 | In Progress|  |
+| 4. Feed Filters & Targeting | 2/4 | In Progress|  |
 | 5. Progressive Reveal | 0/TBD | Not started | - |
 | 6. Trust & Safety | 0/TBD | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
