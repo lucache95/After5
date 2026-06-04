@@ -8,6 +8,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { InterestedList, type HostCandidate } from './InterestedList';
 
@@ -35,12 +36,15 @@ export default async function InterestedPage({
 
   if (!instance || instance.creator_id !== user.id) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
-        <div className="mx-auto max-w-[420px]">
-          <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your date</h1>
-          <p className="mt-4 font-body text-lg text-shell-ink/70">this list belongs to whoever posted the night.</p>
-        </div>
-      </main>
+      <>
+        <DeepRouteHeader backHref="/my-nights" backLabel="back to your nights" />
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+          <div className="mx-auto max-w-[420px]">
+            <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your date</h1>
+            <p className="mt-4 font-body text-lg text-shell-ink/70">this list belongs to whoever posted the night.</p>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -87,12 +91,15 @@ export default async function InterestedPage({
   });
 
   return (
-    <InterestedList
-      instanceId={instanceId}
-      userId={user.id}
-      offerWindowHours={offerWindowHours}
-      activeOffer={offer ? { candidate_id: offer.candidate_id } : null}
-      candidates={candidates}
-    />
+    <>
+      <DeepRouteHeader backHref="/my-nights" backLabel="back to your nights" title="your interest" />
+      <InterestedList
+        instanceId={instanceId}
+        userId={user.id}
+        offerWindowHours={offerWindowHours}
+        activeOffer={offer ? { candidate_id: offer.candidate_id } : null}
+        candidates={candidates}
+      />
+    </>
   );
 }

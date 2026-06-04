@@ -5,6 +5,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { LockDetail } from './LockDetail';
 import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
@@ -41,12 +42,15 @@ export default async function LockPage({
   const lock = row as unknown as LockRowWithParties | null;
   if (!lock || (lock.creator_id !== user.id && lock.matched_user_id !== user.id)) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
-        <div className="mx-auto max-w-[420px]">
-          <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your match</h1>
-          <p className="mt-4 font-body text-lg text-shell-ink/70">this one belongs to someone else.</p>
-        </div>
-      </main>
+      <>
+        <DeepRouteHeader backHref="/matches" backLabel="back to matches" />
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+          <div className="mx-auto max-w-[420px]">
+            <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">that&apos;s not your match</h1>
+            <p className="mt-4 font-body text-lg text-shell-ink/70">this one isn&apos;t yours to see.</p>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -58,9 +62,15 @@ export default async function LockPage({
   const counterpart = pickCounterpart(lock, user.id);
   if (!counterpart) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
-        <p className="font-body text-shell-ink/70">couldn&apos;t load this match. try again in a moment.</p>
-      </main>
+      <>
+        <DeepRouteHeader backHref="/matches" backLabel="back to matches" />
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+          <div className="mx-auto max-w-[420px]">
+            <h1 className="font-heading text-3xl lowercase text-shell-ink">couldn&apos;t load that</h1>
+            <p className="mt-3 font-body text-shell-ink/70">something glitched. head back and try again.</p>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -99,16 +109,23 @@ export default async function LockPage({
   }
 
   return (
-    <LockDetail
-      lockId={lock.id}
-      status={lock.status}
-      counterpart={counterpart}
-      threadId={threadId}
-      startsAt={lock.instance?.starts_at ?? null}
-      ratingOpen={isRatingOpen(lock.instance)}
-      justLocked={just === '1'}
-      photos={photos}
-      prompts={prompts}
-    />
+    <>
+      <DeepRouteHeader
+        backHref="/matches"
+        backLabel="back to matches"
+        title={counterpart.first_name ?? undefined}
+      />
+      <LockDetail
+        lockId={lock.id}
+        status={lock.status}
+        counterpart={counterpart}
+        threadId={threadId}
+        startsAt={lock.instance?.starts_at ?? null}
+        ratingOpen={isRatingOpen(lock.instance)}
+        justLocked={just === '1'}
+        photos={photos}
+        prompts={prompts}
+      />
+    </>
   );
 }

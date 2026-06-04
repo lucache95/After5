@@ -9,6 +9,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { Conversation } from './Conversation';
 import { isMessageable, type MessageRow } from '../thread-view';
@@ -58,12 +59,15 @@ export default async function ConversationPage({
 
   if (!thread || !thread.offer) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
-        <div className="mx-auto max-w-[420px]">
-          <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your conversation</h1>
-          <p className="mt-4 font-body text-lg text-shell-ink/70">this one belongs to someone else.</p>
-        </div>
-      </main>
+      <>
+        <DeepRouteHeader backHref="/inbox" backLabel="back to inbox" />
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+          <div className="mx-auto max-w-[420px]">
+            <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your conversation</h1>
+            <p className="mt-4 font-body text-lg text-shell-ink/70">this one belongs to someone else.</p>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -78,13 +82,20 @@ export default async function ConversationPage({
     .order('created_at', { ascending: true });
 
   return (
-    <Conversation
-      threadId={thread.id}
-      viewerId={user.id}
-      counterpartName={counterpart?.first_name ?? 'someone'}
-      messageable={isMessageable(thread.state, thread.revoked_at)}
-      bothReady={thread.both_ready}
-      initialMessages={(msgs ?? []) as MessageRow[]}
-    />
+    <>
+      <DeepRouteHeader
+        backHref="/inbox"
+        backLabel="back to inbox"
+        title={counterpart?.first_name ?? undefined}
+      />
+      <Conversation
+        threadId={thread.id}
+        viewerId={user.id}
+        counterpartName={counterpart?.first_name ?? 'someone'}
+        messageable={isMessageable(thread.state, thread.revoked_at)}
+        bothReady={thread.both_ready}
+        initialMessages={(msgs ?? []) as MessageRow[]}
+      />
+    </>
   );
 }

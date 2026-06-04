@@ -6,6 +6,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { RatingForm } from './RatingForm';
 import { pickCounterpart, isRatingOpen, ratingOpensAt, type LockRowWithParties } from '../../lock-view';
@@ -42,12 +43,15 @@ export default async function RatePage({ params }: { params: Promise<{ lockId: s
   if (!isRatingOpen(lock!.instance)) {
     const opens = ratingOpensAt(lock!.instance);
     return (
-      <main className="mx-auto max-w-[420px] px-4 py-16 text-center">
-        <h1 className="font-heading text-3xl lowercase text-shell-ink">not yet</h1>
-        <p className="mt-3 font-body text-shell-ink/70">
-          you can rate this once the date&apos;s done{opens ? <>, after <LocalTime iso={opens.toISOString()} opts={{ month: 'short', day: 'numeric', hour: 'numeric' }} /></> : ''}.
-        </p>
-      </main>
+      <>
+        <DeepRouteHeader backHref={`/matches/${lockId}`} backLabel="back to your match" />
+        <main className="mx-auto max-w-[420px] px-4 py-16 text-center">
+          <h1 className="font-heading text-3xl lowercase text-shell-ink">not yet</h1>
+          <p className="mt-3 font-body text-shell-ink/70">
+            you can rate this once the date&apos;s done{opens ? <>, after <LocalTime iso={opens.toISOString()} opts={{ month: 'short', day: 'numeric', hour: 'numeric' }} /></> : ''}.
+          </p>
+        </main>
+      </>
     );
   }
 
@@ -60,12 +64,20 @@ export default async function RatePage({ params }: { params: Promise<{ lockId: s
 
   if (existing) {
     return (
-      <main className="mx-auto max-w-[420px] px-4 py-16 text-center">
-        <h1 className="font-heading text-3xl lowercase text-shell-ink">you already rated this date</h1>
-        <p className="mt-3 font-body text-shell-ink/70">thanks for the feedback.</p>
-      </main>
+      <>
+        <DeepRouteHeader backHref={`/matches/${lockId}`} backLabel="back to your match" />
+        <main className="mx-auto max-w-[420px] px-4 py-16 text-center">
+          <h1 className="font-heading text-3xl lowercase text-shell-ink">you already rated this date</h1>
+          <p className="mt-3 font-body text-shell-ink/70">thanks for the feedback.</p>
+        </main>
+      </>
     );
   }
 
-  return <RatingForm lockId={lockId} rateeId={counterpart!.id} />;
+  return (
+    <>
+      <DeepRouteHeader backHref={`/matches/${lockId}`} backLabel="back to your match" />
+      <RatingForm lockId={lockId} rateeId={counterpart!.id} />
+    </>
+  );
 }

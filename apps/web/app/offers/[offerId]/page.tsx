@@ -16,6 +16,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
+import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { OfferDetail } from './OfferDetail';
 import { AccountGate } from './AccountGate';
@@ -45,12 +46,15 @@ export default async function OfferPage({
 
   if (!offer || offer.candidate_id !== user.id) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
-        <div className="mx-auto max-w-[420px]">
-          <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your offer</h1>
-          <p className="mt-4 font-body text-lg text-shell-ink/70">this one was sent to someone else.</p>
-        </div>
-      </main>
+      <>
+        <DeepRouteHeader backHref="/inbox" backLabel="back to inbox" />
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+          <div className="mx-auto max-w-[420px]">
+            <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your offer</h1>
+            <p className="mt-4 font-body text-lg text-shell-ink/70">this one was sent to someone else.</p>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -60,7 +64,14 @@ export default async function OfferPage({
     .eq('id', user.id)
     .maybeSingle();
   const reason = me ? deriveGateReason(me) : null;
-  if (reason) return <AccountGate reason={reason} />;
+  if (reason) {
+    return (
+      <>
+        <DeepRouteHeader backHref="/inbox" backLabel="back to inbox" />
+        <AccountGate reason={reason} />
+      </>
+    );
+  }
 
   const host = (offer.host ?? {}) as {
     first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null;
@@ -68,19 +79,26 @@ export default async function OfferPage({
   const instance = (offer.instance ?? null) as { starts_at?: string | null } | null;
 
   return (
-    <OfferDetail
-      offerId={offer.id}
-      instanceId={offer.date_instance_id ?? null}
-      expiresAt={offer.expires_at}
-      status={offer.status}
-      host={{
-        first_name: host.first_name ?? 'someone',
-        age: host.age ?? null,
-        city: host.city ?? null,
-        photo_url: host.clear_photo_url ?? null,
-        bio: null, // profiles has no bio column; host preview is name/age/city/photo (parity with D)
-      }}
-      date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
-    />
+    <>
+      <DeepRouteHeader
+        backHref="/inbox"
+        backLabel="back to inbox"
+        title={host.first_name ?? undefined}
+      />
+      <OfferDetail
+        offerId={offer.id}
+        instanceId={offer.date_instance_id ?? null}
+        expiresAt={offer.expires_at}
+        status={offer.status}
+        host={{
+          first_name: host.first_name ?? 'someone',
+          age: host.age ?? null,
+          city: host.city ?? null,
+          photo_url: host.clear_photo_url ?? null,
+          bio: null, // profiles has no bio column; host preview is name/age/city/photo (parity with D)
+        }}
+        date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
+      />
+    </>
   );
 }
