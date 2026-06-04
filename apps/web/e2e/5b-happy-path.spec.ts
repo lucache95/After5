@@ -98,6 +98,31 @@ test('5b happy path: swipe → shortlist → offer → accept → reveal (two co
   await hostPage.getByRole('button', { name: /see their profile/i }).click();
   await expect(hostPage.getByRole('heading', { name: /Jordan[^']*, \d+$/ })).toBeVisible({ timeout: 15_000 });
 
+  // E16 (REQ-E16 / D-02): crossing the lock threshold dispatched identity_revealed
+  // to BOTH parties at match_accept_offer. Assert a row exists for host AND candidate
+  // (mirrors the notification-row reads elsewhere in the 5b suite). Covers the
+  // accept (non-reciprocal) lock site; the reciprocal site is covered by the same
+  // dispatch added in the 05-03 migration.
+  let hostReveal = 0;
+  let candReveal = 0;
+  for (let i = 0; i < 20 && (hostReveal === 0 || candReveal === 0); i++) {
+    const { count: hc } = await admin()
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', seed.hostId)
+      .eq('type', 'identity_revealed');
+    const { count: cc } = await admin()
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', seed.candId)
+      .eq('type', 'identity_revealed');
+    hostReveal = hc ?? 0;
+    candReveal = cc ?? 0;
+    if (hostReveal === 0 || candReveal === 0) await new Promise((r) => setTimeout(r, 500));
+  }
+  expect(hostReveal, 'host should receive an identity_revealed notification at lock').toBeGreaterThan(0);
+  expect(candReveal, 'candidate should receive an identity_revealed notification at lock').toBeGreaterThan(0);
+
   await hostContext.close();
   await candContext.close();
 });

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Drawer } from 'vaul';
@@ -43,10 +43,26 @@ const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short',
 export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], prompts = [], stops = [], vibeTags = null }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
+  // E16 (REQ-E16 / D-04): on justLocked the reveal is a ceremony. Auto-open the
+  // modal in ceremony mode so the un-blur dissolve plays. Return visits (the quiet
+  // "see their profile" button) open ceremony=false (static, Pitfall 5).
+  const [ceremony, setCeremony] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const ceremonyFired = useRef(false);
   const name = counterpart.first_name ?? 'your match';
   const accent = vibePalette(vibeTags).accent;
+
+  // Fire the ceremony exactly once when this lock just fired. The clear photo is
+  // already signed server-side and passed in via photos; this only opens the modal
+  // in ceremony mode and fires the reveal toast. The face says the rest.
+  useEffect(() => {
+    if (!justLocked || ceremonyFired.current) return;
+    ceremonyFired.current = true;
+    setCeremony(true);
+    setRevealOpen(true);
+    toast('the face behind the night. say hi.');
+  }, [justLocked]);
 
   async function onCancel(reason: CancelReason) {
     setBusy(true);
@@ -77,12 +93,19 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
 
       <button
         type="button"
-        onClick={() => setRevealOpen(true)}
+        onClick={() => { setCeremony(false); setRevealOpen(true); }}
         className="w-full rounded-full bg-shell-pink px-6 py-3 font-body font-semibold lowercase text-shell-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
       >
         see their profile
       </button>
-      <RevealModal open={revealOpen} onOpenChange={setRevealOpen} person={counterpart} photos={photos} prompts={prompts} />
+      <RevealModal
+        open={revealOpen}
+        onOpenChange={(o) => { setRevealOpen(o); if (!o) setCeremony(false); }}
+        person={counterpart}
+        photos={photos}
+        prompts={prompts}
+        ceremony={ceremony}
+      />
 
       {threadId ? (
         <Link
