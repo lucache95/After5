@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 Wave 1+2 DONE (03-01/02/03/04/06 green, REQ-E11+E14 complete); Wave 3 (03-05 plan-render + 03-07 decline UI) + visual-verify + verifier pending
-last_updated: "2026-06-04T04:31:16.498Z"
-last_activity: "2026-06-03 — 03-06 (E14 offer-delivery chain AUDIT) Task 1 executed (commit bcb55bd): notify-offered route unit test added (6 green); chain audited — in-app offer_received is TRANSACTIONAL inside match_make_offer (the guarantee) + deep-links /offers/[offerId] via notif-map (no change needed); email is server-runtime (runtime=nodejs) best-effort + ownership-gated. notify-offered test + `pnpm -w typecheck` GREEN. No DB touched. Task 2 = BLOCKING human-verify checkpoint (RESEND_API_KEY in Vercel server runtime — DEFERRED to gated prod deploy; in-app guarantee covers email failure)."
+stopped_at: Phase 3 ALL 7 PLANS DONE (03-01..07 green). Wave 3 (03-05 plan-render E13 + 03-07 host-triage UI E12) merged to main; merged-tree gate GREEN (typecheck 6/6, vitest 641/641). PENDING orchestrator-owned: forced-local visual-verify (03-05 offer/lock screens + 03-07 interested list at 420px) + gsd-verifier phase pass. Migrations local-only — prod apply gated.
+last_updated: "2026-06-04T06:03:05.684Z"
+last_activity: "2026-06-04 — Phase 3 Wave 3 executed (parallel worktrees): 03-05 (render matched plan via shared PlanTimeline on /offers/[offerId] + /matches/[lockId], RLS read path, drop dead host.bio, fix empty 'the night' section — REQ-E13) + 03-07 (silent decline via rejectCandidate + offer withdraw + outcome pills on interested list, filter passed_by_host — REQ-E12 UI). Both verified out-of-band (commits/diffs/SUMMARY/Self-Check), merged --no-ff, worktrees cleaned. Merged-main gate GREEN: typecheck 6/6 packages, vitest 641/641 across 112 files. No DB/prod touched (gated)."
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 15
-  percent: 29
+  completed_plans: 17
+  percent: 43
 ---
 
 # Project State
@@ -21,17 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 3 — Marketplace Completeness (P1) (next)
+**Current focus:** Phase 3 — Marketplace Completeness (P1) — implementation COMPLETE; visual-verify + verifier pending
 
 ## Current Position
 
-Phase: 2 of 7 (Loop Closure & Host Controls) — COMPLETE ✓ (verified passed 5/5)
-Plan: 02-01..02-06 all complete (E5–E9; migrations LOCAL-applied, prod GATED)
-Status: Phases 1+2 done. Phase 3 in progress. Migrations local-only — prod apply gated.
-Last activity: 2026-06-03 — 03-06 (E14 offer-delivery chain AUDIT) Task 1 executed (commit bcb55bd): notify-offered route unit test added (6 green); chain audited — in-app offer_received is TRANSACTIONAL inside match_make_offer (the guarantee) + deep-links /offers/[offerId] via notif-map (no change needed); email is server-runtime (runtime=nodejs) best-effort + ownership-gated. notify-offered test + `pnpm -w typecheck` GREEN. No DB touched. Task 2 = BLOCKING human-verify checkpoint (RESEND_API_KEY in Vercel server runtime — DEFERRED to gated prod deploy; in-app guarantee covers email failure).
-Prior: 2026-06-04 — 02-06 (host cancel/edit UI + api-client wrappers) executed; RTL+jest-axe (7) + api-client (12) + typecheck GREEN local-only.
+Phase: 3 of 7 (Marketplace Completeness P1) — IMPLEMENTATION COMPLETE ✓ (7/7 plans; phase verification pending)
+Plan: 03-01..03-07 all complete (E11 targeting/creator-controls, E12 reject_candidate + host-triage UI, E13 plan-on-match render, E14 offer-delivery audit; migrations LOCAL-applied, prod GATED)
+Status: Phases 1+2+3 implementation done. Migrations local-only — prod apply gated.
+Last activity: 2026-06-04 — Phase 3 Wave 3 (parallel worktrees): 03-05 (render matched plan via shared PlanTimeline on offer+lock screens, RLS read, drop host.bio — E13) + 03-07 (silent decline + withdraw + outcome pills on interested list, filter passed_by_host — E12 UI). Out-of-band verified, merged --no-ff, worktrees cleaned. Merged-main gate GREEN: typecheck 6/6, vitest 641/641.
+Prior: 2026-06-03 — 03-06 (E14 offer-delivery chain audit) + Wave 1+2 (03-01/02/03/04) green.
 
-Progress: [██░░░░░░░░] 16% (Phase 2: 6/6 plans this wave-set complete; prod apply gated/batched; 02-06 live visual-verify pending orchestrator)
+PENDING (orchestrator-owned, before phase close):
+  1. Forced-local visual-verify (Playwright @420px): /offers/[offerId] + /matches/[lockId] PlanTimeline render (03-05 <human-check>), /dates/[slug]/interested decline+withdraw+pills (03-07) — critique vs 03-UI-SPEC §E12/§E13.
+  2. gsd-verifier phase-completion pass (goal-backward, all 7 plans).
+
+Progress: [████░░░░░░] 43% (Phase 3: 7/7 plans complete; prod apply gated/batched; visual-verify + verifier pending)
 
 ## Performance Metrics
 

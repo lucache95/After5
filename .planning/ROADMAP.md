@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Navigation & Profile Spine (P0)** - Never-trap nav chrome, correct tab semantics, real profile hub, editable preferences
 - [x] **Phase 2: Loop Closure & Host Controls (P0)** - Lock-completed + sweep, cancel/edit night, interest notification, poison-loop cleanup
-- [ ] **Phase 3: Marketplace Completeness (P1)** - Creator controls, host reject, plan-on-match/offer, offer delivery
+- [x] **Phase 3: Marketplace Completeness (P1)** - Creator controls, host reject, plan-on-match/offer, offer delivery (completed 2026-06-04)
 - [ ] **Phase 4: Discoverability — Feed Filters & Targeting (P1)** - Per-date targeting + searcher filters + soft-boost feed
 - [ ] **Phase 5: Progressive Reveal (P2)** - The "swipe on the date, not the face" ladder + reveal ceremony
 - [ ] **Phase 6: Trust & Safety (P2)** - Reliability aggregation, chat↔profile↔night wiring, safety check-ins
@@ -102,9 +102,9 @@ Plans:
 - [x] 03-02-PLAN.md — reject_candidate DEFINER RPC (silent decline) + edge fn + client wrapper (REQ-E12)
 - [x] 03-03-PLAN.md — E11 creator controls: PostNightForm fields + cover uploader + Door-2 publish CTA (REQ-E11)
 - [x] 03-04-PLAN.md — Extract shared PlanTimeline from NightDetailSheet (REQ-E13)
-- [ ] 03-05-PLAN.md — Render the plan on OfferDetail + LockDetail via RLS read; drop host.bio (REQ-E13)
+- [x] 03-05-PLAN.md — Render the plan on OfferDetail + LockDetail via RLS read; drop host.bio (REQ-E13)
 - [x] 03-06-PLAN.md — E14 offer-delivery audit + deep-link guarantee + RESEND verify (REQ-E14)
-- [ ] 03-07-PLAN.md — E12 InterestedList decline + withdraw + outcome pills (REQ-E12)
+- [x] 03-07-PLAN.md — E12 InterestedList decline + withdraw + outcome pills (REQ-E12)
 
 **UI hint**: yes
 **Verify-note**: Before building E11 creator controls, RE-CHECK Door 2 + `create_blank_itinerary` (migration 20260603120100) + typed-city against PROD — these work on prod (the live-verify "dead-end" was a LOCAL-only artifact). Do NOT rebuild the blank-itinerary RPC; the canvas-CTA / creator-control work remains in scope. Reconcile §2A canvas work with the open-city `CreateFlow.tsx` scaffold AFTER the fleet lands — do not double-edit concurrently.
@@ -180,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
-| 3. Marketplace Completeness | 0/7 | In progress | - |
+| 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |
 | 5. Progressive Reveal | 0/TBD | Not started | - |
 | 6. Trust & Safety | 0/TBD | Not started | - |
