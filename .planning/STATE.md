@@ -44,7 +44,7 @@ Progress: [█░░░░░░░░░] 14%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 1 | ~2m | ~2m |
+| 02 | 2 | ~6m | ~3m |
 
 **Recent Trend:**
 
@@ -91,6 +91,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T00:53:59.585Z
-Stopped at: Phase 2 context gathered (E5-E9 decisions locked); plan/execute pending
+Last session: 2026-06-04T01:40:29.000Z
+Stopped at: Phase 2 Wave 1 — 02-02 complete (additive loop-closure enums applied LOCAL; types regen; typecheck green). Security advisor + progress-bar recompute owned by orchestrator post-wave. PROD apply NOT attempted.
 Resume file: .planning/phases/02-loop-closure-host-controls-p0/02-CONTEXT.md
