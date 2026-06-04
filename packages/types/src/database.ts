@@ -3130,6 +3130,10 @@ export type Database = {
         }
         Returns: number
       }
+      cancel_night: {
+        Args: { p_actor: string; p_idem_key: string; p_instance: string }
+        Returns: undefined
+      }
       chat_lock_ready: { Args: { p_thread: string }; Returns: boolean }
       chat_mark_read: { Args: { p_thread: string }; Returns: number }
       chat_recompute_both_ready: {
@@ -3463,6 +3467,12 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
+      mk_instance: {
+        Args: { p_creator: string; p_itin: string; p_starts: string }
+        Returns: string
+      }
+      mk_itinerary: { Args: { p_user: string }; Returns: string }
+      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -4158,6 +4168,18 @@ export type Database = {
           p_why_note?: string
         }
         Returns: string
+      }
+      update_night: {
+        Args: {
+          p_actor: string
+          p_ambient_sound_id: string
+          p_duration_min: number
+          p_idem_key: string
+          p_instance: string
+          p_starts_at: string
+          p_venue: string
+        }
+        Returns: undefined
       }
       updategeometrysrid: {
         Args: {
