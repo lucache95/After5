@@ -48,7 +48,7 @@ Progress: [██░░░░░░░░] 16% (Phase 2: 6/6 plans this wave-set
 | 02 | 5 | ~43m | ~8.6m |
 | 03 | (in progress) | — | — |
 
-**03 plan log:** 03-04 PlanTimeline extraction — ~25m, 3 files, commit 74f88db (Wave 1).
+**03 plan log:** 03-04 PlanTimeline extraction — ~25m, 3 files, commit 74f88db (Wave 1). 03-02 reject_candidate DEFINER RPC (silent decline) — ~15m, 5 files, commits 550d8ca/c6a3fc1/99dbd64 (Wave 2); REQ-E12 backend half done, UI half pending.
 
 **Recent Trend:**
 
@@ -101,6 +101,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T04:15Z
-Stopped at: Phase 3 Wave 1 — 03-01 foundation migrations COMPLETE (date_instances targeting cols + passed_by_host enum + post_night/update_itinerary_stops extended; local db:reset/types/test/typecheck GREEN; prod apply gated). Sibling Wave-1 plans (03-04, 03-06) running concurrently.
-Resume file: .planning/phases/03-marketplace-completeness-p1/03-01-SUMMARY.md
+Last session: 2026-06-03T00:00Z
+Stopped at: Phase 3 Wave 2 — 03-02 reject_candidate DEFINER RPC COMPLETE (silent host decline; creator-only 42501; passed_by_host; idempotent; cannot_reject_active_offer; anon-revoked; edge fn + client wrapper; local db:reset/types/test/typecheck GREEN; prod apply gated). REQ-E12 backend half done, UI half (InterestedList decline/withdraw/outcome) pending. 03-03 (UI-only) ran concurrently this wave.
+Resume file: .planning/phases/03-marketplace-completeness-p1/03-02-SUMMARY.md
