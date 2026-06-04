@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   motion,
@@ -11,7 +12,14 @@ import {
 } from 'framer-motion';
 import { toast } from 'sonner';
 import { Heart, X, Volume2, VolumeX, SlidersHorizontal, ChevronDown } from 'lucide-react';
-import { browserAfter5Client, recordSwipe, ambientSoundUrl, type FeedNight } from '@/lib/after5/client';
+import {
+  browserAfter5Client,
+  recordSwipe,
+  ambientSoundUrl,
+  saveFeedFilters,
+  type FeedNight,
+  type FeedFilters,
+} from '@/lib/after5/client';
 import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
 import { NightDetailSheet } from './NightDetailSheet';
@@ -39,7 +47,46 @@ const DAY_SCOPES = [
   { key: 'any', label: 'pick a day' },
 ] as const;
 
-export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; tier?: FeedTier }) {
+// The 3 quick chips (D-04): shortcuts INTO the FilterSheet (not inline editors).
+// Each reads the matching feed_filters key to show its active value; tapping any
+// chip just opens the sheet. distance/price are the hard caps; vibe is the soft pref.
+const QUICK_CHIPS = [
+  { key: 'distance', label: 'distance' },
+  { key: 'price', label: 'price' },
+  { key: 'vibe', label: 'vibe' },
+] as const;
+
+// The active-value label a quick chip shows when its filter is set (e.g. "≤ 25km").
+function chipValue(key: (typeof QUICK_CHIPS)[number]['key'], filters: FeedFilters): string | null {
+  if (key === 'distance') return filters.max_distance_km != null ? `≤ ${filters.max_distance_km}km` : null;
+  if (key === 'price') return filters.max_price != null ? `≤ $${filters.max_price}` : null;
+  if (key === 'vibe') return filters.vibes?.length ? filters.vibes[0] : null;
+  return null;
+}
+
+// Any HARD filter (the three that HIDE) set → the empty deck is filtered, not genuine.
+function hasHardFilter(filters: FeedFilters): boolean {
+  return (
+    (filters.host_genders?.length ?? 0) > 0 ||
+    filters.max_price != null ||
+    filters.max_distance_km != null
+  );
+}
+
+export function SwipeDeck({
+  initial,
+  tier = 'live',
+  userId = '',
+  filters = {},
+}: {
+  initial: FeedNight[];
+  tier?: FeedTier;
+  /** Signed-in viewer id; passed to the FilterSheet self-write (RLS-gated). */
+  userId?: string;
+  /** The viewer's persisted feed_filters (seeds chips + the empty-state branch). */
+  filters?: FeedFilters;
+}) {
+  const router = useRouter();
   const [deck] = useState(initial);
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -50,6 +97,12 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
   const scopeLabel = DAY_SCOPES[scopeIdx].label;
   function cycleScope() {
     setScopeIdx((n) => (n + 1) % DAY_SCOPES.length);
+  }
+
+  // After a successful apply (or empty-state loosen) the persisted filters changed;
+  // re-run the SSR browseFeed (force-dynamic) so the deck reflects the new filters.
+  function refetchFeed() {
+    router.refresh();
   }
 
   // Ambient deck: resolve each card's relative ambient path to a public URL, then
@@ -83,7 +136,14 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
   }
 
   if (deck.length === 0 || i >= deck.length) {
-    return <EmptyDeck tier={tier} />;
+    return (
+      <EmptyDeck
+        tier={tier}
+        userId={userId}
+        filters={filters}
+        onLoosened={refetchFeed}
+      />
+    );
   }
 
   return (
@@ -138,6 +198,33 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
           </div>
         </header>
 
+        {/* Quick-filter chips (D-04): shortcuts into the sheet. An active chip flips to
+            accent and shows its value; a brand-new searcher sees all three inactive. */}
+        <div role="group" aria-label="quick filters" className="mb-5 flex flex-wrap gap-2">
+          {QUICK_CHIPS.map(({ key, label }) => {
+            const value = chipValue(key, filters);
+            const active = value != null;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilterOpen(true)}
+                aria-label={`${label}${value ? `, ${value}` : ''}. tap to open filters`}
+                className={cn(
+                  'min-h-[44px] rounded-full px-4 font-body text-[13px] font-semibold lowercase shadow-md transition',
+                  'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                  'motion-reduce:transition-none motion-reduce:hover:scale-100',
+                  active
+                    ? 'bg-shell-accent text-white shadow-fun'
+                    : 'bg-white/80 text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40',
+                )}
+              >
+                {active ? `${label} · ${value}` : label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="relative flex-1">
           {/* peeking cards behind the active one — depth, not interactive */}
           {after && <PeekCard key={`peek-${after.date_instance_id}`} night={after} depth={2} />}
@@ -161,7 +248,13 @@ export function SwipeDeck({ initial, tier = 'live' }: { initial: FeedNight[]; ti
           onCommit={(direction) => void commit(direction)}
         />
 
-        <FilterSheet open={filterOpen} onOpenChange={setFilterOpen} />
+        <FilterSheet
+          open={filterOpen}
+          onOpenChange={setFilterOpen}
+          userId={userId}
+          current={filters}
+          onApplied={refetchFeed}
+        />
 
         <div className="mt-6 flex items-center justify-center gap-6">
           <button
@@ -344,8 +437,115 @@ function ActiveCard({
   );
 }
 
-// Empty / end-of-deck (DESIGN-SYSTEM §3): funny-not-helpful, multi-city (no Kelowna).
-function EmptyDeck({ tier }: { tier: FeedTier }) {
+// Empty / end-of-deck. Two distinct states (D-02): when a HARD filter is active the
+// deck is filtered-empty → name the most-restrictive hard filter + a one-tap loosen +
+// post-your-own. Otherwise the deck is genuinely-empty → keep the existing dry copy.
+function EmptyDeck({
+  tier,
+  userId = '',
+  filters = {},
+  onLoosened,
+}: {
+  tier: FeedTier;
+  userId?: string;
+  filters?: FeedFilters;
+  onLoosened?: () => void;
+}) {
+  if (hasHardFilter(filters)) {
+    return <FilteredEmptyDeck userId={userId} filters={filters} onLoosened={onLoosened} />;
+  }
+  return <GenuinelyEmptyDeck tier={tier} />;
+}
+
+// The most-restrictive hard filter + how to loosen it. Order of restrictiveness:
+// distance (tightest reach), then price, then host gender. Distance/price get a
+// concrete one-tap widen; gender gets a "drop it" loosen.
+type Loosen = { line: string; cta: string; next: FeedFilters };
+function mostRestrictive(filters: FeedFilters): Loosen {
+  if (filters.max_distance_km != null) {
+    const widened = filters.max_distance_km < 50 ? 50 : 100;
+    return {
+      line: `your distance is set to ${filters.max_distance_km}km.`,
+      cta: `widen to ${widened}km?`,
+      next: { ...filters, max_distance_km: widened },
+    };
+  }
+  if (filters.max_price != null) {
+    const widened = filters.max_price < 120 ? 120 : 200;
+    return {
+      line: `your max price is $${filters.max_price}.`,
+      cta: `raise it to $${widened}?`,
+      next: { ...filters, max_price: widened },
+    };
+  }
+  // host gender is the remaining hard filter
+  const { host_genders: _drop, ...rest } = filters;
+  return {
+    line: 'you only want certain hosts.',
+    cta: 'open it to everyone?',
+    next: rest,
+  };
+}
+
+function FilteredEmptyDeck({
+  userId,
+  filters,
+  onLoosened,
+}: {
+  userId: string;
+  filters: FeedFilters;
+  onLoosened?: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const loosen = mostRestrictive(filters);
+
+  async function widen() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await saveFeedFilters(browserAfter5Client(), userId, loosen.next);
+      onLoosened?.();
+    } catch {
+      toast.error('that didn’t save. try again?');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-24 text-center">
+      <div className="mx-auto max-w-[420px]">
+        <p className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">
+          nothing fits those filters.
+        </p>
+        <p className="mt-4 font-body text-lg text-shell-ink/70">{loosen.line}</p>
+        <button
+          type="button"
+          onClick={() => void widen()}
+          disabled={busy}
+          className="mt-5 min-h-[44px] rounded-full px-2 font-body text-[15px] font-semibold lowercase text-shell-accent underline decoration-2 underline-offset-4 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-60 motion-reduce:transition-none"
+        >
+          {busy ? 'widening…' : loosen.cta}
+        </button>
+        <p className="mt-6 font-body text-[15px] text-shell-ink/60">
+          or be the main character.{' '}
+          <Link
+            href="/nights/new"
+            className="font-semibold text-shell-accent underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40"
+          >
+            post your own night
+          </Link>
+          .
+        </p>
+      </div>
+      <BottomTabShell />
+    </main>
+  );
+}
+
+// Genuinely-empty (DESIGN-SYSTEM §3): funny-not-helpful, multi-city (no Kelowna).
+// Unchanged from the shipped copy.
+function GenuinelyEmptyDeck({ tier }: { tier: FeedTier }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-24 text-center">
       <div className="mx-auto max-w-[420px]">

@@ -6,8 +6,14 @@ const recordSwipe = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/lib/after5/client', () => ({
   browserAfter5Client: () => ({}),
   recordSwipe: (...a: unknown[]) => recordSwipe(...a),
+  saveFeedFilters: vi.fn().mockResolvedValue(undefined),
   getNightDetail: vi.fn().mockResolvedValue(null),
   ambientSoundUrl: (p: string | null) => (p ? `https://x/${p}` : null),
+}));
+// SwipeDeck now reads useRouter (refetch) + BottomTabShell reads usePathname.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+  usePathname: () => '/feed',
 }));
 
 const toggleMute = vi.fn();
