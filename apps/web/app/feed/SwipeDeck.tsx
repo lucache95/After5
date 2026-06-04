@@ -23,6 +23,7 @@ import {
 import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
 import { NightDetailSheet } from './NightDetailSheet';
+import { stickerRotation } from '@/lib/sticker';
 import { FilterSheet } from './FilterSheet';
 import { useAmbientDeck } from './useAmbientDeck';
 import { BottomTabShell } from '@/components/BottomTabShell';
@@ -303,19 +304,22 @@ export function SwipeDeck({
   );
 }
 
-// Non-interactive card stacked behind the active one (scale-down + y-offset + lower z).
+// Non-interactive card stacked behind the active one. A CASUAL PILE, not a tidy fan:
+// each card behind is nudged off-centre (alternating sides) and tilted a few degrees a
+// different way, plus a width step + downward offset so the rims peek. Per-card tilt is
+// deterministic (stickerRotation of the id) so it stays put across renders / hydration.
 function PeekCard({ night, depth }: { night: FeedNight; depth: 1 | 2 }) {
+  const dir = depth === 1 ? -1 : 1; // alternate which side each card leans
+  const tilt = dir * (3 + stickerRotation(night.date_instance_id ?? night.title)); // ~ ±3-6°
+  const shiftX = dir * (depth * 9); // off-centre nudge, grows with depth
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0"
       style={{
         zIndex: 10 - depth,
-        // Read as a real stacked deck: a clear WIDTH step (scale) so you see three
-        // nested card widths, plus a downward offset large enough that each rounded
-        // bottom rim peeks below the one in front against the cream page.
-        transform: `translateY(${depth * 26}px) scale(${1 - depth * 0.08})`,
-        opacity: depth === 2 ? 0.78 : 0.92,
+        transform: `translate(${shiftX}px, ${depth * 22}px) rotate(${tilt}deg) scale(${1 - depth * 0.07})`,
+        opacity: depth === 2 ? 0.8 : 0.92,
       }}
     >
       <NightCard night={night} />
