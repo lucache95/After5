@@ -8,8 +8,11 @@ import { Polaroid } from '@/components/Polaroid';
 import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import { cancelLock, MatchError, messageForCode } from '@/lib/after5/match';
+import { vibePalette } from '@after5/business';
 import { CancelWithReasonPicker, type CancelReason } from '@/app/dates/[slug]/interested/CancelWithReasonPicker';
 import type { LockRowWithParties, PartyProfile, RevealPrompt } from '../lock-view';
+import { PlanTimeline } from '@/components/PlanTimeline';
+import type { NightDetailStop } from '@/lib/after5/client';
 import { RevealModal } from './RevealModal';
 import { MatchConfirmation } from './MatchConfirmation';
 
@@ -27,16 +30,23 @@ export interface LockDetailProps {
   // raw-private-path bug where the reveal photo never loaded).
   photos?: string[];
   prompts?: RevealPrompt[];
+  // E13: the matched night's full itinerary. Post-lock the whole plan is fair
+  // game. Normalized at the loader boundary (page.tsx reads itineraries.stops by
+  // id and runs normalizeNightDetailStops BEFORE passing — PlanTimeline does NOT
+  // re-normalize, D-12/03-04). Empty ⇒ "plan's being put together." degrade copy.
+  stops?: NightDetailStop[];
+  vibeTags?: string[] | null;
 }
 
 const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
 
-export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], prompts = [] }: LockDetailProps) {
+export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], prompts = [], stops = [], vibeTags = null }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const name = counterpart.first_name ?? 'your match';
+  const accent = vibePalette(vibeTags).accent;
 
   async function onCancel(reason: CancelReason) {
     setBusy(true);
@@ -86,6 +96,17 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
           chat will open up here.
         </p>
       )}
+
+      <section>
+        <p className="font-body text-sm text-shell-accent">the night</p>
+        {stops.length > 0 ? (
+          <div className="mt-4">
+            <PlanTimeline stops={stops} accent={accent} vibeTags={vibeTags} />
+          </div>
+        ) : (
+          <p className="mt-3 font-body text-sm text-shell-ink/60">plan&apos;s being put together.</p>
+        )}
+      </section>
 
       {ratingOpen && status !== 'cancelled' && (
         <Link

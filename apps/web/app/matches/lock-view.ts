@@ -36,7 +36,9 @@ export interface LockRowWithParties {
   date_instance_id: string;
   creator: PartyProfile | null;
   matched: PartyProfile | null;
-  instance: { id: string; starts_at: string; time_range: string | null } | null;
+  // E13: itinerary_id lets [lockId]/page.tsx do the second RLS read of the
+  // forked itinerary's stops (itineraries_readable_by_id USING(true)).
+  instance: { id: string; starts_at: string; time_range: string | null; itinerary_id: string | null } | null;
 }
 
 const RATING_GRACE_MIN = 120;

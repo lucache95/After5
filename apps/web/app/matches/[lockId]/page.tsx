@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { normalizeNightDetailStops } from '@after5/api-client';
 import { LockDetail } from './LockDetail';
 import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
 import { pickCounterpart, isRatingOpen, type LockRowWithParties, type RevealPrompt } from '../lock-view';
@@ -33,7 +34,7 @@ export default async function LockPage({
       id, status, locked_at, rating_closed_at, cancel_reason, creator_id, matched_user_id, date_instance_id,
       creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns ),
       matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns ),
-      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range ),
+      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range, itinerary_id ),
       thread:chat_threads!chat_threads_lock_id_fkey ( id )
     `)
     .eq('id', lockId)
@@ -108,6 +109,22 @@ export default async function LockPage({
       .map((a) => ({ label: labelById.get(a.prompt_id) ?? a.prompt_id, answer: a.answer }));
   }
 
+  // E13: render the matched night's full plan. Post-lock the whole itinerary is
+  // fair game; the lock participant reads the instance (locks_party_read) → its
+  // itinerary_id → itineraries.stops (itineraries_readable_by_id USING(true)).
+  // Normalize the raw stops JSON HERE (rich/thin shape drift) before PlanTimeline.
+  let stops: ReturnType<typeof normalizeNightDetailStops> = [];
+  let vibeTags: string[] | null = null;
+  if (lock.instance?.itinerary_id) {
+    const { data: it } = await supabase
+      .from('itineraries')
+      .select('stops, vibe_tags')
+      .eq('id', lock.instance.itinerary_id)
+      .maybeSingle();
+    stops = normalizeNightDetailStops(it?.stops);
+    vibeTags = (it?.vibe_tags as string[] | null) ?? null;
+  }
+
   return (
     <>
       <DeepRouteHeader
@@ -125,6 +142,8 @@ export default async function LockPage({
         justLocked={just === '1'}
         photos={photos}
         prompts={prompts}
+        stops={stops}
+        vibeTags={vibeTags}
       />
     </>
   );
