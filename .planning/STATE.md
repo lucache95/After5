@@ -8,10 +8,10 @@ last_updated: "2026-06-04T02:30:00.000Z"
 last_activity: 2026-06-04 — Phase 2 02-06 executed (host controls UI); local-green, unpushed. Awaiting orchestrator forced-local visual-verify.
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
   completed_plans: 10
-  percent: 16
+  percent: 29
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 2 — Loop Closure & Host Controls (P0) (next)
+**Current focus:** Phase 3 — Marketplace Completeness (P1) (next)
 
 ## Current Position
 
-Phase: 1 of 7 (Navigation & Profile Spine) — COMPLETE ✓ (verified passed)
-Plan: 01-01/01-02 (Wave 1) + 01-03/01-04 (Wave 2) all complete
-Status: Phase 2 executing — 02-01/02/03/04/05/06 all complete (local-green, unpushed)
+Phase: 2 of 7 (Loop Closure & Host Controls) — COMPLETE ✓ (verified passed 5/5)
+Plan: 02-01..02-06 all complete (E5–E9; migrations LOCAL-applied, prod GATED)
+Status: Phases 1+2 done. Ready to plan/execute Phase 3. Migrations local-only — prod apply gated.
 Last activity: 2026-06-04 — 02-06 (host cancel/edit UI + api-client wrappers) executed; RTL+jest-axe (7) + api-client (12) + typecheck GREEN local-only, no prod apply. Live visual-verify deferred to orchestrator forced-local pass.
 
 Progress: [██░░░░░░░░] 16% (Phase 2: 6/6 plans this wave-set complete; prod apply gated/batched; 02-06 live visual-verify pending orchestrator)
