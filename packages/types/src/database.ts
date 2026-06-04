@@ -2153,6 +2153,7 @@ export type Database = {
           dealbreakers: string[]
           distance_pref_km: number
           email: string | null
+          feed_filters: Json
           first_name: string | null
           gender: string | null
           gender_preferences: string[]
@@ -2188,6 +2189,7 @@ export type Database = {
           dealbreakers?: string[]
           distance_pref_km?: number
           email?: string | null
+          feed_filters?: Json
           first_name?: string | null
           gender?: string | null
           gender_preferences?: string[]
@@ -2223,6 +2225,7 @@ export type Database = {
           dealbreakers?: string[]
           distance_pref_km?: number
           email?: string | null
+          feed_filters?: Json
           first_name?: string | null
           gender?: string | null
           gender_preferences?: string[]
@@ -2990,6 +2993,7 @@ export type Database = {
         Args: { ""?: string; att_name: string; tbl: unknown }
         Returns: string
       }
+      _seed_swipes_and_hint: { Args: { p_count: number }; Returns: string }
       _st_3dintersects: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -3122,6 +3126,7 @@ export type Database = {
           cover_image_url: string
           date_instance_id: string
           distance_m: number
+          fit: boolean
           is_seed: boolean
           pay_setting: string
           time_window_start: string
@@ -3476,6 +3481,13 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
+      mk_instance: {
+        Args: { p_creator: string; p_itin: string; p_starts: string }
+        Returns: string
+      }
+      mk_itinerary: { Args: { p_user: string }; Returns: string }
+      mk_itinerary_with_stops: { Args: { p_user: string }; Returns: string }
+      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -3557,6 +3569,15 @@ export type Database = {
           p_max_requests: number
         }
         Returns: Json
+      }
+      reach_preview: {
+        Args: {
+          p_city?: string
+          p_radius_km?: number
+          p_target_age_range?: unknown
+          p_target_genders?: string[]
+        }
+        Returns: number
       }
       recompute_profile_verification: {
         Args: { p_user: string }
@@ -4164,6 +4185,7 @@ export type Database = {
         Returns: unknown
       }
       sweep_loop_terminus: { Args: never; Returns: number }
+      time_bucket_of: { Args: { p_ts: string }; Returns: string }
       tstzrange_from_start_duration: {
         Args: { p_mins: number; p_start: string }
         Returns: unknown
