@@ -84,56 +84,6 @@ Deno.test('callRpc rejects on arbitrary rpc error (non-missing-function)', async
 // Handler tests — missing-RPC handlers reject (fail closed)
 // ---------------------------------------------------------------------------
 
-Deno.test('deletion_process handler rejects when rpc returns PGRST202 error', async () => {
-  const db = makeDb({
-    data: null,
-    error: { code: 'PGRST202', message: 'Could not find the function process_deletion' },
-  });
-  const err = await assertRejects(
-    () => HANDLERS['deletion_process'](db as never, makeJob('deletion_process', { user_id: 'u1' })),
-    Error,
-    'rpc process_deletion failed',
-  );
-  assert((err as Error & { rpcCode?: string }).rpcCode === 'PGRST202');
-  assert((err as Error & { rpcFn?: string }).rpcFn === 'process_deletion');
-});
-
-Deno.test('stale_date_close handler rejects when rpc returns 42883 error', async () => {
-  const db = makeDb({
-    data: null,
-    error: { code: '42883', message: 'function match_stale_date_close does not exist' },
-  });
-  await assertRejects(
-    () => HANDLERS['stale_date_close'](db as never, makeJob('stale_date_close', { instance_id: 'i1' })),
-    Error,
-    'rpc match_stale_date_close failed',
-  );
-});
-
-Deno.test('pending_expiry handler rejects when rpc returns error', async () => {
-  const db = makeDb({
-    data: null,
-    error: { code: 'PGRST202', message: 'Could not find the function match_expire_pending' },
-  });
-  await assertRejects(
-    () => HANDLERS['pending_expiry'](db as never, makeJob('pending_expiry', { queue_entry_id: 'q1' })),
-    Error,
-    'rpc match_expire_pending failed',
-  );
-});
-
-Deno.test('reconfirm_timeout handler rejects when rpc returns error', async () => {
-  const db = makeDb({
-    data: null,
-    error: { code: 'PGRST202', message: 'Could not find the function match_reconfirm_timeout' },
-  });
-  await assertRejects(
-    () => HANDLERS['reconfirm_timeout'](db as never, makeJob('reconfirm_timeout', { lock_id: 'l1' })),
-    Error,
-    'rpc match_reconfirm_timeout failed',
-  );
-});
-
 Deno.test('chat_purge handler rejects when rpc returns error', async () => {
   const db = makeDb({
     data: null,

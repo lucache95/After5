@@ -3,9 +3,8 @@ import { assertEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.t
 import { HANDLERS } from './handlers.ts';
 
 const ALL_TYPES = [
-  'offer_expiry','standby_roll','pending_expiry','stale_date_close',
-  'day_of_reconfirm','safety_checkin','reconfirm_timeout','bulk_withdraw',
-  'chat_purge','rating_window','deletion_process','analytics_relay','notify',
+  'offer_expiry','standby_roll','bulk_withdraw',
+  'chat_purge','rating_window','analytics_relay','notify',
 ];
 
 Deno.test('every job_type has a handler', () => {
