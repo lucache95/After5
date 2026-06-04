@@ -243,7 +243,7 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E6 | host-cancel-night | P0 | Phase 2 | Pending |
 | REQ-E7 | host-edit-night | P0 | Phase 2 | Pending |
 | REQ-E8 | interest-received-notification | P0 | Phase 2 | Pending |
-| REQ-E9 | remove-poison-loop | P0 | Phase 2 | Pending |
+| REQ-E9 | remove-poison-loop | P0 | Phase 2 | Complete |
 | REQ-E10 | feed-filters | P1 | Phase 4 | Pending |
 | REQ-E11 | creator-controls | P1 | Phase 3 | Pending |
 | REQ-E12 | host-reject-candidate | P1 | Phase 3 | Pending |

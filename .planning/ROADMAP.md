@@ -63,7 +63,7 @@ Plans:
   5. No enqueueable job handler references a missing RPC; the job queue cannot poison-loop (sequenced before E5 schedules new jobs).
 **Plans**: 6 plans
 Plans:
-- [ ] 02-01-PLAN.md — Remove the 6 dead job handlers + lockstep test prune (poison-loop cleanup, sequenced first) (REQ-E9)
+- [x] 02-01-PLAN.md — Remove the 6 dead job handlers + lockstep test prune (poison-loop cleanup, sequenced first) (REQ-E9)
 - [ ] 02-02-PLAN.md — Additive enum migration (date_match_status 'expired' + notification_type night_cancelled/night_changed) + local apply gate (REQ-E5, REQ-E6, REQ-E7)
 - [ ] 02-03-PLAN.md — E5 loop terminus: sweep_loop_terminus + flag_no_show RPCs + close-loop cron route (REQ-E5)
 - [ ] 02-04-PLAN.md — E6/E7 cancel_night + update_night DEFINER RPCs with candidate notifications (REQ-E6, REQ-E7)
