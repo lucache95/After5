@@ -4,6 +4,7 @@
 // the owner-scoped update_itinerary_stops RPC with an optimistic toast + rollback.
 // Reuses the PhotoManager Reorder pattern (axis="y", useReducedMotion -> drag).
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Reorder, useReducedMotion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import { addBlankStop, patchStop, removeStop, validateStopsForSave } from '@/lib
 import { googlePlaceToSubmission } from '@/lib/places/normalize';
 import { EditableStopCard } from './EditableStopCard';
 import { CoverPicker } from './CoverPicker';
+import { CoverUploader } from './CoverUploader';
 import { CustomVenueSearch } from './CustomVenueSearch';
 
 // Stable drag keys decoupled from stop content (place_id can be blank on a new
@@ -33,6 +35,7 @@ export function ItineraryEditor({
   initialCover: string | null;
 }) {
   const reduce = useReducedMotion();
+  const router = useRouter();
   const [rows, setRows] = useState<Row[]>(
     () => initialStops.map((stop, i) => ({ key: `s${i}`, stop })),
   );
@@ -199,12 +202,19 @@ export function ItineraryEditor({
         </div>
       </section>
 
-      {photos.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-2 font-heading text-lg lowercase text-shell-ink">cover photo</h2>
-          <CoverPicker photos={photos} current={coverUrl} onPick={setCoverUrl} />
-        </section>
-      )}
+      <section className="mt-8">
+        <h2 className="mb-2 font-heading text-lg lowercase text-shell-ink">cover photo</h2>
+        {/* E11: upload a real cover that sells the night (storage-backed). */}
+        <CoverUploader itineraryId={itineraryId} current={coverUrl} stops={stops} />
+        {photos.length > 0 && (
+          <div className="mt-3">
+            <p className="mb-2 font-body text-[12px] lowercase tracking-[0.04em] text-shell-ink/55">
+              or use a stop photo
+            </p>
+            <CoverPicker photos={photos} current={coverUrl} onPick={setCoverUrl} />
+          </div>
+        )}
+      </section>
 
       <button
         type="button"
@@ -214,6 +224,18 @@ export function ItineraryEditor({
       >
         {saving ? 'saving...' : 'save changes'}
       </button>
+
+      {/* E11 Door-2 publish CTA — carries the forked itinerary id to the real
+          post form (full creator controls live there, F#4 convergence). */}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-8 border-t border-shell-ink/10 bg-shell-base/95 px-4 backdrop-blur pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <button
+          type="button"
+          onClick={() => router.push(`/nights/new?itinerary=${itineraryId}`)}
+          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent px-6 font-body text-base font-semibold lowercase text-white shadow-fun transition hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+        >
+          publish this night
+        </button>
+      </div>
     </main>
   );
 }
