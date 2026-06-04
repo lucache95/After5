@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 05 UI-SPEC approved
-last_updated: "2026-06-04T22:28:04.393Z"
+last_updated: "2026-06-04T22:34:14.171Z"
 last_activity: 2026-06-04
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
   percent: 57
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 05 (Progressive Reveal (P2)) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-04
 Prior: 2026-06-03 — 03-06 (E14 offer-delivery chain audit) + Wave 1+2 (03-01/02/03/04) green.
@@ -45,7 +45,7 @@ LOW findings (non-blocking, optional cleanup):
 
   ✓ GATED PROD-APPLY DONE (2026-06-04): batched Phase 2 (E5-E8 + e2 enums) + Phase 3 (E11 targeting cols/post_night extend, E12 queue enum/reject_candidate) — 9 migrations applied to prod ufufmcpnysvwtutpbian via MCP apply_migration in dependency order. Verified on prod: 8-arg post_night + 7-arg update_itinerary_stops (old 5-arg dropped), reject_candidate/cancel_night/update_night/sweep_loop_terminus/flag_no_show present, queue_status+passed_by_host, date_match_status+expired, date_instances targeting cols. Security advisor: NO new findings (my fns pin search_path=public, no USING(true); DEFINER-executable warnings are the app's established accepted pattern shared by all match_* RPCs). match-reject-candidate edge fn deployed (CLI, verify_jwt=true, 401 unauthed). RESEND_API_KEY confirmed in Vercel prod. NOTE: prod migration ledger uses MCP-assigned versions (drift vs local filenames — pre-existing reconciliation pattern; local files remain source of truth).
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [█████████░] 88%
 
 *Updated after each plan completion*
 | Phase 05 P01 | 9 | 4 tasks | 10 files |
+| Phase 05 P02 | 14 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - E8 interest_received = match_ingest_interest CREATE OR REPLACE (body verbatim) dispatches to host ONLY on n>0 (new candidate enqueued), deep-link /dates/[instance]/interested via payload.date_instance_id; coarse per-instance dedup_key ('interest_received:'||instance) throttles email/push while grouped in-app row still surfaces; grants unchanged (revoked public+authenticated). notif-map already had the deep-link (folded in 02-02).
 - E13/03-04 PlanTimeline (apps/web/components/PlanTimeline.tsx) = StopRow+StopTime extracted VERBATIM from feed/NightDetailSheet; accepts ALREADY-NORMALIZED NightDetailStop[] and does NOT re-normalize (re-running normalizeNightDetailStops on a NightDetailStop is lossy — reads source keys estimated_cost_pp/place_name). Callers reading raw itineraries.stops normalize first (03-05 loaders). Blind-safe: name-query map link, NO /places/[slug] StopCard.
 - [Phase ?]: E15/05-01: signBlurredUrls no-reveal-gate; browse_feed widened +3 host cols LOCAL-applied advisor-clean; blurred path signed app-side in feed/page.tsx; REQ-E15 rung-1 only (offer tier 05-02).
+- [Phase ?]: 05/05-02: rung-2 offer surface = candidate offers/[offerId] view (not InterestedList); avatar signed from blurred_photo_url + CSS blur(3px) over blur(8px), clear path never signed pre-lock (T-05-05/T-05-06); blurred avatar is a 48px circular thumb not a Polaroid
 
 ### Pending Todos
 
@@ -117,6 +119,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T22:27:46.666Z
+Last session: 2026-06-04T22:34:02.096Z
 Stopped at: Phase 05 UI-SPEC approved
 Resume file: None
