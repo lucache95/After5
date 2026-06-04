@@ -84,7 +84,7 @@ export function NightCard({ night }: { night: FeedNight }) {
       />
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,0.78) 100%)' }}
+        style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 28%, rgba(0,0,0,0.46) 56%, rgba(0,0,0,0.9) 100%)' }}
         aria-hidden
       />
 
@@ -127,7 +127,7 @@ export function NightCard({ night }: { night: FeedNight }) {
           </ul>
         )}
 
-        <h2 className="font-heading text-3xl lowercase leading-[1.02] drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+        <h2 className="font-heading text-3xl lowercase leading-[1.02] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">
           {night.title?.toLowerCase() ?? 'a night out'}
         </h2>
 

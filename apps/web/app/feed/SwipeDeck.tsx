@@ -311,8 +311,11 @@ function PeekCard({ night, depth }: { night: FeedNight; depth: 1 | 2 }) {
       className="pointer-events-none absolute inset-0"
       style={{
         zIndex: 10 - depth,
-        transform: `translateY(${depth * 14}px) scale(${1 - depth * 0.05})`,
-        opacity: depth === 2 ? 0.6 : 0.85,
+        // Read as a real stacked deck: a clear WIDTH step (scale) so you see three
+        // nested card widths, plus a downward offset large enough that each rounded
+        // bottom rim peeks below the one in front against the cream page.
+        transform: `translateY(${depth * 26}px) scale(${1 - depth * 0.08})`,
+        opacity: depth === 2 ? 0.78 : 0.92,
       }}
     >
       <NightCard night={night} />
