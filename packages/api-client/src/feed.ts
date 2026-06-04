@@ -19,12 +19,21 @@ export interface AmbientSound {
 export async function postNight(client: After5Client, input: {
   itinerary_id: string; starts_at: string; venue_id?: string | null;
   duration_min?: number; ambient_sound_id?: string | null;
+  // E11 (REQ-E11): per-date targeting, persisted onto the date_instances row.
+  // target_age_range is a Postgres int4range literal, e.g. '[25,40)'. search_radius_km
+  // is numeric (km). All optional: omitting them keeps the open/unbounded defaults.
+  target_genders?: string[] | null;
+  target_age_range?: string | null;
+  search_radius_km?: number | null;
 }): Promise<string> {
   const { data, error } = await client.rpc('post_night', {
     p_itinerary: input.itinerary_id, p_starts_at: input.starts_at,
     p_venue: input.venue_id ?? undefined, p_duration_min: input.duration_min ?? 150,
     p_ambient_sound_id: input.ambient_sound_id ?? undefined,
-  });
+    p_target_genders: input.target_genders ?? undefined,
+    p_target_age_range: input.target_age_range ?? undefined,
+    p_search_radius_km: input.search_radius_km ?? undefined,
+  } as never);
   if (error) throw error;
   return data as string;
 }
@@ -104,7 +113,14 @@ export interface EditableStop {
 
 export async function updateItineraryStops(
   client: After5Client,
-  input: { itinerary_id: string; stops: EditableStop[]; title?: string; why_note?: string; cover_image_url?: string },
+  input: {
+    itinerary_id: string; stops: EditableStop[]; title?: string; why_note?: string;
+    cover_image_url?: string;
+    // E11 (REQ-E11 / D-10): pay_setting + vibe_tags now persist on the itinerary too.
+    // pay_setting maps to the payment_preference enum (cast server-side). Both optional;
+    // an omitted field is "leave unchanged" (coalesce in the RPC).
+    pay_setting?: string; vibe_tags?: string[];
+  },
 ): Promise<string> {
   const { data, error } = await client.rpc('update_itinerary_stops', {
     p_itinerary: input.itinerary_id,
@@ -112,7 +128,9 @@ export async function updateItineraryStops(
     p_title: input.title ?? undefined,
     p_why_note: input.why_note ?? undefined,
     p_cover_image_url: input.cover_image_url ?? undefined,
-  });
+    p_pay_setting: input.pay_setting ?? undefined,
+    p_vibe_tags: input.vibe_tags ?? undefined,
+  } as never);
   if (error) throw error;
   return data as string;
 }
