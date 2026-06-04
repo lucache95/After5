@@ -9,9 +9,9 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Polaroid } from '@/components/Polaroid';
 import { cn } from '@/lib/cn';
 import { acceptOffer, passOffer, withdraw, MatchError, messageForCode } from '@/lib/after5/match';
 import { vibePalette } from '@after5/business';
@@ -87,13 +87,29 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops,
       <div className="mx-auto w-full max-w-[420px]">
         <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">you&apos;ve got an offer</h1>
 
-        <div className="mt-6 flex items-start gap-4">
-          <Polaroid
-            src={host.photo_url ?? '/places/place-walk.jpg'}
-            alt={host.first_name}
-            size="sm"
-            tone="dating"
-          />
+        <div className="mt-6 flex items-center gap-3">
+          {/* Rung-2 host hint (REQ-E15 / D-03): a small 48px blurred avatar, secondary
+              to the night below. CSS blur(3px) over the already-blurred signed asset,
+              one step softer than the feed's rung-1 blur(8px), so the face begins to
+              resolve as a match reward without revealing the clear photo. A null photo
+              falls back to an initial chip, never a broken image. */}
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full ring-2 ring-white/70 shadow-md">
+            {host.photo_url ? (
+              <Image
+                src={host.photo_url}
+                alt=""
+                fill
+                sizes="48px"
+                className={cn('object-cover', 'blur-[3px] scale-110')}
+                data-rung2-avatar
+                draggable={false}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-shell-accent/15 font-heading text-lg lowercase text-shell-accent">
+                {name.charAt(0)}
+              </div>
+            )}
+          </div>
           <div>
             <p className="font-body text-lg font-semibold lowercase text-shell-ink">
               {name}{host.age ? `, ${host.age}` : ''}
