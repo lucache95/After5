@@ -30,9 +30,19 @@ BEGIN
     THEN RAISE EXCEPTION 'notification_type missing lock_cancelled_frozen (5b)'; END IF;
   IF NOT ('lock_cancelled_rolled' = ANY (enum_range(null::notification_type)::text[]))
     THEN RAISE EXCEPTION 'notification_type missing lock_cancelled_rolled (5b)'; END IF;
-  -- Confirm total count = 20 (15 base/C11.11 + 5 from 5b PREREQ)
-  IF array_length(enum_range(null::notification_type), 1) <> 20
-    THEN RAISE EXCEPTION 'notification_type should have 20 values, got %',
+  -- Inbox/loop-closure additive values (20260603120000 gated inbox + 20260604120000 Phase-02 wave-1).
+  IF NOT ('interest_received' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing interest_received (gated inbox)'; END IF;
+  IF NOT ('identity_revealed' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing identity_revealed (gated inbox)'; END IF;
+  IF NOT ('night_cancelled' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing night_cancelled (Phase 02 D-09)'; END IF;
+  IF NOT ('night_changed' = ANY (enum_range(null::notification_type)::text[]))
+    THEN RAISE EXCEPTION 'notification_type missing night_changed (Phase 02 D-09)'; END IF;
+  -- Confirm total count = 24 (15 base/C11.11 + 5 from 5b PREREQ + 2 gated inbox + 2 Phase-02 wave-1).
+  -- Additive only — enum values are never dropped, so this monotonically grows; bump on each add.
+  IF array_length(enum_range(null::notification_type), 1) <> 24
+    THEN RAISE EXCEPTION 'notification_type should have 24 values, got %',
       array_length(enum_range(null::notification_type), 1); END IF;
 END $$;
 
