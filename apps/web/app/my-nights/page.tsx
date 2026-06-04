@@ -17,7 +17,8 @@ import { NotificationToast } from '@/components/NotificationToast';
 import { CalendarHeart, Heart, Sparkles } from 'lucide-react';
 import { LocalTime } from '@/components/LocalTime';
 import { coverImageForNight } from '@/lib/place-image';
-import { NightCardActions } from './NightCardActions';
+import { NightCardActions, type VenueOption, type AmbientOption } from './NightCardActions';
+import { listAmbientSounds } from '@after5/api-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +55,7 @@ function lifecycleLabel(status: string): string {
   }
 }
 
-function NightCard({ night, interested }: { night: NightRow; interested: number }) {
+function NightCard({ night, interested, venues, ambientSounds }: { night: NightRow; interested: number; venues: VenueOption[]; ambientSounds: AmbientOption[] }) {
   const title = night.itinerary?.title?.toLowerCase() ?? 'your night out';
   // Guarantee a tasteful, on-theme banner — never a flat pink placeholder.
   const cover = coverImageForNight({
@@ -139,6 +140,8 @@ function NightCard({ night, interested }: { night: NightRow; interested: number 
               venue_id: night.venue_id,
               ambient_sound_id: night.ambient_sound_id,
             }}
+            venues={venues}
+            ambientSounds={ambientSounds}
           />
         </div>
       )}
@@ -183,6 +186,23 @@ export default async function MyNightsPage() {
     }
   }
 
+  // E7 edit pickers (SC3): the host can re-pin the venue + ambient when editing a
+  // seeking night. Load the live/active venue list (mirrors update_night's
+  // `approval_status='live' and is_active` validation) + the ambient library so
+  // NightCardActions renders the venue/ambient <select>s. Only meaningful when a
+  // seeking night exists; cheap enough to load unconditionally.
+  const hasSeeking = nights.some((n) => n.status === 'seeking');
+  let venues: VenueOption[] = [];
+  let ambientOpts: AmbientOption[] = [];
+  if (hasSeeking) {
+    const [venuesRes, ambientSounds] = await Promise.all([
+      supabase.from('places').select('id, name').eq('approval_status', 'live').eq('is_active', true).order('name').limit(200),
+      listAmbientSounds(supabase as never),
+    ]);
+    venues = ((venuesRes.data ?? []) as Array<{ id: string; name: string }>).map((v) => ({ id: v.id, name: v.name }));
+    ambientOpts = ((ambientSounds ?? []) as Array<{ id: string; name: string }>).map((s) => ({ id: s.id, name: s.name }));
+  }
+
   return (
     <main className="min-h-dvh bg-shell-base">
       <header className="sticky top-0 z-30 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
@@ -214,7 +234,7 @@ export default async function MyNightsPage() {
         ) : (
           <section aria-label="your posted nights" className="mt-6 space-y-4">
             {nights.map((night) => (
-              <NightCard key={night.id} night={night} interested={counts.get(night.id) ?? 0} />
+              <NightCard key={night.id} night={night} interested={counts.get(night.id) ?? 0} venues={venues} ambientSounds={ambientOpts} />
             ))}
           </section>
         )}
