@@ -57,3 +57,6 @@ docs/superpowers/reports/prod-walkthrough-*/*.png
 docs/superpowers/reports/prod-walkthrough-*/summary.json
 docs/superpowers/reports/prod-full-walkthrough-*/*.png
 docs/superpowers/reports/prod-full-walkthrough-*/summary.json
+
+# Visual-verify screenshots (regenerable via route-*-visual specs)
+apps/web/e2e/__screenshots__/
