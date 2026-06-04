@@ -43,7 +43,9 @@ describe('ActivityList', () => {
       expect(JSON.parse((post![1] as RequestInit).body as string)).toEqual({ ids: ['a', 'b', 'c'] });
     });
     expect(readEvent).toHaveBeenCalled();
-    expect(push).toHaveBeenCalledWith('/my-nights');
+    // E8/D-07: an interest_received group deep-links the host to that night's interested
+    // list (payload.date_instance_id='d1'), not the generic /my-nights surface.
+    expect(push).toHaveBeenCalledWith('/dates/d1/interested');
     window.removeEventListener('notif:read', readEvent);
   });
 
