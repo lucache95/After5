@@ -16,8 +16,16 @@ export default async function NewNightPage({
   if (!user) redirect('/login?next=/nights/new');
 
   const { data: p } = await supabase
-    .from('profiles').select('dating_enabled, verification').eq('id', user.id).maybeSingle();
+    .from('profiles')
+    .select('dating_enabled, verification, primary_city_id, cities:primary_city_id (name)')
+    .eq('id', user.id)
+    .maybeSingle();
   if (!p?.dating_enabled || p.verification !== 'verified') redirect('/onboarding');
+
+  // E10/D-01: the host's home city scopes the reach-preview count.
+  const primaryCityId = p.primary_city_id ?? null;
+  const city = p.cities as { name?: string | null } | { name?: string | null }[] | null;
+  const cityName = (Array.isArray(city) ? city[0]?.name : city?.name) ?? null;
 
   const { data: plans } = await supabase
     .from('itineraries')
@@ -33,6 +41,8 @@ export default async function NewNightPage({
       plans={plans ?? []}
       ambientSounds={ambientSounds}
       itineraryId={itinerary}
+      primaryCityId={primaryCityId}
+      cityName={cityName}
     />
   );
 }
