@@ -384,8 +384,11 @@ export type Database = {
           is_seed: boolean
           itinerary_id: string
           moderation_status: Database["public"]["Enums"]["moderation_status"]
+          search_radius_km: number | null
           starts_at: string
           status: Database["public"]["Enums"]["date_match_status"]
+          target_age_range: unknown
+          target_genders: string[]
           time_range: unknown
           updated_at: string
           venue_id: string | null
@@ -400,8 +403,11 @@ export type Database = {
           is_seed?: boolean
           itinerary_id: string
           moderation_status?: Database["public"]["Enums"]["moderation_status"]
+          search_radius_km?: number | null
           starts_at: string
           status?: Database["public"]["Enums"]["date_match_status"]
+          target_age_range?: unknown
+          target_genders?: string[]
           time_range?: unknown
           updated_at?: string
           venue_id?: string | null
@@ -416,8 +422,11 @@ export type Database = {
           is_seed?: boolean
           itinerary_id?: string
           moderation_status?: Database["public"]["Enums"]["moderation_status"]
+          search_radius_km?: number | null
           starts_at?: string
           status?: Database["public"]["Enums"]["date_match_status"]
+          target_age_range?: unknown
+          target_genders?: string[]
           time_range?: unknown
           updated_at?: string
           venue_id?: string | null
@@ -3467,12 +3476,6 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
-      mk_instance: {
-        Args: { p_creator: string; p_itin: string; p_starts: string }
-        Returns: string
-      }
-      mk_itinerary: { Args: { p_user: string }; Returns: string }
-      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -3490,7 +3493,10 @@ export type Database = {
           p_ambient_sound_id?: string
           p_duration_min?: number
           p_itinerary: string
+          p_search_radius_km?: number
           p_starts_at: string
+          p_target_age_range?: unknown
+          p_target_genders?: string[]
           p_venue?: string
         }
         Returns: string
@@ -4163,8 +4169,10 @@ export type Database = {
         Args: {
           p_cover_image_url?: string
           p_itinerary: string
+          p_pay_setting?: string
           p_stops: Json
           p_title?: string
+          p_vibe_tags?: string[]
           p_why_note?: string
         }
         Returns: string
@@ -4297,6 +4305,7 @@ export type Database = {
         | "offer_expired"
         | "standby"
         | "locked"
+        | "passed_by_host"
       report_reason_category:
         | "harassment"
         | "safety_threat"
@@ -4570,6 +4579,7 @@ export const Constants = {
         "offer_expired",
         "standby",
         "locked",
+        "passed_by_host",
       ],
       report_reason_category: [
         "harassment",

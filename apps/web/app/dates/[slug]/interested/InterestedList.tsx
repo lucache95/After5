@@ -25,7 +25,10 @@ const PAGE = 20;
 
 export interface HostCandidate {
   candidate_id: string;
-  status: 'interested' | 'shortlisted' | 'offer_active' | 'offer_passed' | 'offer_expired' | 'standby' | 'locked';
+  // 'passed_by_host' added by E12 (20260605120100) to the queue_status enum so this
+  // hand-typed union stays assignable from the regenerated DB row type. The reject /
+  // silent-removal UI that consumes it lands in a later Phase-3 plan (03-02/03-06).
+  status: 'interested' | 'shortlisted' | 'offer_active' | 'offer_passed' | 'offer_expired' | 'standby' | 'locked' | 'passed_by_host';
   rank: number | null;
   first_name: string;
   age: number | null;
