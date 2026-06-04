@@ -5,12 +5,13 @@ import { Drawer } from 'vaul';
 import { MapPin, Clock, Wallet, Heart, X, Music, Users, Sparkles, Route } from 'lucide-react';
 import { vibePalette } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
-import { coverImageForNight, imageForStop } from '@/lib/place-image';
+import { coverImageForNight } from '@/lib/place-image';
 import {
   browserAfter5Client, getNightDetail,
-  type FeedNight, type NightDetailNight, type NightDetailStop,
+  type FeedNight, type NightDetailNight,
 } from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
+import { PlanTimeline } from '@/components/PlanTimeline';
 import { cn } from '@/lib/cn';
 
 // Pre-swipe DATE DETAIL (DESIGN-SYSTEM §4 "ExperienceDetail" branch), redesigned
@@ -39,22 +40,6 @@ function km(distanceM: number | null): string | null {
   return value < 1
     ? `${Math.max(0.1, Math.round(value * 10) / 10)} km away`
     : `${Math.round(value)} km away`;
-}
-
-// Hour-truncated, lowercase local time for a stop — blind-safe (never minute-
-// precise) and tiny, e.g. "7pm". Returns a <LocalTime> so it stays SSR-safe.
-function StopTime({ iso }: { iso: string | null }) {
-  if (!iso) return null;
-  // Stop start_time can arrive as a bare "HH:MM" clock string (legacy seed
-  // shape) or a full ISO datetime. Normalize a bare clock to a parseable ISO.
-  const isoish = /^\d{1,2}:\d{2}/.test(iso) ? `1970-01-01T${iso.length === 4 ? '0' : ''}${iso}` : iso;
-  return (
-    <LocalTime
-      iso={isoish}
-      format={(d) => d.toLocaleTimeString('en-US', { hour: 'numeric' }).toLowerCase().replace(/\s/g, '')}
-      fallback=""
-    />
-  );
 }
 
 // A pill chip in the scannable fact row. Icon + short lowercase value.
@@ -272,18 +257,7 @@ export function NightDetailSheet({
                   <p className="mb-2 font-body text-[11px] font-bold lowercase tracking-[0.16em] text-shell-ink/50">
                     the night
                   </p>
-                  <ol className="flex flex-col">
-                    {stops.map((s, idx) => (
-                      <StopRow
-                        key={`${s.name}-${idx}`}
-                        stop={s}
-                        index={idx}
-                        last={idx === stops.length - 1}
-                        accent={pal.accent}
-                        vibeTags={night.vibe_tags}
-                      />
-                    ))}
-                  </ol>
+                  <PlanTimeline stops={stops} accent={pal.accent} vibeTags={night.vibe_tags} />
                 </div>
               )}
 
@@ -355,95 +329,5 @@ export function NightDetailSheet({
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-  );
-}
-
-// Blind-safe timeline stop: numbered photo thumb + name + "neighborhood · type ·
-// time" + a one-line desc with "more" + "$ pp" + a name-query "map" link. NO slug
-// link, NO reservation_url — the RPC already scrubbed identity vectors. A dashed
-// connector links each stop to the next, so the column reads as a route.
-function StopRow({
-  stop, index, last, accent, vibeTags,
-}: {
-  stop: NightDetailStop; index: number; last: boolean; accent: string;
-  vibeTags: string[] | null;
-}) {
-  const [open, setOpen] = useState(false);
-  const directions = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.name)}`;
-  // Per-stop thumbnail — real photo when present, else a type/vibe mood shot.
-  // Never an empty src; imageForStop always returns a shipped local asset (#77).
-  const thumb = imageForStop({
-    photo_url: stop.photo_url,
-    place_type: stop.type,
-    vibe_tags: vibeTags,
-    seedKey: stop.name,
-  });
-  const desc = stop.what_to_do?.trim() ?? '';
-  const DESC_LIMIT = 90;
-  const descLong = desc.length > DESC_LIMIT;
-  const descShown = open || !descLong ? desc : `${desc.slice(0, DESC_LIMIT).trimEnd()}…`;
-  const meta = [stop.neighborhood, stop.type?.replace(/_/g, ' ')].filter(Boolean).join(' · ').toLowerCase();
-
-  return (
-    <li className="flex gap-3">
-      {/* rail: numbered thumb + dashed connector to the next stop */}
-      <div className="flex shrink-0 flex-col items-center">
-        <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-shell-pink">
-          <Image src={thumb} alt="" fill sizes="64px" className="object-cover" draggable={false} />
-          <span
-            className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full font-body text-[11px] font-bold text-white ring-2 ring-white"
-            style={{ background: accent }}
-          >
-            {index + 1}
-          </span>
-        </div>
-        {!last && <span className="my-1 w-0 flex-1 border-l-2 border-dashed border-shell-accent/30" aria-hidden />}
-      </div>
-
-      <div className="min-w-0 flex-1 pb-4">
-        <p className="font-heading text-lg lowercase leading-tight text-shell-ink">{stop.name.toLowerCase()}</p>
-        {(meta || stop.start_time) && (
-          <p className="mt-0.5 flex flex-wrap items-center gap-1 font-body text-[11px] lowercase tracking-[0.06em] text-shell-ink/55">
-            {meta}
-            {stop.start_time && (
-              <>
-                {meta && <span aria-hidden>·</span>}
-                <StopTime iso={stop.start_time} />
-              </>
-            )}
-          </p>
-        )}
-        {desc && (
-          <p className="mt-1.5 font-body text-[13px] leading-snug text-shell-ink/85">
-            {descShown}
-            {descLong && (
-              <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="ml-1 font-bold text-shell-accent underline decoration-2 underline-offset-2"
-              >
-                {open ? 'less' : 'more'}
-              </button>
-            )}
-          </p>
-        )}
-        {stop.local_insight && open && (
-          <p className="mt-1.5 font-body text-[12px] leading-snug text-shell-ink/65">tip: {stop.local_insight}</p>
-        )}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-body text-xs font-semibold text-shell-ink/75">
-          {stop.cost_pp != null && (
-            <span className="text-shell-accent">{stop.cost_pp > 0 ? `$${Math.round(stop.cost_pp)} pp` : 'free'}</span>
-          )}
-          <a
-            href={directions}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-shell-ink/75 underline decoration-2 underline-offset-2"
-          >
-            <MapPin className="h-3 w-3" aria-hidden /> map
-          </a>
-        </div>
-      </div>
-    </li>
   );
 }
