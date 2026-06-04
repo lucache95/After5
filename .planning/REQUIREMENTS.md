@@ -237,8 +237,8 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 |-----|--------|----------|-------|--------|
 | REQ-E1 | universal-nav-chrome | P0 | Phase 1 | Complete (01-02) |
 | REQ-E2 | bottom-nav-semantics | P0 | Phase 1 | Complete (01-01) |
-| REQ-E3 | profile-hub (ISSUE #15) | P0 | Phase 1 | Pending |
-| REQ-E4 | editable-dating-preferences | P0 | Phase 1 | Pending |
+| REQ-E3 | profile-hub (ISSUE #15) | P0 | Phase 1 | Complete (01-04) |
+| REQ-E4 | editable-dating-preferences | P0 | Phase 1 | Complete (01-03) |
 | REQ-E5 | lock-completed-transition | P0 | Phase 2 | Pending |
 | REQ-E6 | host-cancel-night | P0 | Phase 2 | Pending |
 | REQ-E7 | host-edit-night | P0 | Phase 2 | Pending |
