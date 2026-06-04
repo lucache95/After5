@@ -76,7 +76,7 @@ Plans:
 - [x] 02-01-PLAN.md — Remove the 6 dead job handlers + lockstep test prune (poison-loop cleanup, sequenced first) (REQ-E9)
 - [x] 02-02-PLAN.md — Additive enum migration (date_match_status 'expired' + notification_type night_cancelled/night_changed) + local apply gate (REQ-E5, REQ-E6, REQ-E7)
 - [x] 02-03-PLAN.md — E5 loop terminus: sweep_loop_terminus + flag_no_show RPCs + close-loop cron route (REQ-E5)
-- [ ] 02-04-PLAN.md — E6/E7 cancel_night + update_night DEFINER RPCs with candidate notifications (REQ-E6, REQ-E7)
+- [x] 02-04-PLAN.md — E6/E7 cancel_night + update_night DEFINER RPCs with candidate notifications (REQ-E6, REQ-E7)
 - [ ] 02-05-PLAN.md — E8 interest_received dispatch from match_ingest_interest + notif-map deep-link/meta (REQ-E8)
 - [ ] 02-06-PLAN.md — Host cancel/edit UI on /my-nights + api-client wrappers (visual-verified) (REQ-E6, REQ-E7)
 
@@ -169,7 +169,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
-| 2. Loop Closure & Host Controls | 3/6 | In Progress|  |
+| 2. Loop Closure & Host Controls | 4/6 | In Progress|  |
 | 3. Marketplace Completeness | 0/TBD | Not started | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |
 | 5. Progressive Reveal | 0/TBD | Not started | - |

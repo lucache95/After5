@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 2 Wave 2 — 02-03 complete (E5 loop terminus: sweep_loop_terminus + flag_no_show RPCs + close-loop cron; rating-window enqueue wired; applied LOCAL, types regen, typecheck + full SQL suite green). Security advisor batched by orchestrator post-wave. PROD apply NOT attempted. 02-04/02-05 run after.
-last_updated: "2026-06-04T01:50:00.000Z"
-last_activity: 2026-06-04 — Phase 2 Wave 2 02-03 executed (loop terminus RPCs + cron). Unpushed/undeployed/un-prod-applied on main.
+stopped_at: Phase 2 Wave 2 — 02-04 complete (E6 cancel_night + E7 update_night DEFINER RPCs + notify; LOCAL-applied, types regen, full SQL suite + typecheck green). Security advisor batched by orchestrator post-wave. PROD apply NOT attempted. 02-05 runs after.
+last_updated: "2026-06-04T02:30:00.000Z"
+last_activity: 2026-06-03 — Phase 1 verified PASSED (4/4 criteria + visual-verify). Unpushed/undeployed on main.
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 16
 ---
 
@@ -30,7 +30,7 @@ Plan: 01-01/01-02 (Wave 1) + 01-03/01-04 (Wave 2) all complete
 Status: Phase 1 done — ready to plan/execute Phase 2
 Last activity: 2026-06-03 — Phase 1 verified PASSED (4/4 criteria + visual-verify). Unpushed/undeployed on main.
 
-Progress: [██░░░░░░░░] 16%
+Progress: [██░░░░░░░░] 16% (Phase 2: 4/4 plans built this wave-set; 02-05 pending)
 
 ## Performance Metrics
 
@@ -44,7 +44,7 @@ Progress: [██░░░░░░░░] 16%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 3 | ~13m | ~4m |
+| 02 | 4 | ~25m | ~6m |
 
 **Recent Trend:**
 
@@ -67,6 +67,8 @@ Recent decisions affecting current work:
 - `interest_received` / `identity_revealed` enums are already applied — E8/E16 are dispatch-site wiring, not migrations (D11).
 - E5 rating-window coordination: cron-completed locks MUST enqueue rating_window themselves — close_rating_window takes an explicit p_lock and does NOT self-discover; accept_lock enqueues it. sweep_loop_terminus now does the same (anchor upper(time_range)+2h, dedup rating:<lock>).
 - no_show is LOCK-level only (date_match_status has no no_show value); date_instances terminal states are completed/expired. flag_no_show uses membership auth (either party), not creator-only.
+- E6 cancel_night = SOFT unpublish (status->'cancelled', row + queue_entries KEPT/reversible), creator-only DEFINER, notifies interested via night_cancelled; pre-match only (non-seeking -> P0001).
+- E7 update_night = creator-only DEFINER, coalesce-edit of starts_at/duration/venue/ambient, NEVER writes GENERATED time_range; dispatches night_changed ONLY on material change (time OR venue), not ambient/duration-only.
 
 ### Pending Todos
 
@@ -93,6 +95,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T01:50:00.000Z
-Stopped at: Phase 2 Wave 2 — 02-03 complete (E5 loop terminus RPCs + close-loop cron; rating-window enqueue wired; LOCAL-applied, types regen, typecheck + full SQL suite green). Security advisor batched by orchestrator post-wave. PROD apply NOT attempted. 02-04/02-05 run after.
-Resume file: .planning/phases/02-loop-closure-host-controls-p0/02-03-SUMMARY.md
+Last session: 2026-06-04T02:30:00.000Z
+Stopped at: Phase 2 Wave 2 — 02-04 complete (E6 cancel_night + E7 update_night DEFINER RPCs + notify; LOCAL-applied, types regen, full SQL suite + typecheck green). Security advisor batched by orchestrator post-wave. PROD apply NOT attempted. 02-05 runs after.
+Resume file: .planning/phases/02-loop-closure-host-controls-p0/02-04-SUMMARY.md
