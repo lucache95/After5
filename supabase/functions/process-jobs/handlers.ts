@@ -46,17 +46,6 @@ const standbyRoll: Handler = async (db, job) => {
   await callRpc(db, "match_auto_roll", { p_instance: id(job, "instance_id") });
 };
 
-// notify both parties of a lock (day_of_reconfirm / safety_checkin / reconfirm_timeout).
-async function notifyLockParties(db: Db, job: Job, type: NotificationType, title: string, body: string) {
-  const lockId = id(job, "lock_id");
-  const { data: lock } = await db.from("locks").select("creator_id, matched_user_id").eq("id", lockId!).single();
-  if (!lock) return;
-  const l = lock as Record<string, string>;
-  for (const uid of [l.creator_id, l.matched_user_id]) {
-    await dispatchNotification(db, { userId: uid, type, payload: { title, body, data: { lock_id: lockId }, dedup_key: `${type}:${lockId}:${uid}` } });
-  }
-}
-
 // Generic deferred notification from payload (job_type 'notify').
 const genericNotify: Handler = async (db, job) => {
   await dispatchNotification(db, {
@@ -69,18 +58,10 @@ const genericNotify: Handler = async (db, job) => {
 export const HANDLERS: Record<string, Handler> = {
   offer_expiry: offerExpiry,
   standby_roll: standbyRoll,
-  // P5/S6 close path (RPC name finalized in S6); call by canonical name.
-  stale_date_close: async (db, job) => { await callRpc(db, "match_stale_date_close", { p_instance: id(job, "instance_id") }); },
-  // pending_expiry: P5/S6 reaps an expired pending queue entry (canonical name in S6).
-  pending_expiry: async (db, job) => { await callRpc(db, "match_expire_pending", { p_queue_entry: id(job, "queue_entry_id") }); },
-  day_of_reconfirm: (db, job) => notifyLockParties(db, job, "date_reconfirm", "Confirm your night", "Still on for tonight? Tap to reconfirm."),
-  safety_checkin: (db, job) => notifyLockParties(db, job, "safety_checkin", "Checking in", "You good? Tap to confirm you're safe."),
-  reconfirm_timeout: async (db, job) => { await callRpc(db, "match_reconfirm_timeout", { p_lock: id(job, "lock_id") }); },
   // payload key is 'user' (set by match_cancel_lock safety branch + match_autowithdraw_user_conflicts overflow).
   bulk_withdraw: async (db, job) => { await callRpc(db, "match_bulk_withdraw", { p_actor: id(job, "user") }); },
   chat_purge: async (db, job) => { await callRpc(db, "chat_purge_thread", { p_thread: id(job, "thread_id") }); },           // P6/S7
   rating_window: async (db, job) => { await callRpc(db, "close_rating_window", { p_lock: id(job, "lock_id") }); },          // P7/S8 (C11.10 canonical name)
-  deletion_process: async (db, job) => { await callRpc(db, "process_deletion", { p_user: id(job, "user_id") }); },          // P9/S10
   analytics_relay: async (db, job) => { await callRpc(db, "analytics_relay_drain", { p_batch: job.payload }); },            // P11/S12 owns the body
   notify: genericNotify,
 };
