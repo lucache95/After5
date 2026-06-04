@@ -122,7 +122,14 @@ Plans:
   3. When hard filters empty the feed, a friendly "loosen a filter" empty state lets the searcher recover.
   4. The filter state persists server-side across sessions (web + native) and hard-filtered feed queries stay sub-100ms via indexed, cursor-paginated, blind-safe RPC results.
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+
+- [ ] 04-01-PLAN.md — DB foundation: feed_filters column + browse_feed_for_viewer hard/soft/fit extension + reach_preview RPC + indexes + SQL suite + [BLOCKING] local-apply/typegen/advisor (REQ-E10)
+- [ ] 04-02-PLAN.md — api-client: FeedNight.fit + reachPreview() + FeedFilters + saveFeedFilters() (REQ-E10)
+- [ ] 04-03-PLAN.md — searcher UI: real FilterSheet (persist+requery) + 3 quick chips + filtered-vs-genuine empty state + e2e (REQ-E10)
+- [ ] 04-04-PLAN.md — hint UI: fit pill on NightCard + live reach-preview line on PostNightForm (REQ-E10)
+
 **UI hint**: yes
 
 **Carry-forward notes** (from Phase-3 live browser QA, 2026-06-04 — verified against the running app + local DB):
@@ -186,7 +193,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
-| 4. Feed Filters & Targeting | 0/TBD | Not started | - |
+| 4. Feed Filters & Targeting | 0/4 | Planned | - |
 | 5. Progressive Reveal | 0/TBD | Not started | - |
 | 6. Trust & Safety | 0/TBD | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
