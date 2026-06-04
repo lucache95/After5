@@ -45,7 +45,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 Plans:
 - [ ] 01-01-PLAN.md — Fix bottom-nav semantics: dates tab to /matches, profile tab to /account (+ Wave-0 reconcile gate) (REQ-E2)
-- [ ] 01-02-PLAN.md — DeepRouteHeader primitive + mount on 6 deep routes + every guard/error terminal (REQ-E1)
+- [x] 01-02-PLAN.md — DeepRouteHeader primitive + mount on 6 deep routes + every guard/error terminal (REQ-E1)
 - [ ] 01-03-PLAN.md — Editable /account/preferences via extracted mode-aware PreferencesForm + relocated dating on/off (REQ-E4)
 - [ ] 01-04-PLAN.md — Enhance /account into an identity-forward profile hub with ProfileCard self-view (REQ-E3)
 **UI hint**: yes
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Navigation & Profile Spine | 1/4 | In progress | - |
+| 1. Navigation & Profile Spine | 2/4 | In progress | - |
 | 2. Loop Closure & Host Controls | 0/TBD | Not started | - |
 | 3. Marketplace Completeness | 0/TBD | Not started | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md (bottom-nav semantics + Wave-0 gate)
+stopped_at: Completed 01-02-PLAN.md (E1 DeepRouteHeader + universal deep-route back chrome)
 last_updated: "2026-06-03T23:11:05.051Z"
-last_activity: 2026-06-03 — Executed 01-01 (E2 bottom-nav repoint dates→/matches, profile→/account; Wave-0 reconcile gate PASS)
+last_activity: 2026-06-03 — Executed 01-02 (E1 DeepRouteHeader primitive + back chrome on 6 deep routes + every guard terminal)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 0
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 1 of 7 (Navigation & Profile Spine)
-Plan: 01-01 complete (Wave 1)
+Plan: 01-01, 01-02 complete (Wave 1)
 Status: Executing Phase 1
-Last activity: 2026-06-03 — Executed 01-01 (E2 bottom-nav repoint; Wave-0 reconcile gate PASS)
+Last activity: 2026-06-03 — Executed 01-02 (E1 DeepRouteHeader + deep-route back chrome on 6 routes + all guard terminals)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -92,5 +92,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-06-03T23:11:05.047Z
-Stopped at: Completed 01-01-PLAN.md
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
