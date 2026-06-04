@@ -125,8 +125,16 @@ Plans:
 **Plans**: 4 plans
 Plans:
 
+**Wave 1**
+
 - [ ] 04-01-PLAN.md — DB foundation: feed_filters column + browse_feed_for_viewer hard/soft/fit extension + reach_preview RPC + indexes + SQL suite + [BLOCKING] local-apply/typegen/advisor (REQ-E10)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 04-02-PLAN.md — api-client: FeedNight.fit + reachPreview() + FeedFilters + saveFeedFilters() (REQ-E10)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 04-03-PLAN.md — searcher UI: real FilterSheet (persist+requery) + 3 quick chips + filtered-vs-genuine empty state + e2e (REQ-E10)
 - [ ] 04-04-PLAN.md — hint UI: fit pill on NightCard + live reach-preview line on PostNightForm (REQ-E10)
 
