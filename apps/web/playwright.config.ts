@@ -18,8 +18,9 @@ export default defineConfig({
   testDir: './e2e',
   // 5b-* = the dating loop suite; chat-* = the Phase 7 chat suite; m5-* = the
   // get_night_detail blind-safe detail-sheet suite; m2-* = date-first landing; m3-* = edit;
-  // route-* = full-route brand + health smoke (route-smoke.spec.ts).
-  testMatch: /(5b-|chat-|m5-|m2-|m3-|route-).*\.spec\.ts$/,
+  // route-* = full-route brand + health smoke (route-smoke.spec.ts);
+  // e10-* = the searcher feed-filters loop (REQ-E10).
+  testMatch: /(5b-|chat-|m5-|m2-|m3-|route-|e10-).*\.spec\.ts$/,
   // Shared DB state across the two-context flow → run serially.
   fullyParallel: false,
   workers: 1,
