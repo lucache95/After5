@@ -97,6 +97,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T03:12:03.670Z
-Stopped at: Phase 3 context gathered (E11-E14 autonomous defaults); planning next
-Resume file: .planning/phases/03-marketplace-completeness-p1/03-CONTEXT.md
+Last session: 2026-06-04T04:15Z
+Stopped at: Phase 3 Wave 1 — 03-01 foundation migrations COMPLETE (date_instances targeting cols + passed_by_host enum + post_night/update_itinerary_stops extended; local db:reset/types/test/typecheck GREEN; prod apply gated). Sibling Wave-1 plans (03-04, 03-06) running concurrently.
+Resume file: .planning/phases/03-marketplace-completeness-p1/03-01-SUMMARY.md
