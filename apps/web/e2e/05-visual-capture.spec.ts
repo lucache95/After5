@@ -11,6 +11,7 @@
 // The privacy invariant still has teeth here: it runs the SAME captureSignedPaths /
 // assertNoClearPhotoSigned network assertion on every pre-lock surface (rung 1 + rung 2)
 // before screenshotting, so a clear-photo leak during capture is a hard failure.
+import { randomUUID } from 'node:crypto';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
@@ -59,6 +60,38 @@ async function seedHostBlurredPhoto(hostId: string): Promise<void> {
   if (upErr) throw new Error(`seed blurred upload: ${upErr.message}`);
   const { error: updErr } = await sb.from('profiles').update({ blurred_photo_url: path }).eq('id', hostId);
   if (updErr) throw new Error(`seed blurred path: ${updErr.message}`);
+}
+
+// Rung 3 only: seed a REAL CLEAR storage object + the profile_photos row that the
+// post-lock reveal page actually signs. /matches/[lockId] calls listMyPhotos(host)
+// then signClearUrls(clear_path); without a real object behind a real gallery row,
+// signClearUrls returns empty -> photoError=true -> the held "pull to retry" state,
+// and the SUCCESS ceremony (un-blur dissolve + flourish + toast) never plays.
+//
+// The clear object lives at the M6 path shape '<uid>/<id>.jpg' (NOT '_blurred.jpg').
+// Reading it post-lock is authorized by the storage policy
+// profile_photos_clear_reveal_read (a profile_photos row whose owner is a
+// match_reveal_allowed_pair of the viewer). The locked pair satisfies that, so the
+// candidate's RLS'd reveal client signs it. This is the COUNTERPART's clear photo,
+// signed ONLY on the post-lock reveal surface — never pre-lock, so the rung-1/2
+// privacy invariant (separate seed, blurred-only) stays green.
+async function seedHostClearPhoto(hostId: string): Promise<void> {
+  const sb = admin();
+  const id = randomUUID();
+  const clearPath = `${hostId}/${id}.jpg`;
+  const bytes = readFileSync(join(process.cwd(), 'public', 'places', 'place-walk.jpg'));
+  const { error: upErr } = await sb.storage
+    .from('profile-photos')
+    .upload(clearPath, bytes, { upsert: true, contentType: 'image/jpeg' });
+  if (upErr) throw new Error(`seed clear upload: ${upErr.message}`);
+  const { error: insErr } = await sb.from('profile_photos').insert({
+    id,
+    user_id: hostId,
+    clear_path: clearPath,
+    sort_order: 0,
+    is_primary: true,
+  });
+  if (insErr) throw new Error(`seed clear photo row: ${insErr.message}`);
 }
 
 // Drive the real loop swipe -> shortlist -> offer -> accept to a lock (mirrors the
@@ -163,6 +196,9 @@ test.describe('05 visual-capture @420px (forced-local, CAPTURE_VISUAL=1)', () =>
 
   test('rung 3: the reveal ceremony (un-blur landed + flourish + toast)', async ({ browser }) => {
     const seed = await seedTwoUsersAndNight();
+    // Seed the host's REAL clear photo so the post-lock reveal SUCCEEDS (the un-blur
+    // lands on a clear face) instead of holding the "pull to retry" fallback.
+    await seedHostClearPhoto(seed.hostId);
     try {
       const { hostContext, candContext, candPage, lockId } = await lockTheMatch(browser, seed);
 
@@ -172,9 +208,12 @@ test.describe('05 visual-capture @420px (forced-local, CAPTURE_VISUAL=1)', () =>
       await expect(candPage.getByText(/the face behind the night\. say hi\./i)).toBeVisible({ timeout: 15_000 });
       // ...and the un-blur settles into the Tier-3 ProfileCard (name+age heading clear).
       await expect(candPage.getByRole('heading', { name: /Maya[^']*, \d+$/ })).toBeVisible({ timeout: 15_000 });
+      // The reveal landed on a REAL clear face (not the held "pull to retry" fallback):
+      // the success photo carousel is present, no retry prompt.
+      await expect(candPage.getByText(/pull to retry/i)).toHaveCount(0);
       // Let the ~1.4s choreography settle (un-blur to 0 + flourish in) before the shot,
       // and keep the toast in frame.
-      await candPage.waitForTimeout(700);
+      await candPage.waitForTimeout(1000);
       await candPage.screenshot({ path: out('rung3-ceremony.png') });
 
       await hostContext.close();
@@ -186,6 +225,9 @@ test.describe('05 visual-capture @420px (forced-local, CAPTURE_VISUAL=1)', () =>
 
   test('rung 3 reduced-motion: immediate clear photo, no glow motion, toast still fires', async ({ browser }) => {
     const seed = await seedTwoUsersAndNight();
+    // Same real-clear-photo seed: reduced-motion still lands on the clear face, just
+    // without the blur/scale/glow choreography.
+    await seedHostClearPhoto(seed.hostId);
     try {
       const { hostContext, candContext, candPage, lockId } = await lockTheMatch(browser, seed);
 
@@ -193,6 +235,7 @@ test.describe('05 visual-capture @420px (forced-local, CAPTURE_VISUAL=1)', () =>
       await candPage.goto(`/matches/${lockId}?just=1`);
       await expect(candPage.getByText(/the face behind the night\. say hi\./i)).toBeVisible({ timeout: 15_000 });
       await expect(candPage.getByRole('heading', { name: /Maya[^']*, \d+$/ })).toBeVisible({ timeout: 15_000 });
+      await expect(candPage.getByText(/pull to retry/i)).toHaveCount(0);
       // Reduced-motion settles immediately (≤200ms cross-fade) — a short beat is enough.
       await candPage.waitForTimeout(400);
       await candPage.screenshot({ path: out('rung3-ceremony-reduced-motion.png') });
