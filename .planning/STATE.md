@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 2 Wave 2 — 02-04 complete (E6 cancel_night + E7 update_night DEFINER RPCs + notify; LOCAL-applied, types regen, full SQL suite + typecheck green). Security advisor batched by orchestrator post-wave. PROD apply NOT attempted. 02-05 runs after.
-last_updated: "2026-06-04T02:11:11.145Z"
-last_activity: 2026-06-03 — Phase 1 verified PASSED (4/4 criteria + visual-verify). Unpushed/undeployed on main.
+stopped_at: Phase 2 Wave 3 — 02-06 complete (host cancel/edit UI on /my-nights + cancelNight/updateNight api-client wrappers; NightCardActions vaul confirm+edit sheet, sonner toasts, errcode mapping, status-gated affordances). RTL+jest-axe (7) + api-client (12) + `pnpm -w typecheck` GREEN. UI + api-client only — no DB change, no migrations, no prod apply. Task 3 live visual-verify DEFERRED to orchestrator forced-local pass. REQ-E6/E7 → Complete.
+last_updated: "2026-06-04T02:30:00.000Z"
+last_activity: 2026-06-04 — Phase 2 02-06 executed (host controls UI); local-green, unpushed. Awaiting orchestrator forced-local visual-verify.
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 10
-  completed_plans: 9
-  percent: 14
+  completed_plans: 10
+  percent: 16
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 1 of 7 (Navigation & Profile Spine) — COMPLETE ✓ (verified passed)
 Plan: 01-01/01-02 (Wave 1) + 01-03/01-04 (Wave 2) all complete
-Status: Phase 2 executing — 02-01/02/03/04/05 all complete (local-green, unpushed)
-Last activity: 2026-06-03 — 02-05 (E8 interest_received dispatch + deep-link) executed; full db:test + vitest (602) + typecheck GREEN local-only, no prod apply.
+Status: Phase 2 executing — 02-01/02/03/04/05/06 all complete (local-green, unpushed)
+Last activity: 2026-06-04 — 02-06 (host cancel/edit UI + api-client wrappers) executed; RTL+jest-axe (7) + api-client (12) + typecheck GREEN local-only, no prod apply. Live visual-verify deferred to orchestrator forced-local pass.
 
-Progress: [██░░░░░░░░] 16% (Phase 2: 5/5 plans this wave-set complete; prod apply gated/batched)
+Progress: [██░░░░░░░░] 16% (Phase 2: 6/6 plans this wave-set complete; prod apply gated/batched; 02-06 live visual-verify pending orchestrator)
 
 ## Performance Metrics
 

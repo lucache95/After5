@@ -78,7 +78,7 @@ Plans:
 - [x] 02-03-PLAN.md — E5 loop terminus: sweep_loop_terminus + flag_no_show RPCs + close-loop cron route (REQ-E5)
 - [x] 02-04-PLAN.md — E6/E7 cancel_night + update_night DEFINER RPCs with candidate notifications (REQ-E6, REQ-E7)
 - [x] 02-05-PLAN.md — E8 interest_received dispatch from match_ingest_interest + notif-map deep-link/meta (REQ-E8)
-- [ ] 02-06-PLAN.md — Host cancel/edit UI on /my-nights + api-client wrappers (visual-verified) (REQ-E6, REQ-E7)
+- [x] 02-06-PLAN.md — Host cancel/edit UI on /my-nights + api-client wrappers (REQ-E6, REQ-E7) — code+RTL+typecheck green; live visual-verify pending orchestrator forced-local pass
 
 **UI hint**: yes
 
