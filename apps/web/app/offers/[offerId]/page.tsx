@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { normalizeNightDetailStops } from '@after5/api-client';
 import { OfferDetail } from './OfferDetail';
 import { AccountGate } from './AccountGate';
 import { deriveGateReason } from './gate';
@@ -40,7 +41,7 @@ export default async function OfferPage({
     .from('offers')
     .select(`id, status, expires_at, candidate_id, creator_id, date_instance_id,
       host:profiles!offers_creator_id_fkey ( first_name, age, city, clear_photo_url ),
-      instance:date_instances!offers_date_instance_id_fkey ( starts_at )`)
+      instance:date_instances!offers_date_instance_id_fkey ( starts_at, itinerary_id )`)
     .eq('id', offerId)
     .maybeSingle();
 
@@ -76,7 +77,24 @@ export default async function OfferPage({
   const host = (offer.host ?? {}) as {
     first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null;
   };
-  const instance = (offer.instance ?? null) as { starts_at?: string | null } | null;
+  const instance = (offer.instance ?? null) as { starts_at?: string | null; itinerary_id?: string | null } | null;
+
+  // E13: render the matched night's full plan. Second RLS read — the forked
+  // itinerary is readable by id (itineraries_readable_by_id USING(true)) once the
+  // offer-recipient policy (127500) has let us read the instance + its itinerary_id.
+  // NOT get_night_detail (blind/pre-swipe-only — T-03-16). Normalize the raw stops
+  // JSON HERE (rich/thin shape drift) before handing to PlanTimeline (D-12/03-04).
+  let stops: ReturnType<typeof normalizeNightDetailStops> = [];
+  let vibeTags: string[] | null = null;
+  if (instance?.itinerary_id) {
+    const { data: it } = await supabase
+      .from('itineraries')
+      .select('stops, vibe_tags')
+      .eq('id', instance.itinerary_id)
+      .maybeSingle();
+    stops = normalizeNightDetailStops(it?.stops);
+    vibeTags = (it?.vibe_tags as string[] | null) ?? null;
+  }
 
   return (
     <>
@@ -95,9 +113,10 @@ export default async function OfferPage({
           age: host.age ?? null,
           city: host.city ?? null,
           photo_url: host.clear_photo_url ?? null,
-          bio: null, // profiles has no bio column; host preview is name/age/city/photo (parity with D)
         }}
         date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
+        stops={stops}
+        vibeTags={vibeTags}
       />
     </>
   );

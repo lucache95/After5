@@ -10,6 +10,11 @@ vi.mock('@/lib/after5/match', () => ({
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
+// next/image renders nothing useful in jsdom (and `fill` warns); stub to a plain img.
+vi.mock('next/image', () => ({
+  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  default: (props: Record<string, unknown>) => <img {...(props as Record<string, never>)} />,
+}));
 
 import { OfferDetail, type OfferDetailProps } from '../OfferDetail';
 import { AccountGate, type GateReason } from '../AccountGate';
@@ -19,8 +24,16 @@ const base: OfferDetailProps = {
   instanceId: 'inst-1',
   expiresAt: new Date(Date.now() + 3600_000).toISOString(),
   status: 'active',
-  host: { first_name: 'Sam', age: 29, city: 'Portland', photo_url: null, bio: 'likes long walks.' },
+  host: { first_name: 'Sam', age: 29, city: 'Portland', photo_url: null },
   date: { startsAt: new Date('2026-06-01T19:00:00Z').toISOString() },
+  stops: [
+    {
+      name: 'rooftop bar', type: 'bar', start_time: null, duration_min: null,
+      cost_pp: 22, what_to_do: null, neighborhood: 'downtown', local_insight: null,
+      photo_url: null, lat: null, lng: null, drive_to_next_min: null,
+    },
+  ],
+  vibeTags: ['chill'],
 };
 
 describe('offer surfaces a11y', () => {

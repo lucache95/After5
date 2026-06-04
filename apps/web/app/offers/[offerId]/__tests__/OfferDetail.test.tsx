@@ -18,12 +18,27 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 const toastError = vi.fn();
 const toastSuccess = vi.fn();
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { error: (...a: unknown[]) => toastError(...a), success: (...a: unknown[]) => toastSuccess(...a) }) }));
+// next/image renders nothing useful in jsdom (and `fill` warns); stub to a plain img.
+vi.mock('next/image', () => ({
+  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  default: (props: Record<string, unknown>) => <img {...(props as Record<string, never>)} />,
+}));
 
 import { OfferDetail, type OfferDetailProps } from '../OfferDetail';
 import { MatchError } from '@/lib/after5/match';
+import type { NightDetailStop } from '@/lib/after5/client';
 
 const future = new Date(Date.now() + 3600_000).toISOString();
 const past = new Date(Date.now() - 10_000).toISOString();
+
+function stop(over: Partial<NightDetailStop>): NightDetailStop {
+  return {
+    name: 'a spot', type: null, start_time: null, duration_min: null,
+    cost_pp: null, what_to_do: null, neighborhood: null, local_insight: null,
+    photo_url: null, lat: null, lng: null, drive_to_next_min: null,
+    ...over,
+  };
+}
 
 function props(over: Partial<OfferDetailProps> = {}): OfferDetailProps {
   return {
@@ -31,8 +46,10 @@ function props(over: Partial<OfferDetailProps> = {}): OfferDetailProps {
     instanceId: 'inst-1',
     expiresAt: future,
     status: 'active',
-    host: { first_name: 'Sam', age: 29, city: 'Portland', photo_url: null, bio: 'likes long walks.' },
+    host: { first_name: 'Sam', age: 29, city: 'Portland', photo_url: null },
     date: { startsAt: new Date('2026-06-01T19:00:00Z').toISOString() },
+    stops: [],
+    vibeTags: ['chill'],
     ...over,
   };
 }
@@ -47,11 +64,26 @@ beforeEach(() => {
 });
 
 describe('OfferDetail', () => {
-  it('renders host tier-3 lowercased + bio', () => {
+  it('renders host tier-3 lowercased (no bio — F#5 removed)', () => {
     render(<OfferDetail {...props()} />);
     expect(screen.getByText(/sam, 29/i)).toBeInTheDocument();
     expect(screen.getByText(/portland/i)).toBeInTheDocument();
-    expect(screen.getByText(/likes long walks/i)).toBeInTheDocument();
+  });
+
+  it('renders the matched plan stops via PlanTimeline in "the night"', () => {
+    render(<OfferDetail {...props({ stops: [
+      stop({ name: 'rooftop bar', cost_pp: 22 }),
+      stop({ name: 'late-night ramen', cost_pp: 0 }),
+    ] })} />);
+    expect(screen.getByText('the night')).toBeInTheDocument();
+    expect(screen.getByText('rooftop bar')).toBeInTheDocument();
+    expect(screen.getByText('late-night ramen')).toBeInTheDocument();
+  });
+
+  it('shows the degrade copy when stops are empty (never a blank labelled section)', () => {
+    render(<OfferDetail {...props({ stops: [] })} />);
+    expect(screen.getByText('the night')).toBeInTheDocument();
+    expect(screen.getByText('the full plan unlocks here.')).toBeInTheDocument();
   });
 
   it('accept resolves a lock id and routes to /matches/<lock>', async () => {

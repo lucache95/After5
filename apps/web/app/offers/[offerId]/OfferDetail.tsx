@@ -14,17 +14,25 @@ import { toast } from 'sonner';
 import { Polaroid } from '@/components/Polaroid';
 import { cn } from '@/lib/cn';
 import { acceptOffer, passOffer, withdraw, MatchError, messageForCode } from '@/lib/after5/match';
+import { vibePalette } from '@after5/business';
 import { ExpiryCountdown } from './ExpiryCountdown';
 import { AccountGate, type GateReason } from './AccountGate';
 import { LocalTime } from '@/components/LocalTime';
+import { PlanTimeline } from '@/components/PlanTimeline';
+import type { NightDetailStop } from '@/lib/after5/client';
 
 export interface OfferDetailProps {
   offerId: string;
   instanceId: string | null;
   expiresAt: string;
   status: 'active' | 'accepted' | 'passed' | 'expired';
-  host: { first_name: string; age: number | null; city: string | null; photo_url: string | null; bio: string | null };
+  host: { first_name: string; age: number | null; city: string | null; photo_url: string | null };
   date: { startsAt: string } | null;
+  // E13: the matched night's full itinerary, normalized at the loader boundary
+  // (the SSR page reads itineraries.stops by id and runs normalizeNightDetailStops
+  // BEFORE passing — PlanTimeline must NOT re-normalize, D-12/03-04). Empty ⇒ degrade.
+  stops: NightDetailStop[];
+  vibeTags: string[] | null;
 }
 
 const DATE_OPTS: Intl.DateTimeFormatOptions = {
@@ -35,7 +43,7 @@ const DATE_OPTS: Intl.DateTimeFormatOptions = {
   minute: '2-digit',
 };
 
-export function OfferDetail({ offerId, instanceId, expiresAt, host, date }: OfferDetailProps) {
+export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops, vibeTags }: OfferDetailProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -70,6 +78,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date }: Offe
   }
 
   const name = host.first_name.toLowerCase();
+  const accent = vibePalette(vibeTags).accent;
   const actionBtn =
     'flex min-h-[48px] w-full items-center justify-center rounded-full font-body font-semibold lowercase transition focus-visible:outline-none disabled:opacity-50';
 
@@ -90,7 +99,6 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date }: Offe
               {name}{host.age ? `, ${host.age}` : ''}
             </p>
             {host.city && <p className="font-body text-sm text-shell-ink/65">{host.city.toLowerCase()}</p>}
-            {host.bio && <p className="mt-2 font-body text-sm text-shell-ink/80">{host.bio}</p>}
           </div>
         </div>
 
@@ -99,6 +107,13 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date }: Offe
           <p className="mt-1 font-body text-base text-shell-ink">
             {date ? <LocalTime iso={date.startsAt} opts={DATE_OPTS} /> : 'details unlock when you accept'}
           </p>
+          {stops.length > 0 ? (
+            <div className="mt-4">
+              <PlanTimeline stops={stops} accent={accent} vibeTags={vibeTags} />
+            </div>
+          ) : (
+            <p className="mt-3 font-body text-sm text-shell-ink/60">the full plan unlocks here.</p>
+          )}
         </div>
 
         <div className="mt-4">
