@@ -138,6 +138,12 @@ export async function signClearUrls(client: After5Client, paths: string[], ttl =
 // safe to sign pre-match — NEVER sign the clear path on a pre-lock surface.
 export async function signBlurredUrls(client: After5Client, paths: string[], ttl = 600): Promise<string[]> {
   if (paths.length === 0) return [];
+  // Defense-in-depth: the privacy invariant is enforced in the DB (storage policy
+  // profile_photos_blurred_read_v2 only permits *_blurred.jpg reads), but fail fast
+  // app-side too so a future caller can never mint a clear-photo signing request on a
+  // pre-lock surface through the "blurred-only" signer.
+  const bad = paths.filter((p) => !/_blurred\.jpe?g$/i.test(p));
+  if (bad.length) throw new Error(`signBlurredUrls received non-blurred path(s): ${bad.join(', ')}`);
   const { data, error } = await client.storage.from(BUCKET).createSignedUrls(paths, ttl);
   if (error) throw new Error(error.message);
   return (data ?? []).map((d) => d.signedUrl).filter((u): u is string => !!u);

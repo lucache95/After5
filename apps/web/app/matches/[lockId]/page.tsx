@@ -81,6 +81,7 @@ export default async function LockPage({
   // is allowed to read them. This is the end-to-end fix for the broken reveal
   // photo (clear_photo_url was a raw private path handed to next/image).
   let photos: string[] = [];
+  let photoError = false;
   try {
     const rows = await listMyPhotos(supabase, counterpart.id);
     photos = await signClearUrls(supabase, rows.map((r) => r.clear_path));
@@ -94,6 +95,10 @@ export default async function LockPage({
   } catch {
     photos = [];
   }
+  // WR-01: a genuinely empty reveal (signing threw, or no rows + no mirror) must surface
+  // the held-blur "pull to retry" state in the ceremony rather than dissolving over a
+  // blank gradient. Thread the outcome down so RevealModal can hold instead of play.
+  if (photos.length === 0) photoError = true;
 
   // Join the counterpart's prompt answers to active prompt labels (server-side).
   let prompts: RevealPrompt[] = [];
@@ -141,6 +146,7 @@ export default async function LockPage({
         ratingOpen={isRatingOpen(lock.instance)}
         justLocked={just === '1'}
         photos={photos}
+        photoError={photoError}
         prompts={prompts}
         stops={stops}
         vibeTags={vibeTags}

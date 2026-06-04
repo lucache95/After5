@@ -29,6 +29,10 @@ export interface LockDetailProps {
   // thumbnail uses photos[0] (a real signed URL — fixes the long-standing
   // raw-private-path bug where the reveal photo never loaded).
   photos?: string[];
+  // WR-01: true when clear-photo signing failed (or there is no photo to reveal) so
+  // RevealModal holds the light-blur "pull to retry" state instead of dissolving over
+  // a blank gradient. The plan stays locked in regardless.
+  photoError?: boolean;
   prompts?: RevealPrompt[];
   // E13: the matched night's full itinerary. Post-lock the whole plan is fair
   // game. Normalized at the loader boundary (page.tsx reads itineraries.stops by
@@ -40,7 +44,7 @@ export interface LockDetailProps {
 
 const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
 
-export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], prompts = [], stops = [], vibeTags = null }: LockDetailProps) {
+export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], photoError = false, prompts = [], stops = [], vibeTags = null }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
   // E16 (REQ-E16 / D-04): on justLocked the reveal is a ceremony. Auto-open the
@@ -103,6 +107,7 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
         onOpenChange={(o) => { setRevealOpen(o); if (!o) setCeremony(false); }}
         person={counterpart}
         photos={photos}
+        photoError={photoError}
         prompts={prompts}
         ceremony={ceremony}
       />
