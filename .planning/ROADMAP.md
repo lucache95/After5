@@ -162,7 +162,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Rung 1: signBlurredUrls + widen browse_feed_for_viewer (+3 host-hint cols, LOCAL apply/typegen/advisor) + FeedNight host hint + blurred avatar on feed card/detail (REQ-E15)
+- [x] 05-01-PLAN.md — Rung 1: signBlurredUrls + widen browse_feed_for_viewer (+3 host-hint cols, LOCAL apply/typegen/advisor) + FeedNight host hint + blurred avatar on feed card/detail (REQ-E15)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -217,6 +217,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
-| 5. Progressive Reveal | 0/4 | Planned | - |
+| 5. Progressive Reveal | 1/4 | In Progress|  |
 | 6. Trust & Safety | 0/TBD | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
