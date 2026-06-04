@@ -312,7 +312,7 @@ export function PostNightForm({
             post a night
           </h1>
           <p className="mt-2 font-body text-[14px] text-shell-ink/65">
-            pick a plan. set the time. people nearby can say they&apos;re in — you choose who makes the cut.
+            pick a plan. set the time. people nearby can say they&apos;re in. you choose who makes the cut.
           </p>
         </header>
 
