@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 3 ALL 7 PLANS DONE (03-01..07 green). Wave 3 (03-05 plan-render E13 + 03-07 host-triage UI E12) merged to main; merged-tree gate GREEN (typecheck 6/6, vitest 641/641). PENDING orchestrator-owned: forced-local visual-verify (03-05 offer/lock screens + 03-07 interested list at 420px) + gsd-verifier phase pass. Migrations local-only — prod apply gated.
-last_updated: "2026-06-04T06:03:05.684Z"
-last_activity: "2026-06-04 — Phase 3 Wave 3 executed (parallel worktrees): 03-05 (render matched plan via shared PlanTimeline on /offers/[offerId] + /matches/[lockId], RLS read path, drop dead host.bio, fix empty 'the night' section — REQ-E13) + 03-07 (silent decline via rejectCandidate + offer withdraw + outcome pills on interested list, filter passed_by_host — REQ-E12 UI). Both verified out-of-band (commits/diffs/SUMMARY/Self-Check), merged --no-ff, worktrees cleaned. Merged-main gate GREEN: typecheck 6/6 packages, vitest 641/641 across 112 files. No DB/prod touched (gated)."
+status: completed
+stopped_at: Phase 04 context gathered
+last_updated: "2026-06-04T18:01:14.474Z"
+last_activity: "2026-06-04 — Phase 3 Wave 3 (parallel worktrees): 03-05 (render matched plan via shared PlanTimeline on offer+lock screens, RLS read, drop host.bio — E13) + 03-07 (silent decline + withdraw + outcome pills on interested list, filter passed_by_host — E12 UI). Out-of-band verified, merged --no-ff, worktrees cleaned. Merged-main gate GREEN: typecheck 6/6, vitest 641/641."
 progress:
   total_phases: 7
   completed_phases: 3
@@ -38,6 +38,7 @@ PHASE-CLOSE GATES:
   → PHASE 3 IMPLEMENTATION + ALL AUTOMATED/VISUAL GATES COMPLETE.
 
 LOW findings (non-blocking, optional cleanup):
+
   - PostNightForm.tsx:315 subtitle uses an em-dash ("they're in — you choose") — stop-slop violation (UI-SPEC §Copywriting); 1-line copy fix.
   - InterestedList offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages); pre-existing, accepted row fine in prod via lock.
   - LockDetail H1 may clip very long real first names (seed name made it visible); verify with a long name.
@@ -114,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T04:31:16.494Z
-Stopped at: Phase 3 Wave 1+2 DONE (03-01/02/03/04/06 green, REQ-E11+E14 complete); Wave 3 (03-05 plan-render + 03-07 decline UI) + visual-verify + verifier pending
-Resume file: .planning/phases/03-marketplace-completeness-p1/03-05-PLAN.md
+Last session: 2026-06-04T18:01:14.469Z
+Stopped at: Phase 04 context gathered
+Resume file: .planning/phases/04-discoverability-feed-filters-targeting-p1/04-CONTEXT.md
