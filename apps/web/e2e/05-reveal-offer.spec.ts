@@ -13,7 +13,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { loginAs } from './_helpers/auth';
 import { seedChatThread, cleanupChat, type ChatSeedResult } from './_helpers/seed';
-import { captureSignedPaths, assertNoClearPhotoSigned } from './05-reveal-feed.spec';
+import { captureSignedPaths, assertNoClearPhotoSigned } from './_helpers/reveal-privacy';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const SERVICE_ROLE_KEY =

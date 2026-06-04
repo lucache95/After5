@@ -8,10 +8,11 @@
 // The visual rung-1 assertions (blurred avatar + {name, age} label) land in Task 4.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { test, expect, type Page, type Request } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { loginAs } from './_helpers/auth';
 import { seedTwoUsersAndNight, cleanup, type SeedResult } from './_helpers/seed';
+import { captureSignedPaths, assertNoClearPhotoSigned } from './_helpers/reveal-privacy';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const SERVICE_ROLE_KEY =
@@ -36,42 +37,9 @@ async function seedHostBlurredPhoto(hostId: string): Promise<string> {
   return path;
 }
 
-// ─── shared privacy-invariant network helper ──────────────────────────────────
-// Capture every Supabase storage sign request and remember the object path(s) each
-// one asked to sign. On a pre-lock surface, asserting "no clear photo signed" reduces
-// to "every signed path ends in _blurred.jpg" (the clear sibling is <uid>/<id>.jpg).
-const SIGN_RE = /\/storage\/v1\/object\/sign(\/|\b)/;
-
-/** Records signed object paths seen on `page`. Call before navigating. */
-export function captureSignedPaths(page: Page): { paths: string[] } {
-  const store = { paths: [] as string[] };
-  page.on('request', (req: Request) => {
-    const url = req.url();
-    if (!SIGN_RE.test(url)) return;
-    // Single-object sign: path is in the URL after /sign/. Batch sign (/sign-many or
-    // createSignedUrls): the paths are in the POST body. Capture both shapes.
-    const m = url.match(/\/storage\/v1\/object\/sign\/(.+?)(?:\?|$)/);
-    if (m) store.paths.push(decodeURIComponent(m[1]));
-    if (req.method() === 'POST') {
-      try {
-        const body = req.postDataJSON() as { paths?: string[]; path?: string } | null;
-        if (body?.paths) store.paths.push(...body.paths);
-        if (body?.path) store.paths.push(body.path);
-      } catch {
-        /* non-JSON body — ignore */
-      }
-    }
-  });
-  return store;
-}
-
-/** The load-bearing assertion: every signed photo path on a pre-lock surface is blurred. */
-export function assertNoClearPhotoSigned(store: { paths: string[] }): void {
-  const photoPaths = store.paths.filter((p) => /\.jpe?g$/i.test(p));
-  for (const p of photoPaths) {
-    expect(p, `pre-lock surface signed a non-blurred photo path: ${p}`).toMatch(/_blurred\.jpe?g$/i);
-  }
-}
+// The shared privacy-invariant network helper (captureSignedPaths / assertNoClearPhotoSigned)
+// lives in ./_helpers/reveal-privacy so the offer + ceremony specs can reuse it without one
+// test file importing another (Playwright forbids that).
 
 let seed: SeedResult;
 
