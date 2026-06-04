@@ -31,11 +31,20 @@ Status: Phases 1+2+3 implementation done. Migrations local-only — prod apply g
 Last activity: 2026-06-04 — Phase 3 Wave 3 (parallel worktrees): 03-05 (render matched plan via shared PlanTimeline on offer+lock screens, RLS read, drop host.bio — E13) + 03-07 (silent decline + withdraw + outcome pills on interested list, filter passed_by_host — E12 UI). Out-of-band verified, merged --no-ff, worktrees cleaned. Merged-main gate GREEN: typecheck 6/6, vitest 641/641.
 Prior: 2026-06-03 — 03-06 (E14 offer-delivery chain audit) + Wave 1+2 (03-01/02/03/04) green.
 
-PENDING (orchestrator-owned, before phase close):
-  1. Forced-local visual-verify (Playwright @420px): /offers/[offerId] + /matches/[lockId] PlanTimeline render (03-05 <human-check>), /dates/[slug]/interested decline+withdraw+pills (03-07) — critique vs 03-UI-SPEC §E12/§E13.
-  2. gsd-verifier phase-completion pass (goal-backward, all 7 plans).
+PHASE-CLOSE GATES:
+  ✓ Forced-local visual-verify @420px E13 (offer+lock PlanTimeline) + E12 (interested decline/withdraw/pills, passed_by_host filtered) — PASS. 1 LOW pre-existing note: offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages; accepted row fine in prod via lock reveal). Harness: apps/web/e2e/route-03-visual.spec.ts.
+  ✓ gsd-verifier goal-backward pass — 4/4 must-haves VERIFIED (03-VERIFICATION.md). Each load-bearing claim re-spot-checked against source (PlanTimeline@112/104, reject_candidate silent, 156-LOC component).
+  ✓ E11 creator-controls visual-verify (PostNightForm @ /nights/new?itinerary= + Door-2 publish CTA + CoverUploader @ /plans/[id]/edit) — PASS. All fieldsets render on-brand (who-pays/open-to inclusive framing/age/radius/the-why/soundtrack); publish CTA + cover dropzone present. Harness: apps/web/e2e/route-03-e11-visual.spec.ts. Door-2 sticky-bar/cover "overlap" was a confirmed fullPage-screenshot artifact (publish bar is last DOM element, sticky bottom-0) — NOT a bug.
+  → PHASE 3 IMPLEMENTATION + ALL AUTOMATED/VISUAL GATES COMPLETE.
 
-Progress: [████░░░░░░] 43% (Phase 3: 7/7 plans complete; prod apply gated/batched; visual-verify + verifier pending)
+LOW findings (non-blocking, optional cleanup):
+  - PostNightForm.tsx:315 subtitle uses an em-dash ("they're in — you choose") — stop-slop violation (UI-SPEC §Copywriting); 1-line copy fix.
+  - InterestedList offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages); pre-existing, accepted row fine in prod via lock.
+  - LockDetail H1 may clip very long real first names (seed name made it visible); verify with a long name.
+
+  ⏳ DEFERRED (gated, not failures): batched prod-apply of Phase-3 migrations (20260605120000-120300) + match-reject-candidate edge deploy + RESEND_API_KEY-in-Vercel confirm + Supabase security advisor on prod. + push (38+ commits ahead of origin/main).
+
+Progress: [████░░░░░░] 43% (Phase 3: 7/7 plans complete + fully verified; prod-apply gated/batched; ready for Phase 4 or gated deploy)
 
 ## Performance Metrics
 
