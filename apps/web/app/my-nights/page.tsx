@@ -17,6 +17,7 @@ import { NotificationToast } from '@/components/NotificationToast';
 import { CalendarHeart, Heart, Sparkles } from 'lucide-react';
 import { LocalTime } from '@/components/LocalTime';
 import { coverImageForNight } from '@/lib/place-image';
+import { NightCardActions } from './NightCardActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,9 @@ interface NightRow {
   id: string;
   starts_at: string;
   status: string;
+  duration_min: number | null;
+  venue_id: string | null;
+  ambient_sound_id: string | null;
   itinerary: {
     title: string | null;
     cover_image_url: string | null;
@@ -80,6 +84,7 @@ function NightCard({ night, interested }: { night: NightRow; interested: number 
   }
 
   return (
+    <div>
     <Link
       href={`/dates/${night.id}/interested`}
       className="group block overflow-hidden rounded-3xl border-2 border-shell-ink/10 bg-white shadow-fun transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 hover:border-shell-accent/40 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
@@ -119,6 +124,25 @@ function NightCard({ night, interested }: { night: NightRow; interested: number 
         </div>
       </div>
     </Link>
+
+      {/* Host controls (E6/E7): cancel + edit, rendered ONLY on the host's own
+          seeking night. NightCardActions returns null for any other status, so
+          this row is invisible on matched/completed/expired/cancelled cards. */}
+      {seeking && (
+        <div className="mt-2.5">
+          <NightCardActions
+            night={{
+              id: night.id,
+              starts_at: night.starts_at,
+              status: night.status,
+              duration_min: night.duration_min,
+              venue_id: night.venue_id,
+              ambient_sound_id: night.ambient_sound_id,
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -136,7 +160,7 @@ export default async function MyNightsPage() {
   // Join itinerary for title + cover. Columns confirmed from migration 120300.
   const { data: rows } = await supabase
     .from('date_instances')
-    .select('id, starts_at, status, itinerary:itineraries(title, cover_image_url, inputs)')
+    .select('id, starts_at, status, duration_min, venue_id, ambient_sound_id, itinerary:itineraries(title, cover_image_url, inputs)')
     .eq('creator_id', user.id)
     .order('starts_at', { ascending: false })
     .limit(50);
