@@ -167,7 +167,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1)*
 
 - [x] 05-02-PLAN.md — Rung 2: offer-received surface switches clear->blurred host photo + CSS blur(3px), experience-led (REQ-E15)
-- [ ] 05-03-PLAN.md — Rung 3 + ceremony: dispatch identity_revealed at both lock RPCs (matches_enabled consent, LOCAL apply/advisor) + RevealModal unblur ceremony + reduced-motion + sonner toast (REQ-E16)
+- [x] 05-03-PLAN.md — Rung 3 + ceremony: dispatch identity_revealed at both lock RPCs (matches_enabled consent, LOCAL apply/advisor) + RevealModal unblur ceremony + reduced-motion + sonner toast (REQ-E16)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -217,6 +217,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
-| 5. Progressive Reveal | 2/4 | In Progress|  |
+| 5. Progressive Reveal | 3/4 | In Progress|  |
 | 6. Trust & Safety | 0/TBD | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
