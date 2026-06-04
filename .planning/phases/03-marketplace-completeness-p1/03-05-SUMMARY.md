@@ -104,3 +104,13 @@ None — no new network endpoints, auth paths, or schema changes. This plan adds
 
 - **Visual-verify (plan `<human-check>`):** forced-local Playwright at 420px — confirm the offer "the night" renders the plan timeline with reveal ordering unchanged, and the lock "the night" sits below the message block / above cancel. Per 03-UI-SPEC §E13. Recommended before the phase's batched push (visual-verify standing rule).
 - The `itineraries USING(true)` read remains flagged for future hardening (T-03-15), out of scope this phase.
+
+## Self-Check: PASSED
+
+- FOUND: supabase/tests/e13_plan_read.sql
+- FOUND: .planning/phases/03-marketplace-completeness-p1/03-05-SUMMARY.md
+- FOUND (modified): apps/web/app/offers/[offerId]/OfferDetail.tsx + page.tsx
+- FOUND (modified): apps/web/app/matches/[lockId]/LockDetail.tsx + page.tsx + lock-view.ts
+- FOUND commit 199875a (Task 1 — OfferDetail)
+- FOUND commit 8418c99 (Task 2 — LockDetail)
+- FOUND commit ba9eaf1 (Task 3 — e13_plan_read.sql)
