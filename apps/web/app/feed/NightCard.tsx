@@ -99,6 +99,16 @@ export function NightCard({ night }: { night: FeedNight }) {
 
       {/* CONTENT — sits on the scrim, pinned to the bottom of the photo. */}
       <div className="relative mt-auto flex flex-col gap-2.5 p-5 text-white">
+        {/* E10/D-03 fit pill: a quiet, flattering targeting signal. Renders ONLY when
+            FeedNight.fit is true — never a score, never on a non-matching card. accent
+            text on white/85 so it reads on any vibe photo without fighting the palette
+            (the pill is one of accent's few reserved uses). Static, not actionable. */}
+        {night.fit === true && (
+          <p className="w-fit rounded-full bg-white/85 px-3 py-1 font-body text-[13px] font-semibold lowercase text-shell-accent shadow-md">
+            <span aria-hidden>✨ </span>looks for someone like you
+          </p>
+        )}
+
         {tags.length > 0 && (
           <ul className="flex flex-wrap gap-2">
             {tags.map((tag) => (
