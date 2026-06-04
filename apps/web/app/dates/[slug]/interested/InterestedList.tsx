@@ -11,12 +11,13 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { Reorder, useReducedMotion } from 'framer-motion';
+import { Drawer } from 'vaul';
 import { toast } from 'sonner';
-import { GripVertical, Lock } from 'lucide-react';
+import { Check, GripVertical, Lock, UserMinus } from 'lucide-react';
 import { Polaroid } from '@/components/Polaroid';
 import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
-import { shortlist as shortlistRpc } from '@/lib/after5/match';
+import { shortlist as shortlistRpc, rejectCandidate, withdraw } from '@/lib/after5/match';
 import { subscribeQueueInserts } from '@/lib/after5/realtime';
 import { browserAfter5Client } from '@/lib/after5/client';
 import { MakeOfferModal } from './MakeOfferModal';
@@ -37,6 +38,26 @@ export interface HostCandidate {
   can_enter_lock_flow: boolean;
 }
 
+// Lowercase outcome pill for an offered candidate's terminal state (E12/D-05).
+// No harsh language: a pass reads as "they passed", never "rejected". offer_active
+// keeps the existing pink "offer out" badge (rendered inline in the row, not here).
+function OutcomePill({ status }: { status: HostCandidate['status'] }) {
+  if (status === 'locked') {
+    return (
+      <span className="flex shrink-0 items-center gap-1 rounded-full bg-shell-pink px-2 py-1 font-body text-xs lowercase text-shell-accent">
+        <Check className="h-3.5 w-3.5" aria-hidden /> accepted
+      </span>
+    );
+  }
+  if (status === 'offer_passed') {
+    return <span className="shrink-0 rounded-full bg-shell-ink/5 px-2 py-1 font-body text-xs lowercase text-shell-ink/55">they passed</span>;
+  }
+  if (status === 'offer_expired') {
+    return <span className="shrink-0 rounded-full bg-shell-ink/5 px-2 py-1 font-body text-xs lowercase text-shell-ink/55">expired</span>;
+  }
+  return null;
+}
+
 export function InterestedList({
   instanceId,
   userId,
@@ -54,6 +75,11 @@ export function InterestedList({
   const [rows, setRows] = useState<HostCandidate[]>(candidates);
   const [visible, setVisible] = useState(PAGE);
   const [offerFor, setOfferFor] = useState<HostCandidate | null>(null);
+  // E12 triage: candidate pending a silent decline (confirm sheet open) and the
+  // active-offer row pending a withdraw confirm. Both null = sheets closed.
+  const [declineFor, setDeclineFor] = useState<HostCandidate | null>(null);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const offerActive = activeOffer !== null;
 
   // Seam 5: append genuinely-new inserts (skip rows we already hold). The realtime
@@ -106,8 +132,13 @@ export function InterestedList({
     });
   }, [userId, instanceId]);
 
+  // The shortlist section also carries terminal-outcome rows (the candidate who
+  // was offered) so their outcome pill stays visible: offer_active (live),
+  // locked (accepted), offer_passed (they passed), offer_expired. passed_by_host
+  // is silently excluded everywhere (D-04).
+  const SHORTLIST_STATUSES = ['shortlisted', 'offer_active', 'locked', 'offer_passed', 'offer_expired'] as const;
   const shortlisted = useMemo(
-    () => rows.filter((r) => r.status === 'shortlisted' || r.status === 'offer_active')
+    () => rows.filter((r) => (SHORTLIST_STATUSES as readonly string[]).includes(r.status))
       .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)),
     [rows],
   );
@@ -154,6 +185,44 @@ export function InterestedList({
     } catch {
       setRows(prev);
       toast.error("couldn't shortlist them. try again?");
+    }
+  }
+
+  // E12 silent decline (D-04). Optimistic-mutate-with-rollback: flip the row to
+  // passed_by_host (which the section memos exclude, so it vanishes), then call
+  // the silent reject RPC. On failure, restore the prior rows. The candidate is
+  // NEVER notified — no candidate-facing copy lives anywhere in this flow.
+  async function confirmDecline(c: HostCandidate) {
+    if (busy) return;
+    setBusy(true);
+    const prev = rows;
+    setRows((r) => r.map((x) => (x.candidate_id === c.candidate_id ? { ...x, status: 'passed_by_host' } : x)));
+    setDeclineFor(null);
+    try {
+      await rejectCandidate(instanceId, c.candidate_id);
+      toast.success('passed. off your list.');
+    } catch {
+      setRows(prev);
+      toast.error("couldn't pass on them. try again?");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // E12 withdraw an outstanding offer (D-05). Routes through the existing
+  // candidate-agnostic match-withdraw wrapper; a router refresh would re-fetch,
+  // but the realtime/SSR seam already drives the row state, so we just toast.
+  async function confirmWithdraw() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await withdraw(instanceId);
+      toast.success('offer pulled.');
+      setWithdrawOpen(false);
+    } catch {
+      toast.error("couldn't pull the offer. try again?");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -204,7 +273,18 @@ export function InterestedList({
                           {c.first_name.toLowerCase()}{c.age ? `, ${c.age}` : ''}
                         </p>
                         {c.city && <p className="truncate font-body text-sm text-shell-ink/65">{c.city.toLowerCase()}</p>}
+                        {frozen && (
+                          <button
+                            type="button"
+                            aria-label={`pull the offer back from ${c.first_name}`}
+                            onClick={() => setWithdrawOpen(true)}
+                            className="mt-0.5 font-body text-sm lowercase text-shell-ink/55 underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 focus-visible:ring-offset-1"
+                          >
+                            withdraw
+                          </button>
+                        )}
                       </div>
+                      <OutcomePill status={c.status} />
                       {isRank1 && !offerActive && (
                         <button
                           type="button"
@@ -232,17 +312,21 @@ export function InterestedList({
               {interested.map((c) => {
                 const booked = !c.can_enter_lock_flow;
                 return (
-                  <li key={c.candidate_id}>
+                  <li
+                    key={c.candidate_id}
+                    className={cn(
+                      'flex min-h-[44px] items-center gap-1 rounded-3xl border-2 pr-2 transition',
+                      booked ? 'border-shell-ink/10 bg-shell-ink/5 opacity-60' : 'border-shell-ink/10 bg-white',
+                    )}
+                  >
                     <button
                       type="button"
                       aria-label={booked ? `${c.first_name} is already booked` : `add ${c.first_name} to shortlist`}
                       onClick={() => void addToShortlist(c)}
                       className={cn(
-                        'flex min-h-[44px] w-full items-center gap-3 rounded-3xl border-2 px-3 py-2 text-left transition',
+                        'flex min-h-[44px] flex-1 items-center gap-3 rounded-3xl px-3 py-2 text-left transition',
                         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
-                        booked
-                          ? 'cursor-not-allowed border-shell-ink/10 bg-shell-ink/5 opacity-60'
-                          : 'border-shell-ink/10 bg-white hover:border-shell-accent',
+                        booked ? 'cursor-not-allowed' : 'hover:opacity-90',
                       )}
                     >
                       <Polaroid src={c.photo_url ?? '/places/place-walk.jpg'} alt={c.first_name} size="sm" tone="dating" />
@@ -253,6 +337,14 @@ export function InterestedList({
                         {booked && <p className="font-body text-xs lowercase text-shell-ink/55">already booked</p>}
                       </div>
                       {!booked && <span className="shrink-0 font-body text-sm font-semibold lowercase text-shell-accent">shortlist</span>}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`pass on ${c.first_name}`}
+                      onClick={() => setDeclineFor(c)}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-shell-ink/40 transition hover:text-shell-accent focus-visible:text-shell-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+                    >
+                      <UserMinus className="h-5 w-5" aria-hidden />
                     </button>
                   </li>
                 );
@@ -270,6 +362,68 @@ export function InterestedList({
           )}
         </section>
       </div>
+
+      {/* ── Decline confirm (silent — D-04) ───────────────────────────────── */}
+      <Drawer.Root open={declineFor !== null} onOpenChange={(o) => { if (!o) setDeclineFor(null); }}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-40 bg-shell-ink/40" />
+          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[420px] rounded-t-3xl bg-shell-base px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3">
+            <div aria-hidden className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-shell-ink/20" />
+            <Drawer.Title className="font-heading text-3xl lowercase text-shell-ink">
+              pass on {declineFor?.first_name.toLowerCase()}?
+            </Drawer.Title>
+            <Drawer.Description className="mt-1 font-body text-sm text-shell-ink/70">
+              they drop off your list. they won&apos;t be told — no awkwardness.
+            </Drawer.Description>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => { if (declineFor) void confirmDecline(declineFor); }}
+              className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent font-body font-semibold lowercase text-white transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
+            >
+              {busy ? 'passing…' : 'pass'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeclineFor(null)}
+              className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-full font-body lowercase text-shell-ink/70 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/30"
+            >
+              keep them
+            </button>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      {/* ── Withdraw confirm ──────────────────────────────────────────────── */}
+      <Drawer.Root open={withdrawOpen} onOpenChange={(o) => { if (!o) setWithdrawOpen(false); }}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-40 bg-shell-ink/40" />
+          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[420px] rounded-t-3xl bg-shell-base px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3">
+            <div aria-hidden className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-shell-ink/20" />
+            <Drawer.Title className="font-heading text-3xl lowercase text-shell-ink">
+              pull this offer back?
+            </Drawer.Title>
+            <Drawer.Description className="mt-1 font-body text-sm text-shell-ink/70">
+              they lose the offer. you can send a new one.
+            </Drawer.Description>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void confirmWithdraw()}
+              className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent font-body font-semibold lowercase text-white transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
+            >
+              {busy ? 'pulling…' : 'pull it'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setWithdrawOpen(false)}
+              className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-full font-body lowercase text-shell-ink/70 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/30"
+            >
+              leave it
+            </button>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
 
       {offerFor && (
         <MakeOfferModal
