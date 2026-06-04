@@ -8,7 +8,7 @@
 //   05-reveal   the post-lock identity reveal (ProfileCard)
 // Matches testMatch via the `route-` prefix. Output → .planning/pitch/shots/.
 import { test, expect, type Page } from '@playwright/test';
-import { mkdirSync } from 'fs';
+import { mkdirSync, readFileSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
 import { loginAs } from './_helpers/auth';
 import { seedChatThread, cleanupChat, type ChatSeedResult } from './_helpers/seed';
@@ -26,9 +26,7 @@ async function clean(page: Page) {
   await page.addStyleTag({ content: 'nextjs-portal,[data-nextjs-toast]{display:none!important}' }).catch(() => {});
 }
 
-// Tasteful Unsplash portrait (images.unsplash.com is allow-listed in next.config)
-// so the post-lock reveal shows a real face instead of the initials placeholder.
-const PORTRAIT = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=640&q=80';
+const MAYA_PHOTO = '/Users/lucas/Projects/After5/.planning/pitch/assets/maya.jpg';
 
 let seed: ChatSeedResult;
 test.beforeAll(async () => {
@@ -37,21 +35,32 @@ test.beforeAll(async () => {
   const sb = admin();
   // Replace the shared seed's run-id'd test data with clean, real-looking values.
   // profiles are keyed by id == userId (promoteProfile updates .eq('id', userId)).
-  const p1 = await sb.from('profiles').update({ first_name: 'Maya', clear_photo_url: PORTRAIT }).eq('id', seed.hostId).select('id,first_name');
+  const p1 = await sb.from('profiles').update({ first_name: 'Maya' }).eq('id', seed.hostId).select('id,first_name');
   const p2 = await sb.from('profiles').update({ first_name: 'Jordan' }).eq('id', seed.candId).select('id,first_name');
   const it = await sb.from('itineraries').update({ title: 'cocktails & charcuterie', hook: 'a slow burn downtown' }).eq('user_id', seed.hostId).select('id,title');
   if (p1.error || p2.error || it.error) throw new Error('fixup failed: ' + JSON.stringify([p1.error, p2.error, it.error]));
-  // Prior runs leave seeking nights behind; the candidate's feed shows all matches and a
-  // stale one can sort first. Cancel every OTHER seeking night so only this run's shows.
+  // Give Maya a real profile photo: upload to the profile-photos bucket at the
+  // <userId>/<id>.jpg path the reveal/match pages sign under the viewer's RLS,
+  // then point both the profile_photos primary row and the mirror columns at it.
+  const photoId = '00000000-0000-4000-8000-0000000000aa';
+  const clearPath = `${seed.hostId}/${photoId}.jpg`;
+  const buf = readFileSync(MAYA_PHOTO);
+  const up = await sb.storage.from('profile-photos').upload(clearPath, buf, { contentType: 'image/jpeg', upsert: true });
+  // The reveal/match pages sign profile_photos.clear_path (primary row) under the
+  // viewer's RLS — so the row alone is enough. Leave the profiles mirror columns as the
+  // seed's valid '/places/...' value (setting them to a bare storage path breaks next/image
+  // on surfaces that render the mirror raw).
+  const ph = await sb.from('profile_photos').upsert({ id: photoId, user_id: seed.hostId, clear_path: clearPath, blurred_path: clearPath, sort_order: 0, is_primary: true });
+  // Prior runs leave seeking nights behind; cancel every OTHER seeking night so only this run's shows.
   const cx = await sb.from('date_instances').update({ status: 'cancelled' }).eq('status', 'seeking').neq('id', seed.instanceId).select('id');
-  console.log('PITCH FIXUP →', JSON.stringify({ host: p1.data, cand: p2.data, itin: it.data, cancelledOthers: cx.data?.length, err: cx.error?.message }));
+  console.log('PITCH FIXUP →', JSON.stringify({ itin: it.data, photoUpload: up.error?.message ?? 'ok', photoRow: ph.error?.message ?? 'ok', cancelledOthers: cx.data?.length }));
 });
 test.afterAll(async () => {
   if (seed) await cleanupChat(seed);
 });
 
 test('capture pitch product screenshots', async ({ browser }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const candCtx = await browser.newContext(MOBILE);
   const hostCtx = await browser.newContext(MOBILE);
   const cand: Page = await loginAs(candCtx, seed.candEmail);
