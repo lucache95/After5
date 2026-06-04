@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { NOTIF_META, hrefForNotification, NOTIFICATION_TYPES } from '../notif-map';
 
 describe('NOTIF_META', () => {
-  it('covers all 20 notification types', () => {
-    expect(NOTIFICATION_TYPES).toHaveLength(20);
+  it('covers all 24 notification types', () => {
+    expect(NOTIFICATION_TYPES).toHaveLength(24);
     for (const t of NOTIFICATION_TYPES) {
       const meta = NOTIF_META[t];
       expect(meta).toBeTruthy();
@@ -31,5 +31,18 @@ describe('NOTIF_META', () => {
     expect(hrefForNotification('new_match', {})).toBe('/matches');
     expect(hrefForNotification('offer_received', {})).toBe('/feed');
     expect(hrefForNotification('account', {})).toBe('/account');
+  });
+
+  it('E8: interest_received deep-links the host to that night\'s interested list', () => {
+    expect(hrefForNotification('interest_received', { date_instance_id: 'di1' })).toBe('/dates/di1/interested');
+    // absent group key -> safe in-app fallback, never /my-nights-with-nothing or ''
+    expect(hrefForNotification('interest_received', {})).toBe('/my-nights');
+  });
+
+  it('night_cancelled / night_changed deep-link the affected night detail', () => {
+    expect(hrefForNotification('night_cancelled', { date_instance_id: 'di2' })).toBe('/dates/di2');
+    expect(hrefForNotification('night_changed', { date_instance_id: 'di3' })).toBe('/dates/di3');
+    expect(hrefForNotification('night_cancelled', {})).toBe('/feed');
+    expect(hrefForNotification('night_changed', {})).toBe('/feed');
   });
 });
