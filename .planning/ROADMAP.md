@@ -157,7 +157,22 @@ Plans:
   2. The offer stage shows a partial host reveal; crossing the post-lock/rapport threshold shows the full reveal.
   3. Crossing the reveal threshold dispatches an `identity_revealed` notification and renders a reveal-ceremony moment in the UI.
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — Rung 1: signBlurredUrls + widen browse_feed_for_viewer (+3 host-hint cols, LOCAL apply/typegen/advisor) + FeedNight host hint + blurred avatar on feed card/detail (REQ-E15)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 05-02-PLAN.md — Rung 2: offer-received surface switches clear->blurred host photo + CSS blur(3px), experience-led (REQ-E15)
+- [ ] 05-03-PLAN.md — Rung 3 + ceremony: dispatch identity_revealed at both lock RPCs (matches_enabled consent, LOCAL apply/advisor) + RevealModal unblur ceremony + reduced-motion + sonner toast (REQ-E16)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 05-04-PLAN.md — Phase gate: forced-local visual-verify @420px of all 3 rungs + GATED prod-apply checkpoint for the e15/e16 migrations (REQ-E15, REQ-E16)
+
 **UI hint**: yes
 
 ### Phase 6: Trust & Safety (P2)
@@ -202,6 +217,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
-| 5. Progressive Reveal | 0/TBD | Not started | - |
+| 5. Progressive Reveal | 0/4 | Planned | - |
 | 6. Trust & Safety | 0/TBD | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
