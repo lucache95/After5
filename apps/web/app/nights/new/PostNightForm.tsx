@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Sparkles, Pause, Play } from 'lucide-react';
 import {
-  browserAfter5Client, postNight, ambientSoundUrl, type AmbientSound,
+  browserAfter5Client, postNight, updateItineraryStops, ambientSoundUrl, type AmbientSound,
 } from '@/lib/after5/client';
 import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
@@ -32,16 +32,75 @@ function nowMin(): string {
   return d.toISOString().slice(0, 16);
 }
 
+// E11 creator-control option sets.
+const PAY_OPTIONS: { id: string; label: string }[] = [
+  { id: 'i_pay', label: 'i pay' },
+  { id: 'they_pay', label: 'they pay' },
+  { id: 'split', label: 'split' },
+];
+const GENDER_OPTIONS: { id: string; label: string }[] = [
+  { id: 'women', label: 'women' },
+  { id: 'men', label: 'men' },
+  { id: 'nonbinary', label: 'nonbinary' },
+  { id: 'everyone', label: 'everyone' },
+];
+
 export function PostNightForm({
   plans,
   ambientSounds = [],
+  itineraryId,
 }: {
   plans: Plan[];
   ambientSounds?: AmbientSound[];
+  // E11: when the host arrives from the Door-2 publish CTA (/nights/new?itinerary=)
+  // the canvas plan is pre-selected.
+  itineraryId?: string;
 }) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedId, setSelectedId] = useState(
+    () => (itineraryId && plans.some((p) => p.id === itineraryId) ? itineraryId : ''),
+  );
   const [startsAt, setStartsAt] = useState('');
+
+  // ── E11 creator controls ──────────────────────────────────────────────────
+  // Targeting defaults are inclusive + overridable (never reads as exclusion):
+  // open to everyone, age unbounded, radius = city default (left blank = server default).
+  const [paySetting, setPaySetting] = useState('split');
+  const [genders, setGenders] = useState<string[]>(['everyone']);
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [radiusKm, setRadiusKm] = useState('');
+  const [whyNote, setWhyNote] = useState('');
+
+  // who-pays radiogroup roving-tabindex.
+  const payRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const paySelectedIndex = Math.max(0, PAY_OPTIONS.findIndex((o) => o.id === paySetting));
+  function focusPay(index: number) {
+    const count = PAY_OPTIONS.length;
+    const wrapped = ((index % count) + count) % count;
+    setPaySetting(PAY_OPTIONS[wrapped]!.id);
+    requestAnimationFrame(() => { payRefs.current[wrapped]?.focus(); });
+  }
+  function handlePayKeyDown(index: number, e: React.KeyboardEvent<HTMLButtonElement>) {
+    switch (e.key) {
+      case 'ArrowDown': case 'ArrowRight': e.preventDefault(); focusPay(index + 1); break;
+      case 'ArrowUp': case 'ArrowLeft': e.preventDefault(); focusPay(index - 1); break;
+      case 'Home': e.preventDefault(); focusPay(0); break;
+      case 'End': e.preventDefault(); focusPay(PAY_OPTIONS.length - 1); break;
+      default: break;
+    }
+  }
+
+  // target-gender multi-select. Picking "everyone" clears the others; picking a
+  // specific gender drops "everyone". Empty selection falls back to everyone.
+  function toggleGender(id: string) {
+    setGenders((prev) => {
+      if (id === 'everyone') return ['everyone'];
+      const without = prev.filter((g) => g !== 'everyone');
+      const next = without.includes(id) ? without.filter((g) => g !== id) : [...without, id];
+      return next.length === 0 ? ['everyone'] : next;
+    });
+  }
   const [phase, setPhase] = useState<'idle' | 'saving' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const reduceMotion = useReducedMotion();
@@ -170,10 +229,44 @@ export function PostNightForm({
     setErrorMsg('');
     stopPreview();
     try {
-      await postNight(browserAfter5Client(), {
+      const client = browserAfter5Client();
+      // E11/D-10: pay_setting + why_note + vibe_tags live on the itinerary — persist
+      // them best-effort onto the forked plan before posting. Read the current stops
+      // first so the update doesn't clobber them (update_itinerary_stops replaces the
+      // stops array). A failure here is non-fatal — the night still posts.
+      const min = ageMin.trim() === '' ? null : Number(ageMin);
+      const max = ageMax.trim() === '' ? null : Number(ageMax);
+      const ageRange = min != null || max != null
+        ? `[${min ?? 18},${max ?? 100}]`
+        : null;
+      const radius = radiusKm.trim() === '' ? null : Number(radiusKm);
+
+      try {
+        const { data: it } = await client
+          .from('itineraries')
+          .select('stops, vibe_tags')
+          .eq('id', selectedId)
+          .maybeSingle();
+        if (it) {
+          await updateItineraryStops(client, {
+            itinerary_id: selectedId,
+            stops: (it.stops ?? []) as never,
+            pay_setting: paySetting,
+            why_note: whyNote.trim() || undefined,
+            vibe_tags: (it.vibe_tags as string[] | null) ?? undefined,
+          });
+        }
+      } catch (metaErr) {
+        console.warn('[PostNightForm] creator-meta update skipped', metaErr);
+      }
+
+      await postNight(client, {
         itinerary_id: selectedId,
         starts_at: new Date(startsAt).toISOString(),
         ambient_sound_id: ambientId || null,
+        target_genders: genders,
+        target_age_range: ageRange,
+        search_radius_km: radius,
       });
       toast.success("posted. it's live.");
       router.push('/home');
@@ -277,6 +370,148 @@ export function PostNightForm({
                 that&apos;s already gone. pick something later.
               </p>
             )}
+          </div>
+
+          {/* ── who's this for? (E11 targeting + who-pays) ── */}
+          <fieldset>
+            <legend className="mb-3 font-body text-sm font-semibold lowercase text-shell-ink">
+              who&apos;s this for?
+            </legend>
+
+            {/* who pays */}
+            <p className="mb-2 font-body text-[13px] lowercase text-shell-ink/65">who pays?</p>
+            <div role="radiogroup" aria-label="who pays" className="mb-5 flex flex-wrap gap-2">
+              {PAY_OPTIONS.map((opt, idx) => {
+                const selected = paySetting === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    ref={(el) => { payRefs.current[idx] = el; }}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    tabIndex={idx === paySelectedIndex ? 0 : -1}
+                    onClick={() => setPaySetting(opt.id)}
+                    onKeyDown={(e) => handlePayKeyDown(idx, e)}
+                    style={{ transform: `rotate(${stickerRotation(opt.id)}deg)` }}
+                    className={cn(
+                      'min-h-[44px] rounded-full px-4 font-body text-[14px] font-semibold lowercase transition',
+                      'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                      'motion-reduce:transition-none',
+                      selected
+                        ? 'bg-shell-accent text-white shadow-fun'
+                        : 'bg-white/80 text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40',
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* target genders (multi-select) */}
+            <p className="mb-2 font-body text-[13px] lowercase text-shell-ink/65">open to</p>
+            <div role="group" aria-label="target gender(s)" className="flex flex-wrap gap-2">
+              {GENDER_OPTIONS.map((opt) => {
+                const selected = genders.includes(opt.id);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={selected}
+                    onClick={() => toggleGender(opt.id)}
+                    style={{ transform: `rotate(${stickerRotation(opt.id)}deg)` }}
+                    className={cn(
+                      'min-h-[44px] rounded-full px-4 font-body text-[14px] font-semibold lowercase transition',
+                      'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                      'motion-reduce:transition-none',
+                      selected
+                        ? 'bg-shell-accent text-white shadow-fun'
+                        : 'bg-white/80 text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40',
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 font-body text-xs lowercase text-shell-ink/55">
+              open to everyone unless you narrow it.
+            </p>
+
+            {/* target age range */}
+            <div className="mt-5 flex items-end gap-3">
+              <label htmlFor="age-min" className="flex-1">
+                <span className="mb-1.5 block font-body text-[13px] lowercase text-shell-ink/65">
+                  youngest
+                </span>
+                <input
+                  id="age-min"
+                  type="number"
+                  inputMode="numeric"
+                  min={18}
+                  max={100}
+                  placeholder="18"
+                  value={ageMin}
+                  onChange={(e) => setAgeMin(e.target.value)}
+                  className="block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] tabular-nums text-shell-ink focus:outline-none focus:ring-2 focus:ring-shell-accent/60"
+                />
+              </label>
+              <span aria-hidden className="pb-3 font-body text-shell-ink/40">–</span>
+              <label htmlFor="age-max" className="flex-1">
+                <span className="mb-1.5 block font-body text-[13px] lowercase text-shell-ink/65">
+                  oldest
+                </span>
+                <input
+                  id="age-max"
+                  type="number"
+                  inputMode="numeric"
+                  min={18}
+                  max={100}
+                  placeholder="100"
+                  value={ageMax}
+                  onChange={(e) => setAgeMax(e.target.value)}
+                  className="block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] tabular-nums text-shell-ink focus:outline-none focus:ring-2 focus:ring-shell-accent/60"
+                />
+              </label>
+            </div>
+
+            {/* radius */}
+            <label htmlFor="radius-km" className="mt-5 block">
+              <span className="mb-1.5 block font-body text-[13px] lowercase text-shell-ink/65">
+                how far? (km)
+              </span>
+              <input
+                id="radius-km"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                placeholder="city default"
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(e.target.value)}
+                className="block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] tabular-nums text-shell-ink focus:outline-none focus:ring-2 focus:ring-shell-accent/60"
+              />
+            </label>
+          </fieldset>
+
+          {/* ── the why? (E11) ── */}
+          <div>
+            <label
+              htmlFor="why-note"
+              className="mb-1.5 block font-body text-sm font-semibold lowercase text-shell-ink"
+            >
+              the why?
+            </label>
+            <textarea
+              id="why-note"
+              value={whyNote}
+              onChange={(e) => setWhyNote(e.target.value)}
+              rows={2}
+              maxLength={140}
+              placeholder="one line on why this night's worth it."
+              className="block w-full resize-none rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] text-shell-ink placeholder:text-shell-ink/35 focus:outline-none focus:ring-2 focus:ring-shell-accent/60"
+            />
           </div>
 
           {/* ── Soundtrack picker (optional) ── */}

@@ -5,7 +5,12 @@ import { PostNightForm } from './PostNightForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function NewNightPage() {
+export default async function NewNightPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ itinerary?: string }>;
+}) {
+  const { itinerary } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/nights/new');
@@ -23,5 +28,11 @@ export default async function NewNightPage() {
 
   const ambientSounds = await listAmbientSounds(supabase as never);
 
-  return <PostNightForm plans={plans ?? []} ambientSounds={ambientSounds} />;
+  return (
+    <PostNightForm
+      plans={plans ?? []}
+      ambientSounds={ambientSounds}
+      itineraryId={itinerary}
+    />
+  );
 }

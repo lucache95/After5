@@ -78,7 +78,8 @@ describe('PostNightForm', () => {
 
   it('plan cards are rendered with aria-checked=false initially', () => {
     render(<PostNightForm plans={[plan('a'), plan('b')]} />);
-    const cards = screen.getAllByRole('radio');
+    const group = screen.getByRole('radiogroup', { name: /pick a plan/i });
+    const cards = within(group).getAllByRole('radio');
     expect(cards).toHaveLength(2);
     cards.forEach((card) => expect(card).toHaveAttribute('aria-checked', 'false'));
   });
@@ -131,6 +132,58 @@ describe('PostNightForm ambient picker', () => {
   });
 
   it('has no a11y violations with the soundtrack picker', async () => {
+    const { container } = render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('PostNightForm creator controls (E11)', () => {
+  it('renders who-pays, target-gender, age, radius and the why fields', () => {
+    render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
+    expect(screen.getByRole('radiogroup', { name: /who pays/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /target gender/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/youngest/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/oldest/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/how far/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/the why/i)).toBeInTheDocument();
+  });
+
+  it('targeting defaults to inclusive: everyone selected, age unbounded', () => {
+    render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
+    const everyone = within(screen.getByRole('group', { name: /target gender/i }))
+      .getByRole('checkbox', { name: /everyone/i });
+    expect(everyone).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByLabelText(/youngest/i)).toHaveValue(null);
+    expect(screen.getByLabelText(/oldest/i)).toHaveValue(null);
+  });
+
+  it('submit passes targeting params to postNight when overridden', async () => {
+    render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
+    await userEvent.click(screen.getByRole('radio', { name: /plan a/i }));
+    await userEvent.type(screen.getByLabelText(/when's the night/i), futureLocal());
+    // override targeting: narrow to women, set an age + radius
+    const genders = within(screen.getByRole('group', { name: /target gender/i }));
+    await userEvent.click(genders.getByRole('checkbox', { name: /^women$/i }));
+    await userEvent.type(screen.getByLabelText(/youngest/i), '25');
+    await userEvent.type(screen.getByLabelText(/oldest/i), '40');
+    await userEvent.type(screen.getByLabelText(/how far/i), '15');
+    await userEvent.click(screen.getByRole('radio', { name: /i pay/i }));
+    await userEvent.click(screen.getByRole('button', { name: /post it/i }));
+
+    expect(postNight).toHaveBeenCalledTimes(1);
+    const arg = postNight.mock.calls[0]![1] as Record<string, unknown>;
+    expect(arg.target_genders).toEqual(['women']);
+    expect(arg.target_age_range).toBe('[25,40]');
+    expect(arg.search_radius_km).toBe(15);
+  });
+
+  it('pre-selects the plan from the itineraryId prop', () => {
+    render(<PostNightForm plans={[plan('a'), plan('b')]} itineraryId="b" />);
+    const b = screen.getByRole('radio', { name: /plan b/i });
+    expect(b).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('has no a11y violations with the creator controls', async () => {
     const { container } = render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
     expect(await axe(container)).toHaveNoViolations();
   });
