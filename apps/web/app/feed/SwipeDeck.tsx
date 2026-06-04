@@ -87,8 +87,19 @@ export function SwipeDeck({
   filters?: FeedFilters;
 }) {
   const router = useRouter();
-  const [deck] = useState(initial);
+  const [deck, setDeck] = useState(initial);
   const [i, setI] = useState(0);
+  // router.refresh() (filter apply / loosen) re-runs the SSR feed and passes a new
+  // `initial`, but useState won't re-init on a prop change — reset the deck + index
+  // when the night set changes (React "adjust state during render" pattern: no effect,
+  // no flash). Without this a filter that emptied the feed leaves the stale card on screen.
+  const deckSig = initial.map((n) => n.date_instance_id).join(',');
+  const [prevSig, setPrevSig] = useState(deckSig);
+  if (deckSig !== prevSig) {
+    setPrevSig(deckSig);
+    setDeck(initial);
+    setI(0);
+  }
   const [busy, setBusy] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
