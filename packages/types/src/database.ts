@@ -3459,12 +3459,6 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
-      mk_instance: {
-        Args: { p_creator: string; p_itin: string; p_starts: string }
-        Returns: string
-      }
-      mk_itinerary: { Args: { p_user: string }; Returns: string }
-      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -4190,6 +4184,7 @@ export type Database = {
         | "matched"
         | "completed"
         | "cancelled"
+        | "expired"
       effort_level: "low" | "moderate" | "high"
       energy_level: "low" | "medium" | "high"
       job_status: "pending" | "running" | "done" | "failed" | "cancelled"
@@ -4238,6 +4233,10 @@ export type Database = {
         | "offer_expired"
         | "lock_cancelled_frozen"
         | "lock_cancelled_rolled"
+        | "interest_received"
+        | "identity_revealed"
+        | "night_cancelled"
+        | "night_changed"
       occasion: "date" | "solo" | "friends"
       offer_status: "active" | "accepted" | "passed" | "expired"
       payment_preference: "i_pay" | "they_pay" | "split"
@@ -4453,6 +4452,7 @@ export const Constants = {
         "matched",
         "completed",
         "cancelled",
+        "expired",
       ],
       effort_level: ["low", "moderate", "high"],
       energy_level: ["low", "medium", "high"],
@@ -4504,6 +4504,10 @@ export const Constants = {
         "offer_expired",
         "lock_cancelled_frozen",
         "lock_cancelled_rolled",
+        "interest_received",
+        "identity_revealed",
+        "night_cancelled",
+        "night_changed",
       ],
       occasion: ["date", "solo", "friends"],
       offer_status: ["active", "accepted", "passed", "expired"],

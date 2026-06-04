@@ -33,6 +33,10 @@ export interface NotifMeta {
 
 const offerHref = (p: Payload) => { const o = str(p, 'offer_id'); return o ? `/offers/${o}` : '/feed'; };
 const lockHref = (p: Payload) => { const l = str(p, 'lock_id'); return l ? `/matches/${l}` : '/matches'; };
+// A host's interested-candidate list for one night (group key = date_instance_id).
+const interestedHref = (p: Payload) => { const id = str(p, 'date_instance_id'); return id ? `/dates/${id}/interested` : '/my-nights'; };
+// The night detail surface (used by cancel/material-change candidate notifications).
+const instanceHref = (p: Payload) => { const id = str(p, 'date_instance_id'); return id ? `/dates/${id}` : '/feed'; };
 const feed = () => '/feed';
 const account = () => '/account';
 
@@ -57,35 +61,30 @@ export const NOTIF_META: Record<NotificationType, NotifMeta> = {
   verification_passed:   { label: "you're verified",              Icon: BadgeCheck,     category: 'account',  hrefFor: account },
   verification_failed:   { label: 'verification needs another look', Icon: BadgeAlert,  category: 'account',  hrefFor: account },
   appeal_resolved:       { label: 'your appeal was reviewed',     Icon: Scale,          category: 'account',  hrefFor: account },
+  interest_received:     { label: "someone's into your night",    Icon: Flame,          category: 'matches',  hrefFor: interestedHref },
+  identity_revealed:     { label: 'you can see them now',         Icon: Eye,            category: 'matches',  hrefFor: lockHref },
+  night_cancelled:       { label: 'a night you liked was cancelled', Icon: CalendarX,   category: 'reminders',hrefFor: instanceHref },
+  night_changed:         { label: 'a night you liked changed',    Icon: RefreshCw,      category: 'reminders',hrefFor: instanceHref },
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIF_META) as NotificationType[];
 
-// Gated inbox types (unified inbox #84, spec §2). These two notification_type
-// values ship behind a GATED migration (20260603120000_gated_inbox_notification_types.sql)
-// and are NOT yet in the generated enum, so they live here as string-keyed meta
-// rather than in the enum-exhaustive NOTIF_META above. When the migration is
-// applied + types regenerate, these move into NOTIF_META and this overlay drops.
-// Until then the inbox tolerates them by resolving meta through metaFor().
+// Unified-inbox grouped types (#84, spec §2). These two notification_type values
+// are now enum-backed (shipped in 20260603120000_gated_inbox_notification_types.sql,
+// surfaced once types regenerated) and have full meta in the enum-exhaustive
+// NOTIF_META above. They remain named here because the inbox groups on them:
 //   interest_received → grouped "someone's into your night" row; group key is
-//     payload.date_instance_id; deep-links the host to their nights surface.
+//     payload.date_instance_id; deep-links the host to that night's interested list.
 //   identity_revealed → single "you can see them now" row; deep-links the lock.
 export const GATED_INBOX_TYPES = ['interest_received', 'identity_revealed'] as const;
-export type GatedInboxType = (typeof GATED_INBOX_TYPES)[number];
 
-const GATED_NOTIF_META: Record<GatedInboxType, NotifMeta> = {
-  interest_received: { label: "someone's into your night", Icon: Flame, category: 'matches', hrefFor: () => '/my-nights' },
-  identity_revealed: { label: 'you can see them now',       Icon: Eye,   category: 'matches', hrefFor: lockHref },
-};
-
-// Resolve render meta for any type string — covers both the enum-backed types
-// and the gated overlay. Falls back to a quiet account row for an unknown value
-// so a future type never crashes the inbox before its meta lands.
+// Resolve render meta for any type string. Now that the inbox types are enum-backed
+// they live in NOTIF_META; a quiet account row is the fallback so an unknown value
+// (e.g. a future type whose meta hasn't landed) never crashes the inbox.
 const ACCOUNT_FALLBACK: NotifMeta = { label: 'account update', Icon: User, category: 'account', hrefFor: account };
 
 export function metaFor(type: string): NotifMeta {
   if (type in NOTIF_META) return NOTIF_META[type as NotificationType];
-  if (type in GATED_NOTIF_META) return GATED_NOTIF_META[type as GatedInboxType];
   return ACCOUNT_FALLBACK;
 }
 
