@@ -3127,6 +3127,9 @@ export type Database = {
           date_instance_id: string
           distance_m: number
           fit: boolean
+          host_age: number
+          host_blurred_photo_url: string
+          host_first_name: string
           is_seed: boolean
           pay_setting: string
           time_window_start: string
