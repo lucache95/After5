@@ -22,7 +22,7 @@ never reordered across P-bands.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Navigation & Profile Spine (P0)** - Never-trap nav chrome, correct tab semantics, real profile hub, editable preferences
+- [x] **Phase 1: Navigation & Profile Spine (P0)** - Never-trap nav chrome, correct tab semantics, real profile hub, editable preferences
 - [ ] **Phase 2: Loop Closure & Host Controls (P0)** - Lock-completed + sweep, cancel/edit night, interest notification, poison-loop cleanup
 - [ ] **Phase 3: Marketplace Completeness (P1)** - Creator controls, host reject, plan-on-match/offer, offer delivery
 - [ ] **Phase 4: Discoverability — Feed Filters & Targeting (P1)** - Per-date targeting + searcher filters + soft-boost feed
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Navigation & Profile Spine | 3/4 | In progress | - |
+| 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
 | 2. Loop Closure & Host Controls | 0/TBD | Not started | - |
 | 3. Marketplace Completeness | 0/TBD | Not started | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |

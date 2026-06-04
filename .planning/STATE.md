@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-03-PLAN.md (E4 editable /account/preferences + mode-aware PreferencesForm + relocated dating on/off)
-last_updated: "2026-06-03T23:30:00.000Z"
-last_activity: 2026-06-03 — Executed 01-03 (E4 editable preferences: extracted parseAgePref + StickerChip + mode-aware PreferencesForm; new auth-gated /account/preferences; relocated dating on/off with A3 stop-new-exposure-only OFF)
+stopped_at: Phase 1 (Navigation & Profile Spine) COMPLETE — verifier passed (4/4 criteria), visual-verify passed (forced-local). Ready for Phase 2.
+last_updated: "2026-06-03T23:45:00.000Z"
+last_activity: 2026-06-03 — Phase 1 verified PASSED (gsd-verifier 4/4 + forced-local Playwright visual-verify); notifications DeepRouteHeader title polish applied. All P1 code on main, unpushed.
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 0
   completed_plans: 4
-  percent: 0
+  percent: 14
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 1 — Navigation & Profile Spine (P0)
+**Current focus:** Phase 2 — Loop Closure & Host Controls (P0) (next)
 
 ## Current Position
 
-Phase: 1 of 7 (Navigation & Profile Spine)
-Plan: 01-01, 01-02 (Wave 1), 01-04 complete (Wave 2)
-Status: Executing Phase 1
-Last activity: 2026-06-03 — Executed 01-04 (E3 identity-forward /account profile hub + SelfViewSheet reusing ProfileCard)
+Phase: 1 of 7 (Navigation & Profile Spine) — COMPLETE ✓ (verified passed)
+Plan: 01-01/01-02 (Wave 1) + 01-03/01-04 (Wave 2) all complete
+Status: Phase 1 done — ready to plan/execute Phase 2
+Last activity: 2026-06-03 — Phase 1 verified PASSED (4/4 criteria + visual-verify). Unpushed/undeployed on main.
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14%
 
 ## Performance Metrics
 
