@@ -18,6 +18,7 @@ export function browserAfter5Client(): After5Client {
 export {
   getMyProfile, upsertProfile, savePreferences, getMyBadge,
   startVerification, confirmPhone, advanceOnboarding, registerDevice,
+  saveFeedFilters, type FeedFilters,
 } from '@after5/api-client';
 export {
   postNight, browseFeed, recordSwipe, getNightDetail,
