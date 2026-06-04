@@ -40,14 +40,18 @@ Existing components to extend (not rebuild): `apps/web/app/feed/FilterSheet.tsx`
 
 ## Spacing Scale
 
-The project is on Tailwind's default 4px-based scale; this phase uses the subset below. Multiples of 4 only.
+**Project-standard spacing set: {4, 8, 12, 16, 20, 24, 32, 48, 64}** — the full Tailwind 4px-multiple scale.
+
+**Justification:** This project runs on `apps/web/tailwind.config.ts`, which uses Tailwind's default spacing scale (every step a multiple of 4px). `docs/superpowers/DESIGN-SYSTEM.md` is the brand authority and is built on these same stock utilities. The set above extends GSD's canonical base {4, 8, 16, 24, 32, 48, 64} with the two intermediate Tailwind steps **12px (`p-3`/`gap-3`)** and **20px (`px-5`/`gap-5`)**. Both are multiples of 4 and stock Tailwind utilities used across this codebase (e.g. PostNightForm's chip padding and the existing sheet horizontal padding) — they are project-standard, not one-off invented values.
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px (`gap-1`) | Icon-to-label gap inside a chip |
 | sm | 8px (`gap-2`) | Chip-to-chip in a row; sheet chip groups |
-| md | 12–16px (`p-3`/`p-4`, `gap-3`/`gap-4`) | Chip internal padding; field stacks |
-| lg | 20–24px (`px-5`/`gap-5`, `px-6`) | Sheet horizontal padding; section gaps |
+| md | 12px (`p-3`/`gap-3`) | Chip internal padding; tight field stacks |
+| md+ | 16px (`p-4`/`gap-4`) | Standard field stacks; sheet content rhythm |
+| lg | 20px (`px-5`/`gap-5`) | Sheet horizontal padding; between soft/hard groups |
+| lg+ | 24px (`px-6`/`gap-6`) | Section gaps; sheet edge padding |
 | xl | 32px (`pb-8`) | Sheet bottom padding above the safe area |
 
 Exceptions:
@@ -58,12 +62,12 @@ Exceptions:
 
 ## Typography
 
-Mirror `tailwind.config.ts` `fontSize` tokens. Headings/CTAs lowercase (DESIGN-SYSTEM §2/§3). Exactly the four roles below for this phase's surfaces.
+Mirror `tailwind.config.ts` `fontSize` tokens. Headings/CTAs lowercase (DESIGN-SYSTEM §2/§3). Exactly the four roles below for this phase's surfaces. Each role is pinned to a single anchor value so no size serves two roles.
 
 | Role | Size | Weight | Line Height | Token / where |
 |------|------|--------|-------------|---------------|
-| Body / helper | 14–15px | regular 400 | 1.5 | `text-sm` / `text-[15px]` `font-body` — reach line, sheet descriptions, chip labels |
-| Label (chip / field) | 13–14px | semibold 600 | 1.5 | `text-[13px]`/`text-sm` `font-body font-semibold lowercase` — quick chips, sheet option chips, the fit pill |
+| Body / helper | 15px | regular 400 | 1.5 | `text-[15px]` `font-body` — reach line, sheet descriptions |
+| Label (chip / field) | 13px | semibold 600 | 1.5 | `text-[13px]` `font-body font-semibold lowercase` — quick chips, sheet option chips, the fit pill |
 | Heading (sheet title) | 28px | regular 400 | 1.2 | `text-3xl` `font-heading lowercase` — "filters" sheet title (matches stub) |
 | Display (empty state) | 50px | regular 400 | 1.05 | `text-5xl` `font-heading lowercase` — empty-state hero line (matches existing `EmptyDeck`) |
 
@@ -74,6 +78,8 @@ Weights: regular 400 (Fredoka/Caprasimo default) + semibold 600 (Fredoka, chips/
 ## Color
 
 Tier-1 shell tokens (dating chrome). Pink is punctuation, not wallpaper (DESIGN-SYSTEM §1). The feed CARD itself is Tier-2 (per-vibe `--exp-*` via `vibePalette`) and is out of scope to restyle — the fit pill must sit ON the card's existing scrim without fighting the vibe palette.
+
+**60/30/10 distribution: Dominant 60% (`shell.base`) / Secondary 30% (`white/70`–`white/80` + `shell.ink/10`) / Accent 10% (`shell.accent`).**
 
 | Role | Value | Usage |
 |------|-------|-------|
@@ -99,7 +105,7 @@ Voice (CONTEXT §specifics + DESIGN-SYSTEM §3, and the live-QA finding this mil
 | Element | Copy |
 |---------|------|
 | Primary CTA (FilterSheet) | `apply filters` |
-| Secondary action (FilterSheet) | `reset` (clears all to inclusive defaults; quiet text button, not accent) |
+| Secondary action (FilterSheet) | `reset filters` (clears all to inclusive defaults; quiet text button, not accent) |
 | Quick-chip row (3 chips, D-04) | `distance` · `price` · `vibe` (lowercase; active chip shows its value, e.g. `≤ 25km`, `≤ $80`, `chill`) |
 | FilterSheet section labels | hard group header: `dealbreakers` · soft group header: `nice to have`. (Inclusive framing; never "exclude".) |
 | FilterSheet hard fields | `who's hosting` (host gender) · `max price` · `how far` |
@@ -112,7 +118,7 @@ Voice (CONTEXT §specifics + DESIGN-SYSTEM §3, and the live-QA finding this mil
 | Empty state body (D-02, active recovery) | name the most-restrictive HARD filter + one-tap loosen, e.g. `your distance is set to 10km.` with an accent action `widen to 50km?` — PLUS a second line: `or be the main character. post your own night.` (link to `/nights/new`). No silent auto-relax. |
 | Empty state — no filters set (fall back to existing `EmptyDeck`) | keep the shipped line `that's everyone for now.` / `touch grass and come back later.` (this is the genuinely-empty feed, not a filtered-empty feed — do not show "loosen a filter" when no hard filter is set) |
 | Error state (filter save / feed reload fails) | sonner toast, lowercase: `that didn't save. try again?` (mirrors the existing `that didn't send. try again?` swipe-error toast) |
-| Destructive actions | none in this phase. `reset` is reversible (re-set filters anytime); no confirmation dialog needed. |
+| Destructive actions | none in this phase. `reset filters` is reversible (re-set filters anytime); no confirmation dialog needed. |
 
 Copy guardrails for the executor:
 - The reach line is **passive + encouraging** — it never renders a warning color, never disables the publish CTA, never says "won't land" or "too narrow."
@@ -139,14 +145,14 @@ Copy guardrails for the executor:
   - **`dealbreakers` (hard, HIDE):** `who's hosting` (host gender multi-select chips) · `max price` (slider or stepped chips) · `how far` (distance slider/stepped chips, km). These map to `feed_filters.host_genders` / `max_price` / `max_distance_km`.
   - **`nice to have` (soft, SORT):** `vibe` (multi chips) · `who pays` (multi chips: `i pay` / `they pay` / `split`) · `when` (time buckets: `this weekend` / `weeknights` / `daytime`) · `their age` (host age range, two number inputs styled like PostNightForm's youngest/oldest). Map to `feed_filters.vibes` / `who_pays` / `time_buckets` / `host_age_range`.
 - Selected chips use the accent-fill active treatment; multi-select groups use `role="group"` + `role="checkbox"` `aria-checked` exactly like PostNightForm's gender group; who-pays single/multi as appropriate with `role` set.
-- Footer: a full-width `apply filters` accent CTA (`h-14 rounded-full bg-shell-accent ... font-heading text-lg lowercase text-white shadow-fun`, copy from the stub's CTA shape) + a quiet `reset` text button. On apply: persist to `profiles.feed_filters`, close the sheet, the feed re-queries. On failure: sonner error toast (copy above).
+- Footer: a full-width `apply filters` accent CTA (`h-14 rounded-full bg-shell-accent ... font-heading text-lg lowercase text-white shadow-fun`, copy from the stub's CTA shape) + a quiet `reset filters` text button. On apply: persist to `profiles.feed_filters`, close the sheet, the feed re-queries. On failure: sonner error toast (copy above).
 - Inclusive-default framing throughout: the soft `nice to have` group must read as preferences, the hard `dealbreakers` group as the only things that hide. Never label anything "exclude".
 
 ### 3. Fit pill (D-03) — `NightCard.tsx`
 
 - Renders ONLY when the card's `fit` flag (from `browse_feed_for_viewer`) is true. Driven by data, not on every card.
 - Placement: small pill in the card content stack (on the existing bottom scrim, with the vibe tags / title), or top-left near the `★ curated` seed badge — must not collide with it. Copy: `looks for someone like you`.
-- Treatment: small, quiet, flattering. `rounded-full px-3 py-1 font-body text-xs font-semibold lowercase`, `shadow-md`, on a `bg-white/85 text-shell-accent` or accent-on-translucent base so it reads on top of any vibe photo. Optional leading `✨` is on-brand (DESIGN-SYSTEM §5b emoji-on-canonical-tag spirit) but keep it subtle.
+- Treatment: small, quiet, flattering. `rounded-full px-3 py-1 font-body text-[13px] font-semibold lowercase`, `shadow-md`, on a `bg-white/85 text-shell-accent` or accent-on-translucent base so it reads on top of any vibe photo. Optional leading `✨` is on-brand (DESIGN-SYSTEM §5b emoji-on-canonical-tag spirit) but keep it subtle.
 - Never a score, never a percentage, never on a non-matching card.
 
 ### 4. Active-recovery empty state (D-02) — `EmptyDeck` in `SwipeDeck.tsx`
