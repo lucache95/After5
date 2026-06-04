@@ -2,18 +2,9 @@ import { redirect } from 'next/navigation';
 import { OnboardingShell } from '../OnboardingShell';
 import { PreferencesStep, type PreferencesInitial } from '../steps/PreferencesStep';
 import { createClient } from '@/lib/supabase/server';
+import { parseAgePref } from '@/lib/after5/parseAgePref';
 
 export const dynamic = 'force-dynamic';
-
-// age_pref is stored canonical as '[lo,hi)' (upper exclusive). Parse to inclusive min/max.
-function parseAgePref(raw: unknown): { min: number; max: number } {
-  if (typeof raw !== 'string') return { min: 25, max: 40 };
-  const m = raw.match(/^\[(\d+),(\d+)\)$/) ?? raw.match(/^\[(\d+),(\d+)\]$/);
-  if (!m) return { min: 25, max: 40 };
-  const lo = Number(m[1]); const hiRaw = Number(m[2]);
-  const inclusiveHi = raw.endsWith(')') ? hiRaw - 1 : hiRaw;
-  return { min: lo, max: inclusiveHi };
-}
 
 export default async function PreferencesPage() {
   const supabase = await createClient();
