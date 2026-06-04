@@ -134,7 +134,7 @@ export function NightDetailSheet({
             {night.title ?? 'a night out'} — full date detail
           </Drawer.Title>
           <Drawer.Description className="sr-only">
-            read the full plan, then swipe to decide. the host stays anonymous until you match.
+            read the full plan, then swipe to decide. you get their first name and a blurred photo now; the clear face shows when you match.
           </Drawer.Description>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -286,10 +286,38 @@ export function NightDetailSheet({
                 </div>
               )}
 
-              {/* Blind reassurance — sets the expectation that identity stays hidden. */}
+              {/* RUNG 1 host hint (E15 / D-01): same 48px blurred avatar + first name +
+                  age the feed card shows. Secondary to the plan above. */}
+              {night.host_first_name?.trim() && (
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full ring-2 ring-shell-pink shadow-md">
+                    {night.host_blurred_photo_url ? (
+                      <Image
+                        src={night.host_blurred_photo_url}
+                        alt=""
+                        fill
+                        sizes="48px"
+                        className={cn('object-cover', 'blur-[8px] scale-110')}
+                        draggable={false}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-shell-pink font-heading text-lg lowercase text-shell-accent">
+                        {night.host_first_name.trim().charAt(0).toLowerCase()}
+                      </div>
+                    )}
+                  </div>
+                  <span className="font-body text-sm font-medium lowercase text-shell-ink/85">
+                    {night.host_age != null
+                      ? `${night.host_first_name.trim().toLowerCase()}, ${night.host_age}`
+                      : night.host_first_name.trim().toLowerCase()}
+                  </span>
+                </div>
+              )}
+
+              {/* Reveal-ladder reassurance — name+age show now, the clear face on match. */}
               <p className="font-body text-[13px] leading-relaxed text-shell-ink/55">
-                you&rsquo;re swiping on the night, not the person. who&rsquo;s hosting stays a
-                secret until you both match.
+                you&rsquo;re swiping on the night, not the face. you get their first name and a
+                blurred photo now. the clear face shows when you both match.
               </p>
             </div>
           </div>

@@ -20,6 +20,11 @@ const nextConfig = {
       // and email assets (welcome polaroid PNGs). Without this, next/image
       // returns a broken-image placeholder.
       { protocol: 'https', hostname: 'ufufmcpnysvwtutpbian.supabase.co' },
+      // Local Supabase Storage (forced-local e2e + local QA) — signed blurred/clear
+      // photo urls come off the local stack at 127.0.0.1:54321. Dev/test only; prod
+      // serves photos from the *.supabase.co host above.
+      { protocol: 'http', hostname: '127.0.0.1', port: '54321' },
+      { protocol: 'http', hostname: 'localhost', port: '54321' },
       // Unsplash — placeholder/seed imagery for local QA + sample content.
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],

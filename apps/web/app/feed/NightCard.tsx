@@ -8,6 +8,7 @@ import { coverImageForNight } from '@/lib/place-image';
 import { formatDistanceAway, formatReach } from '@/lib/distance';
 import type { FeedNight } from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
+import { cn } from '@/lib/cn';
 
 // Tier-2 experience surface (DESIGN-SYSTEM §1/§5): the PHOTOGRAPH leads. The cover
 // fills the card behind a bottom scrim; the title sits on the scrim. The card
@@ -176,8 +177,50 @@ export function NightCard({ night }: { night: FeedNight }) {
             </div>
           )}
         </dl>
+
+        {/* RUNG 1 host hint (E15 / D-01): a heavily-blurred host avatar + first
+            name + age. Secondary to the cover — the experience leads. The face is
+            unreadable (blur(8px) over the already-downscaled blurred asset); the
+            name+age says the rest. No "host" word, no tagline. */}
+        <HostHint night={night} />
       </div>
     </article>
+  );
+}
+
+// 48px blurred avatar + {first_name}, {age} label. Renders only when a first name is
+// known (it always is from the feed onward, D-01). A null photo falls back to a soft
+// initial chip — never a broken image.
+function HostHint({ night }: { night: FeedNight }) {
+  const name = night.host_first_name?.trim().toLowerCase();
+  if (!name) return null;
+  const label = night.host_age != null ? `${name}, ${night.host_age}` : name;
+  const initial = name.charAt(0);
+
+  return (
+    <div className="flex items-center gap-2.5 pt-0.5">
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full ring-2 ring-white/70 shadow-md">
+        {night.host_blurred_photo_url ? (
+          <Image
+            src={night.host_blurred_photo_url}
+            alt=""
+            fill
+            sizes="48px"
+            // Heavy CSS blur(8px) over the already-blurred asset (rung 1 = heavy).
+            className={cn('object-cover', 'blur-[8px] scale-110')}
+            data-rung1-avatar
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-white/25 font-heading text-lg lowercase text-white">
+            {initial}
+          </div>
+        )}
+      </div>
+      <span className="font-body text-sm font-medium lowercase text-white/95 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
+        {label}
+      </span>
+    </div>
   );
 }
 
