@@ -23,19 +23,35 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => true,
   motion: { span: (props: Record<string, unknown>) => <span {...props} /> },
 }));
+// next/image (used by PlanTimeline) renders nothing useful in jsdom — stub to a plain img.
+vi.mock('next/image', () => ({
+  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  default: (props: Record<string, unknown>) => <img {...(props as Record<string, never>)} />,
+}));
 
 import { LockDetail, type LockDetailProps } from '../LockDetail';
 import type { PartyProfile } from '../../lock-view';
+import type { NightDetailStop } from '@/lib/after5/client';
 
 const counterpart: PartyProfile = {
   id: 'p1', first_name: 'jamie', age: 28, city: 'portland', neighborhood: 'alberta',
   clear_photo_url: null, vibe_tags: ['hiking'],
 };
 
+function stop(over: Partial<NightDetailStop>): NightDetailStop {
+  return {
+    name: 'a spot', type: null, start_time: null, duration_min: null,
+    cost_pp: null, what_to_do: null, neighborhood: null, local_insight: null,
+    photo_url: null, lat: null, lng: null, drive_to_next_min: null,
+    ...over,
+  };
+}
+
 function props(over: Partial<LockDetailProps> = {}): LockDetailProps {
   return {
     lockId: 'lock-1', status: 'active', counterpart, threadId: 'thread-1',
-    startsAt: '2026-06-01T19:00:00Z', ratingOpen: false, justLocked: false, ...over,
+    startsAt: '2026-06-01T19:00:00Z', ratingOpen: false, justLocked: false,
+    stops: [], vibeTags: ['hiking'], ...over,
   };
 }
 
@@ -75,6 +91,22 @@ describe('LockDetail', () => {
     render(<LockDetail {...props({ status: 'cancelled', ratingOpen: true })} />);
     expect(screen.queryByRole('link', { name: /rate this date/i })).not.toBeInTheDocument();
     expect(screen.getByText(/this date was cancelled/i)).toBeInTheDocument();
+  });
+
+  it('renders "the night" plan via PlanTimeline when stops are present', () => {
+    render(<LockDetail {...props({ stops: [
+      stop({ name: 'rooftop bar', cost_pp: 22 }),
+      stop({ name: 'late-night ramen', cost_pp: 0 }),
+    ] })} />);
+    expect(screen.getByText('the night')).toBeInTheDocument();
+    expect(screen.getByText('rooftop bar')).toBeInTheDocument();
+    expect(screen.getByText('late-night ramen')).toBeInTheDocument();
+  });
+
+  it('shows the degrade copy when a lock has no stops (never a blank section)', () => {
+    render(<LockDetail {...props({ stops: [] })} />);
+    expect(screen.getByText('the night')).toBeInTheDocument();
+    expect(screen.getByText("plan's being put together.")).toBeInTheDocument();
   });
 
   it('active lock cancel flow calls cancelLock with the chosen reason', async () => {
