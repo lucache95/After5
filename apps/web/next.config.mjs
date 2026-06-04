@@ -29,6 +29,8 @@ const nextConfig = {
       // Investor pitch deck — static HTML in public/pitch/. Rewrite keeps the
       // clean /pitch URL while serving the file (Next doesn't auto-index dirs).
       { source: '/pitch', destination: '/pitch/index.html' },
+      // Condensed 3-slide cut for quick VC forwards.
+      { source: '/pitch-short', destination: '/pitch-short/index.html' },
     ];
   },
   async redirects() {

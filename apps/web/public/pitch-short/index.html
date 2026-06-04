@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>after5 — investor deck (short)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Fredoka:wght@400;500;600;700&family=Caveat:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --base:#FAF4EC; --accent:#E0218A; --ink:#3D0F2E; --pink:#FFE5F1;
+    --blush:#FFB3D1; --sage:#5CDBA0; --paper:#FFFDF9;
+    --shadow:0 22px 60px -22px rgba(61,15,46,.35);
+    --shadow-sm:0 10px 28px -14px rgba(61,15,46,.30);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  ::selection { background:var(--blush); color:var(--ink); }
+  html { scroll-behavior:smooth; scroll-snap-type:y mandatory; }
+  body {
+    font-family:'Fredoka',system-ui,sans-serif; color:var(--ink); background:var(--base);
+    -webkit-font-smoothing:antialiased; line-height:1.4;
+  }
+  /* grain overlay */
+  body::after{
+    content:""; position:fixed; inset:0; z-index:999; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  h1,h2,.display{ font-family:'Caprasimo',Georgia,serif; font-weight:400; text-transform:lowercase; line-height:.96; letter-spacing:-.01em; }
+
+  .slide{
+    position:relative; min-height:100vh; width:100%; scroll-snap-align:start;
+    display:flex; flex-direction:column; justify-content:center; padding:7vh 8vw; overflow:hidden;
+  }
+  .slide-inner{ width:100%; max-width:1080px; margin:0 auto; position:relative; z-index:2; }
+
+  .kicker{ display:inline-block; font-weight:600; font-size:.8rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin-bottom:1rem; }
+  h1{ font-size:clamp(2.7rem,6.5vw,5.4rem); margin-bottom:1.1rem; }
+  h2{ font-size:clamp(2rem,4.5vw,3.4rem); }
+  .lead{ font-size:clamp(1.15rem,2vw,1.55rem); max-width:42ch; color:rgba(61,15,46,.82); }
+  .src{ font-size:.78rem; color:rgba(61,15,46,.45); margin-top:1.4rem; font-weight:500; }
+  .ask-slide .src{ color:rgba(250,244,236,.5); }
+  strong{ font-weight:600; }
+  .num-tag{ position:absolute; top:4.5vh; right:6vw; font-family:'Caprasimo',serif; font-size:.95rem; color:rgba(61,15,46,.28); z-index:3; }
+  .ask-slide .num-tag{ color:rgba(255,255,255,.4); }
+  .wm{ position:absolute; bottom:3.6vh; left:8vw; font-family:'Caprasimo',serif; font-size:.9rem; color:var(--accent); z-index:3; opacity:.8; }
+  .wm::before{ content:"after5"; }
+
+  /* reveal animation */
+  .reveal{ opacity:0; transform:translateY(22px); transition:opacity .6s cubic-bezier(.2,.7,.2,1), transform .6s cubic-bezier(.2,.7,.2,1); }
+  .slide.in .reveal{ opacity:1; transform:none; }
+  .slide.in .reveal:nth-child(2){ transition-delay:.08s; }
+  .slide.in .reveal:nth-child(3){ transition-delay:.16s; }
+  .slide.in .reveal:nth-child(4){ transition-delay:.24s; }
+  .slide.in .reveal:nth-child(5){ transition-delay:.32s; }
+  .slide.in .reveal:nth-child(6){ transition-delay:.40s; }
+  .slide.in .reveal:nth-child(7){ transition-delay:.48s; }
+
+  /* bits */
+  .chip{ display:inline-block; background:var(--accent); color:#fff; font-weight:600; font-size:.9rem; padding:.5rem 1rem; border-radius:999px; box-shadow:var(--shadow-sm); transform:rotate(-2deg); }
+  .chip.live{ background:var(--sage); color:var(--ink); }
+
+  /* bullet list */
+  .bul{ list-style:none; margin-top:1.4rem; display:flex; flex-direction:column; gap:1rem; }
+  .bul li{ position:relative; padding-left:2rem; font-size:clamp(1.05rem,1.7vw,1.4rem); color:rgba(61,15,46,.86); max-width:46ch; }
+  .bul li::before{ content:"✦"; position:absolute; left:0; top:.05em; color:var(--accent); font-size:.95em; }
+  .bul li strong{ color:var(--ink); }
+  .bul li .hot{ color:var(--accent); font-weight:600; }
+
+  /* facing stats */
+  .face{ display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-top:.6rem; }
+  .face .box{ background:var(--paper); border-radius:24px; padding:1.6rem; box-shadow:var(--shadow-sm); }
+  .face .box .big{ font-family:'Caprasimo',serif; font-size:clamp(2.4rem,5vw,3.6rem); color:var(--accent); line-height:1; }
+  .face .box p{ margin-top:.5rem; font-size:1.05rem; color:rgba(61,15,46,.78); }
+
+  /* card grids */
+  .grid{ display:grid; gap:1rem; margin-top:1.5rem; }
+  .g2{ grid-template-columns:1fr 1fr; } .g3{ grid-template-columns:repeat(3,1fr); }
+  .card{ background:var(--paper); border-radius:22px; padding:1.3rem 1.4rem; box-shadow:var(--shadow-sm); border:1px solid rgba(61,15,46,.05); }
+  .card .n{ font-family:'Caprasimo',serif; color:var(--accent); font-size:1.4rem; line-height:1; }
+  .card h3{ font-family:'Caprasimo',serif; font-weight:400; text-transform:lowercase; font-size:1.22rem; margin:.45rem 0 .35rem; }
+  .card p{ font-size:.98rem; color:rgba(61,15,46,.74); }
+
+  /* loop flow */
+  .flow{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.5rem; }
+  .flow .step{ background:var(--paper); border:1.5px solid rgba(224,33,138,.3); border-radius:999px; padding:.55rem 1.05rem; font-weight:600; font-size:1rem; box-shadow:var(--shadow-sm); }
+  .flow .step.key{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .flow .arrow{ color:var(--accent); font-weight:700; }
+
+  .callout{ margin-top:1.6rem; background:var(--ink); color:var(--base); border-radius:22px; padding:1.2rem 1.5rem; box-shadow:var(--shadow); }
+  .callout .display{ color:#fff; font-size:1.45rem; }
+  .callout .pink-text{ color:var(--blush); }
+  .callout p{ color:rgba(250,244,236,.82); margin-top:.3rem; font-size:1rem; }
+
+  .hl{ color:var(--accent); font-weight:600; }
+
+  /* big stat row */
+  .statbig{ font-family:'Caprasimo',serif; color:var(--accent); font-size:clamp(2.6rem,7vw,5rem); line-height:.9; }
+  .arrow-up{ color:var(--sage); }
+
+  .spark{ position:absolute; color:var(--accent); opacity:.45; z-index:1; }
+
+  /* money / dark slides */
+  .ask-slide{ background:linear-gradient(160deg,var(--ink) 0%,#5a1340 100%); color:var(--base); }
+  .ask-slide h1,.ask-slide .display{ color:#fff; } .ask-slide .kicker{ color:var(--blush); }
+  .ask-slide .lead{ color:rgba(250,244,236,.88); } .ask-slide strong{ color:#fff; }
+  .ask-slide .bul li{ color:rgba(250,244,236,.9); } .ask-slide .bul li strong{ color:#fff; }
+  .ask-slide .bul li::before{ color:var(--blush); }
+  .ask-slide .big{ font-family:'Caprasimo',serif; text-transform:lowercase; font-size:clamp(2.2rem,5vw,4rem); color:var(--blush); margin:.5rem 0 1rem; line-height:1; }
+  .ask-slide a{ color:var(--blush); text-decoration:none; }
+  .ask-slide .card{ background:rgba(255,255,255,.06); border:1px solid rgba(255,178,209,.25); }
+  .ask-slide .card h3{ color:#fff; } .ask-slide .card p{ color:rgba(250,244,236,.82); } .ask-slide .card .n{ color:var(--blush); }
+
+  /* cover */
+  .cover{ background:radial-gradient(120% 90% at 85% -10%,var(--pink) 0%,transparent 55%), radial-gradient(90% 80% at -10% 110%,var(--blush) 0%,transparent 50%), var(--base); }
+  .cover .tag{ font-size:clamp(1.3rem,3vw,2.3rem); color:var(--accent); font-family:'Caprasimo',serif; text-transform:lowercase; margin-bottom:1.3rem; }
+  .ask-pill{ display:inline-block; background:var(--accent); color:#fff; font-family:'Caprasimo',serif; text-transform:lowercase; font-size:clamp(1.1rem,2.2vw,1.7rem); padding:.7rem 1.5rem; border-radius:16px; box-shadow:var(--shadow); transform:rotate(-1.5deg); }
+
+  .hint{ position:fixed; bottom:16px; right:18px; z-index:50; background:var(--ink); color:var(--base); font-size:.76rem; font-weight:500; padding:.42rem .8rem; border-radius:999px; opacity:.5; }
+
+  @media print{
+    @page{ size:1280px 800px; margin:0; }
+    html,body{ scroll-snap-type:none; }
+    .slide{ min-height:800px; height:800px; width:1280px; page-break-after:always; break-after:page; padding:60px 80px; }
+    .reveal{ opacity:1 !important; transform:none !important; }
+    .hint, body::after, .wm{ display:none; }
+  }
+  @media screen and (max-width:760px){ .g2,.g3,.face{ grid-template-columns:1fr; } .slide{ padding:8vh 7vw; } }
+</style>
+</head>
+<body>
+
+<!-- 1 · PROBLEM + THE FLIP -->
+<section class="slide cover">
+  <span class="spark" style="top:13%;left:11%;font-size:1.4rem;">✦</span>
+  <span class="spark" style="top:20%;right:14%;font-size:1rem;">✧</span>
+  <span class="spark" style="bottom:17%;left:17%;font-size:1.1rem;">✦</span>
+  <span class="num-tag">01</span>
+  <div class="slide-inner">
+    <span class="kicker reveal">the problem</span>
+    <h1 class="reveal">swipe on the date,<br/>not the face.</h1>
+    <ul class="bul">
+      <li class="reveal">dating apps are winner-take-all. <span class="hot">top 10% of men get 58% of likes. bottom 50% get 4.3%.</span></li>
+      <li class="reveal"><strong>78% of users are burned out.</strong> tinder users down 9% YoY. bumble revenue down 7.7%.</li>
+      <li class="reveal">after5 flips it. swipe a real planned night. match on the experience. identity reveals as it deepens.</li>
+      <li class="reveal"><strong>every match arrives with a real date already attached.</strong></li>
+    </ul>
+    <p class="src reveal">Hinge analysis 2017–18 · Forbes Health 2024 · Match Group &amp; Bumble (SEC) 2024–25.</p>
+  </div>
+  <div class="wm"></div>
+</section>
+
+<!-- 2 · PRODUCT + MOAT -->
+<section class="slide" style="background:radial-gradient(80% 80% at 88% 12%,var(--pink) 0%,transparent 58%),var(--base);">
+  <span class="num-tag">02</span>
+  <div class="slide-inner">
+    <span class="kicker reveal">the product &amp; the moat</span>
+    <h1 class="reveal">built. live. defensible.</h1>
+    <div class="reveal" style="margin:.2rem 0 .4rem;"><span class="chip live">live today · web app</span></div>
+    <ul class="bul">
+      <li class="reveal">an <strong>ai date engine</strong> generates real, bookable nights. real venues, timing, photos. <span class="hot">hallucination-proof.</span></li>
+      <li class="reveal">the engine is the moat <strong>and</strong> licensable beyond dating. tourism, hotels. a wyndham board member is reviewing it.</li>
+      <li class="reveal"><strong>founder-led distribution.</strong> 500K followers across 4 social accounts. a viral-content track record means cheap user acquisition.</li>
+    </ul>
+    <div class="callout reveal"><div class="display">the model writes the vibe. <span class="pink-text">it never invents a place.</span></div></div>
+  </div>
+  <div class="wm"></div>
+</section>
+
+<!-- 3 · BUSINESS + ASK -->
+<section class="slide ask-slide">
+  <span class="num-tag">03</span>
+  <div class="slide-inner">
+    <span class="kicker reveal">the business &amp; the ask</span>
+    <h1 class="reveal">$500K CAD for 10%.</h1>
+    <div class="big reveal">$5M post-money</div>
+    <div class="grid g3 reveal">
+      <div class="card"><div class="n">01</div><h3>after5 pro</h3><p>$19.99 / month subscription.</p></div>
+      <div class="card"><div class="n">02</div><h3>venue marketplace</h3><p>self-serve placement plus booking take-rate.</p></div>
+      <div class="card"><div class="n">03</div><h3>engine licensing</h3><p>tourism and hotels. the upside lever.</p></div>
+    </div>
+    <ul class="bul">
+      <li class="reveal">the doordash playbook. <strong>three revenue lines</strong> fund the company.</li>
+      <li class="reveal">market: online dating <span style="color:#fff;font-weight:600;">~$9B today</span> <span class="arrow-up">→</span> <span style="color:var(--blush);font-weight:600;">~$14.4B by 2030.</span></li>
+      <li class="reveal"><strong>$500K</strong> buys founder full-time, 1 engineer, marketing, incorporation. <strong>12–18 months runway</strong> to close the loop and prove the model.</li>
+    </ul>
+    <p class="src reveal">Grand View Research, 2024.</p>
+  </div>
+</section>
+
+<div class="hint">← → or scroll · press P to print</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let idx = 0;
+  function go(n){ idx=Math.max(0,Math.min(slides.length-1,n)); slides[idx].scrollIntoView({behavior:'smooth'}); }
+  document.addEventListener('keydown',(e)=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){ e.preventDefault(); go(idx+1); }
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); go(idx-1); }
+    else if(e.key==='Home'){ go(0); } else if(e.key==='End'){ go(slides.length-1); }
+    else if(e.key.toLowerCase()==='p'){ window.print(); }
+  });
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); idx=slides.indexOf(en.target); } });
+  },{ threshold:0.45 });
+  slides.forEach(s=>obs.observe(s));
+  window.addEventListener('load',()=>slides[0].classList.add('in'));
+</script>
+</body>
+</html>
