@@ -27,8 +27,9 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 2 of 7 (Loop Closure & Host Controls) — COMPLETE ✓ (verified passed 5/5)
 Plan: 02-01..02-06 all complete (E5–E9; migrations LOCAL-applied, prod GATED)
-Status: Phases 1+2 done. Ready to plan/execute Phase 3. Migrations local-only — prod apply gated.
-Last activity: 2026-06-04 — 02-06 (host cancel/edit UI + api-client wrappers) executed; RTL+jest-axe (7) + api-client (12) + typecheck GREEN local-only, no prod apply. Live visual-verify deferred to orchestrator forced-local pass.
+Status: Phases 1+2 done. Phase 3 in progress. Migrations local-only — prod apply gated.
+Last activity: 2026-06-03 — 03-06 (E14 offer-delivery chain AUDIT) Task 1 executed (commit bcb55bd): notify-offered route unit test added (6 green); chain audited — in-app offer_received is TRANSACTIONAL inside match_make_offer (the guarantee) + deep-links /offers/[offerId] via notif-map (no change needed); email is server-runtime (runtime=nodejs) best-effort + ownership-gated. notify-offered test + `pnpm -w typecheck` GREEN. No DB touched. Task 2 = BLOCKING human-verify checkpoint (RESEND_API_KEY in Vercel server runtime — DEFERRED to gated prod deploy; in-app guarantee covers email failure).
+Prior: 2026-06-04 — 02-06 (host cancel/edit UI + api-client wrappers) executed; RTL+jest-axe (7) + api-client (12) + typecheck GREEN local-only.
 
 Progress: [██░░░░░░░░] 16% (Phase 2: 6/6 plans this wave-set complete; prod apply gated/batched; 02-06 live visual-verify pending orchestrator)
 
