@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Navigation & Profile Spine | 0/4 | Not started | - |
+| 1. Navigation & Profile Spine | 1/4 | In progress | - |
 | 2. Loop Closure & Host Controls | 0/TBD | Not started | - |
 | 3. Marketplace Completeness | 0/TBD | Not started | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |
