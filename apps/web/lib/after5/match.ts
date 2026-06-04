@@ -17,6 +17,7 @@ export type MatchErrorName =
   | 'offer_already_active' | 'time_conflict' | 'chat_not_ready'
   | 'offer_expired' | 'reciprocal_pending' | 'reciprocal_stale'
   | 'chat_not_party' | 'chat_closed' | 'cannot_report'
+  | 'cannot_reject_active_offer'
   | 'server_error' | 'bad_request';
 
 // Raw PG errcodes, carried in `errcode` for debugging/telemetry.
@@ -59,6 +60,7 @@ const MESSAGES: Record<MatchErrorName, string> = {
   chat_not_party: "this conversation isn't yours.",
   chat_closed: 'this chat is closed.',
   cannot_report: "you can't report that message.",
+  cannot_reject_active_offer: 'pull the offer first.',
   server_error: "that didn't go through. try again?",
   bad_request: "that didn't go through. try again?",
 };
@@ -87,6 +89,13 @@ function idemKey(): string {
 
 export function shortlist(instance: string, candidate: string, rank: number): Promise<null> {
   return call<null>('match-shortlist', { instance, candidate, rank });
+}
+
+// E12 host decline (D-04). Routes through the match-reject-candidate edge fn,
+// which calls the silent reject_candidate RPC. The rejected candidate is never
+// notified; this just sets their queue_entry to passed_by_host.
+export function rejectCandidate(instance: string, candidate: string): Promise<null> {
+  return call<null>('match-reject-candidate', { instance, candidate });
 }
 
 // Returns the discriminated jsonb: caller branches on result.kind.

@@ -3573,6 +3573,10 @@ export type Database = {
         Args: { p_platform: string; p_token: string; p_web_push?: Json }
         Returns: string
       }
+      reject_candidate: {
+        Args: { p_actor: string; p_candidate: string; p_instance: string }
+        Returns: undefined
+      }
       report_message: {
         Args: { p_actor: string; p_message: string; p_reason: string }
         Returns: Json
