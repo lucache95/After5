@@ -126,7 +126,11 @@
     .reveal{ opacity:1 !important; transform:none !important; }
     .hint, body::after, .wm{ display:none; }
   }
-  @media screen and (max-width:760px){ .g2,.g3,.face{ grid-template-columns:1fr; } .slide{ padding:8vh 7vw; } }
+  @media screen and (max-width:760px){
+    html{ scroll-snap-type:none; }
+    .slide{ min-height:auto; height:auto; overflow:visible; scroll-snap-align:none; padding:9vh 7vw; }
+    .g2,.g3,.face{ grid-template-columns:1fr; }
+  }
 </style>
 </head>
 <body>

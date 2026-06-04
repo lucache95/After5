@@ -147,7 +147,14 @@
     .bar .col, .slide:not(.in) .bar .col{ height:var(--h) !important; }
     .hint, body::after, .wm{ display:none; }
   }
-  @media screen and (max-width:760px){ .g2,.g3,.g4,.face{ grid-template-columns:1fr; } .slide{ padding:8vh 7vw; } }
+  @media screen and (max-width:760px){
+    /* phones/grids overflow a locked 100vh on a narrow screen — let slides grow and
+       scroll naturally instead of clipping. */
+    html{ scroll-snap-type:none; }
+    .slide{ min-height:auto; height:auto; overflow:visible; scroll-snap-align:none; padding:9vh 7vw; }
+    .g2,.g3,.g4,.face{ grid-template-columns:1fr; }
+    .bars{ height:240px; }
+  }
 </style>
 </head>
 <body>
@@ -256,25 +263,25 @@
     <span class="kicker reveal">the product</span>
     <h1 class="reveal">this is the app. <span style="color:var(--accent);">live today.</span></h1>
     <div class="reveal" style="display:flex;gap:1.1rem;justify-content:center;align-items:flex-start;margin-top:1.6rem;flex-wrap:wrap;">
-      <figure style="margin:0;width:198px;">
+      <figure style="margin:0;width:clamp(150px,22%,198px);">
         <div style="border-radius:26px;overflow:hidden;background:#1c1c1c;padding:7px;box-shadow:var(--shadow);">
           <img src="/pitch/shots/01-feed.png" alt="swipe feed" style="display:block;width:100%;border-radius:20px;" />
         </div>
         <figcaption style="text-align:center;margin-top:.6rem;font-weight:600;font-size:.92rem;color:rgba(61,15,46,.68);">browse real nights</figcaption>
       </figure>
-      <figure style="margin:0;width:198px;">
+      <figure style="margin:0;width:clamp(150px,22%,198px);">
         <div style="border-radius:26px;overflow:hidden;background:#1c1c1c;padding:7px;box-shadow:var(--shadow);">
           <img src="/pitch/shots/02-detail.png" alt="the full plan" style="display:block;width:100%;border-radius:20px;" />
         </div>
         <figcaption style="text-align:center;margin-top:.6rem;font-weight:600;font-size:.92rem;color:rgba(61,15,46,.68);">the full plan, no face</figcaption>
       </figure>
-      <figure style="margin:0;width:198px;">
+      <figure style="margin:0;width:clamp(150px,22%,198px);">
         <div style="border-radius:26px;overflow:hidden;background:#1c1c1c;padding:7px;box-shadow:var(--shadow);">
           <img src="/pitch/shots/04-match.png" alt="it's a match" style="display:block;width:100%;border-radius:20px;" />
         </div>
         <figcaption style="text-align:center;margin-top:.6rem;font-weight:600;font-size:.92rem;color:rgba(61,15,46,.68);">it's a match</figcaption>
       </figure>
-      <figure style="margin:0;width:198px;">
+      <figure style="margin:0;width:clamp(150px,22%,198px);">
         <div style="border-radius:26px;overflow:hidden;background:#1c1c1c;padding:7px;box-shadow:var(--shadow);">
           <img src="/pitch/shots/03-chat.png" alt="plan it together" style="display:block;width:100%;border-radius:20px;" />
         </div>
