@@ -61,7 +61,14 @@ Plans:
   3. A host can edit a posted night's time, venue, duration, and ambient sound.
   4. A right-swipe dispatches an `interest_received` notification to the host, deep-linked to that night's interested list.
   5. No enqueueable job handler references a missing RPC; the job queue cannot poison-loop (sequenced before E5 schedules new jobs).
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 02-01-PLAN.md — Remove the 6 dead job handlers + lockstep test prune (poison-loop cleanup, sequenced first) (REQ-E9)
+- [ ] 02-02-PLAN.md — Additive enum migration (date_match_status 'expired' + notification_type night_cancelled/night_changed) + local apply gate (REQ-E5, REQ-E6, REQ-E7)
+- [ ] 02-03-PLAN.md — E5 loop terminus: sweep_loop_terminus + flag_no_show RPCs + close-loop cron route (REQ-E5)
+- [ ] 02-04-PLAN.md — E6/E7 cancel_night + update_night DEFINER RPCs with candidate notifications (REQ-E6, REQ-E7)
+- [ ] 02-05-PLAN.md — E8 interest_received dispatch from match_ingest_interest + notif-map deep-link/meta (REQ-E8)
+- [ ] 02-06-PLAN.md — Host cancel/edit UI on /my-nights + api-client wrappers (visual-verified) (REQ-E6, REQ-E7)
 **UI hint**: yes
 
 ### Phase 3: Marketplace Completeness (P1)
@@ -136,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
-| 2. Loop Closure & Host Controls | 0/TBD | Not started | - |
+| 2. Loop Closure & Host Controls | 0/6 | Not started | - |
 | 3. Marketplace Completeness | 0/TBD | Not started | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |
 | 5. Progressive Reveal | 0/TBD | Not started | - |
