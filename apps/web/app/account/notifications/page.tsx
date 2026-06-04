@@ -22,7 +22,7 @@ export default async function NotificationPreferencesPage() {
 
   return (
     <>
-      <DeepRouteHeader backHref="/account" backLabel="back to your account" />
+      <DeepRouteHeader title="notifications" backHref="/account" backLabel="back to your account" />
       {/* deep route: pb-20 (no bottom-nav clearance), per UI-SPEC §Spacing */}
       <main className="mx-auto w-full max-w-[420px] px-6 pb-20 pt-8">
         <h1 className="font-heading text-3xl lowercase text-shell-ink">notifications</h1>
