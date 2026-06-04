@@ -46,6 +46,9 @@ Progress: [██░░░░░░░░] 16% (Phase 2: 6/6 plans this wave-set
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 02 | 5 | ~43m | ~8.6m |
+| 03 | (in progress) | — | — |
+
+**03 plan log:** 03-04 PlanTimeline extraction — ~25m, 3 files, commit 74f88db (Wave 1).
 
 **Recent Trend:**
 
@@ -71,6 +74,7 @@ Recent decisions affecting current work:
 - E6 cancel_night = SOFT unpublish (status->'cancelled', row + queue_entries KEPT/reversible), creator-only DEFINER, notifies interested via night_cancelled; pre-match only (non-seeking -> P0001).
 - E7 update_night = creator-only DEFINER, coalesce-edit of starts_at/duration/venue/ambient, NEVER writes GENERATED time_range; dispatches night_changed ONLY on material change (time OR venue), not ambient/duration-only.
 - E8 interest_received = match_ingest_interest CREATE OR REPLACE (body verbatim) dispatches to host ONLY on n>0 (new candidate enqueued), deep-link /dates/[instance]/interested via payload.date_instance_id; coarse per-instance dedup_key ('interest_received:'||instance) throttles email/push while grouped in-app row still surfaces; grants unchanged (revoked public+authenticated). notif-map already had the deep-link (folded in 02-02).
+- E13/03-04 PlanTimeline (apps/web/components/PlanTimeline.tsx) = StopRow+StopTime extracted VERBATIM from feed/NightDetailSheet; accepts ALREADY-NORMALIZED NightDetailStop[] and does NOT re-normalize (re-running normalizeNightDetailStops on a NightDetailStop is lossy — reads source keys estimated_cost_pp/place_name). Callers reading raw itineraries.stops normalize first (03-05 loaders). Blind-safe: name-query map link, NO /places/[slug] StopCard.
 
 ### Pending Todos
 

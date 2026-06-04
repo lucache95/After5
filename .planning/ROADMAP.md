@@ -101,7 +101,7 @@ Plans:
 - [ ] 03-01-PLAN.md — Foundation migrations: targeting cols + passed_by_host enum + extend post_night/update_itinerary_stops (LOCAL apply gate) (REQ-E11, REQ-E12)
 - [ ] 03-02-PLAN.md — reject_candidate DEFINER RPC (silent decline) + edge fn + client wrapper (REQ-E12)
 - [ ] 03-03-PLAN.md — E11 creator controls: PostNightForm fields + cover uploader + Door-2 publish CTA (REQ-E11)
-- [ ] 03-04-PLAN.md — Extract shared PlanTimeline from NightDetailSheet (REQ-E13)
+- [x] 03-04-PLAN.md — Extract shared PlanTimeline from NightDetailSheet (REQ-E13)
 - [ ] 03-05-PLAN.md — Render the plan on OfferDetail + LockDetail via RLS read; drop host.bio (REQ-E13)
 - [ ] 03-06-PLAN.md — E14 offer-delivery audit + deep-link guarantee + RESEND verify (REQ-E14)
 - [ ] 03-07-PLAN.md — E12 InterestedList decline + withdraw + outcome pills (REQ-E12)
