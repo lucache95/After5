@@ -95,7 +95,17 @@ Plans:
   3. Both `/matches/[lockId]` and `/offers/[offerId]` render the matched night's stops/venues — "every match has a real plan attached" holds at the payoff moment.
   4. Every sent offer reaches the candidate via a reliable server-runtime email and/or a guaranteed in-app notification.
 
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+
+- [ ] 03-01-PLAN.md — Foundation migrations: targeting cols + passed_by_host enum + extend post_night/update_itinerary_stops (LOCAL apply gate) (REQ-E11, REQ-E12)
+- [ ] 03-02-PLAN.md — reject_candidate DEFINER RPC (silent decline) + edge fn + client wrapper (REQ-E12)
+- [ ] 03-03-PLAN.md — E11 creator controls: PostNightForm fields + cover uploader + Door-2 publish CTA (REQ-E11)
+- [ ] 03-04-PLAN.md — Extract shared PlanTimeline from NightDetailSheet (REQ-E13)
+- [ ] 03-05-PLAN.md — Render the plan on OfferDetail + LockDetail via RLS read; drop host.bio (REQ-E13)
+- [ ] 03-06-PLAN.md — E14 offer-delivery audit + deep-link guarantee + RESEND verify (REQ-E14)
+- [ ] 03-07-PLAN.md — E12 InterestedList decline + withdraw + outcome pills (REQ-E12)
+
 **UI hint**: yes
 **Verify-note**: Before building E11 creator controls, RE-CHECK Door 2 + `create_blank_itinerary` (migration 20260603120100) + typed-city against PROD — these work on prod (the live-verify "dead-end" was a LOCAL-only artifact). Do NOT rebuild the blank-itinerary RPC; the canvas-CTA / creator-control work remains in scope. Reconcile §2A canvas work with the open-city `CreateFlow.tsx` scaffold AFTER the fleet lands — do not double-edit concurrently.
 
@@ -170,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Navigation & Profile Spine | 4/4 | Complete | 2026-06-03 |
 | 2. Loop Closure & Host Controls | 6/6 | Complete | 2026-06-03 |
-| 3. Marketplace Completeness | 0/TBD | Not started | - |
+| 3. Marketplace Completeness | 0/7 | In progress | - |
 | 4. Feed Filters & Targeting | 0/TBD | Not started | - |
 | 5. Progressive Reveal | 0/TBD | Not started | - |
 | 6. Trust & Safety | 0/TBD | Not started | - |
