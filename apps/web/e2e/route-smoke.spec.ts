@@ -1,6 +1,13 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test';
 import { loginAs } from './_helpers/auth';
-import { seedTwoUsersAndNight, cleanup, type SeedResult } from './_helpers/seed';
+import {
+  seedTwoUsersAndNight,
+  seedChatThread,
+  cleanup,
+  cleanupChat,
+  type SeedResult,
+  type ChatSeedResult,
+} from './_helpers/seed';
 
 // route-smoke — traverse the full reachable route list and assert each route
 //   (1) loads (no HTTP 4xx/5xx on the document, no redirect to /login when authed),
@@ -282,6 +289,138 @@ test.describe('route-smoke · authed routes', () => {
         expect(brand.fontDisplayClass, `${path} legacy font-display class`).toBe(0);
       }
       expect(errors, `onboarding console errors:\n${errors.join('\n')}`).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// E1 / REQ-E1 — deep-route back chrome (DeepRouteHeader, D-07-nav / D-08).
+// Every deep route AND every link-less guard/error terminal must expose a
+// DETERMINISTIC back affordance: a real <a href> (static <Link>), NOT a
+// history.back()-style JS-only button (a cold-entered deep route has an empty
+// history stack, so a blind pop would exit the app). We assert, on each route:
+//   (1) a back control with the DeepRouteHeader aria-label ('back to …') exists,
+//   (2) it is an <A> element carrying an href (static Link, not a button),
+//   (3) the href resolves to its documented parent route,
+//   (4) it is keyboard/clickable (visible) — no link-less dead-end remains.
+// Reuses the existing PKCE auth + seedChatThread fixtures; introduces no new
+// auth recipe and stays within the existing Playwright config.
+// ---------------------------------------------------------------------------
+
+// Assert the deep route at `path` exposes a DeepRouteHeader back control that is
+// a static <a href> resolving to `expectedParent`, and that no JS-only
+// history-back control stands in for it.
+async function assertDeepRouteBackAffordance(
+  page: Page,
+  path: string,
+  opts: { backLabel: string; expectedParent: string },
+): Promise<void> {
+  const errors = watchConsole(page);
+  const res = await page.goto(path, { waitUntil: 'networkidle' });
+
+  // The route must render (party happy-path) OR render its guard <main> (non-party);
+  // either way it is a matched route, never a 4xx document or a /login bounce.
+  const status = res?.status() ?? 0;
+  expect(status, `${path} → HTTP ${status}`).toBeLessThan(400);
+  const landed = new URL(page.url()).pathname;
+  expect(landed, `${path} unexpectedly bounced to ${landed} (auth/session lost?)`).not.toMatch(/^\/login/);
+
+  // (1) the back control exists, labelled by DeepRouteHeader's aria-label.
+  const back = page.getByRole('link', { name: opts.backLabel });
+  await expect(back, `${path} has no '${opts.backLabel}' back affordance (link-less terminal?)`).toBeVisible();
+
+  // (2) it is a real anchor (static Link), NOT a JS-only button.
+  const tag = await back.evaluate((el) => el.tagName.toLowerCase());
+  expect(tag, `${path} back control is <${tag}>, expected a static <a> (D-08, no history.back())`).toBe('a');
+
+  // (3) the href resolves to the documented parent route.
+  const href = await back.getAttribute('href');
+  expect(href, `${path} back href is "${href}", expected "${opts.expectedParent}"`).toBe(opts.expectedParent);
+
+  // (4) clicking it actually navigates to the parent (deterministic, no app-exit).
+  await back.click();
+  await page.waitForURL((url) => url.pathname === opts.expectedParent, { timeout: 15_000 });
+  expect(new URL(page.url()).pathname, `${path} back did not reach ${opts.expectedParent}`).toBe(opts.expectedParent);
+
+  expect(errors, `${path} console errors:\n${errors.join('\n')}`).toEqual([]);
+}
+
+test.describe('route-smoke · E1 deep-route back chrome (REQ-E1)', () => {
+  let seed: ChatSeedResult;
+
+  test.beforeAll(async () => {
+    // offerId + threadId (candidate is a party) + instanceId (host is creator) +
+    // an outsider (non-party) to trigger the "not your offer" guard terminal.
+    seed = await seedChatThread();
+  });
+  test.afterAll(async () => {
+    if (seed) await cleanupChat(seed);
+  });
+
+  test('every deep route (party happy-path) exposes a static back link to its parent', async ({ browser }) => {
+    // Candidate is the offer recipient + a chat party → offers/messages/inbox render.
+    const candContext = await browser.newContext();
+    const candPage = await loginAs(candContext, seed.candEmail);
+    try {
+      await assertDeepRouteBackAffordance(candPage, `/offers/${seed.offerId}`, {
+        backLabel: 'back to inbox',
+        expectedParent: '/inbox',
+      });
+      await assertDeepRouteBackAffordance(candPage, `/messages/${seed.threadId}`, {
+        backLabel: 'back to inbox',
+        expectedParent: '/inbox',
+      });
+      // The /inbox/[threadId] re-export must inherit the SAME header (not forked).
+      await assertDeepRouteBackAffordance(candPage, `/inbox/${seed.threadId}`, {
+        backLabel: 'back to inbox',
+        expectedParent: '/inbox',
+      });
+    } finally {
+      await candContext.close();
+    }
+
+    // Host is the night's creator → the interested list renders.
+    const hostContext = await browser.newContext();
+    const hostPage = await loginAs(hostContext, seed.hostEmail);
+    try {
+      await assertDeepRouteBackAffordance(hostPage, `/dates/${seed.instanceId}/interested`, {
+        backLabel: 'back to your nights',
+        expectedParent: '/my-nights',
+      });
+    } finally {
+      await hostContext.close();
+    }
+  });
+
+  test('the deep-route GUARD terminal ("not your offer") also exposes the back link', async ({ browser }) => {
+    // The outsider is NOT a party to this offer → the "not your offer" guard <main>
+    // renders. Before E1 this was a link-less dead-end (audit C-class); now it must
+    // carry the same DeepRouteHeader back affordance so the user is never trapped.
+    const context = await browser.newContext();
+    const page = await loginAs(context, seed.outsiderEmail);
+    try {
+      await page.goto(`/offers/${seed.offerId}`, { waitUntil: 'networkidle' });
+      // confirm we are on the guard terminal, not the happy path.
+      await expect(page.getByText(/not your offer/i)).toBeVisible();
+      await assertDeepRouteBackAffordance(page, `/offers/${seed.offerId}`, {
+        backLabel: 'back to inbox',
+        expectedParent: '/inbox',
+      });
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('the account/notifications deep route exposes a static back link to /account', async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await loginAs(context, seed.candEmail);
+    try {
+      await assertDeepRouteBackAffordance(page, '/account/notifications', {
+        backLabel: 'back to your account',
+        expectedParent: '/account',
+      });
     } finally {
       await context.close();
     }
