@@ -364,7 +364,9 @@ router.push(`/nights/new?itinerary=${itineraryId}`);
 | A5 | E13 can use the existing RLS read (no new RPC) because `itineraries_readable_by_id` is `USING(true)` | E13 | VERIFIED by reading the policy. Risk only if a future migration tightens that policy before this ships. |
 | A6 | `reach_preview` is a "cheap" query is UNKNOWN until the targeting data layer (Phase 4) exists; per D-01 default to DEFERRING reach preview to Phase 4 | E11 | If deferred wrongly, hosts lose a nice-to-have nudge. D-01 explicitly allows deferral. Recommend defer. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All resolved in 03-CONTEXT before planning: Q1 (E12 decline) → D-09 `passed_by_host` + silent removal; Q2 (reach preview) → D-11 defer to Phase 4; Q3 (RESEND/VAPID) → D-13 execution-time verify. Plans implement these.
 
 1. **D-02 per-stop regenerate seam — does `generate-plan` support single-slot regenerate?**
    - What we know: `generate-plan/index.ts` `InputSchema` (verified) is a FULL-plan generator (occasion/duration/vibe/budget/radius/...). NO `stop_index`/`replace`/`single-slot` field exists. No `regenerate` code path found.
