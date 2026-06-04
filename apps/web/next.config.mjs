@@ -24,6 +24,13 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+  async rewrites() {
+    return [
+      // Investor pitch deck — static HTML in public/pitch/. Rewrite keeps the
+      // clean /pitch URL while serving the file (Next doesn't auto-index dirs).
+      { source: '/pitch', destination: '/pitch/index.html' },
+    ];
+  },
   async redirects() {
     return [
       // Retire the legacy date-PLANNER routes (old brand: serif After5,
