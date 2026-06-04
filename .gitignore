@@ -60,3 +60,6 @@ docs/superpowers/reports/prod-full-walkthrough-*/summary.json
 
 # Visual-verify screenshots (regenerable via route-*-visual specs)
 apps/web/e2e/__screenshots__/
+
+# scratch / generated assets (live in storage buckets, not git)
+tmp/
