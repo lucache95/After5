@@ -4,12 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 const postNight = vi.fn().mockResolvedValue('inst-1');
+const reachPreview = vi.fn().mockResolvedValue(42);
 const mockPush = vi.fn();
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/lib/after5/client', () => ({
   browserAfter5Client: () => ({}),
   postNight: (...a: unknown[]) => postNight(...a),
+  reachPreview: (...a: unknown[]) => reachPreview(...a),
   ambientSoundUrl: (p: string | null) => (p ? `https://x/${p}` : null),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -59,6 +61,8 @@ function futureLocal(): string {
 
 beforeEach(() => {
   postNight.mockClear();
+  reachPreview.mockClear();
+  reachPreview.mockResolvedValue(42);
   mockPush.mockClear();
   HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
   HTMLMediaElement.prototype.pause = vi.fn();
@@ -186,5 +190,52 @@ describe('PostNightForm creator controls (E11)', () => {
   it('has no a11y violations with the creator controls', async () => {
     const { container } = render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('PostNightForm reach line (E10 / D-01)', () => {
+  const CITY = '11111111-1111-1111-1111-111111111111';
+
+  it('shows the loading copy then the live count, and announces it politely', async () => {
+    render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} primaryCityId={CITY} cityName="austin" />);
+    // adjust targeting to trigger the debounced reach call
+    await userEvent.type(screen.getByLabelText(/how far/i), '25');
+    // the count resolves into the polite live region
+    const line = await screen.findByText(/42 people match this in austin/i, {}, { timeout: 2000 });
+    expect(line).toHaveAttribute('aria-live', 'polite');
+    expect(reachPreview).toHaveBeenCalled();
+  });
+
+  it('normalizes the open case: everyone is sent as omitted/empty target_genders, not the literal everyone', async () => {
+    render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} primaryCityId={CITY} cityName="austin" />);
+    await userEvent.type(screen.getByLabelText(/how far/i), '10');
+    await screen.findByText(/match this in austin/i, {}, { timeout: 2000 });
+    const arg = reachPreview.mock.calls.at(-1)![1] as Record<string, unknown>;
+    const genders = (arg.target_genders ?? []) as string[];
+    expect(genders).not.toContain('everyone');
+    expect(genders.length).toBe(0);
+    expect(arg.city).toBe(CITY);
+  });
+
+  it('frames a zero count positively and never disables the publish CTA', async () => {
+    reachPreview.mockResolvedValue(0);
+    render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} primaryCityId={CITY} cityName="austin" />);
+    await userEvent.type(screen.getByLabelText(/how far/i), '1');
+    const zero = await screen.findByText(/no one fits this yet in austin/i, {}, { timeout: 2000 });
+    expect(zero.textContent ?? '').toMatch(/loosen the targeting/i);
+    // the publish CTA is governed by plan+time only, never the count
+    expect(screen.getByRole('button', { name: /post it/i })).toBeDisabled(); // no plan/time yet, but NOT because of the count
+  });
+
+  it('reach line contains no em-dash (stop-slop)', async () => {
+    reachPreview.mockResolvedValue(3);
+    const { container } = render(
+      <PostNightForm plans={[plan('a')]} ambientSounds={sounds} primaryCityId={CITY} cityName="austin" />,
+    );
+    await userEvent.type(screen.getByLabelText(/how far/i), '5');
+    const live = await screen.findByText(/match this in austin/i, {}, { timeout: 2000 });
+    expect(live.textContent ?? '').not.toMatch(/—/); // em-dash
+    // belt-and-suspenders: the live region's own text carries no em-dash
+    expect((container.querySelector('[aria-live="polite"]')?.textContent ?? '')).not.toMatch(/—/);
   });
 });

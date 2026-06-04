@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Sparkles, Pause, Play } from 'lucide-react';
 import {
-  browserAfter5Client, postNight, updateItineraryStops, ambientSoundUrl, type AmbientSound,
+  browserAfter5Client, postNight, reachPreview, updateItineraryStops, ambientSoundUrl, type AmbientSound,
 } from '@/lib/after5/client';
 import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
@@ -49,12 +49,18 @@ export function PostNightForm({
   plans,
   ambientSounds = [],
   itineraryId,
+  primaryCityId = null,
+  cityName = null,
 }: {
   plans: Plan[];
   ambientSounds?: AmbientSound[];
   // E11: when the host arrives from the Door-2 publish CTA (/nights/new?itinerary=)
   // the canvas plan is pre-selected.
   itineraryId?: string;
+  // E10/D-01: the host's home city scopes the reach-preview count. null = unknown
+  // (no city on the profile), in which case the reach line stays quiet.
+  primaryCityId?: string | null;
+  cityName?: string | null;
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(
@@ -71,6 +77,72 @@ export function PostNightForm({
   const [ageMax, setAgeMax] = useState('');
   const [radiusKm, setRadiusKm] = useState('');
   const [whyNote, setWhyNote] = useState('');
+
+  // ── E10/D-01 reach preview ────────────────────────────────────────────────
+  // A quiet, encouraging count of who the current targeting reaches in the host's
+  // city. Debounced as the host edits gender/age/radius. Never gates the publish
+  // CTA (D-01: keep the feed liquid). null reach = idle (nothing computed yet).
+  const [reach, setReach] = useState<number | null>(null);
+  const [reachLoading, setReachLoading] = useState(false);
+
+  useEffect(() => {
+    // No city on the profile → no scope to count against; stay quiet.
+    if (!primaryCityId) return;
+
+    // {everyone} normalization (defense-in-depth; the RPC also normalizes): the
+    // open case must send empty/omitted target_genders so an open night counts
+    // everyone instead of undercounting to ~0 on the literal 'everyone' value.
+    const open = genders.length === 0 || genders.includes('everyone');
+    const targetGenders = open ? [] : genders;
+
+    const min = ageMin.trim() === '' ? null : Number(ageMin);
+    const max = ageMax.trim() === '' ? null : Number(ageMax);
+    const ageRange = min != null || max != null ? `[${min ?? 18},${max ?? 100}]` : undefined;
+    const radius = radiusKm.trim() === '' ? undefined : Number(radiusKm);
+
+    let cancelled = false;
+    setReachLoading(true);
+    const t = setTimeout(() => {
+      void (async () => {
+        try {
+          const n = await reachPreview(browserAfter5Client(), {
+            target_genders: targetGenders,
+            target_age_range: ageRange,
+            city: primaryCityId,
+            radius_km: radius,
+          });
+          if (!cancelled) setReach(n);
+        } catch {
+          // the reach line is a non-essential nudge; a failure leaves it quiet
+          // and never blocks posting.
+          if (!cancelled) setReach(null);
+        } finally {
+          if (!cancelled) setReachLoading(false);
+        }
+      })();
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [genders, ageMin, ageMax, radiusKm, primaryCityId]);
+
+  // The four reach copy states (04-UI-SPEC §Copywriting). Encouraging, never a
+  // warning, no em-dash (stop-slop). A low count is framed positively.
+  const where = cityName?.trim().toLowerCase() || 'your city';
+  let reachLine: string | null = null;
+  if (primaryCityId) {
+    if (reachLoading && reach === null) {
+      reachLine = 'counting who’s around…';
+    } else if (reach === 0) {
+      reachLine = `no one fits this yet in ${where}. loosen the targeting and they’ll show up.`;
+    } else if (reach !== null && reach <= 5) {
+      reachLine = `~${reach} match this in ${where}. a focused crowd, widen anytime.`;
+    } else if (reach !== null) {
+      reachLine = `~${reach} people match this in ${where}`;
+    }
+  }
 
   // who-pays radiogroup roving-tabindex.
   const payRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -493,6 +565,14 @@ export function PostNightForm({
                 className="block w-full rounded-2xl border border-shell-ink/15 bg-white/80 px-4 py-3 font-body text-[15px] tabular-nums text-shell-ink focus:outline-none focus:ring-2 focus:ring-shell-accent/60"
               />
             </label>
+
+            {/* E10/D-01 reach line: a quiet, encouraging count of who this targeting
+                reaches. aria-live so the update is announced without stealing focus
+                (mirrors SwipeDeck's {remaining} left region). NOT accent, NOT a
+                warning color, and it NEVER gates the publish CTA. */}
+            <p className="mt-3 min-h-[1.25rem] font-body text-[13px] lowercase text-shell-ink/65" aria-live="polite">
+              {reachLine}
+            </p>
           </fieldset>
 
           {/* ── the why? (E11) ── */}
