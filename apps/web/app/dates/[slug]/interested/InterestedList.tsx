@@ -373,7 +373,7 @@ export function InterestedList({
               pass on {declineFor?.first_name.toLowerCase()}?
             </Drawer.Title>
             <Drawer.Description className="mt-1 font-body text-sm text-shell-ink/70">
-              they drop off your list. they won&apos;t be told — no awkwardness.
+              they drop off your list. they won&apos;t be told. no awkwardness.
             </Drawer.Description>
             <button
               type="button"
