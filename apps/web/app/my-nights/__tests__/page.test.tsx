@@ -10,7 +10,12 @@ const { redirect, mockClient } = vi.hoisted(() => {
   return { redirect, mockClient };
 });
 
-vi.mock('next/navigation', () => ({ redirect: (p: string) => redirect(p) }));
+// SC3: seeking-night cards now mount NightCardActions (a client leaf) which reads
+// useRouter for its cancel/edit refresh, so the page's transitive tree needs it.
+vi.mock('next/navigation', () => ({
+  redirect: (p: string) => redirect(p),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 vi.mock('@/components/BottomTabShell', () => ({ BottomTabShell: () => <nav data-testid="bottom-nav" /> }));
 // The header bell was retired (#84); the page now mounts the headless toast. Mock
 // it so the page's transitive useRouter import doesn't need the navigation mock.
@@ -21,6 +26,10 @@ vi.mock('next/image', () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} data-testid="cover" />,
 }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => mockClient.current }));
+// SC3: the page also loads the ambient-sound library (and a live-venue list) when a
+// seeking night exists, to feed the host's edit pickers. Stub the api-client call so
+// the page renders; the venue list is handled by the `places` branch in buildClient.
+vi.mock('@after5/api-client', () => ({ listAmbientSounds: async () => [] }));
 
 import Page from '../page';
 
@@ -50,10 +59,13 @@ function buildClient(opts: {
       select: () => ({
         // queue_entries query ends at .eq() and is awaited directly; make the
         // returned object both thenable (for queue) and chainable (for nights).
+        // SC3: the `places` venue-options query chains a second .eq() then
+        // .order().limit() and resolves to {data:[]} — no venues needed in tests.
         eq: (col: string, val: unknown) => {
           eqSpy(col, val);
           const data = table === 'queue_entries' ? queue : nights;
           return {
+            eq: () => ({ order: () => ({ limit: async () => ({ data: [] }) }) }),
             order: () => ({ limit: async () => ({ data: nights }) }),
             then: (resolve: (v: { data: unknown }) => unknown) => resolve({ data }),
           };

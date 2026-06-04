@@ -10,10 +10,18 @@ import { ItineraryEditor } from '../ItineraryEditor';
 const updateItineraryStops = vi.fn().mockResolvedValue('itin-1');
 const insert = vi.fn().mockResolvedValue({ error: null });
 const from = vi.fn(() => ({ insert }));
+// ItineraryEditor now mounts a Door-2 "publish this night" CTA that calls
+// router.push, so the editor reads useRouter at render — stub next/navigation.
+const routerPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: routerPush, refresh: vi.fn() }) }));
 vi.mock('@after5/api-client', () => ({
   updateItineraryStops: (...a: unknown[]) => updateItineraryStops(...a),
 }));
-vi.mock('@/lib/after5/client', () => ({ browserAfter5Client: () => ({ from, auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } }) }));
+// CoverUploader (mounted on the canvas) reaches for storage on upload; stub it so
+// the client mock is complete even though render alone never calls it.
+const storageUpload = vi.fn().mockResolvedValue({ error: null });
+const storage = { from: () => ({ upload: storageUpload, getPublicUrl: () => ({ data: { publicUrl: 'https://x/cover.jpg' } }) }) };
+vi.mock('@/lib/after5/client', () => ({ browserAfter5Client: () => ({ from, storage, auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } }) }));
 vi.mock('framer-motion', () => ({
   Reorder: {
     Group: ({ children }: { children: ReactNode }) => <div>{children}</div>,
