@@ -104,6 +104,18 @@ describe('PreferencesForm — dating toggle (A3: ON→OFF stop new exposure only
     await waitFor(() => expect(datingUpdate).toHaveBeenCalledWith({ dating_enabled: false }));
   });
 
+  it('A3: OFF write is dating_enabled-ONLY — it never touches offers/locks (active offers left intact)', async () => {
+    render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled />);
+    fireEvent.click(screen.getByRole('button', { name: 'pause dating' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pause' }));
+    await waitFor(() => expect(datingUpdate).toHaveBeenCalled());
+    // The single profiles write carries ONLY dating_enabled — no offer/lock cascade.
+    // A seeded active offer/lock is untouched because nothing else is written or invoked.
+    const payload = datingUpdate.mock.calls[0][0] as Record<string, unknown>;
+    expect(Object.keys(payload)).toEqual(['dating_enabled']);
+    expect(payload.dating_enabled).toBe(false);
+  });
+
   it('renders the ON→OFF (turn on) path when dating is OFF', async () => {
     render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'turn dating on' }));
