@@ -31,18 +31,18 @@ BEGIN
   insert into profiles_private(user_id,birthdate) values (viewer,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['man','woman','nonbinary'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   -- both hosts are open to women and within range
   insert into profiles_private(user_id,birthdate) values (man_host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=man_host;
   insert into profiles_private(user_id,birthdate) values (woman_host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=woman_host;
 
   man_itin := mk_itinerary(man_host); woman_itin := mk_itinerary(woman_host);
@@ -78,12 +78,12 @@ BEGIN
   insert into profiles_private(user_id,birthdate) values (viewer,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['man'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   insert into profiles_private(user_id,birthdate) values (host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=host;
 
   cheap_itin := mk_itinerary(host); dear_itin := mk_itinerary(host);
@@ -115,10 +115,18 @@ DECLARE viewer uuid; kel uuid; far uuid; near_host uuid; far_host uuid;
         near_itin uuid; far_itin uuid; near_inst uuid; far_inst uuid; n int;
 BEGIN
   select id into kel from cities where slug='kelowna';
-  -- pick any other city with a centroid that is far from kelowna for the far-night
-  select id into far from cities where slug <> 'kelowna' and centroid is not null
-    order by st_distance(centroid, (select centroid from cities where id=kel)) desc limit 1;
-  IF far IS NULL THEN RAISE EXCEPTION 'E10.3: need a second city with a centroid to test distance'; END IF;
+  -- create a far city about 50km from kelowna (within the 150km baseline gate but beyond
+  -- the 10km hard cap), built by offsetting the kelowna centroid in longitude. This avoids
+  -- depending on a second seeded city (the local stack only seeds kelowna with a centroid).
+  insert into cities (name, slug, timezone, centroid)
+  select 'Far Test City', 'e10-far-' || left(gen_random_uuid()::text,8), timezone,
+         st_setsrid(st_makepoint(st_x(centroid::geometry) + 0.6, st_y(centroid::geometry)), 4326)::geography
+  from cities where id = kel
+  returning id into far;
+  -- sanity: the offset must land between the 10km hard cap and the 150km baseline
+  PERFORM 1 where st_distance((select centroid from cities where id=far),
+                              (select centroid from cities where id=kel)) between 10000 and 150000;
+  IF NOT FOUND THEN RAISE EXCEPTION 'E10.3: far test city is not in the (10km,150km) band'; END IF;
 
   viewer := mk_user('e10_md_viewer');
   near_host := mk_user('e10_md_near');
@@ -128,17 +136,17 @@ BEGIN
   -- viewer's own distance_pref is generous so the BASELINE gate does not hide the far night;
   -- only the new HARD max_distance_km cap should hide it.
   update profiles set gender='woman', gender_preferences=array['man'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=100000, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   insert into profiles_private(user_id,birthdate) values (near_host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=100000, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=near_host;
   insert into profiles_private(user_id,birthdate) values (far_host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=100000, primary_city_id=far,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=far,
     verification='verified', dating_enabled=true where id=far_host;
 
   near_itin := mk_itinerary(near_host); far_itin := mk_itinerary(far_host);
@@ -176,12 +184,12 @@ BEGIN
   insert into profiles_private(user_id,birthdate) values (viewer,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['man'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   insert into profiles_private(user_id,birthdate) values (host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=host;
 
   match_itin := mk_itinerary(host); mismatch_itin := mk_itinerary(host);
@@ -227,12 +235,12 @@ BEGIN
   insert into profiles_private(user_id,birthdate) values (viewer,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['man'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   insert into profiles_private(user_id,birthdate) values (host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=host;
 
   targeted_itin := mk_itinerary(host); untargeted_itin := mk_itinerary(host);
@@ -278,12 +286,12 @@ BEGIN
   insert into profiles_private(user_id,birthdate) values (viewer,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['man'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   insert into profiles_private(user_id,birthdate) values (host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=host;
 
   open_itin := mk_itinerary(host); empty_itin := mk_itinerary(host);
@@ -326,12 +334,12 @@ BEGIN
   insert into profiles_private(user_id,birthdate) values (viewer,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='woman', gender_preferences=array['man'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=viewer;
   insert into profiles_private(user_id,birthdate) values (host,(now()-interval '30 years')::date)
     on conflict(user_id) do update set birthdate=excluded.birthdate;
   update profiles set gender='man', gender_preferences=array['woman'], age=30,
-    age_pref=int4range(18,99), distance_pref_km=500, primary_city_id=kel,
+    age_pref=int4range(18,99), distance_pref_km=150, primary_city_id=kel,
     verification='verified', dating_enabled=true where id=host;
 
   itin := mk_itinerary(host);
@@ -342,27 +350,41 @@ BEGIN
   update date_instances set moderation_status='approved' where creator_id=host;
   update profiles set feed_filters='{}'::jsonb where id=viewer;
 
+  -- Capture the REAL (starts_at, id) of every instance BEFORE switching to the authenticated
+  -- role. Under that role, date_instances is RLS-filtered and the viewer cannot read these
+  -- rows directly (only via the DEFINER feed RPC), so the page-2 cursor must come from this
+  -- pre-captured map, NOT a re-read of date_instances under the role.
+  create temp table _ks_src as
+    select id, starts_at from date_instances where creator_id=host;
+
+  -- page 1 (and a full sanity read) run under the authenticated role; results are copied
+  -- into temp tables. The cursor (real starts_at) is computed AFTER reset role, because the
+  -- pre-captured _ks_src is only readable as the test superuser, not the authenticated role.
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub',viewer,'role','authenticated')::text, true);
-
   create temp table _ks_all as select * from browse_feed_for_viewer(viewer, null, null, null, 50);
+  create temp table _ks_p1  as select * from browse_feed_for_viewer(viewer, null, null, null, 3);
+  reset role;
+
   select count(*) into total from _ks_all;
   IF total < 6 THEN RAISE EXCEPTION 'E10.7: expected at least 6 nights in the feed (got %)', total; END IF;
-
-  -- page 1: first 3
-  create temp table _ks_p1 as select * from browse_feed_for_viewer(viewer, null, null, null, 3);
   select count(*) into page1 from _ks_p1;
   IF page1 <> 3 THEN RAISE EXCEPTION 'E10.7: page 1 should hold 3 rows (got %)', page1; END IF;
-  select time_window_start, date_instance_id into last_starts, last_id
-    from _ks_p1 order by time_window_start desc, date_instance_id desc limit 1;
 
-  -- page 2: continue from the page-1 cursor. NOTE the cursor predicate compares the REAL
-  -- starts_at, but the projection truncates to the hour; to drive the keyset we re-read the
-  -- true starts_at of the last page-1 row.
+  -- last page-1 row in feed order (no soft filters -> stable starts_at asc, id asc),
+  -- joined to the pre-captured real starts_at to drive the keyset cursor.
+  select src.starts_at, src.id into last_starts, last_id
+    from _ks_p1 p join _ks_src src on src.id = p.date_instance_id
+    order by src.starts_at desc, src.id desc limit 1;
+
+  -- page 2: continue from the page-1 cursor using the REAL starts_at (projection is
+  -- hour-truncated, so we feed the cursor the captured exact timestamp).
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub',viewer,'role','authenticated')::text, true);
   create temp table _ks_p2 as
-    select * from browse_feed_for_viewer(
-      viewer, null,
-      (select starts_at from date_instances where id=last_id), last_id, 3);
+    select * from browse_feed_for_viewer(viewer, null, last_starts, last_id, 3);
+  reset role;
+
   select count(*) into page2 from _ks_p2;
   IF page2 < 3 THEN RAISE EXCEPTION 'E10.7: page 2 should hold the next 3 rows (got %)', page2; END IF;
 
@@ -371,8 +393,7 @@ BEGIN
     from _ks_p1 a join _ks_p2 b on a.date_instance_id = b.date_instance_id;
   IF overlap <> 0 THEN RAISE EXCEPTION 'E10.7: keyset pages overlap (dup rows=%)', overlap; END IF;
 
-  reset role;
-  drop table _ks_all; drop table _ks_p1; drop table _ks_p2;
+  drop table _ks_src; drop table _ks_all; drop table _ks_p1; drop table _ks_p2;
   RAISE NOTICE 'E10.7: keyset no-dup/no-skip OK';
   ROLLBACK;
 END $do$;
