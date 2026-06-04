@@ -125,6 +125,11 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+**Carry-forward notes** (from Phase-3 live browser QA, 2026-06-04 — verified against the running app + local DB):
+
+  1. **`date_instances.target_genders` is written as `{everyone}` (a literal value), NOT `{}`** when a host leaves "open to everyone" selected on `/nights/new`. Confirmed live: `post_night` stored `{everyone}` for a posted night. The E10 feed filter MUST treat `everyone` (and an empty array) as "no gender restriction" — do NOT filter for a literal `'everyone'` row value, or every open night disappears. Normalize `everyone`→open at the filter boundary (or fix `post_night`/`PostNightForm` to write `{}` for the open case — decide during E10 design).
+  2. **Editing "the why" (and pay/vibe) on `/nights/new` mutates the SOURCE itinerary, then forks.** Per D-10 those fields persist onto the underlying itinerary before `post_night` deep-copies it — so an already-posted night that references the same source plan retroactively picks up the edit (observed live: two posted nights sharing one plan showed the same edited `why_note`). When E10 lets a host re-post / re-target the same plan, this source-mutation coupling gets more consequential. Decide whether the post flow should fork-then-edit (isolate each posting) vs the current edit-source-then-fork.
+
 ### Phase 5: Progressive Reveal (P2)
 
 **Goal**: "Swipe on the date, not the face" becomes real — the host is limited/blurred pre-match, partially revealed at the offer, and fully revealed at the threshold with a ceremony.
