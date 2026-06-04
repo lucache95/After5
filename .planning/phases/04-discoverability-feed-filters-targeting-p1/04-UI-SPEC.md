@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: discoverability-feed-filters-targeting-p1
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-04
+reviewed: 2026-06-04
 ---
 
 # Phase 4 — UI Design Contract
