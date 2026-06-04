@@ -29,6 +29,70 @@ export async function postNight(client: After5Client, input: {
   return data as string;
 }
 
+// ─── Phase 02 E6/E7: host cancel + edit wrappers ──────────────────────────────
+// Both call CREATOR-ONLY DEFINER RPCs (cancel_night / update_night, migrations
+// 20260604122000/123000). The RPC re-checks p_actor = auth.uid(), so the wrapper
+// reads the signed-in uid from the client and passes it as p_actor. A client-side
+// UUID p_idem_key makes a retry a clean no-op (idempotency ledger). Same shape as
+// postNight: client.rpc(fn, { p_... }); if (error) throw error.
+
+// Web Crypto is a global in both the browser and Node ≥ 22 (this package's
+// engines floor). The package's tsconfig ships no DOM/node lib, so reach it
+// through globalThis with a narrow local type instead of pulling in @types/node.
+function newIdemKey(): string {
+  const g = globalThis as unknown as { crypto?: { randomUUID?: () => string } };
+  const uuid = g.crypto?.randomUUID?.();
+  if (!uuid) throw new Error('crypto.randomUUID unavailable');
+  return uuid;
+}
+
+async function actorId(client: After5Client): Promise<string> {
+  const { data, error } = await client.auth.getUser();
+  if (error) throw error;
+  const uid = data.user?.id;
+  if (!uid) throw new Error('not signed in');
+  return uid;
+}
+
+/** Soft-cancel (unpublish) the host's own seeking night. Reversible — the row +
+ *  interest data are kept; the night just leaves feed eligibility. Throws on error. */
+export async function cancelNight(
+  client: After5Client,
+  input: { instance_id: string; idem_key?: string },
+): Promise<void> {
+  const { error } = await client.rpc('cancel_night', {
+    p_actor: await actorId(client),
+    p_instance: input.instance_id,
+    p_idem_key: input.idem_key ?? newIdemKey(),
+  });
+  if (error) throw error;
+}
+
+/** Edit the host's own seeking night. Only the supplied fields change; an omitted
+ *  field is sent as null, which the RPC treats as "leave unchanged". Throws on error. */
+export async function updateNight(
+  client: After5Client,
+  input: {
+    instance_id: string;
+    starts_at?: string | null;
+    duration_min?: number | null;
+    venue?: string | null;
+    ambient_sound_id?: string | null;
+    idem_key?: string;
+  },
+): Promise<void> {
+  const { error } = await client.rpc('update_night', {
+    p_actor: await actorId(client),
+    p_instance: input.instance_id,
+    p_starts_at: input.starts_at ?? null,
+    p_duration_min: input.duration_min ?? null,
+    p_venue: input.venue ?? null,
+    p_ambient_sound_id: input.ambient_sound_id ?? null,
+    p_idem_key: input.idem_key ?? newIdemKey(),
+  } as never);
+  if (error) throw error;
+}
+
 // M3: the host edit wire shape (structurally compatible with the web `Stop` type).
 export interface EditableStop {
   place_id?: string; place_name: string; place_slug?: string; place_type?: string;

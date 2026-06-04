@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
-import { postNight, browseFeed, ambientSoundUrl, updateItineraryStops, type FeedNight } from '../feed';
+import { postNight, browseFeed, ambientSoundUrl, updateItineraryStops, cancelNight, updateNight, type FeedNight } from '../feed';
 
 function mockClient(result: { data: unknown; error: unknown }) {
   return { rpc: vi.fn().mockResolvedValue(result) } as never;
+}
+
+// A client whose rpc resolves and whose auth.getUser returns a stable uid, so the
+// E6/E7 wrappers can resolve p_actor. rpc default returns { data: null, error: null }.
+function mockAuthedClient(uid = 'host-1', rpcResult: { data: unknown; error: unknown } = { data: null, error: null }) {
+  return {
+    rpc: vi.fn().mockResolvedValue(rpcResult),
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: uid } }, error: null }) },
+  } as never;
 }
 
 describe('postNight', () => {
@@ -47,6 +56,50 @@ describe('browseFeed', () => {
     const out = await browseFeed(c);
     expect(out[0]?.ambient_sound_path).toBe('lofi/calm.m4a');
     expect(out[0]?.ambient_sound_name).toBe('calm');
+  });
+});
+
+describe('cancelNight', () => {
+  it('calls cancel_night with p_actor (uid), p_instance, and a generated p_idem_key', async () => {
+    const c = mockAuthedClient('host-1');
+    await cancelNight(c, { instance_id: 'inst-9' });
+    const rpc = (c as { rpc: ReturnType<typeof vi.fn> }).rpc;
+    expect(rpc).toHaveBeenCalledWith('cancel_night', expect.objectContaining({
+      p_actor: 'host-1', p_instance: 'inst-9',
+    }));
+    const arg = rpc.mock.calls[0]![1] as { p_idem_key: string };
+    expect(typeof arg.p_idem_key).toBe('string');
+    expect(arg.p_idem_key.length).toBeGreaterThan(0);
+  });
+  it('forwards a supplied idem_key (retry no-op contract)', async () => {
+    const c = mockAuthedClient('host-1');
+    await cancelNight(c, { instance_id: 'inst-9', idem_key: 'fixed-key' });
+    expect((c as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith(
+      'cancel_night', expect.objectContaining({ p_idem_key: 'fixed-key' }),
+    );
+  });
+  it('throws when the RPC returns an error', async () => {
+    const c = mockAuthedClient('host-1', { data: null, error: { message: 'not_creator', code: '42501' } });
+    await expect(cancelNight(c, { instance_id: 'inst-9' })).rejects.toBeTruthy();
+  });
+});
+
+describe('updateNight', () => {
+  it('sends only provided fields; omitted fields are null (leave-unchanged)', async () => {
+    const c = mockAuthedClient('host-1');
+    await updateNight(c, { instance_id: 'inst-9', starts_at: '2026-07-01T19:00:00Z', venue: 'venue-2' });
+    expect((c as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith('update_night', expect.objectContaining({
+      p_actor: 'host-1',
+      p_instance: 'inst-9',
+      p_starts_at: '2026-07-01T19:00:00Z',
+      p_venue: 'venue-2',
+      p_duration_min: null,
+      p_ambient_sound_id: null,
+    }));
+  });
+  it('throws when the RPC returns an error', async () => {
+    const c = mockAuthedClient('host-1', { data: null, error: { message: 'not_cancellable', code: 'P0001' } });
+    await expect(updateNight(c, { instance_id: 'inst-9', duration_min: 90 })).rejects.toBeTruthy();
   });
 });
 
