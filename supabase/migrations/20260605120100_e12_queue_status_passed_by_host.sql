@@ -1,0 +1,15 @@
+-- 20260605120100_e12_queue_status_passed_by_host.sql
+-- E12 (REQ-E12 / D-09): add the host-decline state to the queue_status enum.
+--
+-- queue_status today (20260525120500_p0_queue_entries.sql line 3) is
+-- ('interested','shortlisted','offer_active','offer_passed','offer_expired','standby','locked')
+-- — none means "the host passed on this candidate". Reusing offer_passed (a
+-- CANDIDATE-passed-the-OFFER semantic) would corrupt analytics + InterestedList
+-- filters, so add a dedicated value.
+--
+-- PG ADD VALUE same-tx rule (03-RESEARCH Pitfall 1): a newly added enum value is
+-- not usable in the same transaction that adds it. This value therefore lives in
+-- its OWN migration, sequenced BEFORE the reject_candidate RPC (plan 03-02) that
+-- consumes it. Do NOT add the value in the same file as any function reference.
+-- Additive + idempotent.
+alter type queue_status add value if not exists 'passed_by_host';
