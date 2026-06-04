@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { signBlurredUrls } from '@/lib/after5/photos';
 import { normalizeNightDetailStops } from '@after5/api-client';
 import { OfferDetail } from './OfferDetail';
 import { AccountGate } from './AccountGate';
@@ -40,7 +41,7 @@ export default async function OfferPage({
   const { data: offer } = await supabase
     .from('offers')
     .select(`id, status, expires_at, candidate_id, creator_id, date_instance_id,
-      host:profiles!offers_creator_id_fkey ( first_name, age, city, clear_photo_url ),
+      host:profiles!offers_creator_id_fkey ( first_name, age, city, blurred_photo_url ),
       instance:date_instances!offers_date_instance_id_fkey ( starts_at, itinerary_id )`)
     .eq('id', offerId)
     .maybeSingle();
@@ -75,9 +76,21 @@ export default async function OfferPage({
   }
 
   const host = (offer.host ?? {}) as {
-    first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null;
+    first_name?: string | null; age?: number | null; city?: string | null; blurred_photo_url?: string | null;
   };
   const instance = (offer.instance ?? null) as { starts_at?: string | null; itinerary_id?: string | null } | null;
+
+  // E15 rung-2 (REQ-E15 / D-03): sign the host's BLURRED photo PATH only. The offer
+  // surface stays pre-lock, so the clear path is NEVER signed here (T-05-05/T-05-06).
+  // The blurred signer needs no reveal gate (the blurred asset IS the privacy artifact).
+  // OfferDetail applies the softer rung-2 CSS blur on top of this signed blurred url.
+  // Degrade to null on a missing path or a signing hiccup so OfferDetail falls back to
+  // the placeholder; never crash the offer page.
+  let hostPhotoUrl: string | null = null;
+  if (host.blurred_photo_url) {
+    const [signed] = await signBlurredUrls(supabase, [host.blurred_photo_url]).catch(() => []);
+    hostPhotoUrl = signed ?? null;
+  }
 
   // E13: render the matched night's full plan. Second RLS read — the forked
   // itinerary is readable by id (itineraries_readable_by_id USING(true)) once the
@@ -112,7 +125,7 @@ export default async function OfferPage({
           first_name: host.first_name ?? 'someone',
           age: host.age ?? null,
           city: host.city ?? null,
-          photo_url: host.clear_photo_url ?? null,
+          photo_url: hostPhotoUrl,
         }}
         date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
         stops={stops}
