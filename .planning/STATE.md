@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: planning
 stopped_at: Phase 2 Wave 2 — 02-04 complete (E6 cancel_night + E7 update_night DEFINER RPCs + notify; LOCAL-applied, types regen, full SQL suite + typecheck green). Security advisor batched by orchestrator post-wave. PROD apply NOT attempted. 02-05 runs after.
-last_updated: "2026-06-04T02:30:00.000Z"
+last_updated: "2026-06-04T02:11:11.145Z"
 last_activity: 2026-06-03 — Phase 1 verified PASSED (4/4 criteria + visual-verify). Unpushed/undeployed on main.
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 10
   completed_plans: 9
-  percent: 16
+  percent: 14
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 1 of 7 (Navigation & Profile Spine) — COMPLETE ✓ (verified passed)
 Plan: 01-01/01-02 (Wave 1) + 01-03/01-04 (Wave 2) all complete
-Status: Phase 1 done — ready to plan/execute Phase 2
-Last activity: 2026-06-03 — Phase 1 verified PASSED (4/4 criteria + visual-verify). Unpushed/undeployed on main.
+Status: Phase 2 executing — 02-01/02/03/04/05 all complete (local-green, unpushed)
+Last activity: 2026-06-03 — 02-05 (E8 interest_received dispatch + deep-link) executed; full db:test + vitest (602) + typecheck GREEN local-only, no prod apply.
 
-Progress: [██░░░░░░░░] 16% (Phase 2: 4/4 plans built this wave-set; 02-05 pending)
+Progress: [██░░░░░░░░] 16% (Phase 2: 5/5 plans this wave-set complete; prod apply gated/batched)
 
 ## Performance Metrics
 
@@ -44,7 +44,7 @@ Progress: [██░░░░░░░░] 16% (Phase 2: 4/4 plans built this wa
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 4 | ~25m | ~6m |
+| 02 | 5 | ~43m | ~8.6m |
 
 **Recent Trend:**
 
@@ -69,6 +69,7 @@ Recent decisions affecting current work:
 - no_show is LOCK-level only (date_match_status has no no_show value); date_instances terminal states are completed/expired. flag_no_show uses membership auth (either party), not creator-only.
 - E6 cancel_night = SOFT unpublish (status->'cancelled', row + queue_entries KEPT/reversible), creator-only DEFINER, notifies interested via night_cancelled; pre-match only (non-seeking -> P0001).
 - E7 update_night = creator-only DEFINER, coalesce-edit of starts_at/duration/venue/ambient, NEVER writes GENERATED time_range; dispatches night_changed ONLY on material change (time OR venue), not ambient/duration-only.
+- E8 interest_received = match_ingest_interest CREATE OR REPLACE (body verbatim) dispatches to host ONLY on n>0 (new candidate enqueued), deep-link /dates/[instance]/interested via payload.date_instance_id; coarse per-instance dedup_key ('interest_received:'||instance) throttles email/push while grouped in-app row still surfaces; grants unchanged (revoked public+authenticated). notif-map already had the deep-link (folded in 02-02).
 
 ### Pending Todos
 
