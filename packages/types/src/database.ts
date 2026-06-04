@@ -3236,6 +3236,10 @@ export type Database = {
       }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       fail_job: { Args: { p_error: string; p_id: string }; Returns: undefined }
+      flag_no_show: {
+        Args: { p_actor: string; p_idem_key: string; p_lock: string }
+        Returns: undefined
+      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -4139,6 +4143,7 @@ export type Database = {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
       }
+      sweep_loop_terminus: { Args: never; Returns: number }
       tstzrange_from_start_duration: {
         Args: { p_mins: number; p_start: string }
         Returns: unknown
