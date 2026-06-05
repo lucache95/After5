@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: "Completed 08-02-PLAN.md (fail-loud guards + unverified marker + unverified_rate); 11/11 deno tests green."
-last_updated: "2026-06-05T22:44:00.000Z"
-last_activity: 2026-06-05 -- Phase 8 Plan 02 executed (DATA-03 fail-loud guards)
+stopped_at: "Completed 08-03-PLAN.md (DATA-01/02 migration: source check + fsq_place_id full unique index + cities.seeded_at + google_legacy relabel); SQL assertion test green on local db reset."
+last_updated: "2026-06-05T23:30:00.000Z"
+last_activity: 2026-06-05 -- Phase 8 Plan 03 executed (DATA-01/02 places fsq/source migration)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 8 — Compliant Any-City Venue Corpus (in progress)
-Plan: 02 complete (DATA-03 fail-loud guards) — next: 08-03 (migration)
+Plan: 03 complete (DATA-01/02 places fsq/source migration) — next: 08-04 (re-source cold-start + google_legacy pool exclusion)
 Status: Executing
-Last activity: 2026-06-05 -- Phase 8 Plan 02 executed (DATA-03 fail-loud guards + unverified_rate)
+Last activity: 2026-06-05 -- Phase 8 Plan 03 executed (DATA-01/02 places migration + SQL test)
 
 ## v2.0 Roadmap (phases 8–11)
 
