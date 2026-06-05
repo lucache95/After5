@@ -252,7 +252,7 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E15 | progressive-reveal-ladder | P2 | Phase 5 | Pending |
 | REQ-E16 | identity-revealed-moment | P2 | Phase 5 | Pending |
 | REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Built (06-01, migration gated to 06-05) |
-| REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Pending |
+| REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Complete (06-02; E2E + chat-RLS SQL run in 06-05) |
 | REQ-E19 | safety-flows | P2 | Phase 6 | Pending |
 | REQ-E20 | real-map-route | P3 | Phase 7 | Pending |
 | REQ-E21 | venues-into-loop | P3 | Phase 7 | Pending |
