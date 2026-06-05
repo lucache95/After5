@@ -113,3 +113,39 @@ Deno.test('generate: cold city warms via Foursquare then runs pipeline with [liv
   }));
   assertEquals(approvalStatuses, ['live', 'auto']);
 });
+
+// ─── city_warming fallback (Area 3, DATA-02) ────────────────────────────────
+Deno.test('generate: a still-thin warmed city → city_warming (503), NOT no_candidates (422)', async () => {
+  const ctx = baseCtx({ supabase: fakeDb({ count: 0 }) }); // cold → warms inline
+  const err = await assertRejects(
+    () => generateOnTheFly(ctx as never, okDeps({
+      // pipeline still finds < 3 usable after the warm → throws no_candidates (422)
+      runPipeline: async () => { throw new PipelineError('no_candidates', 'Not enough places match those filters.', 422); },
+    })),
+    PipelineError,
+  );
+  assertEquals((err as PipelineError).code, 'city_warming');
+  assertEquals((err as PipelineError).httpStatus, 503);
+  // the warming message names the city, never leaks the key (T-08-09)
+  assertEquals((err as PipelineError).message.includes('Kelowna'), true);
+  assertEquals((err as PipelineError).message.includes(KEY), false);
+});
+
+Deno.test('generate: an already-WARM city\'s no_candidates is NOT masked as city_warming', async () => {
+  const ctx = baseCtx({ supabase: fakeDb({ count: 50 }) }); // warm → no inline warm
+  const err = await assertRejects(
+    () => generateOnTheFly(ctx as never, okDeps({
+      runPipeline: async () => { throw new PipelineError('no_candidates', 'Not enough places match those filters.', 422); },
+    })),
+    PipelineError,
+  );
+  // a genuine filter miss in a warm city stays no_candidates (422), not warming.
+  assertEquals((err as PipelineError).code, 'no_candidates');
+  assertEquals((err as PipelineError).httpStatus, 422);
+});
+
+Deno.test('generate: a healthy city does NOT throw city_warming and returns itineraries', async () => {
+  const ctx = baseCtx({ supabase: fakeDb({ count: 0 }) });
+  const res = await generateOnTheFly(ctx as never, okDeps()); // runPipeline returns 1 itinerary
+  assertEquals(res.itineraries.length, 1);
+});
