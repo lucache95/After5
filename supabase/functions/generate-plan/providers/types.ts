@@ -8,6 +8,7 @@ export interface GenerationEnv {
   anthropicKey: string;
   anthropicModel: string;
   googleKey?: string;
+  foursquareKey?: string;
   railwayUrl?: string;
   railwayToken?: string;
 }

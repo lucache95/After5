@@ -34,6 +34,26 @@ function currentSeason(): string {
   return 'winter';
 }
 
+// The approvalStatuses the any-city / OnTheFlyProvider read-path passes on EVERY
+// generation (DATA-01 / plan-check W3). Foursquare-warmed rows are written
+// approval_status='auto' (08-01); admitting 'auto' on every generation — not only
+// the inline-warm branch — keeps a BACKGROUND-seeded city from reading cold once
+// its seed_city run completes.
+export const ONTHEFLY_APPROVAL_STATUSES = ['live', 'auto'] as const;
+
+// Area 2 (08-04): relabeled Google rows (source='google_legacy', per 08-03) must
+// never reach the candidate pool — feeding Google content to the LLM is the exact
+// licensing violation this phase removes. Pure predicate mirroring the filterPlaces
+// select's source + approval_status clauses so the exclusion is unit-testable
+// without a live DB.
+export function admitsRow(
+  row: { source?: string | null; approval_status?: string | null },
+  approvalStatuses: readonly string[],
+): boolean {
+  if (row.source === 'google_legacy') return false;
+  return approvalStatuses.includes(row.approval_status ?? '');
+}
+
 // M1: city-scoped. The caller passes the resolved CityRecord; the centroid +
 // default radius come from the city (no more hardcoded Kelowna constants).
 // approvalStatuses is parameterized so KelownaProvider stays curated-only
@@ -56,6 +76,9 @@ export async function filterPlaces(
     )
     .eq('is_active', true)
     .in('approval_status', approvalStatuses)
+    // Area 2 (08-04): relabeled Google rows are license-incompatible — excluded
+    // from the pool so no Google content is ever fed to the LLM.
+    .neq('source', 'google_legacy')
     .eq('city_id', city.id)
     .eq('at_home', wantsHome)
     .in('price_tier', tiers)
