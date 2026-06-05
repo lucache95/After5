@@ -251,7 +251,7 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E14 | offer-delivery-reliability | P1 | Phase 3 | Complete (03-06) |
 | REQ-E15 | progressive-reveal-ladder | P2 | Phase 5 | Pending |
 | REQ-E16 | identity-revealed-moment | P2 | Phase 5 | Pending |
-| REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Pending |
+| REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Built (06-01, migration gated to 06-05) |
 | REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Pending |
 | REQ-E19 | safety-flows | P2 | Phase 6 | Pending |
 | REQ-E20 | real-map-route | P3 | Phase 7 | Pending |

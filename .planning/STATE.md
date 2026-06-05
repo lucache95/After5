@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-03-PLAN.md (Rung 3 + reveal ceremony)
-last_updated: "2026-06-05T05:26:05.309Z"
-last_activity: 2026-06-05 -- Phase 6 planning complete
+last_updated: "2026-06-05T05:34:36.687Z"
+last_activity: 2026-06-05
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 30
-  completed_plans: 25
+  completed_plans: 26
   percent: 71
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 6 — trust & safety (p2)
+**Current focus:** Phase 6 — Trust & Safety (P2)
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
+Phase: 6 (Trust & Safety (P2)) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-06-05 -- Phase 6 planning complete
+Last activity: 2026-06-05
 Prior: 2026-06-04 — 05-03 (Rung 3 + ceremony) green: identity_revealed dispatched both lock RPCs + consent-gated (LOCAL applied + advisor-clean, prod untouched), RevealModal unblur ceremony + reduced-motion + sonner toast, 4/4 e2e (ceremony/reduced-motion/inverse-consent/both-party-dispatch). Migrations PENDING gated prod-apply in 05-04: 20260606120100_e16 (+ the 05-01 e15 browse_feed widen).
 
 PHASE-CLOSE GATES:
@@ -45,7 +45,7 @@ LOW findings (non-blocking, optional cleanup):
 
   ✓ GATED PROD-APPLY DONE (2026-06-04): batched Phase 2 (E5-E8 + e2 enums) + Phase 3 (E11 targeting cols/post_night extend, E12 queue enum/reject_candidate) — 9 migrations applied to prod ufufmcpnysvwtutpbian via MCP apply_migration in dependency order. Verified on prod: 8-arg post_night + 7-arg update_itinerary_stops (old 5-arg dropped), reject_candidate/cancel_night/update_night/sweep_loop_terminus/flag_no_show present, queue_status+passed_by_host, date_match_status+expired, date_instances targeting cols. Security advisor: NO new findings (my fns pin search_path=public, no USING(true); DEFINER-executable warnings are the app's established accepted pattern shared by all match_* RPCs). match-reject-candidate edge fn deployed (CLI, verify_jwt=true, 401 unauthed). RESEND_API_KEY confirmed in Vercel prod. NOTE: prod migration ledger uses MCP-assigned versions (drift vs local filenames — pre-existing reconciliation pattern; local files remain source of truth).
 
-Progress: [██████████] 96% (Phase 5: 3/4 plans; 05-04 phase gate remaining)
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [██████████] 96% (Phase 5: 3/4 plans; 05-04 phase 
 | Phase 05 P01 | 9 | 4 tasks | 10 files |
 | Phase 05 P02 | 14 | 2 tasks | 3 files |
 | Phase 05 P03 | ~40 | 3 tasks | 5 files |
+| Phase 06 P01 | 6 | 4 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,7 @@ Recent decisions affecting current work:
 - [Phase ?]: E15/05-01: signBlurredUrls no-reveal-gate; browse_feed widened +3 host cols LOCAL-applied advisor-clean; blurred path signed app-side in feed/page.tsx; REQ-E15 rung-1 only (offer tier 05-02).
 - [Phase ?]: 05/05-02: rung-2 offer surface = candidate offers/[offerId] view (not InterestedList); avatar signed from blurred_photo_url + CSS blur(3px) over blur(8px), clear path never signed pre-lock (T-05-05/T-05-06); blurred avatar is a 48px circular thumb not a Polaroid
 - [Phase 05]: 05/05-03 (E16/D-02/D-04): identity_revealed dispatched at BOTH match_accept_offer AND match_resolve_reciprocal to both parties; consent = it honors matches_enabled by gating the DELIVERY channel to 'suppressed' (sibling PARITY with new_match), NOT by withholding the in-app row — dispatch_notification ALWAYS writes the in-app row, prefs gate push/email (E8 precedent). Inverse-consent verified at runtime + through the real lock e2e. RevealModal ceremony = framer-motion blur(12px)->0 / 900ms expo-out + scale/opacity + one shell.accent glow flourish, gated on justLocked (?just=1); reduced-motion = immediate clear + opacity cross-fade, toast still fires; sage NOT promoted (flourish is pink, not a tick). e16 migration LOCAL-applied + advisor-clean, PROD UNTOUCHED (gated to 05-04 alongside the 05-01 e15 browse_feed widen).
+- [Phase 06]: 06/06-01 (E17/REQ-E17/D-01/D-02): reliability_score = weighted % from match_ratings + no_show locks, recomputed on close_rating_window for BOTH parties. Weights LOCKED in packages/business/src/reliability.ts (SQL recompute_reliability mirrors 1:1): showed_up 80 + on_time 20 (clean attended date=100); cancelled_with_notice 50 RECOVERY credit ONLY on a no-show (not an additive bonus); unsafe_or_disrespectful -100 (floors the date to 0); each no_show lock=0. NULL until >=3 total (rated+no_show) dates -> badge_is_new "new here". no_show counted from locks.status='no_show' EXCLUDING any lock already rated for the ratee (no_show AUTHORITATIVE, one bucket per lock, no double-count). SOFT (D-02): recompute_reliability writes ONLY profiles.reliability_score — NO enforcement/status-change/bans. DEFINER pins search_path=public + revoke-all from public/anon/authenticated. ProfileCard pill (verified-gated via badgeFor): blush "new here" (+ "no rated dates yet", no number) / neutral "{score}% · reliable" + tiny sage Check tick, aria-label both states, NO red. Migration 20260605120000_e17 GATED: local apply + advisor + e17 SQL assertion-script run all DEFERRED to 06-05; prod (ufufmcpnysvwtutpbian) UNTOUCHED.
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-04T22:34:02.096Z
+Last session: 2026-06-05T05:34:10.105Z
 Stopped at: Completed 05-03-PLAN.md (Rung 3 + reveal ceremony)
 Resume file: None
