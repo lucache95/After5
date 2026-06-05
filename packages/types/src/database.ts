@@ -2993,7 +2993,6 @@ export type Database = {
         Args: { ""?: string; att_name: string; tbl: unknown }
         Returns: string
       }
-      _seed_swipes_and_hint: { Args: { p_count: number }; Returns: string }
       _st_3dintersects: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -3197,6 +3196,7 @@ export type Database = {
       complete_job: { Args: { p_id: string }; Returns: undefined }
       create_blank_itinerary: { Args: never; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
+      dispatch_date_reconfirm: { Args: { p_lock: string }; Returns: undefined }
       dispatch_notification: {
         Args: {
           p_payload?: Json
@@ -3205,6 +3205,7 @@ export type Database = {
         }
         Returns: Json
       }
+      dispatch_safety_checkin: { Args: { p_lock: string }; Returns: undefined }
       dropgeometrycolumn:
         | {
             Args: {
@@ -3484,13 +3485,6 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
-      mk_instance: {
-        Args: { p_creator: string; p_itin: string; p_starts: string }
-        Returns: string
-      }
-      mk_itinerary: { Args: { p_user: string }; Returns: string }
-      mk_itinerary_with_stops: { Args: { p_user: string }; Returns: string }
-      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -3586,6 +3580,7 @@ export type Database = {
         Args: { p_user: string }
         Returns: undefined
       }
+      recompute_reliability: { Args: { p_ratee: string }; Returns: undefined }
       record_swipe: {
         Args: {
           p_direction: Database["public"]["Enums"]["swipe_direction"]

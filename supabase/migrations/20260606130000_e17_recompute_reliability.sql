@@ -31,6 +31,20 @@
 -- to prod (ufufmcpnysvwtutpbian) here.
 -- ============================================================================
 
+-- The score is a 0-100 percent. The p0 column was numeric(4,2) (max 99.99), which
+-- cannot hold a perfect 100. Widen to numeric(5,2) so a clean record stores 100.00.
+-- public_profile_card (20260525122700_p1_badge_view) reads reliability_score, so the
+-- column type cannot be altered while the view exists — drop it, widen, recreate it
+-- verbatim. Precision-widen only (non-destructive); the recreated view is identical.
+drop view if exists public_profile_card;
+alter table profiles alter column reliability_score type numeric(5,2);
+create or replace view public_profile_card with (security_invoker = true) as
+select p.id as profile_id, p.age, p.vibe_tags, p.prompt_answers, p.blurred_photo_url, p.reliability_score,
+  (p.verification = 'verified') as badge_verified,
+  (p.verification = 'verified' and p.reliability_score is null) as badge_is_new
+from profiles p where p.dating_enabled = true;
+grant select on public_profile_card to authenticated;
+
 create or replace function recompute_reliability(p_ratee uuid)
 returns void language plpgsql security definer set search_path=public as $fn$
 declare
