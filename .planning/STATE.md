@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 05 UI-SPEC approved
-last_updated: "2026-06-04T22:34:14.171Z"
+status: ready_to_plan
+stopped_at: Phase 05 complete (4/4) — ready to discuss Phase 6
+last_updated: 2026-06-05T00:42:56.074Z
 last_activity: 2026-06-04
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 25
-  completed_plans: 24
-  percent: 60
+  completed_plans: 25
+  percent: 57
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 05 — Progressive Reveal (P2)
+**Current focus:** Phase 6 — trust & safety (p2)
 
 ## Current Position
 
-Phase: 05 (Progressive Reveal (P2)) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute (05-04 = phase gate: forced-local visual-verify @420px all 3 rungs + GATED prod-apply of e15/e16 migrations)
-Last activity: 2026-06-04
+Phase: 6
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-05
 Prior: 2026-06-04 — 05-03 (Rung 3 + ceremony) green: identity_revealed dispatched both lock RPCs + consent-gated (LOCAL applied + advisor-clean, prod untouched), RevealModal unblur ceremony + reduced-motion + sonner toast, 4/4 e2e (ceremony/reduced-motion/inverse-consent/both-party-dispatch). Migrations PENDING gated prod-apply in 05-04: 20260606120100_e16 (+ the 05-01 e15 browse_feed widen).
 
 PHASE-CLOSE GATES:
@@ -51,7 +51,7 @@ Progress: [██████████] 96% (Phase 5: 3/4 plans; 05-04 phase 
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 4
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -61,6 +61,7 @@ Progress: [██████████] 96% (Phase 5: 3/4 plans; 05-04 phase 
 |-------|-------|-------|----------|
 | 02 | 5 | ~43m | ~8.6m |
 | 03 | (in progress) | — | — |
+| 05 | 4 | - | - |
 
 **03 plan log:** 03-04 PlanTimeline extraction — ~25m, 3 files, commit 74f88db (Wave 1). 03-02 reject_candidate DEFINER RPC (silent decline) — ~15m, 5 files, commits 550d8ca/c6a3fc1/99dbd64 (Wave 2); REQ-E12 backend half done, UI half pending.
 

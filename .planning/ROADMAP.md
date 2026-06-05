@@ -171,7 +171,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 05-04-PLAN.md — Phase gate: forced-local visual-verify @420px of all 3 rungs + GATED prod-apply checkpoint for the e15/e16 migrations (REQ-E15, REQ-E16)
+- [x] 05-04-PLAN.md — Phase gate: forced-local visual-verify @420px of all 3 rungs + GATED prod-apply checkpoint for the e15/e16 migrations (REQ-E15, REQ-E16)
 
 **UI hint**: yes
 
