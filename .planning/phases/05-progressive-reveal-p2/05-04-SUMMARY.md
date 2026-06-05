@@ -1,12 +1,12 @@
 ---
 plan: 05-04
 phase: 05-progressive-reveal-p2
-status: partial
+status: complete
 autonomous: false
 requirements: [REQ-E15, REQ-E16]
 tasks_total: 3
-tasks_complete: 2
-held_at: "Task 3 — gated prod-apply (blocking-human checkpoint)"
+tasks_complete: 3
+prod_applied: 2026-06-04
 key_files:
   created:
     - apps/web/e2e/05-visual-capture.spec.ts
@@ -36,9 +36,15 @@ Orchestrator reviewed every captured tier against the UI-SPEC Visual-Verify Chec
 
 Notes (non-blocking): the pink shell.accent flourish is a subtle animated glow (hard to read in a static frame, not a defect); the seeded "clear photo" is a stand-in street scene asset (production renders the host's real photo — mechanism verified); seed-generated names (`maya mq04…`) are e2e noise.
 
-## Task 3 — GATED PROD-APPLY — HELD (blocking-human checkpoint)
-NOT performed during autonomous execution, by design. Two SECURITY DEFINER migrations are **local-green + security-advisor-clean** and PENDING prod apply under explicit human approval:
-- `20260606120000_e15_browse_feed_host_hint.sql` (widen `browse_feed_for_viewer` +3 host-hint cols; drop+recreate with re-applied revoke-anon/grant-authenticated tail)
-- `20260606120100_e16_dispatch_identity_revealed.sql` (re-CREATE `match_accept_offer`, `match_resolve_reciprocal`, `dispatch_notification` to dispatch `identity_revealed` to both parties under `matches_enabled` consent)
+## Task 3 — GATED PROD-APPLY — DONE (2026-06-04, explicit human approval)
+Applied to prod `ufufmcpnysvwtutpbian` via MCP `apply_migration`, in dependency order, after confirming prod was at the expected pre-e15/e16 baseline (feed RPC 14 OUT cols, no `identity_revealed` in any RPC, enum already present, anon NOT feed-executable, all base function bodies matched — no drift):
+- e15 `browse_feed_for_viewer` host-hint widen → prod ledger version `20260605003956`
+- e16 `identity_revealed` dispatch (both lock RPCs + consent predicate) → prod ledger version `20260605004050`
 
-To complete: apply e15 then e16 to prod `ufufmcpnysvwtutpbian` via the MCP `apply_migration` path, verify the feed RPC is not anon-executable + dispatch fires at both lock RPCs, run the prod security advisor (expect only the established accepted DEFINER pattern), and record the outcome in STATE.md's gated-prod-apply log.
+(Local file timestamps `20260606120000` / `20260606120100` remain source of truth; the prod ledger uses MCP-assigned versions per the project convention.)
+
+**Post-apply verification (prod, read-only):**
+- `browse_feed_for_viewer`: 17 OUT cols incl. the 3 host-hint columns; `anon` CANNOT execute, `authenticated` can (re-grant tail held).
+- `match_accept_offer` + `match_resolve_reciprocal`: each dispatches `identity_revealed` to both parties; `dispatch_notification` consent branch covers `identity_revealed`; all 4 functions remain SECURITY DEFINER with pinned `search_path`.
+
+**Prod security advisor:** no NEW findings. The 3 WARNs on the changed functions are the established accepted `authenticated_security_definer_function_executable` pattern shared by every `match_*` RPC. The 1 ERROR (`spatial_ref_sys` PostGIS system table) and the 8 `function_search_path_mutable` warnings are pre-existing and unrelated to e15/e16.

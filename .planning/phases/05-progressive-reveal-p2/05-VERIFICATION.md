@@ -1,9 +1,11 @@
 ---
 phase: 05-progressive-reveal-p2
 verified: 2026-06-04T23:00:00Z
-status: human_needed
+status: passed
+human_gates_resolved: 2026-06-04
 score: 9/9 must-haves verified
 overrides_applied: 0
+resolution: "Both human gates closed 2026-06-04 — visual-verify @420px PASS on all 3 tiers + ceremony (motion + reduced-motion); gated prod-apply of e15+e16 done + verified + advisor-clean (no new findings). Phase fully complete."
 human_verification:
   - test: "Visual-verify all three reveal tiers @420px against the UI-SPEC Visual-Verify Checklist"
     expected: "Rung 1: cover leads, 48px secondary avatar is heavy-blur (face unreadable), lowercase {name, age} label, softened anonymity copy. Rung 2: host avatar visibly softer than rung 1 (blur(3px)), plan/PlanTimeline leads, no clear face. Rung 3: un-blur dissolve lands (~900ms) with exactly one pink flourish (not a burst), sonner toast fires with reveal copy, settles into Tier-3 ProfileCard; reduced-motion case shows immediate clear photo + opacity cross-fade, no blur/scale/glow, toast still fires."
