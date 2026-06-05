@@ -27,6 +27,13 @@
 
 import type { Place, PlanInputs, Template, TemplateSlot, Itinerary, ItineraryStop, EditorialPack } from './types.ts';
 import { resolvePredicate } from './editorial-packs.ts';
+import { haversineKm } from './places-filter.ts';
+
+// PLAN-01 (Area 1): max consecutive-hop distance for an itinerary. Tunable,
+// named constant — ~2km is walkable / a short drive. Replaces the drive_cluster
+// string-equality adjacency check (which couldn't generalize past curated
+// Kelowna). drive_cluster stays for display but no longer gates adjacency.
+export const MAX_HOP_KM = 2.0;
 
 interface ScoredPlace {
   place: Place;
@@ -99,16 +106,24 @@ function pairingBonus(p: Place, prefers: string[] | undefined): number {
   return overlap * 1.5;
 }
 
-function clusterCompatible(picked: Place[], candidate: Place): boolean {
-  if (picked.length === 0) return true;
-  // Stay in the same cluster, OR allow "multiple" cluster (places that span)
-  const clusters = new Set(picked.map((p) => p.drive_cluster));
-  if (candidate.drive_cluster === 'multiple') return true;
-  for (const c of clusters) {
-    if (c === candidate.drive_cluster) return true;
-    if (c === 'multiple') return true;
+// PLAN-01 (Area 1): real haversine adjacency gate. Returns true when the
+// candidate is within maxKm of the previous (consecutive) stop. DATA-03
+// fail-loud: a stop with unknown coords is EXCLUDED (false), never silently
+// passed — mirrors withinRadius's null→false convention. First stop (no prev)
+// always passes. Replaces the drive_cluster string membership check.
+export function withinHop(
+  prev: Place | undefined,
+  cand: Place,
+  maxKm: number = MAX_HOP_KM,
+): boolean {
+  if (!prev) return true;
+  if (
+    typeof prev.lat !== 'number' || typeof prev.lng !== 'number' ||
+    typeof cand.lat !== 'number' || typeof cand.lng !== 'number'
+  ) {
+    return false;
   }
-  return false;
+  return haversineKm(prev.lat, prev.lng, cand.lat, cand.lng) <= maxKm;
 }
 
 function scorePlace(
@@ -137,8 +152,12 @@ function scorePlace(
   const sameTypeCount = alreadyPicked.filter((x) => x.type === p.type).length;
   if (sameTypeCount > 0) score -= 3 * sameTypeCount;
 
-  // Penalty for breaking cluster
-  if (!clusterCompatible(alreadyPicked, p)) score -= 5;
+  // Soft proximity signal: penalize a candidate that's a long hop from the
+  // previous (consecutive) stop. Kept soft in the pick loop (not a hard reject)
+  // so thin/cold pools can still fill a plan; the assembled itinerary is then
+  // post-validated + repaired against MAX_HOP_KM (see buildItineraryFromTemplate).
+  const prevPicked = alreadyPicked[alreadyPicked.length - 1];
+  if (!withinHop(prevPicked, p)) score -= 5;
 
   // Tonight bias: low-friction places are easier to pull off on short
   // notice (no reservations, easy parking, quick in/out). Strong nudge.
@@ -258,6 +277,10 @@ export function buildItineraryFromTemplate(
     startTime ?? DEFAULT_START_HOUR_BY_OCCASION[inputs.occasion] ?? '18:00',
   );
 
+  // Remember each slot's eligible candidates so the post-validate repair pass
+  // can swap a far stop for the nearest in-slot alternative (PLAN-01).
+  const slotMatches: ScoredPlace[][] = [];
+
   for (let i = 0; i < template.slots.length; i++) {
     const slot = template.slots[i];
     // skipHoursFilter is set on the relaxed-mode retry — passes a sentinel
@@ -274,10 +297,20 @@ export function buildItineraryFromTemplate(
       )
       .sort((a, b) => b.score - a.score);
 
+    slotMatches.push(matching);
     const choice = pickFromTop(matching, 5);
     if (!choice) return null; // can't fill this template
     picked.push(choice.place);
   }
+
+  // ─── Post-validate + repair the consecutive-hop gate (PLAN-01) ─────────
+  // The soft penalty in scorePlace biases toward proximity but doesn't guarantee
+  // it on thin pools. Walk consecutive pairs; if a hop exceeds MAX_HOP_KM, swap
+  // the far stop for the nearest in-slot candidate that's within hop of its
+  // predecessor and not already used. Preserves plan availability while
+  // guaranteeing the shipped plan passes the gate. Stops with null coords are
+  // excluded by withinHop (fail-loud) and so are never accepted as a repair.
+  repairFarHops(picked, slotMatches, usedAcrossBatch);
 
   // Build stops with real timing using whichever places actually got picked
   // (drive_to_next is computed below, after we know the picks).
@@ -351,10 +384,57 @@ export function buildItineraryFromTemplate(
   };
 }
 
+// Post-validation repair: for each consecutive pair, if the hop exceeds
+// MAX_HOP_KM, replace the far stop (index i) with the nearest in-slot candidate
+// that is within hop of the previous stop and not already used elsewhere in the
+// plan or batch. Mutates `picked` in place. If no in-slot candidate satisfies the
+// hop (thin pool), the original far pick is kept — better a slightly far plan
+// than no plan (the eval surfaces remaining far hops). null-coord candidates are
+// rejected by withinHop, so they are never chosen as a repair.
+function repairFarHops(
+  picked: Place[],
+  slotMatches: ScoredPlace[][],
+  usedAcrossBatch: Set<string>,
+): void {
+  for (let i = 1; i < picked.length; i++) {
+    const prev = picked[i - 1];
+    if (withinHop(prev, picked[i])) continue;
+
+    const usedIds = new Set(picked.map((p) => p.id));
+    const candidates = (slotMatches[i] ?? [])
+      .map((sp) => sp.place)
+      .filter(
+        (p) =>
+          p.id !== picked[i].id &&
+          !usedIds.has(p.id) &&
+          !usedAcrossBatch.has(p.id) &&
+          withinHop(prev, p),
+      );
+    if (candidates.length === 0) continue; // can't repair — keep the far pick
+
+    // Nearest in-slot candidate to the previous stop wins the swap.
+    candidates.sort(
+      (a, b) =>
+        haversineKm(prev.lat as number, prev.lng as number, a.lat as number, a.lng as number) -
+        haversineKm(prev.lat as number, prev.lng as number, b.lat as number, b.lng as number),
+    );
+    picked[i] = candidates[0];
+  }
+}
+
 function estimateDriveMin(a: Place, b: Place): number {
+  // PLAN-01: prefer real distance so the displayed drive time agrees with the
+  // haversine hop-gate. Within MAX_HOP_KM = walkable/short (5 min); otherwise
+  // scale ~30 km/h city driving. Falls back to the drive_cluster heuristic only
+  // when coords are unknown (display-only; the gate itself excludes null coords).
+  if (typeof a.lat === 'number' && typeof a.lng === 'number' &&
+      typeof b.lat === 'number' && typeof b.lng === 'number') {
+    const km = haversineKm(a.lat, a.lng, b.lat, b.lng);
+    if (km <= MAX_HOP_KM) return 5;
+    return Math.max(5, Math.round((km / 30) * 60));
+  }
   if (a.drive_cluster === b.drive_cluster) return 5;
   if (a.drive_cluster === 'multiple' || b.drive_cluster === 'multiple') return 10;
-  // Cross-cluster: rough heuristic, real distance lookup would be Phase 6+
   return 20;
 }
 

@@ -1,5 +1,6 @@
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { buildItineraryFromTemplate, isOpenAt } from './scoring.ts';
+import { buildItineraryFromTemplate, isOpenAt, withinHop, MAX_HOP_KM } from './scoring.ts';
+import { haversineKm } from './places-filter.ts';
 import type { Place, PlanInputs, Template } from './types.ts';
 
 // Minimal Place factory — only the fields scoring/assembly touch matter; the
@@ -115,4 +116,82 @@ Deno.test('buildItineraryFromTemplate: fully-specified place is not unverified',
   );
   assertEquals(it !== null, true);
   assertEquals(it!.stops[0].unverified, false);
+});
+
+// ─── withinHop: haversine consecutive-stop adjacency gate (PLAN-01) ──────
+
+// ~0.6 km apart in Kelowna downtown (well within MAX_HOP_KM).
+const NEAR_A = makePlace({ id: 'na', lat: 49.8880, lng: -119.4960 });
+const NEAR_B = makePlace({ id: 'nb', lat: 49.8920, lng: -119.4920 });
+// ~7 km away (well over MAX_HOP_KM).
+const FAR = makePlace({ id: 'far', lat: 49.9400, lng: -119.4000 });
+
+Deno.test('withinHop: true when consecutive stops are within MAX_HOP_KM', () => {
+  // sanity: the two near places really are under the threshold
+  assertEquals(haversineKm(NEAR_A.lat!, NEAR_A.lng!, NEAR_B.lat!, NEAR_B.lng!) <= MAX_HOP_KM, true);
+  assertEquals(withinHop(NEAR_A, NEAR_B), true);
+});
+
+Deno.test('withinHop: false when consecutive stops exceed MAX_HOP_KM', () => {
+  assertEquals(haversineKm(NEAR_A.lat!, NEAR_A.lng!, FAR.lat!, FAR.lng!) > MAX_HOP_KM, true);
+  assertEquals(withinHop(NEAR_A, FAR), false);
+});
+
+Deno.test('withinHop: EXCLUDES (false) when prev has null coords (DATA-03 fail-loud)', () => {
+  const nullCoord = makePlace({ id: 'nc', lat: null, lng: null });
+  assertEquals(withinHop(nullCoord, NEAR_B), false);
+});
+
+Deno.test('withinHop: EXCLUDES (false) when candidate has null coords (DATA-03 fail-loud)', () => {
+  const nullCoord = makePlace({ id: 'nc', lat: null, lng: null });
+  assertEquals(withinHop(NEAR_A, nullCoord), false);
+});
+
+Deno.test('withinHop: true when prev is undefined (first stop)', () => {
+  assertEquals(withinHop(undefined, NEAR_A), true);
+});
+
+// ─── post-validate + repair: a far stop is swapped for the nearest in-slot ──
+
+// Slot 1 is a distinct type (restaurant) with exactly ONE candidate, so the
+// anchor is deterministic. Slot 2 (cafe) has a FAR high-score place and a NEAR
+// low-score place — the repair must reject FAR and swap in NEAR.
+const TWO_SLOT_TEMPLATE: Template = {
+  id: 't2',
+  name: 'two stops',
+  duration_min: 120,
+  suitable_for: ['date'],
+  vibe: [],
+  slots: [
+    { types: ['restaurant'], duration_min: 60 },
+    { types: ['cafe'], duration_min: 60 },
+  ],
+  geographic_rule: null,
+  energy_curve: null,
+};
+
+Deno.test('buildItineraryFromTemplate: repairs a far second stop with a nearer in-slot candidate', () => {
+  const anchor = makePlace({ id: 'anchor', type: 'restaurant', lat: 49.8880, lng: -119.4960, quality_score: 100, feedback_score: 0 });
+  const farHigh = makePlace({ id: 'far-high', type: 'cafe', lat: 49.9400, lng: -119.4000, quality_score: 50, feedback_score: 0 });
+  const nearLow = makePlace({ id: 'near-low', type: 'cafe', lat: 49.8895, lng: -119.4945, quality_score: 1, feedback_score: 0 });
+
+  const it = buildItineraryFromTemplate(
+    TWO_SLOT_TEMPLATE,
+    [anchor, farHigh, nearLow],
+    BASE_INPUTS,
+    '10:00',
+    new Set(),
+    {},
+  );
+  assertEquals(it !== null, true);
+  assertEquals(it!.stops.length, 2);
+  assertEquals(it!.stops[0].place_id, 'anchor');
+  // Far high-score pick must be repaired down to the near candidate.
+  assertEquals(it!.stops[1].place_id, 'near-low');
+  // And the assembled plan must pass the hop-gate end-to-end.
+  for (let i = 1; i < it!.stops.length; i++) {
+    const a = it!.stops[i - 1];
+    const b = it!.stops[i];
+    assertEquals(haversineKm(a.lat!, a.lng!, b.lat!, b.lng!) <= MAX_HOP_KM, true);
+  }
 });

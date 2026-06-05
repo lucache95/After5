@@ -1,5 +1,13 @@
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { withinRadius, admitsRow, ONTHEFLY_APPROVAL_STATUSES } from './places-filter.ts';
+import { withinRadius, admitsRow, haversineKm, ONTHEFLY_APPROVAL_STATUSES } from './places-filter.ts';
+
+// PLAN-01: haversineKm is now exported so the scoring hop-gate reuses the same
+// geo math (one source of truth — no duplicate haversine).
+Deno.test('haversineKm: exported + returns ~0 for identical points, real km otherwise', () => {
+  assertEquals(haversineKm(49.888, -119.496, 49.888, -119.496) < 0.001, true);
+  // Kelowna → Calgary is ~370+ km; assert it's a large positive number.
+  assertEquals(haversineKm(49.888, -119.496, 51.05, -114.07) > 300, true);
+});
 
 Deno.test('withinRadius: EXCLUDES places with null coords (DATA-03 Area 4), applies haversine otherwise', () => {
   const kel = { lat: 49.888, lng: -119.496 };
