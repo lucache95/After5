@@ -187,7 +187,23 @@ Plans:
   2. From a conversation a user can reach the counterpart's profile and the night/plan, and Profile→Night and Night→Profile/Chat all navigate.
   3. Accepting a date enqueues `day_of_reconfirm` and `safety_checkin`, and the handlers run without poison-looping.
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — E17 reliability: recompute_reliability DEFINER RPC (+ no_show feed, new-until-3) + close_rating_window hook + reliability pill on ProfileCard (REQ-E17)
+- [ ] 06-02-PLAN.md — E18 chat↔profile↔night: loader lock_id + 2 reveal-gated DeepRouteHeader edges + chat-RLS deny-non-party verify/test (REQ-E18)
+- [ ] 06-03-PLAN.md — E19 consumers: 2 safety dispatch RPCs (stale-tolerant) + 2 job handlers + soft reconfirm/check-in cards on LockDetail (REQ-E19)
+
+**Wave 2** *(blocked on 06-03)*
+
+- [ ] 06-04-PLAN.md — E19 producers: CREATE OR REPLACE both lock RPCs adding day_of_reconfirm + safety_checkin enqueues (both paths) (REQ-E19)
+
+**Wave 3** *(blocked on Waves 1-2)*
+
+- [ ] 06-05-PLAN.md — Phase gate: [BLOCKING] local migration apply + advisor + typegen + run all SQL/E2E + visual-verify @420px + GATED prod-apply checkpoint (REQ-E17, REQ-E18, REQ-E19)
+
 **UI hint**: yes
 
 ### Phase 7: Enhancements & Polish (P3)
@@ -218,5 +234,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
-| 6. Trust & Safety | 0/TBD | Not started | - |
+| 6. Trust & Safety | 0/5 | Not started | - |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
