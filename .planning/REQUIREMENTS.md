@@ -253,7 +253,7 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E16 | identity-revealed-moment | P2 | Phase 5 | Pending |
 | REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Built (06-01, migration gated to 06-05) |
 | REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Complete (06-02; E2E + chat-RLS SQL run in 06-05) |
-| REQ-E19 | safety-flows | P2 | Phase 6 | Consumer half built (06-03: dispatch RPCs + handlers + soft cards + SQL; producers in 06-04, gated apply 06-05) |
+| REQ-E19 | safety-flows | P2 | Phase 6 | Built (06-03 consumers: dispatch RPCs + handlers + soft cards; 06-04 producers: both lock RPCs enqueue day_of_reconfirm + safety_checkin + e19_producers.sql); gated apply + advisor + SQL/E2E run 06-05 |
 | REQ-E20 | real-map-route | P3 | Phase 7 | Pending |
 | REQ-E21 | venues-into-loop | P3 | Phase 7 | Pending |
 | REQ-E22 | relevance-ranking | P3 | Phase 7 | Pending |

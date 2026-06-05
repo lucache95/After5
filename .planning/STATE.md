@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-03-PLAN.md (Rung 3 + reveal ceremony)
-last_updated: "2026-06-05T05:48:20.249Z"
+stopped_at: Completed 06-04-PLAN.md (E19 producers — both lock RPCs enqueue safety jobs)
+last_updated: "2026-06-05T06:10:00.000Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 30
-  completed_plans: 28
-  percent: 71
+  completed_plans: 29
+  percent: 73
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 6 (Trust & Safety (P2)) — EXECUTING
-Plan: 4 of 5
-Status: Ready to execute
+Plan: 5 of 5
+Status: Ready to execute (06-05 phase gate — local apply + advisor + run all SQL/E2E + visual-verify + GATED prod-apply)
 Last activity: 2026-06-05
-Prior: 2026-06-04 — 05-03 (Rung 3 + ceremony) green: identity_revealed dispatched both lock RPCs + consent-gated (LOCAL applied + advisor-clean, prod untouched), RevealModal unblur ceremony + reduced-motion + sonner toast, 4/4 e2e (ceremony/reduced-motion/inverse-consent/both-party-dispatch). Migrations PENDING gated prod-apply in 05-04: 20260606120100_e16 (+ the 05-01 e15 browse_feed widen).
+Prior: 2026-06-05 — 06-04 (E19 producers) green: both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100) adding day_of_reconfirm (morning-of 09:00 date-city-tz, permissive UTC degrade) + safety_checkin (post-window) enqueues beside rating_window — new_match + identity_revealed dispatches + authenticated grant PRESERVED. Migration 20260606130000 (timestamp strictly after e16 so db reset can't clobber). e19_producers.sql asserts both paths enqueue both jobs (Pitfall 2 reciprocal). Commits 954176d (migration), be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
 
 PHASE-CLOSE GATES:
   ✓ Forced-local visual-verify @420px E13 (offer+lock PlanTimeline) + E12 (interested decline/withdraw/pills, passed_by_host filtered) — PASS. 1 LOW pre-existing note: offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages; accepted row fine in prod via lock reveal). Harness: apps/web/e2e/route-03-visual.spec.ts.
@@ -77,6 +77,7 @@ Progress: [█████████░] 93%
 | Phase 06 P01 | 6 | 4 tasks | 10 files |
 | Phase 06 P02 | 4 | 2 tasks | 3 files |
 | Phase 06 P03 | 18 | 4 tasks | 5 files |
+| Phase 06 P04 | 12 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05/05-03 (E16/D-02/D-04): identity_revealed dispatched at BOTH match_accept_offer AND match_resolve_reciprocal to both parties; consent = it honors matches_enabled by gating the DELIVERY channel to 'suppressed' (sibling PARITY with new_match), NOT by withholding the in-app row — dispatch_notification ALWAYS writes the in-app row, prefs gate push/email (E8 precedent). Inverse-consent verified at runtime + through the real lock e2e. RevealModal ceremony = framer-motion blur(12px)->0 / 900ms expo-out + scale/opacity + one shell.accent glow flourish, gated on justLocked (?just=1); reduced-motion = immediate clear + opacity cross-fade, toast still fires; sage NOT promoted (flourish is pink, not a tick). e16 migration LOCAL-applied + advisor-clean, PROD UNTOUCHED (gated to 05-04 alongside the 05-01 e15 browse_feed widen).
 - [Phase 06]: 06/06-01 (E17/REQ-E17/D-01/D-02): reliability_score = weighted % from match_ratings + no_show locks, recomputed on close_rating_window for BOTH parties. Weights LOCKED in packages/business/src/reliability.ts (SQL recompute_reliability mirrors 1:1): showed_up 80 + on_time 20 (clean attended date=100); cancelled_with_notice 50 RECOVERY credit ONLY on a no-show (not an additive bonus); unsafe_or_disrespectful -100 (floors the date to 0); each no_show lock=0. NULL until >=3 total (rated+no_show) dates -> badge_is_new "new here". no_show counted from locks.status='no_show' EXCLUDING any lock already rated for the ratee (no_show AUTHORITATIVE, one bucket per lock, no double-count). SOFT (D-02): recompute_reliability writes ONLY profiles.reliability_score — NO enforcement/status-change/bans. DEFINER pins search_path=public + revoke-all from public/anon/authenticated. ProfileCard pill (verified-gated via badgeFor): blush "new here" (+ "no rated dates yet", no number) / neutral "{score}% · reliable" + tiny sage Check tick, aria-label both states, NO red. Migration 20260605120000_e17 GATED: local apply + advisor + e17 SQL assertion-script run all DEFERRED to 06-05; prod (ufufmcpnysvwtutpbian) UNTOUCHED.
 - [Phase 06]: 06/06-02 (E18/REQ-E18): chat→profile + chat→night wired into the existing DeepRouteHeader right slot, reveal-gated on chat_threads.lock_id (added to the conversation loader select). Pre-lock thread renders NEITHER control (no identity leak, T-06-05); both → /matches/[lockId] (lucide UserRound / CalendarHeart, 44px tap targets, quiet ink, aria-labels their profile / the night). Night→Profile + Night→Chat in LockDetail confirmed unchanged. chat_threads_party_read VERIFIED-not-recreated (deny-non-party SQL, NO create policy). E2E + SQL authored, EXECUTION deferred to 06-05. No DB applied, prod untouched.
+- [Phase 06]: 06/06-04 (E19/REQ-E19 producers): both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100_e16) — NOT the superseded 127800/_p5_accept_lock/_p5_b_complete — adding day_of_reconfirm + safety_checkin enqueues beside rating_window. PRESERVED everything e16 added: new_match (2/RPC) + identity_revealed (2/RPC), SECURITY DEFINER SET search_path, inherited grant to authenticated (no DROP — T-06-12). Migration timestamp 20260606130000 sorts STRICTLY AFTER e16 (20260606120100) so a db reset can't let e16 re-apply and clobber the safety enqueues (the plan's stale 20260605120200 filename would have). day_of_reconfirm run_after = date_trunc('day', lower(rng) at time zone v_tz) at time zone v_tz + 9h, tz from date_instance.city_id→cities.timezone (NOT primary_city_id), permissive degrade lower(rng)-6h if tz null. safety_checkin run_after = upper(rng)+2h. Dedup reconfirm:||lid / checkin:||lid; payload {lock_id}. Reciprocal uses p_chosen_instance (no inst local, Pitfall 2). e19_producers.sql drives both RPCs to real locks (accept via a_accept_lock recipe, reciprocal via b_reciprocal recipe) and asserts rating:/reconfirm:/checkin: jobs for each lid. Commits 954176d (migration) + be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
 
 ### Pending Todos
 
@@ -127,6 +129,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-05T05:48:14.293Z
-Stopped at: Completed 05-03-PLAN.md (Rung 3 + reveal ceremony)
+Last session: 2026-06-05T06:10:00.000Z
+Stopped at: Completed 06-04-PLAN.md (E19 producers — both lock RPCs enqueue safety jobs)
 Resume file: None

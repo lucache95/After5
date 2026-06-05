@@ -198,7 +198,7 @@ Plans:
 
 **Wave 2** *(blocked on 06-03)*
 
-- [ ] 06-04-PLAN.md — E19 producers: CREATE OR REPLACE both lock RPCs adding day_of_reconfirm + safety_checkin enqueues (both paths) (REQ-E19)
+- [x] 06-04-PLAN.md — E19 producers: CREATE OR REPLACE both lock RPCs adding day_of_reconfirm + safety_checkin enqueues (both paths) (REQ-E19) — migration 20260606130000 (after e16) + e19_producers.sql; gated apply 06-05
 
 **Wave 3** *(blocked on Waves 1-2)*
 
@@ -234,5 +234,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
-| 6. Trust & Safety | 3/5 | In Progress|  |
+| 6. Trust & Safety | 4/5 | In Progress|  |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
