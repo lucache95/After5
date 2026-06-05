@@ -12,6 +12,7 @@ import {
 } from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
 import { PlanTimeline } from '@/components/PlanTimeline';
+import { RouteMap } from '@/components/itinerary/RouteMap';
 import { cn } from '@/lib/cn';
 
 // Pre-swipe DATE DETAIL (DESIGN-SYSTEM §4 "ExperienceDetail" branch), redesigned
@@ -101,6 +102,9 @@ export function NightDetailSheet({
   const distance = km(night.distance_m);
   const tags = (night.vibe_tags ?? []).filter(Boolean);
   const stops = detail?.stops ?? [];
+  // E20: drive the real map only when >=1 stop carries coords; else the section
+  // keeps its "short hop apart" placeholder (RouteMap itself returns null at 0 coords).
+  const hasMappedStops = stops.some((s) => typeof s.lat === 'number' && typeof s.lng === 'number');
 
   // Always resolve to a tasteful, on-theme hero (#77 — never an empty src).
   const cover = coverImageForNight({
@@ -261,28 +265,25 @@ export function NightDetailSheet({
                 </div>
               )}
 
-              {/* THE ROUTE — mini-map placeholder (no real map wired yet) */}
+              {/* THE ROUTE — real static map (E20). RouteMap plots coords ONLY
+                  (no names/slugs — blind contract) and returns null at 0 coords,
+                  so we keep the "short hop apart" placeholder tone as the no-coords
+                  fallback. Never a broken tile. */}
               {stops.length > 1 && (
                 <div>
                   <p className="mb-2 font-body text-[11px] font-bold lowercase tracking-[0.16em] text-shell-ink/50">
                     the route
                   </p>
-                  <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-shell-pink to-shell-base ring-1 ring-shell-ink/10">
-                    <Route className="h-5 w-5 text-shell-ink/40" aria-hidden />
-                    <span className="ml-2 font-body text-xs lowercase text-shell-ink/50">
-                      {stops.length} stops, a short hop apart
-                    </span>
-                    {stops.slice(0, 4).map((s, idx) => (
-                      <span
-                        key={`pin-${s.name}-${idx}`}
-                        className="absolute flex h-5 w-5 items-center justify-center rounded-full bg-shell-accent font-body text-[10px] font-bold text-white ring-2 ring-white"
-                        style={{ left: `${18 + idx * 22}%`, top: idx % 2 === 0 ? '26%' : '60%' }}
-                        aria-hidden
-                      >
-                        {idx + 1}
+                  {hasMappedStops ? (
+                    <RouteMap stops={stops} />
+                  ) : (
+                    <div className="flex h-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-shell-pink to-shell-base ring-1 ring-shell-ink/10">
+                      <Route className="h-5 w-5 text-shell-ink/40" aria-hidden />
+                      <span className="ml-2 font-body text-xs lowercase text-shell-ink/50">
+                        {stops.length} stops, a short hop apart
                       </span>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 
