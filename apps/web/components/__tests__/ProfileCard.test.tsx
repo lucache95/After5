@@ -40,4 +40,51 @@ describe('ProfileCard', () => {
     render(<ProfileCard name="Lee" age={30} place="x" photos={[]} vibe_tags={[]} prompts={[]} />);
     expect(screen.queryByText(/@/)).not.toBeInTheDocument();
   });
+
+  it('renders the "new here" reliability pill (no number) for a verified new member', () => {
+    render(
+      <ProfileCard
+        name="Nova"
+        age={27}
+        place="x"
+        photos={[]}
+        vibe_tags={[]}
+        prompts={[]}
+        verification="verified"
+        reliability_score={null}
+      />,
+    );
+    expect(screen.getByText('new here')).toBeInTheDocument();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    // aria-label spells out the new-member state
+    expect(screen.getByLabelText(/new member, no rated dates yet/i)).toBeInTheDocument();
+  });
+
+  it('renders "{score}% · reliable" with an aria-label for an established member', () => {
+    render(
+      <ProfileCard
+        name="Reed"
+        age={31}
+        place="x"
+        photos={[]}
+        vibe_tags={[]}
+        prompts={[]}
+        verification="verified"
+        reliability_score={94}
+      />,
+    );
+    expect(screen.getByText(/94% · reliable/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/reliability: 94 percent, established/i)).toBeInTheDocument();
+  });
+
+  it('carries an aria-label on the pill in both states', () => {
+    const { rerender } = render(
+      <ProfileCard name="A" age={20} place="x" photos={[]} vibe_tags={[]} prompts={[]} verification="verified" reliability_score={null} />,
+    );
+    expect(screen.getByLabelText(/new member/i)).toBeInTheDocument();
+    rerender(
+      <ProfileCard name="A" age={20} place="x" photos={[]} vibe_tags={[]} prompts={[]} verification="verified" reliability_score={88} />,
+    );
+    expect(screen.getByLabelText(/reliability: 88 percent, established/i)).toBeInTheDocument();
+  });
 });

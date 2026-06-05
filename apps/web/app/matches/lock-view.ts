@@ -17,6 +17,9 @@ export interface PartyProfile {
   // M6 reveal additions. prompt_answers is the raw jsonb; pronouns is plain text.
   prompt_answers?: { prompt_id: string; answer: string }[];
   pronouns?: string | null;
+  // E17 reliability badge inputs for the revealed ProfileCard pill.
+  verification?: Database['public']['Enums']['verification_state'];
+  reliability_score?: number | null;
 }
 
 // A prompt answer joined to its (active) prompt label, ready for the ProfileCard.

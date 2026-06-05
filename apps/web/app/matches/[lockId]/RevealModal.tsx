@@ -95,6 +95,8 @@ export function RevealModal({
                 photos={photos}
                 vibe_tags={person.vibe_tags}
                 prompts={prompts}
+                verification={person.verification}
+                reliability_score={person.reliability_score ?? null}
               />
             </motion.div>
           </div>

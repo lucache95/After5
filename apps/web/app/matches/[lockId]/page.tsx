@@ -32,8 +32,8 @@ export default async function LockPage({
     .from('locks')
     .select(`
       id, status, locked_at, rating_closed_at, cancel_reason, creator_id, matched_user_id, date_instance_id,
-      creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns ),
-      matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns ),
+      creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns, verification, reliability_score ),
+      matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns, verification, reliability_score ),
       instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range, itinerary_id ),
       thread:chat_threads!chat_threads_lock_id_fkey ( id )
     `)
