@@ -28,6 +28,7 @@ A user can browse a real planned night, express interest, get matched, and **end
 - An eval harness (deterministic + LLM-judge over a golden set incl. a cold city) — the product's actual test.
 - Vibe-matched ambient sound + more tracks.
 - Generation becomes the primary night-creation path; legacy `/create` funnel retired.
+- A page-by-page UX/brand/navigation audit of the whole app (empirical, browser-driven via Playwright/Chromium against the running app — catches missing back affordances, nav traps, brand drift), then prioritized remediation (nav gaps + brand consistency first).
 
 **Discipline:** no manufactured features. Every requirement serves "deliver a date someone will actually go on, created simply, in any city, legally." Cut: scraping, multi-city marketing, cover-image-ML sound matching, whole-app redesign.
 

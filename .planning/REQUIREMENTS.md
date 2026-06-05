@@ -34,6 +34,10 @@ harness), and its ambient sound fits its cover.
 ### FLOW — into the dating product
 - [ ] **FLOW-01** — Generating a date becomes the primary way to create a night in the dating app (publishes to the feed); the legacy manual `/create` planner funnel (and its orphaned `/plan`/catalog surfaces) is retired or replaced.
 
+### UX — page-by-page brand + navigation audit
+- [ ] **UX-01** — A systematic audit of **every** route/page and shared component against (a) the design system (DESIGN-SYSTEM.md / Barbiecore brand consistency) and (b) a navigation + flow rubric (every deep route has a working back/up affordance, no dead-ends or traps, correct tab/back-stack semantics, consistent chrome, sane entry/exit). Produces a severity-scored findings inventory covering the whole app surface (incl. the legacy planner surfaces being retired under FLOW-01).
+- [ ] **UX-02** — Remediate the UX-01 findings, prioritized: fix all navigation gaps (missing back/up, dead-ends, traps) and brand-consistency violations; defer purely-cosmetic nits. Outcome: no page is a navigation trap and every page reads as one coherent branded product.
+
 ---
 
 ## Future Requirements (deferred to v2.1+)
@@ -51,6 +55,15 @@ harness), and its ambient sound fits its cover.
 
 ---
 
+## Audit methodology (UX-01)
+
+The UX-01 audit is **empirical, browser-driven** — not a code read. Use the Playwright / Chromium
+/ playwright-MCP browser tools to navigate **every** route in the running app (prod
+`ufufmcpnysvwtutpbian` deployment and/or forced-local), screenshot each page at the @420px
+mobile-first viewport, and check each against the nav/flow rubric + DESIGN-SYSTEM.md. The findings
+inventory cites real screenshots + concrete page URLs, so UX-02 remediation is grounded in what the
+app actually does, not what the code implies.
+
 ## Traceability
 *(filled by the roadmapper — every REQ maps to exactly one phase)*
 
@@ -64,5 +77,7 @@ harness), and its ambient sound fits its cover.
 | EVAL-01 | eval-harness | EVAL | — | Pending |
 | SOUND-01 | vibe-matched-sound | SOUND | — | Pending |
 | FLOW-01 | generate-into-dating | FLOW | — | Pending |
+| UX-01 | ux-nav-brand-audit | UX | — | Pending |
+| UX-02 | ux-remediation | UX | — | Pending |
 
-**Coverage:** 8/8 requirements (to be mapped by roadmap).
+**Coverage:** 10/10 requirements (to be mapped by roadmap).
