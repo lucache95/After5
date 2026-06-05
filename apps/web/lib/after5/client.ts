@@ -22,6 +22,6 @@ export {
 } from '@after5/api-client';
 export {
   postNight, browseFeed, recordSwipe, getNightDetail, reachPreview,
-  ambientSoundUrl, listAmbientSounds, cancelNight, updateNight, updateItineraryStops,
+  ambientSoundUrl, listAmbientSounds, cancelNight, updateNight, withdrawInterest, updateItineraryStops,
   type FeedNight, type NightDetailNight, type NightDetailStop, type AmbientSound,
 } from '@after5/api-client';

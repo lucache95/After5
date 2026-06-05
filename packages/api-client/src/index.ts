@@ -70,6 +70,6 @@ export * from './profile';
 export {
   postNight, browseFeed, recordSwipe, getNightDetail, reachPreview,
   ambientSoundUrl, listAmbientSounds, updateItineraryStops, createBlankItinerary,
-  cancelNight, updateNight, normalizeNightDetailStops,
+  cancelNight, updateNight, withdrawInterest, normalizeNightDetailStops,
   type FeedNight, type NightDetailNight, type NightDetailStop, type AmbientSound, type EditableStop,
 } from './feed';
