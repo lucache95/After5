@@ -202,7 +202,7 @@ Plans:
 
 **Wave 3** *(blocked on Waves 1-2)*
 
-- [ ] 06-05-PLAN.md — Phase gate: [BLOCKING] local migration apply + advisor + typegen + run all SQL/E2E + visual-verify @420px + GATED prod-apply checkpoint (REQ-E17, REQ-E18, REQ-E19)
+- [x] 06-05-PLAN.md — Phase gate: [BLOCKING] local migration apply + advisor + typegen + run all SQL/E2E + visual-verify @420px + GATED prod-apply checkpoint (REQ-E17, REQ-E18, REQ-E19)
 
 **UI hint**: yes
 

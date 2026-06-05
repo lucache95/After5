@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 06-04-PLAN.md (E19 producers — both lock RPCs enqueue safety jobs)
-last_updated: "2026-06-05T06:10:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 06 complete (5/5) — ready to discuss Phase 7
+last_updated: 2026-06-05T16:08:33.304Z
 last_activity: 2026-06-05
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 30
-  completed_plans: 29
-  percent: 73
+  completed_plans: 30
+  percent: 71
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 6 — Trust & Safety (P2)
+**Current focus:** Phase 7 — enhancements & polish (p3)
 
 ## Current Position
 
-Phase: 6 (Trust & Safety (P2)) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute (06-05 phase gate — local apply + advisor + run all SQL/E2E + visual-verify + GATED prod-apply)
+Phase: 7
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-06-05
 Prior: 2026-06-05 — 06-04 (E19 producers) green: both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100) adding day_of_reconfirm (morning-of 09:00 date-city-tz, permissive UTC degrade) + safety_checkin (post-window) enqueues beside rating_window — new_match + identity_revealed dispatches + authenticated grant PRESERVED. Migration 20260606130000 (timestamp strictly after e16 so db reset can't clobber). e19_producers.sql asserts both paths enqueue both jobs (Pitfall 2 reciprocal). Commits 954176d (migration), be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
 
@@ -51,7 +51,7 @@ Progress: [█████████░] 93%
 
 **Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 9
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 93%
 | 02 | 5 | ~43m | ~8.6m |
 | 03 | (in progress) | — | — |
 | 05 | 4 | - | - |
+| 06 | 5 | - | - |
 
 **03 plan log:** 03-04 PlanTimeline extraction — ~25m, 3 files, commit 74f88db (Wave 1). 03-02 reject_candidate DEFINER RPC (silent decline) — ~15m, 5 files, commits 550d8ca/c6a3fc1/99dbd64 (Wave 2); REQ-E12 backend half done, UI half pending.
 
