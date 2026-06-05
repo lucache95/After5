@@ -84,7 +84,7 @@ sound fits its cover.
   4. The eval harness scores generated dates with deterministic hard checks (proximity, hours-open-at-time, schedule monotonicity, budget sum, no hallucinated venues) plus an Opus-4.8 judge rubric, over a golden set that includes a cold on-the-fly city, surfacing `unverified_rate` per city, and gates in CI.
 **Plans**: 6 plans
 Plans:
-- [ ] 09-01-PLAN.md — PLAN-01: tool-use copy pass + haversine hop-gate (one-tap any-city generate)
+- [x] 09-01-PLAN.md — PLAN-01: tool-use copy pass + haversine hop-gate (one-tap any-city generate)
 - [ ] 09-02-PLAN.md — SOUND-01: expanded ambient library + vibe-match auto-pick on persist
 - [ ] 09-03-PLAN.md — EVAL-01: scheduleMonotonic gate + cold-city fixtures + unverified_rate threshold
 - [ ] 09-04-PLAN.md — EVAL-01: per-fixture JUDGE_CITY + live no-hallucination + baseline regen + CI gate

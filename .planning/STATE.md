@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 08-05-PLAN.md; next plan 08-06 (phase gate + gated prod-apply).
-last_updated: "2026-06-05T23:06:31.497Z"
-last_activity: 2026-06-05 -- Phase 8 Plan 05 executed (seed_city job type + handler: bounded FSQ fetch → upsert onConflict fsq_place_id → stamp cities.seeded_at; dedup'd service-role enqueue helper; prod untouched)
+stopped_at: Completed 09-01-PLAN.md (PLAN-01: tool-use copy pass + haversine hop-gate); next plan 09-02.
+last_updated: "2026-06-05T23:54:00.000Z"
+last_activity: 2026-06-05 -- Phase 9 Plan 01 executed (PLAN-01: migrated Sonnet copy pass to forced Anthropic tool-use; replaced drive_cluster string adjacency with haversine withinHop/MAX_HOP_KM + post-validate+repair; exported haversineKm; 67/67 deno tests green)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 
 ## Current Position
 
-Phase: 8 — Compliant Any-City Venue Corpus (in progress)
-Plan: 05 complete (DATA-02 seed_city: job-type enum + handler bounded-fetches FSQ → upserts onConflict fsq_place_id → stamps cities.seeded_at; dedup'd service-role enqueueSeedCity helper) — next: 08-06 (phase gate + gated prod-apply, blocked on FOURSQUARE_API_KEY)
+Phase: 9 — Trustworthy Generation + Eval Harness (in progress)
+Plan: 01 complete (PLAN-01: forced tool-use copy pass via ITINERARY_TOOL/extractToolUseItineraries; haversine withinHop + MAX_HOP_KM=2.0 replaces drive_cluster adjacency; post-validate+repair of far hops; haversineKm exported) — next: 09-02
 Status: Executing
-Last activity: 2026-06-05 -- Phase 8 Plan 05 executed (seed_city job type + handler + dedup'd enqueue; local-green via db reset + mock-FSQ handler test; prod untouched)
+Last activity: 2026-06-05 -- Phase 9 Plan 01 executed (tool-use migration + haversine hop-gate; parseLLMResponse/clusterCompatible removed; 67/67 deno tests green; prod untouched)
 
 ## v2.0 Roadmap (phases 8–11)
 

@@ -22,7 +22,7 @@ harness), and its ambient sound fits its cover.
 - [ ] **DATA-03** — Proximity and opening-hours validators use real geo/hours and **fail loud on missing data** (no silent pass), so a cold city cannot read as valid when it isn't.
 
 ### PLAN — generation
-- [ ] **PLAN-01** — A user generates a coherent multi-stop date for their city in one tap from real venues (hardened existing engine: any-city provider + PostGIS proximity hop-gate + tool-use structured output).
+- [x] **PLAN-01** — A user generates a coherent multi-stop date for their city in one tap from real venues (hardened existing engine: any-city provider + PostGIS proximity hop-gate + tool-use structured output).
 - [ ] **PLAN-02** — A user can swap a single stop and apply natural-language tweaks ("cheaper", "more romantic", "later"), and the itinerary stays coherent (single-stop re-pick + intent parsing, persisted via `update_itinerary_stops`).
 
 ### EVAL — prove it's good
@@ -72,7 +72,7 @@ app actually does, not what the code implies.
 | DATA-01 | foursquare-corpus | DATA | Phase 8 | Built (local-green: foursquare.ts corpus, Google removed from gen path, google_legacy excluded; prod cutover key-gated, pending 08-06) |
 | DATA-02 | city-preseed | DATA | Phase 8 | Complete |
 | DATA-03 | failloud-guards | DATA | Phase 8 | In Progress |
-| PLAN-01 | one-tap-generate | PLAN | Phase 9 | Pending |
+| PLAN-01 | one-tap-generate | PLAN | Phase 9 | Complete (09-01) |
 | PLAN-02 | improve-loop | PLAN | Phase 9 | Pending |
 | EVAL-01 | eval-harness | EVAL | Phase 9 | Pending |
 | SOUND-01 | vibe-matched-sound | SOUND | Phase 9 | Pending |
