@@ -14,7 +14,7 @@ function stop(over: Partial<NightDetailStop>): NightDetailStop {
   return {
     name: 'a spot', type: null, start_time: null, duration_min: null,
     cost_pp: null, what_to_do: null, neighborhood: null, local_insight: null,
-    photo_url: null, lat: null, lng: null, drive_to_next_min: null,
+    photo_url: null, lat: null, lng: null, place_slug: null, drive_to_next_min: null,
     ...over,
   };
 }
@@ -50,5 +50,53 @@ describe('PlanTimeline', () => {
     render(<PlanTimeline stops={stops} accent="#ff00aa" vibeTags={['jazz']} />);
     expect(screen.getByText('jazz cellar')).toBeInTheDocument();
     expect(screen.getByText(/alberta/)).toBeInTheDocument();
+  });
+
+  // E20 — per-stop coord deep-links --------------------------------------------
+  it('uses a coord deep-link for the map link when lat/lng are present', () => {
+    const stops = [stop({ name: 'rooftop bar', lat: 49.888, lng: -119.496 })];
+    render(<PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} />);
+    const link = screen.getByRole('link', { name: /map/i });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/search/?api=1&query=49.888,-119.496',
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('falls back to a name search for the map link when coords are absent', () => {
+    const stops = [stop({ name: 'rooftop bar', lat: null, lng: null })];
+    render(<PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} />);
+    const link = screen.getByRole('link', { name: /map/i });
+    expect(link.getAttribute('href')).toContain('query=rooftop%20bar');
+    expect(link.getAttribute('href')).not.toContain('query=49');
+  });
+
+  // E21 — opt-in /places slug link (default OFF, blind contract) ----------------
+  it('does NOT link the stop name to /places by default (blind contract)', () => {
+    const stops = [stop({ name: 'jazz cellar', place_slug: 'jazz-cellar' })];
+    const { container } = render(
+      <PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} />,
+    );
+    // the name is plain text, never a /places anchor
+    expect(container.querySelector('a[href^="/places/"]')).toBeNull();
+    expect(screen.getByText('jazz cellar').closest('a')).toBeNull();
+  });
+
+  it('links the stop name to /places/[slug] when linkSlugs=true AND a slug is present', () => {
+    const stops = [stop({ name: 'jazz cellar', place_slug: 'jazz-cellar' })];
+    render(<PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} linkSlugs />);
+    const nameLink = screen.getByRole('link', { name: 'jazz cellar' });
+    expect(nameLink).toHaveAttribute('href', '/places/jazz-cellar');
+  });
+
+  it('renders the stop name as plain text when linkSlugs=true but the slug is absent (graceful degrade)', () => {
+    const stops = [stop({ name: 'mystery spot', place_slug: null })];
+    const { container } = render(
+      <PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} linkSlugs />,
+    );
+    expect(container.querySelector('a[href^="/places/"]')).toBeNull();
+    expect(screen.getByText('mystery spot').closest('a')).toBeNull();
   });
 });
