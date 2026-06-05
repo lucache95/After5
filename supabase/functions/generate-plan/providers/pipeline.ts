@@ -19,19 +19,12 @@ import { writeItineraries } from '../prompt.ts';
 import { selectPack, isSurpriseMe, packIsSatisfiable, enforceSequenceRules } from '../editorial-packs.ts';
 import type { Itinerary, Place } from '../types.ts';
 import type { GenerationContext, ProviderResult, ModifierRow } from './types.ts';
+import { PipelineError } from './pipeline-error.ts';
 
-// Typed pipeline error → handler maps .code/.message back to the EXACT 422/503
-// response bodies the frontend already handles.
-export class PipelineError extends Error {
-  code: string;
-  httpStatus: number;
-  constructor(code: string, message: string, httpStatus: number) {
-    super(message);
-    this.code = code;
-    this.httpStatus = httpStatus;
-    this.name = 'PipelineError';
-  }
-}
+// Re-export so existing `import { PipelineError } from './pipeline.ts'` callers
+// (handler, KelownaProvider) keep working. The class itself moved to
+// pipeline-error.ts so unit tests can import it without the Anthropic-SDK chain.
+export { PipelineError };
 
 export async function runPipeline(
   ctx: GenerationContext,

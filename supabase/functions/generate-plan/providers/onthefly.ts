@@ -1,63 +1,142 @@
-import type { DateGenerationProvider, GenerationContext } from './types.ts';
-import { runPipeline, PipelineError } from './pipeline.ts';
-import { searchText, googleResultToPlaceRow, passesQualityFloor, type GoogleResult } from '../google-places.ts';
+import type { DateGenerationProvider, GenerationContext, ProviderResult } from './types.ts';
+import { PipelineError } from './pipeline-error.ts';
+import { ONTHEFLY_APPROVAL_STATUSES } from '../places-filter.ts';
+import { searchPlaces, fsqResultToPlaceRow, passesQualityFloor, type FsqResult } from '../foursquare.ts';
 
-// One Text Search per category. ~5 calls, parallelized. No Place Details, no
-// per-place LLM (C6) — the stopgap warms cheaply; the real engine comes later.
-const CATEGORIES = ['cafe', 'restaurant', 'bar', 'activity', 'park'];
+// Fixed server-side Foursquare top-level category IDs (08-RESEARCH "Category
+// taxonomy"). These are seeded across the date-relevant categories; the granular
+// returned categories[].name is mapped to our place_type enum in mapFsqCategories.
+// [ASSUMED] — long-standing FSQ top-level ids; re-verified at the 08-06 live smoke
+// against docs.foursquare.com/data-products/docs/categories (RESEARCH A1).
+// Kept as a fixed constant (not user input) per the threat model (SQL-injection /
+// unbounded-seed control).
+export const FSQ_SEED_CATEGORY_IDS = [
+  '4d4b7105d754a06374d81259', // Dining and Drinking  → restaurant / cafe / bar / dessert
+  '4d4b7104d754a06370d81259', // Arts and Entertainment → activity / gallery
+  '4d4b7105d754a06377d81259', // Landscapes and Outdoors → park / beach / hike / viewpoint / walk
+  '4d4b7105d754a06378d81259', // Retail → shop / market
+].join(',');
 
-// Cold-check threshold: if a city already has >= this many usable places we
-// skip the Google round-trip entirely (keeps repeat generations cheap, C7).
-// Heuristic — a city with a dozen vetted/auto spots can fill 3 itineraries.
+// Per-category seed cap. RESEARCH Open Question 1: start at 30 (≤120/city), tune
+// after the Phase-9 eval.
+const SEED_LIMIT_PER_CATEGORY = 30;
+
+// Cold-check threshold: if a city already has >= this many usable places we skip
+// the Foursquare round-trip entirely (keeps repeat generations cheap, C7 / T-08-08).
 const COLD_THRESHOLD = 12;
 
-export function buildWarmRows(results: GoogleResult[], city: { id: string; slug: string }, key: string) {
+// Minimum usable candidates a warmed city needs before we trust it to fill a
+// date. Below this the city is still "warming up" — surface a distinct state
+// instead of a thin/garbage itinerary (Area 3, DATA-02).
+const MIN_USABLE = 3;
+
+export function buildWarmRows(
+  results: FsqResult[],
+  city: { id: string; slug: string },
+  key: string,
+) {
   const seen = new Set<string>();
   const rows = [];
   for (const r of results) {
-    if (!r.id || seen.has(r.id)) continue;
+    if (!r.fsq_place_id || seen.has(r.fsq_place_id)) continue;
     if (!passesQualityFloor(r)) continue;
-    seen.add(r.id);
-    rows.push(googleResultToPlaceRow(r, city, key));
+    seen.add(r.fsq_place_id);
+    rows.push(fsqResultToPlaceRow(r, city, key));
   }
   return rows;
+}
+
+// Injectable seam so the provider's control flow (env guard, cold-check, warm,
+// city_warming fallback) is unit-testable without the prompt.ts → Anthropic-SDK
+// import chain (no node_modules under plain `deno test`) and without a live key.
+export interface OnTheFlyDeps {
+  searchPlaces: typeof searchPlaces;
+  runPipeline: (ctx: GenerationContext, opts?: { approvalStatuses?: string[] }) => Promise<ProviderResult>;
+}
+
+export async function generateOnTheFly(
+  ctx: GenerationContext,
+  deps: OnTheFlyDeps,
+): Promise<ProviderResult> {
+  const { city, env, supabase } = ctx;
+  if (!env.foursquareKey) {
+    throw new PipelineError('generation_unavailable', 'On-the-fly generation is not configured for this city yet.', 503);
+  }
+
+  // Warm only if the city is cold (no auto/live places yet) — keeps repeat
+  // generations cheap. (Count, not fetch.)
+  const { count } = await supabase.from('places')
+    .select('id', { count: 'exact', head: true })
+    .eq('city_id', city.id).in('approval_status', ['live', 'auto']).eq('is_active', true);
+  const wasCold = (count ?? 0) < COLD_THRESHOLD;
+
+  if (wasCold) {
+    // One /places/search per top-level category id, parallelized. The new API
+    // returns hours/photos/price/rating inline — no Place Details call (C6).
+    const categoryIds = FSQ_SEED_CATEGORY_IDS.split(',');
+    const settled = await Promise.allSettled(categoryIds.map((id) =>
+      deps.searchPlaces({
+        apiKey: env.foursquareKey!,
+        lat: city.centroid_lat,
+        lng: city.centroid_lng,
+        radiusKm: city.default_radius_km,
+        categoryIds: id,
+        limit: SEED_LIMIT_PER_CATEGORY,
+      })));
+    const results: FsqResult[] = [];
+    const searchErrors: string[] = [];
+    for (const s of settled) {
+      if (s.status === 'fulfilled') results.push(...s.value);
+      else searchErrors.push(String((s.reason as Error)?.message ?? s.reason));
+    }
+    const rows = buildWarmRows(results, city, env.foursquareKey);
+    let upsertError: string | null = null;
+    if (rows.length > 0) {
+      // Idempotent: upsert on fsq_place_id (C7 / P5). Requires the NON-partial
+      // unique index places_fsq_place_id_key (08-03). Surface any error into the
+      // warm log instead of silently warming nothing.
+      const { error } = await supabase.from('places').upsert(rows, { onConflict: 'fsq_place_id', ignoreDuplicates: true });
+      if (error) upsertError = error.message;
+    }
+    ctx.log.warm = { city: city.slug, queried: categoryIds.length, raw: results.length, inserted: rows.length, searchErrors, upsertError };
+  }
+
+  // Reuse the shared pipeline, accepting freshly-warmed 'auto' rows on EVERY
+  // generation (W3 — a background-seeded city must read its 'auto' rows too).
+  try {
+    return await deps.runPipeline(ctx, { approvalStatuses: [...ONTHEFLY_APPROVAL_STATUSES] });
+  } catch (err) {
+    // Area 3 (DATA-02): a city that is still thin after the inline warm surfaces a
+    // DISTINCT city_warming (503) signal — "warming up, check back in a moment" —
+    // NOT the generic no_candidates (422) and NEVER a garbage date. Only translate
+    // when the city was just cold-warmed (an already-warm city's no_candidates is a
+    // genuine filter miss, not a warming state).
+    if (
+      err instanceof PipelineError &&
+      (err.code === 'no_candidates' || err.code === 'no_valid_itineraries') &&
+      wasCold
+    ) {
+      throw new PipelineError(
+        'city_warming',
+        `We're still gathering great spots in ${city.name} — check back in a moment.`,
+        503,
+      );
+    }
+    throw err;
+  }
 }
 
 export const OnTheFlyProvider: DateGenerationProvider = {
   name: 'onthefly',
   async generate(ctx: GenerationContext) {
-    const { city, env, supabase } = ctx;
-    if (!env.googleKey) {
-      throw new PipelineError('generation_unavailable', 'On-the-fly generation is not configured for this city yet.', 503);
-    }
-    // Warm only if the city is cold (no auto/live places yet) — keeps repeat
-    // generations cheap. (Count, not fetch.)
-    const { count } = await supabase.from('places')
-      .select('id', { count: 'exact', head: true })
-      .eq('city_id', city.id).in('approval_status', ['live', 'auto']).eq('is_active', true);
-    if ((count ?? 0) < COLD_THRESHOLD) {
-      const queries = CATEGORIES.map((c) => `${c} in ${city.name} ${city.region ?? ''}`.trim());
-      const settled = await Promise.allSettled(queries.map((q) =>
-        searchText(q, { apiKey: env.googleKey!, lat: city.centroid_lat, lng: city.centroid_lng, radiusKm: city.default_radius_km })));
-      const results: GoogleResult[] = [];
-      const searchErrors: string[] = [];
-      for (const s of settled) {
-        if (s.status === 'fulfilled') results.push(...s.value);
-        else searchErrors.push(String((s.reason as Error)?.message ?? s.reason));
-      }
-      const rows = buildWarmRows(results, city, env.googleKey);
-      let upsertError: string | null = null;
-      if (rows.length > 0) {
-        // Idempotent: upsert on google_place_id (C7). Requires a NON-partial unique
-        // index on places.google_place_id — a partial index (WHERE ... IS NOT NULL)
-        // is not a valid ON CONFLICT arbiter (see 20260602160000). Surface any error
-        // into the warm log instead of silently warming nothing.
-        const { error } = await supabase.from('places').upsert(rows, { onConflict: 'google_place_id', ignoreDuplicates: true });
-        if (error) upsertError = error.message;
-      }
-      ctx.log.warm = { city: city.slug, queried: queries.length, raw: results.length, inserted: rows.length, searchErrors, upsertError };
-    }
-    // Reuse the shared pipeline, accepting freshly-warmed 'auto' rows.
-    return runPipeline(ctx, { approvalStatuses: ['live', 'auto'] });
+    // Lazy import keeps the module top-level free of pipeline.ts → prompt.ts →
+    // npm:@anthropic-ai/sdk, so the unit tests can import this file (for
+    // buildWarmRows / generateOnTheFly via injected deps) without node_modules.
+    const { runPipeline } = await import('./pipeline.ts');
+    return generateOnTheFly(ctx, { searchPlaces, runPipeline });
   },
 };
+
+// MIN_USABLE referenced by the city_warming threshold doc; the pipeline's own
+// `< 3` candidate gate (pipeline.ts) is the runtime enforcement we translate.
+export { MIN_USABLE };
