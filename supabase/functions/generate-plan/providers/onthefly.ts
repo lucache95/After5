@@ -1,21 +1,13 @@
 import type { DateGenerationProvider, GenerationContext, ProviderResult } from './types.ts';
 import { PipelineError } from './pipeline-error.ts';
 import { ONTHEFLY_APPROVAL_STATUSES } from '../places-filter.ts';
-import { searchPlaces, fsqResultToPlaceRow, passesQualityFloor, type FsqResult } from '../foursquare.ts';
-
-// Fixed server-side Foursquare top-level category IDs (08-RESEARCH "Category
-// taxonomy"). These are seeded across the date-relevant categories; the granular
-// returned categories[].name is mapped to our place_type enum in mapFsqCategories.
-// [ASSUMED] — long-standing FSQ top-level ids; re-verified at the 08-06 live smoke
-// against docs.foursquare.com/data-products/docs/categories (RESEARCH A1).
-// Kept as a fixed constant (not user input) per the threat model (SQL-injection /
-// unbounded-seed control).
-export const FSQ_SEED_CATEGORY_IDS = [
-  '4d4b7105d754a06374d81259', // Dining and Drinking  → restaurant / cafe / bar / dessert
-  '4d4b7104d754a06370d81259', // Arts and Entertainment → activity / gallery
-  '4d4b7105d754a06377d81259', // Landscapes and Outdoors → park / beach / hike / viewpoint / walk
-  '4d4b7105d754a06378d81259', // Retail → shop / market
-].join(',');
+import { searchPlaces, type FsqResult } from '../foursquare.ts';
+// FSQ_SEED_CATEGORY_IDS + buildWarmRows live in the SDK-free fsq-seed.ts so the
+// async seed handler (process-jobs/seed-city.ts) shares the exact same category
+// set + quality-floor + dedupe as this inline cold-start path. Re-exported here so
+// existing importers of these symbols from onthefly.ts are unchanged.
+export { FSQ_SEED_CATEGORY_IDS, buildWarmRows } from './fsq-seed.ts';
+import { FSQ_SEED_CATEGORY_IDS, buildWarmRows } from './fsq-seed.ts';
 
 // Per-category seed cap. RESEARCH Open Question 1: start at 30 (≤120/city), tune
 // after the Phase-9 eval.
@@ -29,22 +21,6 @@ const COLD_THRESHOLD = 12;
 // date. Below this the city is still "warming up" — surface a distinct state
 // instead of a thin/garbage itinerary (Area 3, DATA-02).
 const MIN_USABLE = 3;
-
-export function buildWarmRows(
-  results: FsqResult[],
-  city: { id: string; slug: string },
-  key: string,
-) {
-  const seen = new Set<string>();
-  const rows = [];
-  for (const r of results) {
-    if (!r.fsq_place_id || seen.has(r.fsq_place_id)) continue;
-    if (!passesQualityFloor(r)) continue;
-    seen.add(r.fsq_place_id);
-    rows.push(fsqResultToPlaceRow(r, city, key));
-  }
-  return rows;
-}
 
 // Injectable seam so the provider's control flow (env guard, cold-check, warm,
 // city_warming fallback) is unit-testable without the prompt.ts → Anthropic-SDK

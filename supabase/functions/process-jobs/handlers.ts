@@ -5,6 +5,7 @@
 
 import { type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { dispatchNotification, type NotificationType } from "../_shared/notify.ts";
+import { seedCity } from "./seed-city.ts";
 
 // Bare SupabaseClient (default generics) so a real createClient(url, key) result
 // — SupabaseClient<any, 'public', any> — is assignable here. (ReturnType<typeof
@@ -67,5 +68,10 @@ export const HANDLERS: Record<string, Handler> = {
   day_of_reconfirm: async (db, job) => { await callRpc(db, "dispatch_date_reconfirm", { p_lock: id(job, "lock_id") }); },  // P6/E19
   safety_checkin: async (db, job) => { await callRpc(db, "dispatch_safety_checkin", { p_lock: id(job, "lock_id") }); },    // P6/E19
   analytics_relay: async (db, job) => { await callRpc(db, "analytics_relay_drain", { p_batch: job.payload }); },            // P11/S12 owns the body
+  // DATA-02 (P8): async city pre-seed. Unlike the loop handlers this one writes
+  // corpus tables directly (Foursquare fetch → places upsert → cities.seeded_at)
+  // rather than calling a consumer RPC — it IS the consumer. payload = {city_id};
+  // dedup_key=city_id on the enqueue side (poison-loop safe). See seed-city.ts.
+  seed_city: seedCity,
   notify: genericNotify,
 };
