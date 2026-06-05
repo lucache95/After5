@@ -8,6 +8,12 @@ After5 is a two-sided dating marketplace built on the premise **"swipe on the da
 
 A user can browse a real planned night, express interest, get matched, and **end up on an actual date with a real plan attached — the full loop closes and never traps the user.** If everything else fails, the browse → match → reveal → plan → date → review loop must work end-to-end.
 
+## Current State
+
+**Shipped: v1.0 (MVP) — 2026-06-05.** The full blind dating loop is live and proven on prod (`ufufmcpnysvwtutpbian`): browse (blind) → swipe → offer (plan-on-match) → lock → reveal ceremony → chat → date → rating → archive. v1.0 delivered all 25 P0→P3 requirements (E1–E25) across 7 phases: the navigation/profile spine, loop closure + host controls, marketplace completeness, discoverability (targeting + filters + soft-boost ranking), progressive reveal (host-hint ladder + identity reveal), trust & safety (reliability_score + chat↔profile↔night wiring + soft safety check-ins), and enhancements (real maps + post-match venue identity + standby/waitlist + archive). Milestone audit PASSED — integration clean, blind contract intact end-to-end. See [`MILESTONES.md`](MILESTONES.md).
+
+**Next milestone goals (carried deferrals):** the AI date-planner moat (generate/customize nights — the product's defensible core), E25 draft-state + typing indicators + read receipts, business-ownership/claim, richer compatibility ranking, automatic standby promotion, multi-city expansion, and the Phase-5 WR-04 cancelled-lock reveal. Start with `/gsd:new-milestone`.
+
 ## Requirements
 
 ### Validated
