@@ -18,7 +18,7 @@ harness), and its ambient sound fits its cover.
 
 ### DATA — venue corpus & compliance
 - [ ] **DATA-01** — Foursquare Places becomes the canonical, stored, LLM-fed `places` corpus; Google is demoted to a live display-only layer keyed by `google_place_id` (never persisted as content, never fed to the model). The existing Google→LLM path is removed.
-- [ ] **DATA-02** — When a user sets their profile location, their city's venues ingest into `places` in the background (async pre-seed); generation falls back to a live fetch if the city is still cold, with a graceful "warming up" state.
+- [x] **DATA-02** — When a user sets their profile location, their city's venues ingest into `places` in the background (async pre-seed); generation falls back to a live fetch if the city is still cold, with a graceful "warming up" state.
 - [ ] **DATA-03** — Proximity and opening-hours validators use real geo/hours and **fail loud on missing data** (no silent pass), so a cold city cannot read as valid when it isn't.
 
 ### PLAN — generation
@@ -70,7 +70,7 @@ app actually does, not what the code implies.
 | Requirement | Slug | Category | Phase | Status |
 |-------------|------|----------|-------|--------|
 | DATA-01 | foursquare-corpus | DATA | Phase 8 | Pending |
-| DATA-02 | city-preseed | DATA | Phase 8 | Pending |
+| DATA-02 | city-preseed | DATA | Phase 8 | Complete |
 | DATA-03 | failloud-guards | DATA | Phase 8 | In Progress |
 | PLAN-01 | one-tap-generate | PLAN | Phase 9 | Pending |
 | PLAN-02 | improve-loop | PLAN | Phase 9 | Pending |

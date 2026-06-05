@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 08-04-PLAN.md; next plan in Phase 8 (08-05 seed_city).
-last_updated: "2026-06-05T22:56:30.000Z"
-last_activity: 2026-06-05 -- Phase 8 Plan 04 executed (DATA-01/02 re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback)
+stopped_at: Completed 08-05-PLAN.md; next plan 08-06 (phase gate + gated prod-apply).
+last_updated: "2026-06-05T23:06:31.497Z"
+last_activity: 2026-06-05 -- Phase 8 Plan 05 executed (seed_city job type + handler: bounded FSQ fetch → upsert onConflict fsq_place_id → stamp cities.seeded_at; dedup'd service-role enqueue helper; prod untouched)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 6
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 8 — Compliant Any-City Venue Corpus (in progress)
-Plan: 04 complete (DATA-01/02 re-source OnTheFlyProvider to Foursquare + google_legacy pool exclusion + city_warming fallback) — next: 08-05 (seed_city handler)
+Plan: 05 complete (DATA-02 seed_city: job-type enum + handler bounded-fetches FSQ → upserts onConflict fsq_place_id → stamps cities.seeded_at; dedup'd service-role enqueueSeedCity helper) — next: 08-06 (phase gate + gated prod-apply, blocked on FOURSQUARE_API_KEY)
 Status: Executing
-Last activity: 2026-06-05 -- Phase 8 Plan 04 executed (cold-start now Foursquare-sourced; W3 read-path admits 'auto' every generation; thin city → city_warming 503)
+Last activity: 2026-06-05 -- Phase 8 Plan 05 executed (seed_city job type + handler + dedup'd enqueue; local-green via db reset + mock-FSQ handler test; prod untouched)
 
 ## v2.0 Roadmap (phases 8–11)
 
