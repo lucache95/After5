@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: trust-and-safety-p2
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-04
+reviewed_at: 2026-06-04
 ---
 
 # Phase 6 — UI Design Contract
@@ -130,6 +131,7 @@ Post-lock identity is already revealed (Phase 5), so the chat header may link to
    - Night link → `/matches/[lockId]` (the night/plan), label `the night`.
    - These require the thread's `lock_id` (chat_threads carries `offer_id`/`lock_id`); the loader must select it. If the thread is not yet lock-promoted (pre-lock), render NO profile/night control (reveal-gated — do not leak identity pre-lock).
    - Render as quiet ink links/icon-buttons in the header `right` slot. Pink reserved for at most one (the night) if a primary affordance is wanted; default both quiet.
+   - **A11y (checker FLAG resolution):** each control in the `right` slot MUST carry an `aria-label` matching its nav-edge label copy (`their profile`, `the night`) whenever it renders without a visible text label (icon-only). Same rule as the reliability pill.
 2. **Profile → Night** (`ProfileCard`/reveal surface or LockDetail): a `see the night` text-link/button. On LockDetail the night already renders in-page (the PlanTimeline section), so "Profile → Night" within LockDetail is a scroll-to / existing section; from a standalone profile route it is a `Link` to `/matches/[lockId]`.
 3. **Night → Profile** (`LockDetail.tsx`): the existing `see their profile` button (line ~98–104) IS this edge — unchanged, confirmed satisfying the contract.
 4. **Night → Chat** (`LockDetail.tsx`): the existing `message {name}` link (line ~115–121) — unchanged (already the one working edge).
