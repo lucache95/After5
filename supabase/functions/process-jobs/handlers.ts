@@ -62,6 +62,10 @@ export const HANDLERS: Record<string, Handler> = {
   bulk_withdraw: async (db, job) => { await callRpc(db, "match_bulk_withdraw", { p_actor: id(job, "user") }); },
   chat_purge: async (db, job) => { await callRpc(db, "chat_purge_thread", { p_thread: id(job, "thread_id") }); },           // P6/S7
   rating_window: async (db, job) => { await callRpc(db, "close_rating_window", { p_lock: id(job, "lock_id") }); },          // P7/S8 (C11.10 canonical name)
+  // E19 (D-04 / D-03): morning-of reconfirm + post-date safety check-in. Both dispatch-only
+  // RPCs (no lock-state mutation) that never raise on a resolved lock — see 06-03 migration.
+  day_of_reconfirm: async (db, job) => { await callRpc(db, "dispatch_date_reconfirm", { p_lock: id(job, "lock_id") }); },  // P6/E19
+  safety_checkin: async (db, job) => { await callRpc(db, "dispatch_safety_checkin", { p_lock: id(job, "lock_id") }); },    // P6/E19
   analytics_relay: async (db, job) => { await callRpc(db, "analytics_relay_drain", { p_batch: job.payload }); },            // P11/S12 owns the body
   notify: genericNotify,
 };
