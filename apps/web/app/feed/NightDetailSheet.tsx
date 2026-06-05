@@ -117,6 +117,11 @@ export function NightDetailSheet({
   onCommit: (direction: 'left' | 'right') => void;
 }) {
   const [detail, setDetail] = useState<NightDetailNight | null>(null);
+  // `settled` tracks whether the get_night_detail fetch has resolved/rejected yet.
+  // We can't infer "still loading" from `detail === null` alone: a night with no
+  // detail (or a broken RPC) legitimately resolves to null and must fall back to
+  // the blind summary, not sit on the skeleton forever.
+  const [settled, setSettled] = useState(false);
   const [hookOpen, setHookOpen] = useState(false);
   const instanceId = night?.date_instance_id ?? null;
 
@@ -124,14 +129,15 @@ export function NightDetailSheet({
     if (!open || !instanceId) return;
     let cancelled = false;
     setDetail(null);
+    setSettled(false);
     setHookOpen(false);
     getNightDetail(browserAfter5Client(), instanceId)
-      .then((d) => { if (!cancelled) setDetail(d); })
+      .then((d) => { if (!cancelled) { setDetail(d); setSettled(true); } })
       .catch((err) => {
         // Fall back to the blind summary, but log so a broken RPC doesn't degrade silently in prod.
         // eslint-disable-next-line no-console
         console.warn('[night-detail] get_night_detail failed; showing blind summary', err);
-        if (!cancelled) setDetail(null);
+        if (!cancelled) { setDetail(null); setSettled(true); }
       });
     return () => { cancelled = true; };
   }, [open, instanceId]);
@@ -166,9 +172,10 @@ export function NightDetailSheet({
   const durHrs = detail?.total_duration_min != null && detail.total_duration_min > 0
     ? Math.round(detail.total_duration_min / 60) : null;
 
-  // E25 (D-02): while get_night_detail pends, hold the new card's shape with a
-  // silent shimmer instead of the blind summary. Reduced-motion-friendly.
-  const pending = detail === null && open;
+  // E25 (D-02): while get_night_detail is in flight, hold the new card's shape with
+  // a silent shimmer. Once the fetch settles — even to null (no detail / RPC error) —
+  // drop to the blind summary rather than stranding on the skeleton. Reduced-motion-friendly.
+  const pending = !settled && open;
 
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>

@@ -69,8 +69,8 @@ describe('SwipeDeck', () => {
   it('blind-safety: the detail sheet reveals no host identity and reassures it stays hidden', async () => {
     render(<SwipeDeck initial={[night('a', { title: 'Speakeasy + jazz', venue_neighborhood: 'Pandosy' })]} />);
     fireEvent.keyDown(screen.getByRole('button', { name: /tap to read the full plan/i }), { key: 'Enter' });
-    // Reassurance copy is present...
-    expect(await screen.findByText(/who.s hosting stays a secret until you both match/i)).toBeInTheDocument();
+    // Reassurance copy is present (reveal-ladder: name+blurred now, clear face on match)...
+    expect(await screen.findByText(/swiping on the night, not the face/i)).toBeInTheDocument();
     // ...and neighborhood is shown but NOT a precise address or a person name.
     expect(screen.getAllByText(/pandosy/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/hosted by|with sandrine|@/i)).not.toBeInTheDocument();
