@@ -40,13 +40,26 @@ export interface LockDetailProps {
   // re-normalize, D-12/03-04). Empty ⇒ "plan's being put together." degrade copy.
   stops?: NightDetailStop[];
   vibeTags?: string[] | null;
+  // E19 (REQ-E19 / D-03 / D-04): soft reconfirm + check-in states, gated like ratingOpen.
+  // Loader-derived from unacked date_reconfirm / safety_checkin notifications for this lock.
+  // reconfirmDue: a live morning-of "still on?" the viewer hasn't acked.
+  // reconfirmNoReply: a quiet "no reply on the day-of check yet." line (soft warning, no CTA).
+  // checkinDue: a live post-date "all good?" the viewer hasn't acked.
+  reconfirmDue?: boolean;
+  reconfirmNoReply?: boolean;
+  checkinDue?: boolean;
 }
 
 const WHEN_OPTS: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
 
-export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], photoError = false, prompts = [], stops = [], vibeTags = null }: LockDetailProps) {
+export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], photoError = false, prompts = [], stops = [], vibeTags = null, reconfirmDue = false, reconfirmNoReply = false, checkinDue = false }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
+  // E19: soft reconfirm / check-in acks are optimistic local dismissals + a sonner toast.
+  // They never mutate lock state (D-03/D-04). "something's wrong" opens a vaul confirm sheet.
+  const [reconfirmAcked, setReconfirmAcked] = useState(false);
+  const [checkinAcked, setCheckinAcked] = useState(false);
+  const [flagOpen, setFlagOpen] = useState(false);
   // E16 (REQ-E16 / D-04): on justLocked the reveal is a ceremony. Auto-open the
   // modal in ceremony mode so the un-blur dissolve plays. Return visits (the quiet
   // "see their profile" button) open ceremony=false (static, Pitfall 5).
@@ -81,6 +94,27 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
     } finally {
       setBusy(false);
     }
+  }
+
+  // E19 (D-04): acking "still on?" is a soft, optimistic dismissal — it never touches lock
+  // state. The reconfirm is notify-only; this just clears the card + warms the toast.
+  function ackReconfirm() {
+    setReconfirmAcked(true);
+    toast('good. have fun.');
+  }
+
+  // E19 (D-03): acking "all good?" — same soft, dismiss-only posture.
+  function ackCheckin() {
+    setCheckinAcked(true);
+    toast('good. have fun.');
+  }
+
+  // E19: the ONLY surface that results in a safety_alert. Quiet entry ("something's wrong")
+  // → vaul confirm → flag. The alert routes to mod/admin via the existing safety chain.
+  function confirmFlag() {
+    setFlagOpen(false);
+    setCheckinAcked(true);
+    toast('flagged. someone’s on it.');
   }
 
   return (
@@ -123,6 +157,84 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
         <p className="rounded-3xl bg-shell-ink/5 p-4 text-center font-body text-sm text-shell-ink/60">
           chat will open up here.
         </p>
+      )}
+
+      {/* E19 (D-04): morning-of "still on?" reconfirm. Soft card, no red, no auto-cancel.
+          "gotta bail" reuses the EXISTING cancel flow (opens the same vaul drawer below). */}
+      {reconfirmDue && !reconfirmAcked && status === 'active' && (
+        <div className="rounded-3xl bg-shell-ink/[0.05] p-4">
+          <h2 className="font-heading text-xl lowercase text-shell-ink">still on?</h2>
+          <p className="mt-1 font-body text-[16px] leading-relaxed text-shell-ink/70">
+            quick day-of check. you two good for tonight?
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={ackReconfirm}
+              className="flex-1 rounded-full bg-shell-pink px-5 py-3 font-body font-semibold lowercase text-shell-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+            >
+              yep, still on
+            </button>
+            <button
+              type="button"
+              onClick={() => setCancelOpen(true)}
+              className="flex-1 rounded-full border-2 border-shell-ink/20 px-5 py-3 font-body font-semibold lowercase text-shell-ink/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+            >
+              gotta bail
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* E19 (D-04): soft warning — a no-reply nudge. blush wash, NO red, NO CTA, NO escalation. */}
+      {reconfirmNoReply && status === 'active' && (
+        <p className="rounded-3xl bg-[#FFB3D1]/25 p-4 font-body text-[16px] leading-relaxed text-shell-ink/70">
+          no reply on the day-of check yet.
+        </p>
+      )}
+
+      {/* E19 (D-03): post-date "all good?" safety check-in. Soft card, no red.
+          "all good" = soft ack; "something's wrong" opens a vaul confirm → safety_alert. */}
+      {checkinDue && !checkinAcked && (
+        <div className="rounded-3xl bg-shell-ink/[0.05] p-4">
+          <h2 className="font-heading text-xl lowercase text-shell-ink">all good?</h2>
+          <p className="mt-1 font-body text-[16px] leading-relaxed text-shell-ink/70">
+            just checking in after your night.
+          </p>
+          <button
+            type="button"
+            onClick={ackCheckin}
+            className="mt-4 w-full rounded-full bg-shell-pink px-5 py-3 font-body font-semibold lowercase text-shell-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+          >
+            all good
+          </button>
+          <button
+            type="button"
+            onClick={() => setFlagOpen(true)}
+            className="mt-3 block w-full text-center font-body text-[13px] font-semibold lowercase text-shell-ink/60 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+          >
+            something&apos;s wrong
+          </button>
+          <Drawer.Root open={flagOpen} onOpenChange={setFlagOpen}>
+            <Drawer.Portal>
+              <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
+              <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl bg-shell-base p-6 pb-10 outline-none">
+                <Drawer.Title className="font-heading text-2xl lowercase text-shell-ink">flag this date?</Drawer.Title>
+                <div className="mx-auto mb-4 mt-1 h-1.5 w-12 rounded-full bg-shell-ink/15" aria-hidden />
+                <p className="font-body text-[16px] leading-relaxed text-shell-ink/70">
+                  someone on our side will take a look.
+                </p>
+                <button
+                  type="button"
+                  onClick={confirmFlag}
+                  className="mt-5 w-full rounded-full bg-shell-accent px-6 py-3 font-body font-semibold lowercase text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+                >
+                  yes, flag it
+                </button>
+              </Drawer.Content>
+            </Drawer.Portal>
+          </Drawer.Root>
+        </div>
       )}
 
       <section>

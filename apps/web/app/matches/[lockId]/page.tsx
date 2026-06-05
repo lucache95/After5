@@ -130,6 +130,35 @@ export default async function LockPage({
     vibeTags = (it?.vibe_tags as string[] | null) ?? null;
   }
 
+  // E19 (REQ-E19 / D-03 / D-04): derive the soft reconfirm / check-in flags from the viewer's
+  // own notification rows (RLS notifications_recipient_read scopes to user_id = auth.uid()).
+  // A live, unread date_reconfirm / safety_checkin for THIS lock surfaces its soft card.
+  // reconfirmNoReply: a day-of reconfirm that's been sitting unread past a soft window — a
+  // quiet nudge, never an escalation. Light derivation, mirroring isRatingOpen.
+  let reconfirmDue = false;
+  let reconfirmNoReply = false;
+  let checkinDue = false;
+  if (lock.status === 'active') {
+    const { data: notifs } = await supabase
+      .from('notifications')
+      .select('type, read_at, created_at')
+      .in('type', ['date_reconfirm', 'safety_checkin'])
+      .eq('user_id', user.id)
+      .filter('payload->>lock_id', 'eq', lockId)
+      .order('created_at', { ascending: false });
+    const RECONFIRM_NO_REPLY_MIN = 240; // 4h with no ack reads as the soft "no reply yet" nudge
+    for (const n of notifs ?? []) {
+      if (n.read_at) continue;
+      if (n.type === 'date_reconfirm') {
+        reconfirmDue = true;
+        const age = Date.now() - new Date(n.created_at).getTime();
+        if (age >= RECONFIRM_NO_REPLY_MIN * 60_000) reconfirmNoReply = true;
+      } else if (n.type === 'safety_checkin') {
+        checkinDue = true;
+      }
+    }
+  }
+
   return (
     <>
       <DeepRouteHeader
@@ -150,6 +179,9 @@ export default async function LockPage({
         prompts={prompts}
         stops={stops}
         vibeTags={vibeTags}
+        reconfirmDue={reconfirmDue}
+        reconfirmNoReply={reconfirmNoReply}
+        checkinDue={checkinDue}
       />
     </>
   );
