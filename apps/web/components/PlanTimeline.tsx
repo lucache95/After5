@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import { imageForStop } from '@/lib/place-image';
 import { type NightDetailStop } from '@/lib/after5/client';
@@ -10,11 +11,17 @@ import { LocalTime } from '@/components/LocalTime';
 // the feed sheet, OfferDetail, and LockDetail all render an IDENTICAL plan (no fork,
 // no drift — D-12). It renders ONLY blind-safe fields: numbered photo thumb + dashed
 // connector + name + "neighborhood · type · time" + one-line desc w/ "more" + "$ pp" +
-// a name-query map link. NO slug link, NO reservation_url. Do NOT swap in
-// components/itinerary/StopCard.tsx — it links /places/[slug] (identity-bearing) and is
-// wrong for offer/match. The StopRow shape is already blind-safe and renders fine
-// whether identity is hidden (pre-swipe) or revealed (post-lock) — no reveal-ordering
-// change (D-07).
+// a coord (else name-query) map link. Do NOT swap in components/itinerary/StopCard.tsx
+// — it links /places/[slug] (identity-bearing) and is wrong for offer/match. The StopRow
+// shape is already blind-safe and renders fine whether identity is hidden (pre-swipe) or
+// revealed (post-lock) — no reveal-ordering change (D-07).
+//
+// E20 (REQ-E20): the per-stop "map" link deep-links coordinates when the stop carries
+// lat/lng (else the legacy name search). E21 (REQ-E21 / D-01): the stop NAME may link
+// to /places/[slug], but ONLY when the caller opts in via `linkSlugs` (default OFF) AND
+// the stop has a catalog slug. The blind feed sheet + offer surfaces MUST leave
+// `linkSlugs` off so venue identity never leaks (T-07-12); only the post-lock LockDetail
+// sets it true. A stop with no slug degrades to plain text — never a broken /places link.
 
 // Hour-truncated, lowercase local time for a stop — blind-safe (never minute-
 // precise) and tiny, e.g. "7pm". Returns a <LocalTime> so it stays SSR-safe.
@@ -37,13 +44,21 @@ function StopTime({ iso }: { iso: string | null }) {
 // link, NO reservation_url — the RPC already scrubbed identity vectors. A dashed
 // connector links each stop to the next, so the column reads as a route.
 function StopRow({
-  stop, index, last, accent, vibeTags,
+  stop, index, last, accent, vibeTags, linkSlugs,
 }: {
   stop: NightDetailStop; index: number; last: boolean; accent: string;
-  vibeTags: string[] | null;
+  vibeTags: string[] | null; linkSlugs: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const directions = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.name)}`;
+  // E20: deep-link the stop's coordinates when present, else fall back to the legacy
+  // name text-search. Label/icon/target are unchanged.
+  const directions =
+    stop.lat != null && stop.lng != null
+      ? `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.name)}`;
+  // E21 / D-01: opt-in /places link. Only when the caller passes linkSlugs AND the stop
+  // has a catalog slug; otherwise the name is plain text (blind contract + graceful degrade).
+  const slugHref = linkSlugs && stop.place_slug ? `/places/${stop.place_slug}` : null;
   // Per-stop thumbnail — real photo when present, else a type/vibe mood shot.
   // Never an empty src; imageForStop always returns a shipped local asset (#77).
   const thumb = imageForStop({
@@ -75,7 +90,16 @@ function StopRow({
       </div>
 
       <div className="min-w-0 flex-1 pb-4">
-        <p className="font-heading text-lg lowercase leading-tight text-shell-ink">{stop.name.toLowerCase()}</p>
+        {slugHref ? (
+          <Link
+            href={slugHref}
+            className="font-heading text-lg lowercase leading-tight text-shell-ink underline decoration-shell-accent/40 decoration-2 underline-offset-4"
+          >
+            {stop.name.toLowerCase()}
+          </Link>
+        ) : (
+          <p className="font-heading text-lg lowercase leading-tight text-shell-ink">{stop.name.toLowerCase()}</p>
+        )}
         {(meta || stop.start_time) && (
           <p className="mt-0.5 flex flex-wrap items-center gap-1 font-body text-[11px] lowercase tracking-[0.06em] text-shell-ink/55">
             {meta}
@@ -130,13 +154,19 @@ function StopRow({
  * `itineraries.stops` JSON (rich/thin shape drift) normalize via
  * `normalizeNightDetailStops` BEFORE passing them in (E13 loaders + `get_night_detail`
  * both do). An empty array renders nothing (the caller owns its degrade/empty copy).
+ *
+ * `linkSlugs` (default false) is the E21 / D-01 opt-in: when true, a stop with a catalog
+ * `place_slug` renders its name as a `/places/[slug]` link. It MUST stay false on the blind
+ * feed sheet + offer surfaces (venue identity must not leak — T-07-12); only the post-lock
+ * LockDetail passes `linkSlugs`.
  */
 export function PlanTimeline({
-  stops, accent, vibeTags,
+  stops, accent, vibeTags, linkSlugs = false,
 }: {
   stops: NightDetailStop[];
   accent: string;
   vibeTags: string[] | null;
+  linkSlugs?: boolean;
 }) {
   if (stops.length === 0) return null;
   return (
@@ -149,6 +179,7 @@ export function PlanTimeline({
           last={idx === stops.length - 1}
           accent={accent}
           vibeTags={vibeTags}
+          linkSlugs={linkSlugs}
         />
       ))}
     </ol>
