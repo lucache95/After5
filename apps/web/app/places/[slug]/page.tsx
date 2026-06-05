@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  ArrowRight,
   MapPin,
   Lightbulb,
   ExternalLink,
@@ -11,7 +10,6 @@ import {
   Clock,
   Phone,
   Globe,
-  Sparkles,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { imageForStop, coverImageFor } from '@/lib/place-image';
@@ -260,13 +258,6 @@ export default async function PlacePage(props: {
               </Link>
             )}
           </div>
-          <Link
-            href="/create"
-            className="inline-flex items-center gap-1.5 rounded-pill bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
-          >
-            build a date here
-            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-          </Link>
         </nav>
       </header>
 
@@ -456,13 +447,6 @@ export default async function PlacePage(props: {
                   <p className="font-body text-sm leading-relaxed text-shell-ink/70">
                     no reservations, no driving. everything you need is at your place, or a quick stop on the way home.
                   </p>
-                  <Link
-                    href="/create"
-                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-shell-accent px-5 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
-                  >
-                    <Sparkles className="h-4 w-4" strokeWidth={2} />
-                    build a date with this idea
-                  </Link>
                 </>
               ) : (
                 <>
@@ -511,13 +495,6 @@ export default async function PlacePage(props: {
                       <ExternalLink className="h-4 w-4" strokeWidth={2} />
                     </a>
                   )}
-                  <Link
-                    href="/create"
-                    className="flex w-full items-center justify-center gap-2 rounded-pill bg-shell-pink/70 px-5 py-3 font-body text-sm font-semibold lowercase text-shell-ink ring-1 ring-shell-accent/20 transition active:scale-95 hover:bg-shell-pink"
-                  >
-                    <Sparkles className="h-4 w-4 text-shell-accent" strokeWidth={2} />
-                    build a date with this spot
-                  </Link>
                 </>
               )}
             </div>
@@ -571,16 +548,6 @@ export default async function PlacePage(props: {
                   </Link>
                 );
               })}
-            </div>
-
-            <div className="mt-10 flex justify-center">
-              <Link
-                href="/create"
-                className="inline-flex items-center gap-2 rounded-pill bg-shell-accent px-7 py-3.5 font-body text-base font-semibold lowercase text-white shadow-fun transition active:scale-95"
-              >
-                build a date around {p.name.toLowerCase()}
-                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-              </Link>
             </div>
           </div>
         </section>
