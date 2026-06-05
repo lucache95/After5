@@ -65,7 +65,13 @@ sound fits its cover.
   2. When a user sets their profile location, their city's venues ingest into `places` in the background, and a still-cold city shows a graceful "warming up" state instead of a broken or empty result.
   3. A generation attempt in a city with missing coordinates or hours fails loud (no silent pass) rather than producing a date that reads valid but isn't.
   4. A previously Google-warmed `places` row is no longer fed to the model (re-warmed from Foursquare or relabeled and excluded from the LLM input path).
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves
+- [ ] 08-01-PLAN.md — DATA-01: foursquare.ts drop-in corpus source (mappers + pickHours + searchPlaces), TDD, fixture-mocked
+- [ ] 08-02-PLAN.md — DATA-03: fail-loud guards (withinRadius/isOpenAt) + unverified marker + unverified_rate
+- [ ] 08-03-PLAN.md — DATA-01/02: migration (source check + fsq_place_id full unique index + cities.seeded_at + google_legacy relabel) + SQL test
+- [ ] 08-04-PLAN.md — DATA-01/02: re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback
+- [ ] 08-05-PLAN.md — DATA-02: seed_city job type + handler + server-side dedup'd enqueue on profile-location-set
+- [ ] 08-06-PLAN.md — phase gate: local suite/migrations/advisor green, then key-gated live smoke + gated prod-apply (blocked on FOURSQUARE_API_KEY)
 
 ### Phase 9: Trustworthy Generation + Eval Harness
 **Goal**: A user can generate a coherent multi-stop date for their own city in one tap, improve it with simple tweaks, and get a vibe-matched soundtrack — and the harness proves the result is genuinely good, including in a cold on-the-fly city.
