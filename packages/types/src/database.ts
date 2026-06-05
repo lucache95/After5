@@ -3122,6 +3122,7 @@ export type Database = {
           ambient_sound_name: string
           ambient_sound_path: string
           city_id: string
+          city_name: string
           cover_image_url: string
           date_instance_id: string
           distance_m: number
@@ -4222,6 +4223,10 @@ export type Database = {
           table_name: string
         }
         Returns: string
+      }
+      withdraw_interest: {
+        Args: { p_actor?: string; p_instance: string }
+        Returns: undefined
       }
     }
     Enums: {

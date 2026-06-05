@@ -27,9 +27,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Loop Closure & Host Controls (P0)** - Lock-completed + sweep, cancel/edit night, interest notification, poison-loop cleanup
 - [x] **Phase 3: Marketplace Completeness (P1)** - Creator controls, host reject, plan-on-match/offer, offer delivery (completed 2026-06-04)
 - [x] **Phase 4: Discoverability — Feed Filters & Targeting (P1)** - Per-date targeting + searcher filters + soft-boost feed (completed 2026-06-04)
-- [ ] **Phase 5: Progressive Reveal (P2)** - The "swipe on the date, not the face" ladder + reveal ceremony
-- [ ] **Phase 6: Trust & Safety (P2)** - Reliability aggregation, chat↔profile↔night wiring, safety check-ins
-- [ ] **Phase 7: Enhancements & Polish (P3)** - Map/route, venues-into-loop, ranking, proximity, standby UI, polish + legacy cleanup
+- [x] **Phase 5: Progressive Reveal (P2)** - The "swipe on the date, not the face" ladder + reveal ceremony (completed 2026-06-05)
+- [x] **Phase 6: Trust & Safety (P2)** - Reliability aggregation, chat↔profile↔night wiring, safety check-ins (completed 2026-06-05)
+- [x] **Phase 7: Enhancements & Polish (P3)** - Map/route, venues-into-loop, ranking, proximity, standby UI, polish + legacy cleanup (completed 2026-06-05)
 
 ## Phase Details
 
@@ -243,7 +243,7 @@ Plans:
 
 **Wave 4** *(phase gate, blocked on Waves 1-3)*
 
-- [ ] 07-09-PLAN.md — Phase gate: [BLOCKING] local apply all 3 migrations + typegen + advisor + full+SQL suite + visual-verify @420px + GATED prod-apply checkpoint (REQ-E20..E25)
+- [x] 07-09-PLAN.md — Phase gate: [BLOCKING] local apply all 3 migrations + typegen + advisor + full+SQL suite + visual-verify @420px + GATED prod-apply checkpoint (REQ-E20..E25)
 
 **UI hint**: yes
 
@@ -260,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
 | 6. Trust & Safety | 4/5 | In Progress|  |
-| 7. Enhancements & Polish | 8/9 | In Progress|  |
+| 7. Enhancements & Polish | 9/9 | Complete   | 2026-06-05 |

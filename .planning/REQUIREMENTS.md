@@ -254,12 +254,12 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Built (06-01, migration gated to 06-05) |
 | REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Complete (06-02; E2E + chat-RLS SQL run in 06-05) |
 | REQ-E19 | safety-flows | P2 | Phase 6 | Built (06-03 consumers: dispatch RPCs + handlers + soft cards; 06-04 producers: both lock RPCs enqueue day_of_reconfirm + safety_checkin + e19_producers.sql); gated apply + advisor + SQL/E2E run 06-05 |
-| REQ-E20 | real-map-route | P3 | Phase 7 | Pending |
+| REQ-E20 | real-map-route | P3 | Phase 7 | Complete (07-01 get_night_detail per-stop coords; 07-04 pink RouteMap + coord deep-links; 07-05 map mounted in detail sheet; prod-applied 07-09) |
 | REQ-E21 | venues-into-loop | P3 | Phase 7 | Complete (07-06; LockDetail links post-match stops to /places/[slug], /create funnel retired, no /places global nav) |
-| REQ-E22 | relevance-ranking | P3 | Phase 7 | Pending |
-| REQ-E23 | city-label-proximity | P3 | Phase 7 | Pending |
-| REQ-E24 | standby-waitlist-ui | P3 | Phase 7 | Pending |
-| REQ-E25 | feed-detail-polish-and-misc | P3 | Phase 7 | Pending |
+| REQ-E22 | relevance-ranking | P3 | Phase 7 | Complete (07-02 browse_feed soft-score tune: COUNT-weighted vibe overlap + mutual-compat nudge, keyset stable; prod-applied 07-09) |
+| REQ-E23 | city-label-proximity | P3 | Phase 7 | Complete (07-02 browse_feed +city_name + finer venue-coord distance; 07-05 NightCard label; e23_feed_contract regression; prod-applied 07-09) |
+| REQ-E24 | standby-waitlist-ui | P3 | Phase 7 | Complete (07-03 withdraw_interest DEFINER RPC; 07-07 candidate StandbyCard position + neutral withdraw on /inbox; prod-applied 07-09) |
+| REQ-E25 | feed-detail-polish-and-misc | P3 | Phase 7 | Complete (scoped D-02: 07-05 detail-sheet shimmer skeleton + 07-08 /my-nights upcoming/archive toggle; draft/typing/claims deferred to a future milestone) |
 
 **Coverage:** 25/25 requirements mapped. No orphans, no duplicates.
 
