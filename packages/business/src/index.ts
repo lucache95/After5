@@ -32,6 +32,9 @@ export type Stub = { phase: 'placeholder'; inputs: PlanInputs };
 export * from './age';
 export * from './eligibility';
 
+// ─── Phase 6: E17 reliability scoring ──────────────────────────────────
+export { computeReliability, type ReliabilityDate } from './reliability';
+
 // ─── Phase 5a: feed cold-start tier ────────────────────────────────────
 export { feedColdStartTier, type FeedTier, type FeedCounts } from './feedColdStart';
 
