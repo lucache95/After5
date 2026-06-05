@@ -78,7 +78,7 @@ sound fits its cover.
 **Depends on**: Phase 8
 **Requirements**: PLAN-01, PLAN-02, EVAL-01, SOUND-01
 **Success Criteria** (what must be TRUE):
-  1. A user generates a coherent multi-stop date for their city in one tap from real venues, with stops that are actually close together (real PostGIS proximity hop-gate, not a string label).
+  1. A user generates a coherent multi-stop date for their city in one tap from real venues, with stops that are actually close together (real haversine proximity hop-gate, not a string label — corpus already filtered with JS haversine, no PostGIS dependency in the pick loop).
   2. A user can swap a single stop and apply natural-language tweaks ("cheaper", "more romantic", "later") and the itinerary stays coherent and persisted.
   3. A generated date auto-receives an ambient sound that fits its cover (sound ↔ cover cohere via shared vibe tags), drawn from an expanded track library.
   4. The eval harness scores generated dates with deterministic hard checks (proximity, hours-open-at-time, schedule monotonicity, budget sum, no hallucinated venues) plus an Opus-4.8 judge rubric, over a golden set that includes a cold on-the-fly city, surfacing `unverified_rate` per city, and gates in CI.
