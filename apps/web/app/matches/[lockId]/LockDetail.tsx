@@ -241,7 +241,11 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
         <p className="font-body text-sm text-shell-accent">the night</p>
         {stops.length > 0 ? (
           <div className="mt-4">
-            <PlanTimeline stops={stops} accent={accent} vibeTags={vibeTags} />
+            {/* E21 (REQ-E21 / D-01): LockDetail is post-lock (identity revealed) — the ONE
+                place venue identity is allowed, so it is the ONLY caller that sets
+                linkSlugs=true. A stop with a catalog place_slug links its name to
+                /places/[slug]; a slugless stop degrades to plain text (no broken link). */}
+            <PlanTimeline stops={stops} accent={accent} vibeTags={vibeTags} linkSlugs />
           </div>
         ) : (
           <p className="mt-3 font-body text-sm text-shell-ink/60">plan&apos;s being put together.</p>
