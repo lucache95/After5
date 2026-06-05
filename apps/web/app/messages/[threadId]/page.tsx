@@ -7,6 +7,8 @@
 // read under messages_party_read RLS, oldest → newest. Everything live happens in
 // the client Conversation child.
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { UserRound, CalendarHeart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
@@ -38,7 +40,7 @@ export default async function ConversationPage({
   const { data: row } = await supabase
     .from('chat_threads')
     .select(`
-      id, state, both_ready, revoked_at,
+      id, state, both_ready, revoked_at, lock_id,
       offer:offers!chat_threads_offer_id_fkey (
         creator_id, candidate_id,
         creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
@@ -50,6 +52,7 @@ export default async function ConversationPage({
 
   const thread = row as unknown as {
     id: string; state: string; both_ready: boolean; revoked_at: string | null;
+    lock_id: string | null;
     offer: {
       creator_id: string; candidate_id: string;
       creator: ProfileLite | ProfileLite[] | null;
@@ -81,12 +84,30 @@ export default async function ConversationPage({
     .eq('thread_id', threadId)
     .order('created_at', { ascending: true });
 
+  // E18: chat → profile + chat → night quick-links. Reveal-gated on lock_id — a
+  // pre-lock thread (lock_id null) renders NO control, so no identity leak before the
+  // reveal threshold (T-06-05). Post-lock identity is already revealed (Phase 5), so
+  // both controls safely point at /matches/[lockId]. Icon-only → aria-label mandatory.
+  const navEdgeClass =
+    'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-shell-ink/70 transition hover:text-shell-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none';
+  const navEdges = thread.lock_id ? (
+    <div className="flex items-center gap-2">
+      <Link href={`/matches/${thread.lock_id}`} aria-label="their profile" className={navEdgeClass}>
+        <UserRound className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+      </Link>
+      <Link href={`/matches/${thread.lock_id}`} aria-label="the night" className={navEdgeClass}>
+        <CalendarHeart className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+      </Link>
+    </div>
+  ) : undefined;
+
   return (
     <>
       <DeepRouteHeader
         backHref="/inbox"
         backLabel="back to inbox"
         title={counterpart?.first_name ?? undefined}
+        right={navEdges}
       />
       <Conversation
         threadId={thread.id}
