@@ -53,7 +53,10 @@ begin
   select creator_id, matched_user_id, date_instance_id, status
     into cre, matched, inst, lst from locks where id=p_lock;
   if cre is null then return; end if;                          -- stale/missing: drain cleanly
-  if lst <> 'active' then return; end if;                      -- cancelled/no_show/completed: no check-in, drain
+  -- A post-date check-in fires AFTER the date; by then sweep_loop_terminus may have moved
+  -- the lock active->completed. Check in on active AND completed dates; only a cancelled or
+  -- no_show date (the date never happened) drains without a ping.
+  if lst in ('cancelled', 'no_show') then return; end if;
 
   -- SOFT (D-03): dispatch only. No lock-state mutation, no enforcement.
   perform dispatch_notification(cre,     'safety_checkin', jsonb_build_object('lock_id', p_lock, 'instance', inst));
