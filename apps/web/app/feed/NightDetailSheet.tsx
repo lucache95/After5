@@ -64,6 +64,45 @@ function Chip({
   );
 }
 
+// E25 (D-02): silent shimmer held inside the open drawer while get_night_detail
+// resolves. Mirrors feed/loading.tsx's shimmer atom EXACTLY (`animate-pulse ...
+// bg-shell-ink/10 motion-reduce:animate-none`) so it settles to a static
+// placeholder under reduced-motion. Holds the NEW card's shape — hero block +
+// chip row + hook line + timeline rows. No spinner, no caption text.
+function DetailSkeleton() {
+  return (
+    <div data-testid="detail-skeleton" aria-hidden>
+      {/* hero block */}
+      <div className="aspect-[5/4] w-full animate-pulse bg-shell-ink/10 motion-reduce:animate-none" />
+      <div className="flex flex-col gap-4 px-5 pb-6 pt-4">
+        {/* chip row */}
+        <div className="flex flex-wrap gap-2">
+          <div className="h-7 w-24 animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+          <div className="h-7 w-20 animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+          <div className="h-7 w-16 animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+        </div>
+        {/* hook line */}
+        <div className="space-y-2">
+          <div className="h-5 w-full animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+          <div className="h-5 w-2/3 animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+        </div>
+        {/* timeline rows */}
+        <div className="space-y-3 pt-1">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex gap-3">
+              <div className="h-16 w-16 shrink-0 animate-pulse rounded-2xl bg-shell-ink/10 motion-reduce:animate-none" />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="h-4 w-1/2 animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+                <div className="h-3 w-3/4 animate-pulse rounded-full bg-shell-ink/10 motion-reduce:animate-none" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NightDetailSheet({
   night,
   open,
@@ -127,6 +166,10 @@ export function NightDetailSheet({
   const durHrs = detail?.total_duration_min != null && detail.total_duration_min > 0
     ? Math.round(detail.total_duration_min / 60) : null;
 
+  // E25 (D-02): while get_night_detail pends, hold the new card's shape with a
+  // silent shimmer instead of the blind summary. Reduced-motion-friendly.
+  const pending = detail === null && open;
+
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
@@ -142,6 +185,10 @@ export function NightDetailSheet({
           </Drawer.Description>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {pending ? (
+              <DetailSkeleton />
+            ) : (
+              <>
             {/* HERO — full-bleed cover with scrim, title overlay, badge + soundtrack */}
             <div className="relative aspect-[5/4] w-full overflow-hidden bg-shell-pink">
               <Image src={cover} alt="" fill sizes="420px" className="object-cover" draggable={false} priority />
@@ -321,6 +368,8 @@ export function NightDetailSheet({
                 blurred photo now. the clear face shows when you both match.
               </p>
             </div>
+              </>
+            )}
           </div>
 
           {/* Sticky bottom CTA — decide after reading. Skip / i'm in. */}
