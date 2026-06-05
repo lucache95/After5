@@ -21,7 +21,7 @@ export function buildSystemPrompt(city: PromptCity): string {
   return `You are After5's resident local. Your voice: confident, warm, never sappy, never marketing-speak. You write date plans the way a friend with great taste would describe them — specific, sensory, never generic.
 
 Hard rules:
-- Output ONLY valid JSON matching the schema below. No prose outside the JSON.
+- Emit your copy by calling the emit_itineraries tool. Do not write prose outside the tool call.
 - Never invent places. The places are given to you with fixed IDs.
 - Never reference time of day in titles ("evening", "night") — the schedule already says when.
 - Never use the word "perfect", "amazing", "unforgettable", "magical", or other generic praise.
@@ -35,20 +35,9 @@ Brand tone calibration:
 - ${localSpecificity}
 - Avoid generic AI tells: no "embark on a journey", no "indulge in", no "this experience".
 
-Output schema (one object per itinerary, in an array of length 3):
-[
-  {
-    "template_id": "<unchanged from input>",
-    "title": "string (8 words max)",
-    "hook": "string (one short line, 12 words max)",
-    "why_it_works": "string (3 sentences max)",
-    "stops": [
-      { "place_id": "<unchanged UUID>", "what_to_do": "2-3 sentence prose, mandatory, never empty" }
-    ]
-  }
-]
+Tool call: call emit_itineraries with an itineraries array of length 3. Each entry carries template_id, title, hook, why_it_works, and stops[] (place_id + what_to_do).
 
-Critical: preserve place_id values exactly as given (they are UUIDs). Every stop in every itinerary must have a what_to_do string.`;
+Critical: preserve template_id and place_id values exactly as given (they are UUIDs). Every stop in every itinerary must have a non-empty what_to_do string.`;
 }
 
 interface WritingPassInput {
@@ -67,6 +56,68 @@ interface LLMItineraryWriting {
   hook: string;
   why_it_works: string;
   stops: { place_id: string; what_to_do: string }[];
+}
+
+// PLAN-01 (Area 1): forced tool-use schema for the copy pass. The field names
+// are byte-identical to LLMItineraryWriting so mergeWriting/patchEmptyStops keep
+// working (Pitfall 3 — schema/merge are two sources of truth; keep them aligned).
+// Copy length (8-word titles etc.) is NOT enforced here — JSON-schema can't, and
+// length stays in the eval gates (A4). The LLM still only writes copy over frozen
+// place_ids; it never picks places.
+export const ITINERARY_TOOL = {
+  name: 'emit_itineraries',
+  description:
+    'Emit the written copy for each assembled itinerary. Preserve every template_id and place_id exactly as given — never invent, reorder, or drop a place.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      itineraries: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            template_id: { type: 'string', description: 'Unchanged from input.' },
+            title: { type: 'string', description: '8 words max; no time-of-day; no generic praise.' },
+            hook: { type: 'string', description: 'One short line, 12 words max.' },
+            why_it_works: { type: 'string', description: '3 sentences max; reference the specific a→b→c sequence.' },
+            stops: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  place_id: { type: 'string', description: 'Unchanged UUID from input.' },
+                  what_to_do: { type: 'string', description: '2-3 sentence prose, mandatory, never empty.' },
+                },
+                required: ['place_id', 'what_to_do'],
+              },
+            },
+          },
+          required: ['template_id', 'title', 'hook', 'why_it_works', 'stops'],
+        },
+      },
+    },
+    required: ['itineraries'],
+  },
+};
+
+// Minimal structural shape of the Anthropic messages.create response we read.
+// We avoid importing the SDK's ContentBlock type so this function is unit-testable
+// under deno without resolving the npm: specifier at type-check time.
+interface ToolUseResponse {
+  content: Array<{ type: string; input?: unknown }>;
+}
+
+/**
+ * Extract the forced tool_use itineraries from a messages.create response.
+ * Returns [] when no tool_use block is present (deterministic fallback path
+ * stays alive — T-09-03) or when its input lacks an itineraries array.
+ */
+export function extractToolUseItineraries(response: ToolUseResponse): LLMItineraryWriting[] {
+  const toolUse = response.content.find((b) => b.type === 'tool_use');
+  if (!toolUse || toolUse.type !== 'tool_use') return [];
+  const input = toolUse.input as { itineraries?: unknown } | null | undefined;
+  if (!input || !Array.isArray(input.itineraries)) return [];
+  return input.itineraries as LLMItineraryWriting[];
 }
 
 // Minimum character threshold for a what_to_do to be considered non-empty.
@@ -128,6 +179,9 @@ async function callLLMWritingPass(
 ): Promise<LLMItineraryWriting[]> {
   const userMessage = buildUserMessage(input);
 
+  // PLAN-01 (Area 1): forced tool-use copy pass. tool_choice pins the model to
+  // emit_itineraries, so the API validates the schema for us — no fence-strip +
+  // JSON.parse. The model still only writes copy over frozen place_ids.
   const response = await client.messages.create({
     model,
     max_tokens: 4096,
@@ -139,23 +193,19 @@ async function callLLMWritingPass(
         cache_control: { type: 'ephemeral' },
       },
     ],
+    tools: [ITINERARY_TOOL],
+    tool_choice: { type: 'tool', name: ITINERARY_TOOL.name },
     messages: [
       { role: 'user', content: userMessage },
     ],
   });
 
-  const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock || textBlock.type !== 'text') {
-    console.error('LLM returned no text content');
-    return [];
-  }
-
-  let written: LLMItineraryWriting[];
-  try {
-    written = parseLLMResponse(textBlock.text);
-  } catch (_err) {
-    console.error('LLM returned non-JSON, using fallback titles. Snippet:', textBlock.text.slice(0, 120));
-    written = [];
+  // Extract the tool_use block. No tool_use → keep the deterministic fallback
+  // (T-09-03): mergeWriting fills fallback titles, patchEmptyStops/buildFallback
+  // handle copy. Defense-in-depth: tool-use guarantees shape, not non-emptiness.
+  const written = extractToolUseItineraries(response);
+  if (written.length === 0) {
+    console.error('LLM returned no emit_itineraries tool_use block, using fallback titles');
   }
   const whatToDoCounts = written.map(
     (w) => w.stops?.filter((s) => s.what_to_do && s.what_to_do.length > 0).length ?? 0,
@@ -288,7 +338,7 @@ export function buildUserMessage(input: WritingPassInput): string {
     lines.push(input.packVoiceNote);
   }
   lines.push('');
-  lines.push(`Three itineraries to write copy for. Return ONLY a JSON array of length 3.`);
+  lines.push(`Three itineraries to write copy for. Call the emit_itineraries tool with one entry per itinerary (length 3).`);
   lines.push('');
 
   for (const it of itineraries) {
@@ -319,18 +369,7 @@ export function buildUserMessage(input: WritingPassInput): string {
     lines.push('');
   }
 
-  lines.push(`Return ONLY the JSON array. No markdown fences, no commentary.`);
+  lines.push(`Call emit_itineraries with one entry per itinerary. Preserve every template_id and place_id exactly.`);
 
   return lines.join('\n');
-}
-
-function parseLLMResponse(text: string): LLMItineraryWriting[] {
-  // Strip optional markdown fences if Claude returns them anyway
-  let cleaned = text.trim();
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '');
-  }
-  const parsed = JSON.parse(cleaned);
-  if (!Array.isArray(parsed)) throw new Error('LLM response was not an array');
-  return parsed as LLMItineraryWriting[];
 }
