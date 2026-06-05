@@ -67,7 +67,7 @@ sound fits its cover.
   4. A previously Google-warmed `places` row is no longer fed to the model (re-warmed from Foursquare or relabeled and excluded from the LLM input path).
 **Plans**: 6 plans in 3 waves
 - [x] 08-01-PLAN.md — DATA-01: foursquare.ts drop-in corpus source (mappers + pickHours + searchPlaces), TDD, fixture-mocked
-- [ ] 08-02-PLAN.md — DATA-03: fail-loud guards (withinRadius/isOpenAt) + unverified marker + unverified_rate
+- [x] 08-02-PLAN.md — DATA-03: fail-loud guards (withinRadius/isOpenAt) + unverified marker + unverified_rate
 - [ ] 08-03-PLAN.md — DATA-01/02: migration (source check + fsq_place_id full unique index + cities.seeded_at + google_legacy relabel) + SQL test
 - [ ] 08-04-PLAN.md — DATA-01/02: re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback
 - [ ] 08-05-PLAN.md — DATA-02: seed_city job type + handler + server-side dedup'd enqueue on profile-location-set

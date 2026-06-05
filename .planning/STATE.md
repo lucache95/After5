@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: "Completed 08-01-PLAN.md (foursquare.ts corpus source); 16/16 deno tests green, no live key."
-last_updated: "2026-06-05T22:40:00.000Z"
-last_activity: 2026-06-05 -- Phase 8 Plan 01 executed (Foursquare corpus source)
+stopped_at: "Completed 08-02-PLAN.md (fail-loud guards + unverified marker + unverified_rate); 11/11 deno tests green."
+last_updated: "2026-06-05T22:44:00.000Z"
+last_activity: 2026-06-05 -- Phase 8 Plan 02 executed (DATA-03 fail-loud guards)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 8 — Compliant Any-City Venue Corpus (in progress)
-Plan: 01 complete (foursquare.ts) — next plan in phase
+Plan: 02 complete (DATA-03 fail-loud guards) — next: 08-03 (migration)
 Status: Executing
-Last activity: 2026-06-05 -- Phase 8 Plan 01 executed (Foursquare corpus source)
+Last activity: 2026-06-05 -- Phase 8 Plan 02 executed (DATA-03 fail-loud guards + unverified_rate)
 
 ## v2.0 Roadmap (phases 8–11)
 

@@ -71,7 +71,7 @@ app actually does, not what the code implies.
 |-------------|------|----------|-------|--------|
 | DATA-01 | foursquare-corpus | DATA | Phase 8 | Pending |
 | DATA-02 | city-preseed | DATA | Phase 8 | Pending |
-| DATA-03 | failloud-guards | DATA | Phase 8 | Pending |
+| DATA-03 | failloud-guards | DATA | Phase 8 | In Progress |
 | PLAN-01 | one-tap-generate | PLAN | Phase 9 | Pending |
 | PLAN-02 | improve-loop | PLAN | Phase 9 | Pending |
 | EVAL-01 | eval-harness | EVAL | Phase 9 | Pending |
