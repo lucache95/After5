@@ -244,16 +244,16 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E7 | host-edit-night | P0 | Phase 2 | Complete (02-06) |
 | REQ-E8 | interest-received-notification | P0 | Phase 2 | Complete |
 | REQ-E9 | remove-poison-loop | P0 | Phase 2 | Complete |
-| REQ-E10 | feed-filters | P1 | Phase 4 | Pending |
+| REQ-E10 | feed-filters | P1 | Phase 4 | Complete (Phase 4 VERIFICATION passed; browse_feed_for_viewer soft-score + filters wired on prod, confirmed by v1.0 integration check) |
 | REQ-E11 | creator-controls | P1 | Phase 3 | Complete (03-01,03-03) |
-| REQ-E12 | host-reject-candidate | P1 | Phase 3 | Pending |
-| REQ-E13 | plan-on-match-and-offer | P1 | Phase 3 | Pending |
+| REQ-E12 | host-reject-candidate | P1 | Phase 3 | Complete (Phase 3 verified — 4/4 automated must-haves; reject_candidate wired on prod, confirmed by v1.0 integration check) |
+| REQ-E13 | plan-on-match-and-offer | P1 | Phase 3 | Complete (Phase 3 verified; match-make-offer edge + OfferDetail blind stops wired on prod, confirmed by v1.0 integration check) |
 | REQ-E14 | offer-delivery-reliability | P1 | Phase 3 | Complete (03-06) |
-| REQ-E15 | progressive-reveal-ladder | P2 | Phase 5 | Pending |
-| REQ-E16 | identity-revealed-moment | P2 | Phase 5 | Pending |
-| REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Built (06-01, migration gated to 06-05) |
+| REQ-E15 | progressive-reveal-ladder | P2 | Phase 5 | Complete (Phase 5 VERIFICATION passed; host-hint reveal ladder + e15 feed cols wired on prod, confirmed by v1.0 integration check) |
+| REQ-E16 | identity-revealed-moment | P2 | Phase 5 | Complete (Phase 5 VERIFICATION passed; identity_revealed dispatch + reveal ceremony wired on prod, confirmed by v1.0 integration check) |
+| REQ-E17 | ratings-reliability-aggregation | P2 | Phase 6 | Complete (06-01/06-05 gated-applied; reliability_score recompute → ProfileCard pill wired on prod. NOTE: flag_no_show distinct lock outcome has no UI producer — no-show reliability hit flows via the showed_up=false rating path, per the soft-posture D-02; see v1.0 audit tech-debt) |
 | REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Complete (06-02; E2E + chat-RLS SQL run in 06-05) |
-| REQ-E19 | safety-flows | P2 | Phase 6 | Built (06-03 consumers: dispatch RPCs + handlers + soft cards; 06-04 producers: both lock RPCs enqueue day_of_reconfirm + safety_checkin + e19_producers.sql); gated apply + advisor + SQL/E2E run 06-05 |
+| REQ-E19 | safety-flows | P2 | Phase 6 | Complete (06-03 consumers + 06-04 producers; both lock RPCs enqueue day_of_reconfirm + safety_checkin; gated-applied + advisor + SQL/E2E run 06-05; wired on prod, confirmed by v1.0 integration check) |
 | REQ-E20 | real-map-route | P3 | Phase 7 | Complete (07-01 get_night_detail per-stop coords; 07-04 pink RouteMap + coord deep-links; 07-05 map mounted in detail sheet; prod-applied 07-09) |
 | REQ-E21 | venues-into-loop | P3 | Phase 7 | Complete (07-06; LockDetail links post-match stops to /places/[slug], /create funnel retired, no /places global nav) |
 | REQ-E22 | relevance-ranking | P3 | Phase 7 | Complete (07-02 browse_feed soft-score tune: COUNT-weighted vibe overlap + mutual-compat nudge, keyset stable; prod-applied 07-09) |
