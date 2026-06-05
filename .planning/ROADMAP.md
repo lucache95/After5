@@ -226,7 +226,7 @@ Plans:
 
 **Wave 1** *(independent: 3 DB slices + the archive view)*
 
-- [ ] 07-01-PLAN.md — feed.ts Phase-7 contract (place_slug/city_name/withdrawInterest) + get_night_detail re-CREATE (+per-stop lat/lng/place_slug) + e20 SQL test (REQ-E20, REQ-E23, REQ-E24)
+- [x] 07-01-PLAN.md — feed.ts Phase-7 contract (place_slug/city_name/withdrawInterest) + get_night_detail re-CREATE (+per-stop lat/lng/place_slug) + e20 SQL test (REQ-E20, REQ-E23, REQ-E24)
 - [ ] 07-02-PLAN.md — browse_feed_for_viewer DROP+CREATE: +city_name +finer distance +tuned soft-score (vibe COUNT + mutual-compat nudge) + e23 contract regression test (REQ-E22, REQ-E23)
 - [ ] 07-03-PLAN.md — withdraw_interest DEFINER RPC (deletes own plain interest, auth.uid() gate) + e24 SQL test (REQ-E24)
 - [ ] 07-08-PLAN.md — E25 archive: /my-nights upcoming/archive segment toggle (status bucketing) + test (REQ-E25)
@@ -260,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
 | 6. Trust & Safety | 4/5 | In Progress|  |
-| 7. Enhancements & Polish | 0/9 | Not started | - |
+| 7. Enhancements & Polish | 1/9 | In Progress|  |
