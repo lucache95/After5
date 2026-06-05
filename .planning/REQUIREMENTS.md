@@ -69,7 +69,7 @@ app actually does, not what the code implies.
 
 | Requirement | Slug | Category | Phase | Status |
 |-------------|------|----------|-------|--------|
-| DATA-01 | foursquare-corpus | DATA | Phase 8 | Pending |
+| DATA-01 | foursquare-corpus | DATA | Phase 8 | Built (local-green: foursquare.ts corpus, Google removed from gen path, google_legacy excluded; prod cutover key-gated, pending 08-06) |
 | DATA-02 | city-preseed | DATA | Phase 8 | Complete |
 | DATA-03 | failloud-guards | DATA | Phase 8 | In Progress |
 | PLAN-01 | one-tap-generate | PLAN | Phase 9 | Pending |
