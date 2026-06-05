@@ -18,11 +18,33 @@ vi.mock('vaul', () => {
   const Pass = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   return { Drawer: Object.assign(Pass, { Root: Pass, Trigger: Pass, Portal: Pass, Overlay: Pass, Content: Pass, Title: Pass, Description: Pass, Close: Pass }) };
 });
-// framer-motion (used by MatchConfirmation) — stub.
-vi.mock('framer-motion', () => ({
-  useReducedMotion: () => true,
-  motion: { span: (props: Record<string, unknown>) => <span {...props} /> },
-}));
+// framer-motion (used by MatchConfirmation + the real RevealModal in this tree) — stub.
+// Pass through any motion.* tag (div/span/section/…) as a plain element, dropping the
+// animation-only props that aren't valid DOM attributes.
+vi.mock('framer-motion', () => {
+  const strip = (props: Record<string, unknown>) => {
+    const {
+      initial, animate, exit, transition, variants, custom, layout, layoutId,
+      whileHover, whileTap, whileFocus, whileInView, whileDrag, drag, dragConstraints,
+      onAnimationComplete, onAnimationStart, viewport, ...rest
+    } = props;
+    return rest;
+  };
+  const motion = new Proxy({}, {
+    get: (_t, tag) => {
+      const Tag = String(tag) as React.ElementType;
+      return (props: Record<string, unknown> = {}) => {
+        const { children, ...rest } = strip(props);
+        return <Tag {...rest}>{children as React.ReactNode}</Tag>;
+      };
+    },
+  });
+  return {
+    useReducedMotion: () => true,
+    AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    motion,
+  };
+});
 // next/image (used by PlanTimeline) renders nothing useful in jsdom — stub to a plain img.
 vi.mock('next/image', () => ({
   // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text

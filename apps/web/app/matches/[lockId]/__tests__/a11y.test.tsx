@@ -14,10 +14,32 @@ vi.mock('vaul', () => {
   return { Drawer: Object.assign(Pass, { Root: Pass, Trigger: Pass, Portal: Pass, Overlay: Pass, Content: Pass, Title: Pass, Description: Pass, Close: Pass }) };
 });
 const useReducedMotion = vi.fn(() => true);
-vi.mock('framer-motion', () => ({
-  useReducedMotion: () => useReducedMotion(),
-  motion: { span: (props: Record<string, unknown>) => <span {...props} /> },
-}));
+// Pass through any motion.* tag as a plain element, dropping animation-only props
+// (not valid DOM attributes) so axe sees clean markup — RevealModal uses motion.div.
+vi.mock('framer-motion', () => {
+  const strip = (props: Record<string, unknown>) => {
+    const {
+      initial, animate, exit, transition, variants, custom, layout, layoutId,
+      whileHover, whileTap, whileFocus, whileInView, whileDrag, drag, dragConstraints,
+      onAnimationComplete, onAnimationStart, viewport, ...rest
+    } = props;
+    return rest;
+  };
+  const motion = new Proxy({}, {
+    get: (_t, tag) => {
+      const Tag = String(tag) as React.ElementType;
+      return (props: Record<string, unknown> = {}) => {
+        const { children, ...rest } = strip(props);
+        return <Tag {...rest}>{children as React.ReactNode}</Tag>;
+      };
+    },
+  });
+  return {
+    useReducedMotion: () => useReducedMotion(),
+    AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    motion,
+  };
+});
 
 import { MatchesList, type MatchCard } from '../../MatchesList';
 import { LockDetail } from '../LockDetail';
