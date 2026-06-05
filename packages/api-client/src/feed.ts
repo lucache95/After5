@@ -19,6 +19,9 @@ export interface FeedNight {
   host_blurred_photo_url: string | null; // signed blurred-photo url (NOT clear)
   host_first_name: string | null;        // first name only — never full name
   host_age: number | null;               // age only — never DOB
+  // E23 (REQ-E23): human city label (cities.name) returned by browse_feed_for_viewer.
+  // NightCard.tsx:54-56 already reads + lowercases this slot — no component change.
+  city_name: string | null;
 }
 
 /** A curated library entry for the host's optional soundtrack pick. */
@@ -109,6 +112,29 @@ export async function updateNight(
     p_ambient_sound_id: input.ambient_sound_id ?? null,
     p_idem_key: input.idem_key ?? newIdemKey(),
   } as never);
+  if (error) throw error;
+}
+
+/** E24 (REQ-E24): pull a plain interested queue interest before the offer stage,
+ *  distinct from the offer-stage withdraw. Calls the DEFINER RPC withdraw_interest
+ *  (migration 20260606140200), which re-checks p_actor = auth.uid() and deletes ONLY
+ *  the actor's own interested row (never shortlisted/offer_active/standby/locked).
+ *  Throws on error; mirrors the cancelNight/updateNight wrapper shape. */
+export async function withdrawInterest(
+  client: After5Client,
+  input: { instance_id: string },
+): Promise<void> {
+  const actor = await actorId(client);
+  // withdraw_interest is added by migration 20260606140200 (Phase 7); the generated
+  // Database types regenerate at the gated prod-apply, so the RPC name + args are cast
+  // until then (same forward-reference pattern other not-yet-applied wrappers use).
+  const { error } = await (client.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ error: unknown }>)('withdraw_interest', {
+    p_instance: input.instance_id,
+    p_actor: actor,
+  });
   if (error) throw error;
 }
 
@@ -228,6 +254,12 @@ export interface NightDetailStop {
   photo_url: string | null;
   lat: number | null;
   lng: number | null;
+  // E20/E21 (REQ-E20/REQ-E21): the catalog venue slug for a stop whose place_id is in
+  // `places`. null for a non-catalog / legacy / seed stop (graceful degrade, D-01) — the
+  // post-lock /places/[slug] link only renders when this is non-null. Sourced from the
+  // rich itineraries.stops element (LockDetail loader) and merged by the E20 get_night_detail
+  // RPC (feed sheet) — both flow through normalizeNightDetailStops below.
+  place_slug: string | null;
   drive_to_next_min: number | null;
 }
 
@@ -274,6 +306,7 @@ export function normalizeNightDetailStops(raw: unknown): NightDetailStop[] {
       photo_url: str(o.photo_url),
       lat: num(o.lat),
       lng: num(o.lng),
+      place_slug: str(o.place_slug),
       drive_to_next_min: num(o.drive_to_next_min),
     };
   });
