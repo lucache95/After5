@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
-status: roadmapped
-last_updated: "2026-06-05T19:27:33.221Z"
-last_activity: 2026-06-05
+status: executing
+stopped_at: "Completed 08-01-PLAN.md (foursquare.ts corpus source); 16/16 deno tests green, no live key."
+last_updated: "2026-06-05T22:40:00.000Z"
+last_activity: 2026-06-05 -- Phase 8 Plan 01 executed (Foursquare corpus source)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 6
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 
 ## Current Position
 
-Phase: 8 — Compliant Any-City Venue Corpus (not started)
-Plan: —
-Status: Roadmap approved — ready to plan Phase 8
-Last activity: 2026-06-05 — v2.0 roadmap created (4 phases, 8–11; 10/10 reqs mapped)
+Phase: 8 — Compliant Any-City Venue Corpus (in progress)
+Plan: 01 complete (foursquare.ts) — next plan in phase
+Status: Executing
+Last activity: 2026-06-05 -- Phase 8 Plan 01 executed (Foursquare corpus source)
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -80,6 +81,7 @@ Last activity: 2026-06-05 — v2.0 roadmap created (4 phases, 8–11; 10/10 reqs
 | Phase 07 P07 | 8 | 3 tasks | 6 files |
 | Phase 07 P05 | 12 | 3 tasks | 2 files |
 | Phase 07 P06 | 12 | 3 tasks | 3 files |
+| Phase 08 P01 | ~3 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -96,6 +98,8 @@ Decisions are logged in PROJECT.md Key Decisions table (+ `.planning/intel/decis
 - Generation hardening (Phase 9): replace `drive_cluster` string-label with PostGIS + haversine drive-time hop-gate; migrate copy pass from raw-JSON parsing to Anthropic tool-use; improve loop = single-stop re-pick + NL-tweak intent parsing → scoring knobs → re-run pipeline, persisted via existing `update_itinerary_stops` RPC.
 - Model split: Sonnet 4.6 generate (~1¢, 2–4s) · Haiku 4.5 improve loop (<$0.001, <1s) · Opus 4.8 offline judge only.
 - Cost is a non-issue (<$200/mo every option) — venue sourcing is purely a licensing decision.
+
+- DATA-01/08-01: `foursquare.ts` mirrors `google-places.ts` key-for-key (drop-in); new-API auth (Bearer + `X-Places-Api-Version: 2025-06-17`), `searchPlaces` takes injectable `fetchImpl` (key-free request-shape tests); rating un-doubled (FSQ 0–10, floor ≥7.0); `pickHours` parses `hours.regular` HHMM per-day (Wed else first, malformed→null); rows carry `fsq_place_id` + `source:'foursquare'` + `approval_status:'auto'`. CROSS-PLAN: 08-04 read-path must admit `'auto'` on EVERY generation or seeded rows read cold.
 
 *(v1.0 phase decisions E15–E25 retained below for continuity reference.)*
 
@@ -136,6 +140,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — v2.0 roadmap created (phases 8–11, 10/10 reqs mapped).
-Stopped at: ROADMAP.md + REQUIREMENTS.md traceability + STATE.md written; awaiting `/gsd:plan-phase 8`.
+Last session: 2026-06-05 — Phase 8 Plan 01 executed: `foursquare.ts` corpus source (DATA-01), 16/16 deno tests green, no live key.
+Stopped at: Completed 08-01-PLAN.md; next plan in Phase 8.
 Resume file: None
