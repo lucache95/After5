@@ -78,8 +78,9 @@ export async function filterPlaces(
   return filtered;
 }
 
-// Pure radius predicate (testable). Places with unknown coords always pass —
-// we'd rather keep a candidate with missing geo than silently drop it.
+// Pure radius predicate (testable). DATA-03 fail-loud: places with unknown
+// coords are EXCLUDED — a venue we can't proximity-validate must not silently
+// pass as in-range (a cold city would otherwise read valid when it isn't).
 export function withinRadius(
   lat: number | null | undefined,
   lng: number | null | undefined,
@@ -87,7 +88,7 @@ export function withinRadius(
   centroidLng: number,
   maxKm: number,
 ): boolean {
-  if (typeof lat !== 'number' || typeof lng !== 'number') return true;
+  if (typeof lat !== 'number' || typeof lng !== 'number') return false;
   return haversineKm(lat, lng, centroidLat, centroidLng) <= maxKm;
 }
 
