@@ -16,6 +16,7 @@ import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { groupActivity, type RawNotification } from '@/lib/after5/inbox-activity';
 import { ActivityList } from './ActivityList';
+import { StandbyList } from './StandbyList';
 import { ThreadRow } from '../messages/ThreadList';
 import {
   sortThreadsByRecency,
@@ -123,7 +124,18 @@ export default async function InboxPage() {
   });
   const threads = sortThreadsByRecency(summaries);
 
-  const bothEmpty = activityItems.length === 0 && threads.length === 0;
+  // E24 (REQ-E24): does the candidate have any pending-interest standby rows? A
+  // head-count keeps the empty-state decision honest — a queue-only inbox must
+  // NOT read "quiet in here". RLS (queue_candidate_read_own) scopes to the
+  // viewer; the explicit candidate_id + interested filter mirrors StandbyList.
+  const { count: standbyCount } = await supabase
+    .from('queue_entries')
+    .select('date_instance_id', { count: 'exact', head: true })
+    .eq('candidate_id', user.id)
+    .eq('status', 'interested');
+  const hasStandby = (standbyCount ?? 0) > 0;
+
+  const bothEmpty = activityItems.length === 0 && threads.length === 0 && !hasStandby;
 
   return (
     <main className="min-h-dvh bg-shell-base">
@@ -144,6 +156,7 @@ export default async function InboxPage() {
           </div>
         ) : (
           <div className="space-y-8">
+            <StandbyList supabase={supabase} userId={user.id} />
             <ActivityList userId={user.id} initialItems={activityItems} initialCursor={activityCursor} />
             {threads.length > 0 && (
               <section aria-labelledby="inbox-messages-heading" className="space-y-3">
