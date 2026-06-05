@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 07-03-PLAN.md (E24 withdraw_interest DEFINER RPC)
-last_updated: "2026-06-05T17:28:59.087Z"
+last_updated: "2026-06-05T17:33:38.430Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 39
-  completed_plans: 33
-  percent: 85
+  completed_plans: 34
+  percent: 86
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 07 (enhancements-and-polish-p3) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-06-05
 Prior: 2026-06-05 — 06-04 (E19 producers) green: both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100) adding day_of_reconfirm (morning-of 09:00 date-city-tz, permissive UTC degrade) + safety_checkin (post-window) enqueues beside rating_window — new_match + identity_revealed dispatches + authenticated grant PRESERVED. Migration 20260606130000 (timestamp strictly after e16 so db reset can't clobber). e19_producers.sql asserts both paths enqueue both jobs (Pitfall 2 reciprocal). Commits 954176d (migration), be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
@@ -45,7 +45,7 @@ LOW findings (non-blocking, optional cleanup):
 
   ✓ GATED PROD-APPLY DONE (2026-06-04): batched Phase 2 (E5-E8 + e2 enums) + Phase 3 (E11 targeting cols/post_night extend, E12 queue enum/reject_candidate) — 9 migrations applied to prod ufufmcpnysvwtutpbian via MCP apply_migration in dependency order. Verified on prod: 8-arg post_night + 7-arg update_itinerary_stops (old 5-arg dropped), reject_candidate/cancel_night/update_night/sweep_loop_terminus/flag_no_show present, queue_status+passed_by_host, date_match_status+expired, date_instances targeting cols. Security advisor: NO new findings (my fns pin search_path=public, no USING(true); DEFINER-executable warnings are the app's established accepted pattern shared by all match_* RPCs). match-reject-candidate edge fn deployed (CLI, verify_jwt=true, 401 unauthed). RESEND_API_KEY confirmed in Vercel prod. NOTE: prod migration ledger uses MCP-assigned versions (drift vs local filenames — pre-existing reconciliation pattern; local files remain source of truth).
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [█████████░] 85%
 | Phase 07 P01 | 22 | 2 tasks | 3 files |
 | Phase 07 P02 | 18 | 2 tasks | 2 files |
 | Phase 07 P03 | 12 | 2 tasks | 2 files |
+| Phase 07 P08 | 12 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06/06-04 (E19/REQ-E19 producers): both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100_e16) — NOT the superseded 127800/_p5_accept_lock/_p5_b_complete — adding day_of_reconfirm + safety_checkin enqueues beside rating_window. PRESERVED everything e16 added: new_match (2/RPC) + identity_revealed (2/RPC), SECURITY DEFINER SET search_path, inherited grant to authenticated (no DROP — T-06-12). Migration timestamp 20260606130000 sorts STRICTLY AFTER e16 (20260606120100) so a db reset can't let e16 re-apply and clobber the safety enqueues (the plan's stale 20260605120200 filename would have). day_of_reconfirm run_after = date_trunc('day', lower(rng) at time zone v_tz) at time zone v_tz + 9h, tz from date_instance.city_id→cities.timezone (NOT primary_city_id), permissive degrade lower(rng)-6h if tz null. safety_checkin run_after = upper(rng)+2h. Dedup reconfirm:||lid / checkin:||lid; payload {lock_id}. Reciprocal uses p_chosen_instance (no inst local, Pitfall 2). e19_producers.sql drives both RPCs to real locks (accept via a_accept_lock recipe, reciprocal via b_reciprocal recipe) and asserts rating:/reconfirm:/checkin: jobs for each lid. Commits 954176d (migration) + be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
 - [Phase ?]: [Phase 07]: 07/07-01 (E20/E23/E24 contract): get_night_detail re-CREATEd (CREATE OR REPLACE, RETURNS TABLE byte-identical) merging per-stop lat/lng/place_slug via left join places on (s->>'place_id')::uuid INSIDE the DEFINER RPC (T-07-01: never a client-side places query). Non-catalog place_id degrades to null/no-row-error (D-01). reservation_url scrub + search_path pin + revoke-anon/grant-authenticated tail preserved. Migration 20260606140000 sorts after latest 20260606130200 (Phase-6 ordering lesson). feed.ts owns the WHOLE Phase-7 contract here to keep Wave-1 parallel: NightDetailStop.place_slug (+normalizer o.place_slug, feeds both LockDetail direct-itinerary loader AND feed RPC), FeedNight.city_name (E23), withdrawInterest wrapper (E24, forward-ref RPC-name cast until types regen). GATED: migration local-green only, prod UNTOUCHED — advisor+assertion owned by 07-09. REQ-E20/E23/E24 NOT marked complete: their user-facing acceptance lands in downstream Wave-2/3 frontend plans.
 - [Phase 07]: 07/07-02 (E22/E23/D-03): browse_feed_for_viewer DROP+CREATE on the e15 body (return shape changed) +city_name (=cities.name, NightCard slot already wired) + finer distance (venue coords else city-centroid) + tuned soft-score (vibe overlap COUNT-weighted via cardinality(intersect) not boolean; +1 light mutual-compat nudge when both gender prefs align). Preserves all 14 e10 + 3 host-hint cols + every hard gate + the (starts_at,id) keyset tail byte-identical (Pitfall 3) + search_path pin + verbatim revoke-anon/public + grant-authenticated tail. e23_feed_contract.sql (the phase's most important regression) locks col set + anon/public-denied + city_name + keyset no-dup/no-skip; GREEN on a fresh db reset. — GATED: local-green only, prod ufufmcpnysvwtutpbian UNTOUCHED (advisor + prod-apply at 07-09). REQ-E22/E23 NOT marked complete — DB half only; NightCard render + relevance surface land downstream (mirrors 07-01).
+- [Phase ?]: [Phase 07]: 07/07-08 (E25/D-02 archive half): /my-nights gains an upcoming/archive segment toggle (NightsSegments use-client leaf) bucketing the already-fetched creator-scoped rows IN MEMORY (no second DB query, RLS unchanged, T-07-11) — upcoming=seeking/matched/active (default), archive=completed/expired/cancelled. Reuses the existing NightCard row + lifecycleLabel corner chip (no new card); lifecycleLabel gained an explicit expired case. Empty archive = funny copy 'nothing in the rear-view yet' / 'your past nights and matches land here once they wrap.'; empty no-nights-at-all (upcoming) keeps the 'nothing posted yet' CTA. counts Map serialized to a plain object across the server/client boundary. Segments >=44px tap targets, active=shell.accent, focus-visible ring-4. 16 tests green (7 new archive-bucket + 9 page). Visual-verify @420px deferred to the 07-09 gate. REQ-E25 archive half (skeleton is the sibling plan).
 
 ### Pending Todos
 
@@ -135,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-05T17:28:59.077Z
+Last session: 2026-06-05T17:33:13.843Z
 Stopped at: Completed 07-03-PLAN.md (E24 withdraw_interest DEFINER RPC)
 Resume file: None
