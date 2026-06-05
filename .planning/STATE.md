@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 07-03-PLAN.md (E24 withdraw_interest DEFINER RPC)
-last_updated: "2026-06-05T17:40:30.552Z"
+last_updated: "2026-06-05T17:46:17.516Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 39
-  completed_plans: 35
+  completed_plans: 36
   percent: 86
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 07 (enhancements-and-polish-p3) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-06-05
 Prior: 2026-06-05 — 06-04 (E19 producers) green: both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100) adding day_of_reconfirm (morning-of 09:00 date-city-tz, permissive UTC degrade) + safety_checkin (post-window) enqueues beside rating_window — new_match + identity_revealed dispatches + authenticated grant PRESERVED. Migration 20260606130000 (timestamp strictly after e16 so db reset can't clobber). e19_producers.sql asserts both paths enqueue both jobs (Pitfall 2 reciprocal). Commits 954176d (migration), be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
@@ -45,7 +45,7 @@ LOW findings (non-blocking, optional cleanup):
 
   ✓ GATED PROD-APPLY DONE (2026-06-04): batched Phase 2 (E5-E8 + e2 enums) + Phase 3 (E11 targeting cols/post_night extend, E12 queue enum/reject_candidate) — 9 migrations applied to prod ufufmcpnysvwtutpbian via MCP apply_migration in dependency order. Verified on prod: 8-arg post_night + 7-arg update_itinerary_stops (old 5-arg dropped), reject_candidate/cancel_night/update_night/sweep_loop_terminus/flag_no_show present, queue_status+passed_by_host, date_match_status+expired, date_instances targeting cols. Security advisor: NO new findings (my fns pin search_path=public, no USING(true); DEFINER-executable warnings are the app's established accepted pattern shared by all match_* RPCs). match-reject-candidate edge fn deployed (CLI, verify_jwt=true, 401 unauthed). RESEND_API_KEY confirmed in Vercel prod. NOTE: prod migration ledger uses MCP-assigned versions (drift vs local filenames — pre-existing reconciliation pattern; local files remain source of truth).
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Progress: [█████████░] 90%
 | Phase 07 P03 | 12 | 2 tasks | 2 files |
 | Phase 07 P08 | 12 | 2 tasks | 3 files |
 | Phase 07 P04 | 12 | 3 tasks | 4 files |
+| Phase 07 P07 | 8 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,7 @@ Recent decisions affecting current work:
 - [Phase 07]: 07/07-02 (E22/E23/D-03): browse_feed_for_viewer DROP+CREATE on the e15 body (return shape changed) +city_name (=cities.name, NightCard slot already wired) + finer distance (venue coords else city-centroid) + tuned soft-score (vibe overlap COUNT-weighted via cardinality(intersect) not boolean; +1 light mutual-compat nudge when both gender prefs align). Preserves all 14 e10 + 3 host-hint cols + every hard gate + the (starts_at,id) keyset tail byte-identical (Pitfall 3) + search_path pin + verbatim revoke-anon/public + grant-authenticated tail. e23_feed_contract.sql (the phase's most important regression) locks col set + anon/public-denied + city_name + keyset no-dup/no-skip; GREEN on a fresh db reset. — GATED: local-green only, prod ufufmcpnysvwtutpbian UNTOUCHED (advisor + prod-apply at 07-09). REQ-E22/E23 NOT marked complete — DB half only; NightCard render + relevance surface land downstream (mirrors 07-01).
 - [Phase ?]: [Phase 07]: 07/07-08 (E25/D-02 archive half): /my-nights gains an upcoming/archive segment toggle (NightsSegments use-client leaf) bucketing the already-fetched creator-scoped rows IN MEMORY (no second DB query, RLS unchanged, T-07-11) — upcoming=seeking/matched/active (default), archive=completed/expired/cancelled. Reuses the existing NightCard row + lifecycleLabel corner chip (no new card); lifecycleLabel gained an explicit expired case. Empty archive = funny copy 'nothing in the rear-view yet' / 'your past nights and matches land here once they wrap.'; empty no-nights-at-all (upcoming) keeps the 'nothing posted yet' CTA. counts Map serialized to a plain object across the server/client boundary. Segments >=44px tap targets, active=shell.accent, focus-visible ring-4. 16 tests green (7 new archive-bucket + 9 page). Visual-verify @420px deferred to the 07-09 gate. REQ-E25 archive half (skeleton is the sibling plan).
 - [Phase ?]: [Phase 07]: 07/07-04 (E20/E21 building blocks): RouteMap = pink/NightDetailStop static-map variant of ItineraryMap (ACCENT bare hex E0218A, base light-v11, reuses encodePolyline+buildStaticMapUrl+lightbox verbatim, null at 0 coords so the sheet keeps its placeholder, coords-only=no identity T-07-13). PlanTimeline got 2 surgical edits: E20 coord deep-link href ({lat},{lng} when both present, else name search) + E21/D-01 opt-in linkSlugs prop (default FALSE) threaded to StopRow rendering the name as next/link /places/[slug] ONLY when linkSlugs===true AND place_slug present, else plain text (blind contract T-07-12 + graceful degrade). Token read lazily (token() render-time not module-scope) so the static URL builds under vitest. 12/12 tests green, typecheck green. REQ-E20/E21 NOT marked complete — shared primitives; user-facing render (RouteMap mount + LockDetail linkSlugs=true) lands in Plans 05/06.
+- [Phase 07]: 07/07-07 (E24/REQ-E24): candidate standby UI. StandbyCard (Tier-1 shell: night-label eyebrow + position line rank=1 "you're next in line" / rank>1 "you're #{rank} in line" + soft no-promise sub-line "if the spot opens up, you're up." + NEUTRAL "pull my interest" behind a vaul confirm calling the Wave-1 withdrawInterest RPC wrapper -> sonner "pulled. you're off this one." + router.refresh; not accent, not red). StandbyList SSR-reads candidate's OWN interested queue rows (candidate_id=user.id AND status='interested'; queue_candidate_read_own RLS double-enforces) under a "your queue" eyebrow, hidden when empty. BLIND CONTRACT (T-07-16): a candidate has NO RLS read on date_instances pre-offer (creator/offer-recipient only, 20260527127500) so the night label is identity-free ("a night you slid in on"), NOT the night title — honors the blind contract AND avoids a null join. /inbox empty-state now head-counts the candidate's pending-interest rows so a queue-only inbox isn't "quiet in here". withdrawInterest re-exported through api-client index + app client.ts (it existed in feed.ts from 07-01 but was unexported). 8/8 StandbyCard tests + typecheck green. REQ-E24 stays Pending until the 07-09 phase-close gate (mirrors 07-01/07-02 DB-half plans, whose acceptance + gated prod-apply land at 07-09). Visual-verify @420px deferred to 07-09.
 
 ### Pending Todos
 
@@ -139,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-05T17:40:05.934Z
+Last session: 2026-06-05T17:45:36.829Z
 Stopped at: Completed 07-03-PLAN.md (E24 withdraw_interest DEFINER RPC)
 Resume file: None

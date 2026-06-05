@@ -234,7 +234,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1)*
 
 - [x] 07-04-PLAN.md — RouteMap (pink/NightDetailStop static map) + PlanTimeline coord href + opt-in linkSlugs prop (blind contract) + unit tests (REQ-E20, REQ-E21)
-- [ ] 07-07-PLAN.md — E24 standby UI: StandbyCard + /inbox StandbyList read + neutral withdraw vaul confirm + test (REQ-E24)
+- [x] 07-07-PLAN.md — E24 standby UI: StandbyCard + /inbox StandbyList read + neutral withdraw vaul confirm + test (REQ-E24)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -260,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
 | 6. Trust & Safety | 4/5 | In Progress|  |
-| 7. Enhancements & Polish | 5/9 | In Progress|  |
+| 7. Enhancements & Polish | 6/9 | In Progress|  |
