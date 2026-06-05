@@ -219,7 +219,32 @@ Plans:
   3. The feed reflects compatibility/vibe relevance (not just chronology), cards show a human city label with finer distance, and a standby candidate sees their queue position and can withdraw a pending interest.
   4. Feed/detail hero is consistent, skeletons match the new card, archive/draft states exist, typing/read receipts work, a business-ownership stub exists, and the legacy `/plan/i/` dead link is cleaned up.
 
-**Plans**: TBD
+**Note (D-02 scope):** E25 ships ONLY the detail-sheet skeleton + the /my-nights archive view. Draft state, typing/read-receipts, the business-ownership/claim stub, and the legacy `/plan/i/` cleanup are DEFERRED to a future milestone (the SC4 items beyond skeleton+archive are intentionally out of scope this phase).
+
+**Plans**: 9 plans
+Plans:
+
+**Wave 1** *(independent: 3 DB slices + the archive view)*
+
+- [ ] 07-01-PLAN.md — feed.ts Phase-7 contract (place_slug/city_name/withdrawInterest) + get_night_detail re-CREATE (+per-stop lat/lng/place_slug) + e20 SQL test (REQ-E20, REQ-E23, REQ-E24)
+- [ ] 07-02-PLAN.md — browse_feed_for_viewer DROP+CREATE: +city_name +finer distance +tuned soft-score (vibe COUNT + mutual-compat nudge) + e23 contract regression test (REQ-E22, REQ-E23)
+- [ ] 07-03-PLAN.md — withdraw_interest DEFINER RPC (deletes own plain interest, auth.uid() gate) + e24 SQL test (REQ-E24)
+- [ ] 07-08-PLAN.md — E25 archive: /my-nights upcoming/archive segment toggle (status bucketing) + test (REQ-E25)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 07-04-PLAN.md — RouteMap (pink/NightDetailStop static map) + PlanTimeline coord href + opt-in linkSlugs prop (blind contract) + unit tests (REQ-E20, REQ-E21)
+- [ ] 07-07-PLAN.md — E24 standby UI: StandbyCard + /inbox StandbyList read + neutral withdraw vaul confirm + test (REQ-E24)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 07-05-PLAN.md — NightDetailSheet: swap placeholder for RouteMap (E20) + in-sheet loading skeleton (E25) + test (REQ-E20, REQ-E25)
+- [ ] 07-06-PLAN.md — E21 reveal: LockDetail linkSlugs + loader place_slug + retire /create CTAs on /places/[slug] + test (REQ-E21)
+
+**Wave 4** *(phase gate, blocked on Waves 1-3)*
+
+- [ ] 07-09-PLAN.md — Phase gate: [BLOCKING] local apply all 3 migrations + typegen + advisor + full+SQL suite + visual-verify @420px + GATED prod-apply checkpoint (REQ-E20..E25)
+
 **UI hint**: yes
 
 ## Progress
@@ -235,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
 | 6. Trust & Safety | 4/5 | In Progress|  |
-| 7. Enhancements & Polish | 0/TBD | Not started | - |
+| 7. Enhancements & Polish | 0/9 | Not started | - |
