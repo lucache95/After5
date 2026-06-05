@@ -194,7 +194,7 @@ Plans:
 
 - [x] 06-01-PLAN.md — E17 reliability: recompute_reliability DEFINER RPC (+ no_show feed, new-until-3) + close_rating_window hook + reliability pill on ProfileCard (REQ-E17)
 - [x] 06-02-PLAN.md — E18 chat↔profile↔night: loader lock_id + 2 reveal-gated DeepRouteHeader edges + chat-RLS deny-non-party verify/test (REQ-E18)
-- [ ] 06-03-PLAN.md — E19 consumers: 2 safety dispatch RPCs (stale-tolerant) + 2 job handlers + soft reconfirm/check-in cards on LockDetail (REQ-E19)
+- [x] 06-03-PLAN.md — E19 consumers: 2 safety dispatch RPCs (stale-tolerant) + 2 job handlers + soft reconfirm/check-in cards on LockDetail (REQ-E19)
 
 **Wave 2** *(blocked on 06-03)*
 
@@ -234,5 +234,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Marketplace Completeness | 7/7 | Complete   | 2026-06-04 |
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
-| 6. Trust & Safety | 2/5 | In Progress|  |
+| 6. Trust & Safety | 3/5 | In Progress|  |
 | 7. Enhancements & Polish | 0/TBD | Not started | - |
