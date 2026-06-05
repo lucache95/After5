@@ -11,6 +11,7 @@
 // handler can attach it on insert.
 
 import { filterPlaces, coversAllMustIncludes } from '../places-filter.ts';
+import { computeUnverifiedRate } from './unverified-rate.ts';
 import { loadTemplates, selectTopTemplates } from '../templates.ts';
 import { buildItineraryFromTemplate, injectDelighter } from '../scoring.ts';
 import type { TasteContext } from '../scoring.ts';
@@ -62,6 +63,10 @@ export async function runPipeline(
   // re-running the function.
   sharedLog.inputs = inputs;
   sharedLog.candidate_pool_size = candidates.length;
+  // DATA-03: share of the candidate pool with missing coords/hours. Set BEFORE
+  // itinerary assembly so it is recorded even when assembly later fails — a
+  // first-class Phase-9 eval signal flagging cold/thin cities reading "valid".
+  sharedLog.unverified_rate = computeUnverifiedRate(candidates);
   sharedLog.templates_considered = allTemplates.map((t) => ({
     id: t.id,
     name: t.name,
