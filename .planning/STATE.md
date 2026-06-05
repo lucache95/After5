@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 07-03-PLAN.md (E24 withdraw_interest DEFINER RPC)
-last_updated: "2026-06-05T18:26:56.675Z"
-last_activity: 2026-06-05 -- Phase 07 marked complete
+milestone: v2.0
+milestone_name: AI Date-Planner
+status: planning
+last_updated: "2026-06-05T19:27:33.221Z"
+last_activity: 2026-06-05
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 39
-  completed_plans: 39
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,27 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 07 — COMPLETE
-Plan: 9 of 9
-Status: Phase 07 complete
-Last activity: 2026-06-05 -- Phase 07 marked complete
-Prior: 2026-06-05 — 06-04 (E19 producers) green: both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100) adding day_of_reconfirm (morning-of 09:00 date-city-tz, permissive UTC degrade) + safety_checkin (post-window) enqueues beside rating_window — new_match + identity_revealed dispatches + authenticated grant PRESERVED. Migration 20260606130000 (timestamp strictly after e16 so db reset can't clobber). e19_producers.sql asserts both paths enqueue both jobs (Pitfall 2 reciprocal). Commits 954176d (migration), be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
-
-PHASE-CLOSE GATES:
-  ✓ Forced-local visual-verify @420px E13 (offer+lock PlanTimeline) + E12 (interested decline/withdraw/pills, passed_by_host filtered) — PASS. 1 LOW pre-existing note: offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages; accepted row fine in prod via lock reveal). Harness: apps/web/e2e/route-03-visual.spec.ts.
-  ✓ gsd-verifier goal-backward pass — 4/4 must-haves VERIFIED (03-VERIFICATION.md). Each load-bearing claim re-spot-checked against source (PlanTimeline@112/104, reject_candidate silent, 156-LOC component).
-  ✓ E11 creator-controls visual-verify (PostNightForm @ /nights/new?itinerary= + Door-2 publish CTA + CoverUploader @ /plans/[id]/edit) — PASS. All fieldsets render on-brand (who-pays/open-to inclusive framing/age/radius/the-why/soundtrack); publish CTA + cover dropzone present. Harness: apps/web/e2e/route-03-e11-visual.spec.ts. Door-2 sticky-bar/cover "overlap" was a confirmed fullPage-screenshot artifact (publish bar is last DOM element, sticky bottom-0) — NOT a bug.
-  → PHASE 3 IMPLEMENTATION + ALL AUTOMATED/VISUAL GATES COMPLETE.
-
-LOW findings (non-blocking, optional cleanup):
-
-  - PostNightForm.tsx:315 subtitle uses an em-dash ("they're in — you choose") — stop-slop violation (UI-SPEC §Copywriting); 1-line copy fix.
-  - InterestedList offer_passed/offer_expired rows show "someone" (reveal policies cover only pre-offer stages); pre-existing, accepted row fine in prod via lock.
-  - LockDetail H1 may clip very long real first names (seed name made it visible); verify with a long name.
-
-  ✓ GATED PROD-APPLY DONE (2026-06-04): batched Phase 2 (E5-E8 + e2 enums) + Phase 3 (E11 targeting cols/post_night extend, E12 queue enum/reject_candidate) — 9 migrations applied to prod ufufmcpnysvwtutpbian via MCP apply_migration in dependency order. Verified on prod: 8-arg post_night + 7-arg update_itinerary_stops (old 5-arg dropped), reject_candidate/cancel_night/update_night/sweep_loop_terminus/flag_no_show present, queue_status+passed_by_host, date_match_status+expired, date_instances targeting cols. Security advisor: NO new findings (my fns pin search_path=public, no USING(true); DEFINER-executable warnings are the app's established accepted pattern shared by all match_* RPCs). match-reject-candidate edge fn deployed (CLI, verify_jwt=true, 401 unauthed). RESEND_API_KEY confirmed in Vercel prod. NOTE: prod migration ledger uses MCP-assigned versions (drift vs local filenames — pre-existing reconciliation pattern; local files remain source of truth).
-
-Progress: [██████████] 97%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-05 — Milestone v2.0 started
 
 ## Performance Metrics
 

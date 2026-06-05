@@ -12,7 +12,24 @@ A user can browse a real planned night, express interest, get matched, and **end
 
 **Shipped: v1.0 (MVP) — 2026-06-05.** The full blind dating loop is live and proven on prod (`ufufmcpnysvwtutpbian`): browse (blind) → swipe → offer (plan-on-match) → lock → reveal ceremony → chat → date → rating → archive. v1.0 delivered all 25 P0→P3 requirements (E1–E25) across 7 phases: the navigation/profile spine, loop closure + host controls, marketplace completeness, discoverability (targeting + filters + soft-boost ranking), progressive reveal (host-hint ladder + identity reveal), trust & safety (reliability_score + chat↔profile↔night wiring + soft safety check-ins), and enhancements (real maps + post-match venue identity + standby/waitlist + archive). Milestone audit PASSED — integration clean, blind contract intact end-to-end. See [`MILESTONES.md`](MILESTONES.md).
 
-**Next milestone goals (carried deferrals):** the AI date-planner moat (generate/customize nights — the product's defensible core), E25 draft-state + typing indicators + read receipts, business-ownership/claim, richer compatibility ranking, automatic standby promotion, multi-city expansion, and the Phase-5 WR-04 cancelled-lock reveal. Start with `/gsd:new-milestone`.
+**Next milestone goals (carried deferrals):** the AI date-planner moat (generate/customize nights — the product's defensible core), E25 draft-state + typing indicators + read receipts, business-ownership/claim, richer compatibility ranking, automatic standby promotion, multi-city expansion, and the Phase-5 WR-04 cancelled-lock reveal.
+
+## Current Milestone: v2.0 — AI Date-Planner (revive + harden + make-compliant)
+
+**Goal:** Turn the existing-but-Kelowna-bound, legally-non-compliant AI date-planner into the primary, any-city, provably-good way to create a dating night.
+
+**Key reframe (from 2026-06-05 research):** the planner engine already exists and is live on prod — `supabase/functions/generate-plan/` is a mature constraint-first hybrid (code picks venues, Claude only writes copy), reachable via `/create` → publishes to the feed. It is the original pre-pivot product, never removed. v2.0 = **revive + harden + make-compliant + wire into the dating flow**, not build-from-scratch. ~half the work is hardening/compliance of existing code.
+
+**Target features (bare-minimum MVP — see REQUIREMENTS.md):**
+- Foursquare replaces Google as the stored/LLM-fed venue corpus (Google's 2026 Maps ToS forbids the current caching + LLM-feeding); Google demoted to display-only.
+- Any-city venue pre-seed on profile-location-set + cold-start fallback.
+- Trustworthy generation: real proximity/hours guards that fail loud on missing data (the cold-city quality risk).
+- One-tap generate + a customize/improve loop (swap a stop, NL tweaks).
+- An eval harness (deterministic + LLM-judge over a golden set incl. a cold city) — the product's actual test.
+- Vibe-matched ambient sound + more tracks.
+- Generation becomes the primary night-creation path; legacy `/create` funnel retired.
+
+**Discipline:** no manufactured features. Every requirement serves "deliver a date someone will actually go on, created simply, in any city, legally." Cut: scraping, multi-city marketing, cover-image-ML sound matching, whole-app redesign.
 
 ## Requirements
 
