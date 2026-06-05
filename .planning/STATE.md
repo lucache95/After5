@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
-status: planning
+status: roadmapped
 last_updated: "2026-06-05T19:27:33.221Z"
 last_activity: 2026-06-05
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,28 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-03)
+See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 phases 8–11) · .planning/REQUIREMENTS.md (10 v2.0 reqs)
 
-**Core value:** A user can browse a real planned night, express interest, get matched, and end up on an actual date with a real plan attached — the full loop closes and never traps the user.
-**Current focus:** Phase 07 — enhancements-and-polish-p3
+**Core value (v2.0):** A user can generate a real, coherent multi-stop date for their own city in one tap — from legally-sourced (Foursquare) venues — make it better with simple tweaks, and publish it into the dating feed. The generated date is provably good (eval harness incl. a cold city) and its ambient sound fits its cover.
+**Current focus:** Phase 08 — compliant-any-city-venue-corpus (next: `/gsd:plan-phase 8`)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 8 — Compliant Any-City Venue Corpus (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-05 — Milestone v2.0 started
+Status: Roadmap approved — ready to plan Phase 8
+Last activity: 2026-06-05 — v2.0 roadmap created (4 phases, 8–11; 10/10 reqs mapped)
+
+## v2.0 Roadmap (phases 8–11)
+
+| Phase | Goal | Requirements |
+|-------|------|--------------|
+| 8 — Compliant Any-City Venue Corpus | Foursquare = stored/LLM-fed corpus (Google display-only); per-city async pre-seed; fail-loud proximity/hours guards | DATA-01, DATA-02, DATA-03 |
+| 9 — Trustworthy Generation + Eval Harness | One-tap any-city generate + swap/NL-tweak improve loop + vibe-matched sound, proven by deterministic + Opus-4.8-judge eval over a golden set incl. a cold city | PLAN-01, PLAN-02, EVAL-01, SOUND-01 |
+| 10 — Generation as the Primary Night Path | Generation is THE way to create a night (publishes to feed); legacy `/create`/`/plan`/catalog retired | FLOW-01 |
+| 11 — Page-by-Page UX & Nav Audit + Remediation | Browser-driven audit of every route + prioritized remediation; no traps, one branded product | UX-01, UX-02 |
+
+**Dependency spine:** 8 (corpus + guards = foundation, also the compliance unblocker) → 9 (generation + its eval, paired) → 10 (wire as primary, retire legacy) → 11 (audit runs last so it covers the new creation surfaces too).
 
 ## Performance Metrics
 
@@ -75,57 +86,56 @@ Last activity: 2026-06-05 — Milestone v2.0 started
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table (+ `.planning/intel/decisions.md` D1–D13).
-Recent decisions affecting current work:
 
-- Roadmap is the audit's P0→P3 E-queue (E1–E25), not re-derived — sequence never reorders across P-bands (D7).
-- E3 / ISSUE #15 is a nav-repoint + profile-view of the existing `/account` hub, NOT a from-scratch build (D12).
-- Door 2 + `create_blank_itinerary` + typed-city are LIVE ON PROD — re-check against prod before E11, do NOT rebuild (D8).
-- `reject_candidate` / `update_night` / `cancel_night` are genuinely absent on prod = real build work (E12/E7/E6, D9).
-- `interest_received` / `identity_revealed` enums are already applied — E8/E16 are dispatch-site wiring, not migrations (D11).
-- E5 rating-window coordination: cron-completed locks MUST enqueue rating_window themselves — close_rating_window takes an explicit p_lock and does NOT self-discover; accept_lock enqueues it. sweep_loop_terminus now does the same (anchor upper(time_range)+2h, dedup rating:<lock>).
-- no_show is LOCK-level only (date_match_status has no no_show value); date_instances terminal states are completed/expired. flag_no_show uses membership auth (either party), not creator-only.
-- E6 cancel_night = SOFT unpublish (status->'cancelled', row + queue_entries KEPT/reversible), creator-only DEFINER, notifies interested via night_cancelled; pre-match only (non-seeking -> P0001).
-- E7 update_night = creator-only DEFINER, coalesce-edit of starts_at/duration/venue/ambient, NEVER writes GENERATED time_range; dispatches night_changed ONLY on material change (time OR venue), not ambient/duration-only.
-- E8 interest_received = match_ingest_interest CREATE OR REPLACE (body verbatim) dispatches to host ONLY on n>0 (new candidate enqueued), deep-link /dates/[instance]/interested via payload.date_instance_id; coarse per-instance dedup_key ('interest_received:'||instance) throttles email/push while grouped in-app row still surfaces; grants unchanged (revoked public+authenticated). notif-map already had the deep-link (folded in 02-02).
-- E13/03-04 PlanTimeline (apps/web/components/PlanTimeline.tsx) = StopRow+StopTime extracted VERBATIM from feed/NightDetailSheet; accepts ALREADY-NORMALIZED NightDetailStop[] and does NOT re-normalize (re-running normalizeNightDetailStops on a NightDetailStop is lossy — reads source keys estimated_cost_pp/place_name). Callers reading raw itineraries.stops normalize first (03-05 loaders). Blind-safe: name-query map link, NO /places/[slug] StopCard.
-- [Phase ?]: E15/05-01: signBlurredUrls no-reveal-gate; browse_feed widened +3 host cols LOCAL-applied advisor-clean; blurred path signed app-side in feed/page.tsx; REQ-E15 rung-1 only (offer tier 05-02).
-- [Phase ?]: 05/05-02: rung-2 offer surface = candidate offers/[offerId] view (not InterestedList); avatar signed from blurred_photo_url + CSS blur(3px) over blur(8px), clear path never signed pre-lock (T-05-05/T-05-06); blurred avatar is a 48px circular thumb not a Polaroid
-- [Phase 05]: 05/05-03 (E16/D-02/D-04): identity_revealed dispatched at BOTH match_accept_offer AND match_resolve_reciprocal to both parties; consent = it honors matches_enabled by gating the DELIVERY channel to 'suppressed' (sibling PARITY with new_match), NOT by withholding the in-app row — dispatch_notification ALWAYS writes the in-app row, prefs gate push/email (E8 precedent). Inverse-consent verified at runtime + through the real lock e2e. RevealModal ceremony = framer-motion blur(12px)->0 / 900ms expo-out + scale/opacity + one shell.accent glow flourish, gated on justLocked (?just=1); reduced-motion = immediate clear + opacity cross-fade, toast still fires; sage NOT promoted (flourish is pink, not a tick). e16 migration LOCAL-applied + advisor-clean, PROD UNTOUCHED (gated to 05-04 alongside the 05-01 e15 browse_feed widen).
-- [Phase 06]: 06/06-01 (E17/REQ-E17/D-01/D-02): reliability_score = weighted % from match_ratings + no_show locks, recomputed on close_rating_window for BOTH parties. Weights LOCKED in packages/business/src/reliability.ts (SQL recompute_reliability mirrors 1:1): showed_up 80 + on_time 20 (clean attended date=100); cancelled_with_notice 50 RECOVERY credit ONLY on a no-show (not an additive bonus); unsafe_or_disrespectful -100 (floors the date to 0); each no_show lock=0. NULL until >=3 total (rated+no_show) dates -> badge_is_new "new here". no_show counted from locks.status='no_show' EXCLUDING any lock already rated for the ratee (no_show AUTHORITATIVE, one bucket per lock, no double-count). SOFT (D-02): recompute_reliability writes ONLY profiles.reliability_score — NO enforcement/status-change/bans. DEFINER pins search_path=public + revoke-all from public/anon/authenticated. ProfileCard pill (verified-gated via badgeFor): blush "new here" (+ "no rated dates yet", no number) / neutral "{score}% · reliable" + tiny sage Check tick, aria-label both states, NO red. Migration 20260605120000_e17 GATED: local apply + advisor + e17 SQL assertion-script run all DEFERRED to 06-05; prod (ufufmcpnysvwtutpbian) UNTOUCHED.
-- [Phase 06]: 06/06-02 (E18/REQ-E18): chat→profile + chat→night wired into the existing DeepRouteHeader right slot, reveal-gated on chat_threads.lock_id (added to the conversation loader select). Pre-lock thread renders NEITHER control (no identity leak, T-06-05); both → /matches/[lockId] (lucide UserRound / CalendarHeart, 44px tap targets, quiet ink, aria-labels their profile / the night). Night→Profile + Night→Chat in LockDetail confirmed unchanged. chat_threads_party_read VERIFIED-not-recreated (deny-non-party SQL, NO create policy). E2E + SQL authored, EXECUTION deferred to 06-05. No DB applied, prod untouched.
-- [Phase 06]: 06/06-04 (E19/REQ-E19 producers): both lock RPCs (match_accept_offer + match_resolve_reciprocal) re-CREATEd via CREATE OR REPLACE from the LIVE e16 body (20260606120100_e16) — NOT the superseded 127800/_p5_accept_lock/_p5_b_complete — adding day_of_reconfirm + safety_checkin enqueues beside rating_window. PRESERVED everything e16 added: new_match (2/RPC) + identity_revealed (2/RPC), SECURITY DEFINER SET search_path, inherited grant to authenticated (no DROP — T-06-12). Migration timestamp 20260606130000 sorts STRICTLY AFTER e16 (20260606120100) so a db reset can't let e16 re-apply and clobber the safety enqueues (the plan's stale 20260605120200 filename would have). day_of_reconfirm run_after = date_trunc('day', lower(rng) at time zone v_tz) at time zone v_tz + 9h, tz from date_instance.city_id→cities.timezone (NOT primary_city_id), permissive degrade lower(rng)-6h if tz null. safety_checkin run_after = upper(rng)+2h. Dedup reconfirm:||lid / checkin:||lid; payload {lock_id}. Reciprocal uses p_chosen_instance (no inst local, Pitfall 2). e19_producers.sql drives both RPCs to real locks (accept via a_accept_lock recipe, reciprocal via b_reciprocal recipe) and asserts rating:/reconfirm:/checkin: jobs for each lid. Commits 954176d (migration) + be5a124 (test). GATED: NOT applied local/prod — local apply + advisor + assertion run owned by 06-05.
-- [Phase ?]: [Phase 07]: 07/07-01 (E20/E23/E24 contract): get_night_detail re-CREATEd (CREATE OR REPLACE, RETURNS TABLE byte-identical) merging per-stop lat/lng/place_slug via left join places on (s->>'place_id')::uuid INSIDE the DEFINER RPC (T-07-01: never a client-side places query). Non-catalog place_id degrades to null/no-row-error (D-01). reservation_url scrub + search_path pin + revoke-anon/grant-authenticated tail preserved. Migration 20260606140000 sorts after latest 20260606130200 (Phase-6 ordering lesson). feed.ts owns the WHOLE Phase-7 contract here to keep Wave-1 parallel: NightDetailStop.place_slug (+normalizer o.place_slug, feeds both LockDetail direct-itinerary loader AND feed RPC), FeedNight.city_name (E23), withdrawInterest wrapper (E24, forward-ref RPC-name cast until types regen). GATED: migration local-green only, prod UNTOUCHED — advisor+assertion owned by 07-09. REQ-E20/E23/E24 NOT marked complete: their user-facing acceptance lands in downstream Wave-2/3 frontend plans.
-- [Phase 07]: 07/07-02 (E22/E23/D-03): browse_feed_for_viewer DROP+CREATE on the e15 body (return shape changed) +city_name (=cities.name, NightCard slot already wired) + finer distance (venue coords else city-centroid) + tuned soft-score (vibe overlap COUNT-weighted via cardinality(intersect) not boolean; +1 light mutual-compat nudge when both gender prefs align). Preserves all 14 e10 + 3 host-hint cols + every hard gate + the (starts_at,id) keyset tail byte-identical (Pitfall 3) + search_path pin + verbatim revoke-anon/public + grant-authenticated tail. e23_feed_contract.sql (the phase's most important regression) locks col set + anon/public-denied + city_name + keyset no-dup/no-skip; GREEN on a fresh db reset. — GATED: local-green only, prod ufufmcpnysvwtutpbian UNTOUCHED (advisor + prod-apply at 07-09). REQ-E22/E23 NOT marked complete — DB half only; NightCard render + relevance surface land downstream (mirrors 07-01).
-- [Phase ?]: [Phase 07]: 07/07-08 (E25/D-02 archive half): /my-nights gains an upcoming/archive segment toggle (NightsSegments use-client leaf) bucketing the already-fetched creator-scoped rows IN MEMORY (no second DB query, RLS unchanged, T-07-11) — upcoming=seeking/matched/active (default), archive=completed/expired/cancelled. Reuses the existing NightCard row + lifecycleLabel corner chip (no new card); lifecycleLabel gained an explicit expired case. Empty archive = funny copy 'nothing in the rear-view yet' / 'your past nights and matches land here once they wrap.'; empty no-nights-at-all (upcoming) keeps the 'nothing posted yet' CTA. counts Map serialized to a plain object across the server/client boundary. Segments >=44px tap targets, active=shell.accent, focus-visible ring-4. 16 tests green (7 new archive-bucket + 9 page). Visual-verify @420px deferred to the 07-09 gate. REQ-E25 archive half (skeleton is the sibling plan).
-- [Phase ?]: [Phase 07]: 07/07-04 (E20/E21 building blocks): RouteMap = pink/NightDetailStop static-map variant of ItineraryMap (ACCENT bare hex E0218A, base light-v11, reuses encodePolyline+buildStaticMapUrl+lightbox verbatim, null at 0 coords so the sheet keeps its placeholder, coords-only=no identity T-07-13). PlanTimeline got 2 surgical edits: E20 coord deep-link href ({lat},{lng} when both present, else name search) + E21/D-01 opt-in linkSlugs prop (default FALSE) threaded to StopRow rendering the name as next/link /places/[slug] ONLY when linkSlugs===true AND place_slug present, else plain text (blind contract T-07-12 + graceful degrade). Token read lazily (token() render-time not module-scope) so the static URL builds under vitest. 12/12 tests green, typecheck green. REQ-E20/E21 NOT marked complete — shared primitives; user-facing render (RouteMap mount + LockDetail linkSlugs=true) lands in Plans 05/06.
-- [Phase 07]: 07/07-07 (E24/REQ-E24): candidate standby UI. StandbyCard (Tier-1 shell: night-label eyebrow + position line rank=1 "you're next in line" / rank>1 "you're #{rank} in line" + soft no-promise sub-line "if the spot opens up, you're up." + NEUTRAL "pull my interest" behind a vaul confirm calling the Wave-1 withdrawInterest RPC wrapper -> sonner "pulled. you're off this one." + router.refresh; not accent, not red). StandbyList SSR-reads candidate's OWN interested queue rows (candidate_id=user.id AND status='interested'; queue_candidate_read_own RLS double-enforces) under a "your queue" eyebrow, hidden when empty. BLIND CONTRACT (T-07-16): a candidate has NO RLS read on date_instances pre-offer (creator/offer-recipient only, 20260527127500) so the night label is identity-free ("a night you slid in on"), NOT the night title — honors the blind contract AND avoids a null join. /inbox empty-state now head-counts the candidate's pending-interest rows so a queue-only inbox isn't "quiet in here". withdrawInterest re-exported through api-client index + app client.ts (it existed in feed.ts from 07-01 but was unexported). 8/8 StandbyCard tests + typecheck green. REQ-E24 stays Pending until the 07-09 phase-close gate (mirrors 07-01/07-02 DB-half plans, whose acceptance + gated prod-apply land at 07-09). Visual-verify @420px deferred to 07-09.
-- [Phase ?]: [Phase 07]: 07/07-05 (E20/E25): RouteMap mounted in NightDetailSheet 'the route' section (hasMappedStops guard, else 'short hop apart' fallback); E25 DetailSkeleton (hero+chips+hook+timeline rows, feed/loading.tsx shimmer atom, motion-reduce:animate-none) on detail===null && open. Sheet stays BLIND: PlanTimeline linkSlugs unset, RouteMap coords-only, test asserts no /places link (T-07-17). 5/5 tests + typecheck green. REQ-E20/E25 stay Pending until 07-09 visual-verify gate (mirrors 07-01/02/04).
+**v2.0 (from 2026-06-05 research — see SUMMARY.md / VENUE-DATA.md / GENERATION.md):**
+
+- Verdict: **refactor, do not replace.** The generate-plan engine is a mature constraint-first hybrid (code picks venues, Claude only writes copy) live on prod (edge fn v46). ~half of v2.0 = hardening + compliance, not net-new.
+- Venue model is two-layer: **Foursquare = canonical stored + LLM-fed `places` corpus** (the one license that permits fetch + store-forever + LLM-input + display; build on the NEW Places API, legacy V3 deprecates 2026-05-15); **Google demoted to live display-only** keyed by `google_place_id` (never persisted as content, never fed to model). Reject scraping; OSM/Overpass only as a free lat/lng+category backfill for thin cities.
+- Schema impact small: add `fsq_place_id` (+ optional `google_place_id`), extend a `source` column, swap the fetcher. The trigger model (async pre-seed on profile-location-set + cold-start fallback at generation) stays intact. Cleanup debt: Google-warmed `places` rows must be re-warmed from Foursquare or relabeled + pulled out of the LLM input path.
+- **BIGGEST RISK — silent quality collapse on cold cities:** the deterministic guards PASS on null input (`withinRadius` true on null coords, `isOpenAt` true on null hours). Curated Kelowna is hand-filled; Foursquare-warmed cold cities arrive partial → guards quietly no-op exactly where the corpus is weakest, and a Kelowna-only eval reads green. Mitigations are requirements: guards FAIL LOUD on missing data (DATA-03); the eval golden set MUST include a cold on-the-fly city + surface `unverified_rate` per city (EVAL-01).
+- Generation hardening (Phase 9): replace `drive_cluster` string-label with PostGIS + haversine drive-time hop-gate; migrate copy pass from raw-JSON parsing to Anthropic tool-use; improve loop = single-stop re-pick + NL-tweak intent parsing → scoring knobs → re-run pipeline, persisted via existing `update_itinerary_stops` RPC.
+- Model split: Sonnet 4.6 generate (~1¢, 2–4s) · Haiku 4.5 improve loop (<$0.001, <1s) · Opus 4.8 offline judge only.
+- Cost is a non-issue (<$200/mo every option) — venue sourcing is purely a licensing decision.
+
+*(v1.0 phase decisions E15–E25 retained below for continuity reference.)*
+
+- E13/03-04 PlanTimeline = StopRow+StopTime extracted VERBATIM from feed/NightDetailSheet; accepts ALREADY-NORMALIZED NightDetailStop[]; blind-safe (name-query map link, NO /places/[slug] StopCard).
+- E15/05-01: signBlurredUrls no-reveal-gate; browse_feed +3 host cols; rung-1 only (offer tier 05-02).
+- E16/05-03: identity_revealed dispatched at match_accept_offer AND match_resolve_reciprocal to both parties; in-app row always written, prefs gate push/email; RevealModal ceremony gated on ?just=1; reduced-motion = immediate clear.
+- E17/06-01: reliability_score = weighted % from match_ratings + no_show locks, recomputed on close_rating_window; SOFT (writes score only, NO enforcement); NULL until ≥3 dates → "new here" badge.
+- E18/06-02: chat→profile + chat→night reveal-gated on chat_threads.lock_id; pre-lock thread renders NEITHER control (no identity leak).
+- E19/06-04: both lock RPCs enqueue day_of_reconfirm + safety_checkin beside rating_window; SOFT notify-only, no enforcement.
+- E20–E25/Phase 07: get_night_detail merges per-stop lat/lng/place_slug inside the DEFINER RPC; browse_feed +city_name + finer distance + tuned soft-score; RouteMap coords-only (no identity); /my-nights upcoming/archive segment toggle in memory; DetailSkeleton on null detail.
 
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
 
 - Investigate the possible lost-swipe race in the detail-sheet "i'm in" path (live-verify new-issue #2 — not yet an E-item).
-- Residual legacy-Fraunces serif spots on `/create`, `/login`, `/about`, `/tell-us` — follow-up touch-up, not a brand-sweep re-queue.
+- Residual legacy-Fraunces serif spots on `/create`, `/login`, `/about`, `/tell-us` — likely folds into the UX-02 remediation (Phase 11).
+- WR-04 cancelled-lock reveal (carried from v1.0 Phase 5) — deferred to v2.1+.
 
 ### Blockers/Concerns
 
 [Issues that affect future work]
 
-- UNREACHED audit items (C2/C3/C5/C6/C9 nav terminals, D13 preferences-edit, D16 dead handlers/safety) are assertions from the static read — confirm in code before building the fix.
-- Phase 3 (E11): re-check Door 2 against PROD first; reconcile §2A canvas work with the open-city `CreateFlow.tsx` scaffold AFTER the fleet lands (do not double-edit concurrently).
-- All schema work is gated prod-apply: local-green → security advisor after DDL → batched prod apply. Watch local-vs-prod drift (prod ref `ufufmcpnysvwtutpbian`).
+- All schema work is gated prod-apply: local-green → security advisor after DDL → batched prod apply against `ufufmcpnysvwtutpbian`. Watch local-vs-prod drift. New RPCs/migrations pin `search_path` + secure-by-default RLS.
+- Foursquare API keys are server-side only (never `NEXT_PUBLIC_`, never edge-exposed as client content).
+- Phase 8 must verify the LIVE prod state of generate-plan + `places` schema + `GOOGLE_PLACES_API_KEY` usage before refactoring — the SUMMARY describes the engine but prod is the source of truth.
+- Confirm the Foursquare new Places API free-tier transition (legacy V3 deprecates 2026-05-15) before building DATA-01 on it.
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
+Items acknowledged and carried forward:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Reveal | WR-04 cancelled-lock reveal | Deferred to v2.1+ | v1.0 Phase 5 |
+| Chat polish | E25 typing indicators / read receipts / draft-state | Deferred to v2.1+ | v1.0 close |
+| Marketplace | business-ownership/claim model | Deferred to v2.1+ | v1.0 close |
 
 ## Session Continuity
 
-Last session: 2026-06-05T17:56:18.113Z
-Stopped at: Completed 07-03-PLAN.md (E24 withdraw_interest DEFINER RPC)
+Last session: 2026-06-05 — v2.0 roadmap created (phases 8–11, 10/10 reqs mapped).
+Stopped at: ROADMAP.md + REQUIREMENTS.md traceability + STATE.md written; awaiting `/gsd:plan-phase 8`.
 Resume file: None

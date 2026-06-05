@@ -69,15 +69,15 @@ app actually does, not what the code implies.
 
 | Requirement | Slug | Category | Phase | Status |
 |-------------|------|----------|-------|--------|
-| DATA-01 | foursquare-corpus | DATA | — | Pending |
-| DATA-02 | city-preseed | DATA | — | Pending |
-| DATA-03 | failloud-guards | DATA | — | Pending |
-| PLAN-01 | one-tap-generate | PLAN | — | Pending |
-| PLAN-02 | improve-loop | PLAN | — | Pending |
-| EVAL-01 | eval-harness | EVAL | — | Pending |
-| SOUND-01 | vibe-matched-sound | SOUND | — | Pending |
-| FLOW-01 | generate-into-dating | FLOW | — | Pending |
-| UX-01 | ux-nav-brand-audit | UX | — | Pending |
-| UX-02 | ux-remediation | UX | — | Pending |
+| DATA-01 | foursquare-corpus | DATA | Phase 8 | Pending |
+| DATA-02 | city-preseed | DATA | Phase 8 | Pending |
+| DATA-03 | failloud-guards | DATA | Phase 8 | Pending |
+| PLAN-01 | one-tap-generate | PLAN | Phase 9 | Pending |
+| PLAN-02 | improve-loop | PLAN | Phase 9 | Pending |
+| EVAL-01 | eval-harness | EVAL | Phase 9 | Pending |
+| SOUND-01 | vibe-matched-sound | SOUND | Phase 9 | Pending |
+| FLOW-01 | generate-into-dating | FLOW | Phase 10 | Pending |
+| UX-01 | ux-nav-brand-audit | UX | Phase 11 | Pending |
+| UX-02 | ux-remediation | UX | Phase 11 | Pending |
 
-**Coverage:** 10/10 requirements (to be mapped by roadmap).
+**Coverage:** 10/10 requirements mapped — DATA→Phase 8, PLAN/EVAL/SOUND→Phase 9, FLOW→Phase 10, UX→Phase 11. No orphans, no duplicates.
