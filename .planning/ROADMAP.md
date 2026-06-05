@@ -69,7 +69,7 @@ sound fits its cover.
 - [x] 08-01-PLAN.md — DATA-01: foursquare.ts drop-in corpus source (mappers + pickHours + searchPlaces), TDD, fixture-mocked
 - [x] 08-02-PLAN.md — DATA-03: fail-loud guards (withinRadius/isOpenAt) + unverified marker + unverified_rate
 - [x] 08-03-PLAN.md — DATA-01/02: migration (source check + fsq_place_id full unique index + cities.seeded_at + google_legacy relabel) + SQL test
-- [ ] 08-04-PLAN.md — DATA-01/02: re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback
+- [x] 08-04-PLAN.md — DATA-01/02: re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback
 - [ ] 08-05-PLAN.md — DATA-02: seed_city job type + handler + server-side dedup'd enqueue on profile-location-set
 - [ ] 08-06-PLAN.md — phase gate: local suite/migrations/advisor green, then key-gated live smoke + gated prod-apply (blocked on FOURSQUARE_API_KEY)
 

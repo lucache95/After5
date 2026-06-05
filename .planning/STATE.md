@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: "Completed 08-03-PLAN.md (DATA-01/02 migration: source check + fsq_place_id full unique index + cities.seeded_at + google_legacy relabel); SQL assertion test green on local db reset."
-last_updated: "2026-06-05T23:30:00.000Z"
-last_activity: 2026-06-05 -- Phase 8 Plan 03 executed (DATA-01/02 places fsq/source migration)
+stopped_at: Completed 08-04-PLAN.md; next plan in Phase 8 (08-05 seed_city).
+last_updated: "2026-06-05T22:56:30.000Z"
+last_activity: 2026-06-05 -- Phase 8 Plan 04 executed (DATA-01/02 re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 8 — Compliant Any-City Venue Corpus (in progress)
-Plan: 03 complete (DATA-01/02 places fsq/source migration) — next: 08-04 (re-source cold-start + google_legacy pool exclusion)
+Plan: 04 complete (DATA-01/02 re-source OnTheFlyProvider to Foursquare + google_legacy pool exclusion + city_warming fallback) — next: 08-05 (seed_city handler)
 Status: Executing
-Last activity: 2026-06-05 -- Phase 8 Plan 03 executed (DATA-01/02 places migration + SQL test)
+Last activity: 2026-06-05 -- Phase 8 Plan 04 executed (cold-start now Foursquare-sourced; W3 read-path admits 'auto' every generation; thin city → city_warming 503)
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -82,6 +82,7 @@ Last activity: 2026-06-05 -- Phase 8 Plan 03 executed (DATA-01/02 places migrati
 | Phase 07 P05 | 12 | 3 tasks | 2 files |
 | Phase 07 P06 | 12 | 3 tasks | 3 files |
 | Phase 08 P01 | ~3 | 3 tasks | 3 files |
+| Phase 08 P04 | ~5 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
