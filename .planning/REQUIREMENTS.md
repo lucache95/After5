@@ -255,7 +255,7 @@ the legacy-planner cleanup (F11) incl. the re-scoped C10 `/plan/i/` dead link.
 | REQ-E18 | chat-profile-night-wiring | P2 | Phase 6 | Complete (06-02; E2E + chat-RLS SQL run in 06-05) |
 | REQ-E19 | safety-flows | P2 | Phase 6 | Built (06-03 consumers: dispatch RPCs + handlers + soft cards; 06-04 producers: both lock RPCs enqueue day_of_reconfirm + safety_checkin + e19_producers.sql); gated apply + advisor + SQL/E2E run 06-05 |
 | REQ-E20 | real-map-route | P3 | Phase 7 | Pending |
-| REQ-E21 | venues-into-loop | P3 | Phase 7 | Pending |
+| REQ-E21 | venues-into-loop | P3 | Phase 7 | Complete (07-06; LockDetail links post-match stops to /places/[slug], /create funnel retired, no /places global nav) |
 | REQ-E22 | relevance-ranking | P3 | Phase 7 | Pending |
 | REQ-E23 | city-label-proximity | P3 | Phase 7 | Pending |
 | REQ-E24 | standby-waitlist-ui | P3 | Phase 7 | Pending |

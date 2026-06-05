@@ -239,7 +239,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2)*
 
 - [x] 07-05-PLAN.md — NightDetailSheet: swap placeholder for RouteMap (E20) + in-sheet loading skeleton (E25) + test (REQ-E20, REQ-E25)
-- [ ] 07-06-PLAN.md — E21 reveal: LockDetail linkSlugs + loader place_slug + retire /create CTAs on /places/[slug] + test (REQ-E21)
+- [x] 07-06-PLAN.md — E21 reveal: LockDetail linkSlugs + loader place_slug + retire /create CTAs on /places/[slug] + test (REQ-E21)
 
 **Wave 4** *(phase gate, blocked on Waves 1-3)*
 
@@ -260,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Feed Filters & Targeting | 4/4 | Complete   | 2026-06-04 |
 | 5. Progressive Reveal | 3/4 | In Progress|  |
 | 6. Trust & Safety | 4/5 | In Progress|  |
-| 7. Enhancements & Polish | 7/9 | In Progress|  |
+| 7. Enhancements & Polish | 8/9 | In Progress|  |
