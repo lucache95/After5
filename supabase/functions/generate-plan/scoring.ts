@@ -47,12 +47,20 @@ export interface TasteContext {
 }
 
 // Returns true if the place's hours window covers the slot start time.
-// `opens`/`closes` are nullable; null = unknown, treated as always-open.
+// DATA-03 fail-loud: null hours are NOT treated as always-open for a timed
+// slot — a venue we can't hours-validate must not silently pass.
 // Late-night closes (e.g. 01:00) are handled by allowing wraparound.
-function isOpenAt(p: Place, slotStart: string): boolean {
-  if (!p.opens || !p.closes) return true;
-  // Empty slotStart = relaxed mode (skip hours filtering).
+//
+// CONTROL-FLOW ORDER MATTERS: relaxed mode (empty slotStart) is checked FIRST.
+// The relaxed retry path deliberately admits null-hours venues so thin/cold
+// cities can still fill an itinerary. Checking null-hours first would make a
+// relaxed call return false on those venues and collapse the retry — the exact
+// failure this phase prevents.
+export function isOpenAt(p: Place, slotStart: string): boolean {
+  // Empty slotStart = relaxed mode (skip hours filtering) — unchanged.
   if (!slotStart) return true;
+  // Timed slot + unknown hours → EXCLUDE (was silently true). Fail loud.
+  if (!p.opens || !p.closes) return false;
   const start = toMinutes(slotStart);
   const open = toMinutes(p.opens);
   const close = toMinutes(p.closes);
@@ -303,6 +311,12 @@ export function buildItineraryFromTemplate(
       local_insight: p.local_insight,
       reservation_url: p.reservation_url,
       reservation_required: p.reservation_required,
+      // DATA-03: re-check THIS place's own hours at assembly. A null-hours
+      // place can only have been admitted via the relaxed retry path (the timed
+      // isOpenAt now excludes it), so unknown hours here = unverified open-state.
+      // We re-derive it from the place rather than observe isOpenAt's internal
+      // relaxed bypass, which is invisible to the assembler.
+      unverified: (!p.opens || !p.closes),
     });
 
     totalCost += cost;

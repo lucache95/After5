@@ -182,6 +182,10 @@ export interface ItineraryStop {
   local_insight?: string | null;
   reservation_url?: string | null;
   reservation_required?: boolean;
+  // DATA-03: true when the admitted place has unknown hours (null opens/closes).
+  // Set at stop assembly by re-checking the place's own hours — surfaces that
+  // this stop was admitted via the relaxed path and its open-state is unverified.
+  unverified?: boolean;
 }
 
 export interface Itinerary {
