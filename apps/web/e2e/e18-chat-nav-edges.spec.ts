@@ -19,7 +19,11 @@ import { loginAs } from './_helpers/auth';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY ?? '';
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??
+  process.env.SERVICE_ROLE_KEY ??
+  // Local Supabase demo service-role JWT fallback (same as the 05-reveal specs) so the
+  // spec is self-sufficient on the forced-local stack without exporting env first.
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
 
 // 420px-wide phone viewport (the design target; desktop centers in a max-w-[420px] shell).
 test.use({ viewport: { width: 420, height: 900 } });
@@ -63,14 +67,17 @@ test.beforeAll(async () => {
   await sb.from('chat_threads').update({ lock_id: lockId }).eq('id', seed.threadId);
 
   // A second, PRE-LOCK thread (separate offer, lock_id stays null) to assert the reveal gate.
+  // Status is 'expired' (not 'active') so it does not trip offers_one_active_per_instance —
+  // the seed's first offer on this instance is still active. The reveal gate keys ONLY on
+  // chat_threads.lock_id being null, so the offer's status is irrelevant to this test.
   const { data: offer2, error: offer2Err } = await sb
     .from('offers')
     .insert({
       date_instance_id: seed.instanceId,
       creator_id: seed.hostId,
       candidate_id: seed.candId,
-      status: 'active',
-      expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      status: 'expired',
+      expires_at: new Date(Date.now() - 3600 * 1000).toISOString(),
     })
     .select('id')
     .single();
@@ -100,7 +107,7 @@ test('E18: locked chat header exposes chat→profile + chat→night, both → th
   await page.goto(`/messages/${seed.threadId}`);
   expect(page.url(), 'conversation bounced to /login → seed/login failed').not.toContain('/login');
   // The conversation header renders (counterpart = Maya).
-  await expect(page.getByRole('heading', { name: new RegExp(seed.hostName, 'i') })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('banner').getByRole('heading', { name: new RegExp(seed.hostName, 'i') })).toBeVisible({ timeout: 20_000 });
 
   // Edge 1: Chat → Profile. Icon-only control carries the aria-label and points at the lock.
   const toProfile = page.getByRole('link', { name: 'their profile' });
@@ -121,7 +128,7 @@ test('E18: a PRE-LOCK thread renders NEITHER nav control (reveal-gated, no ident
 
   await page.goto(`/messages/${preLockThreadId}`);
   expect(page.url(), 'pre-lock conversation bounced to /login').not.toContain('/login');
-  await expect(page.getByRole('heading', { name: new RegExp(seed.hostName, 'i') })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('banner').getByRole('heading', { name: new RegExp(seed.hostName, 'i') })).toBeVisible({ timeout: 20_000 });
 
   // T-06-05: no profile/night control before the thread is lock-promoted.
   await expect(page.getByRole('link', { name: 'their profile' })).toHaveCount(0);
