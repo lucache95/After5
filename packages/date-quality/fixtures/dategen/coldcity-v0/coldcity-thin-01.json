@@ -1,0 +1,84 @@
+{
+  "id": "coldcity-thin-01-foursquare-cold",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["relaxed", "casual"],
+    "budget_per_person": 60,
+    "duration_min": 180,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "chill",
+    "when": "tonight",
+    "time_of_day": "evening",
+    "note": "First date in a small town. Keep it easy."
+  },
+  "stops": [
+    {
+      "place_id": "c01d0000-0001-4b01-8101-000000000001",
+      "place_name": "Heid Out Restaurant & Brewhouse",
+      "place_type": "restaurant",
+      "start_time": "18:00",
+      "duration_min": 75,
+      "estimated_cost_pp": 32,
+      "lat": 49.5126,
+      "lng": -115.7686,
+      "opens": "11:00",
+      "closes": "22:00",
+      "vibe_tags": ["casual", "lively"],
+      "pairing_tags": ["dinner", "drinks"],
+      "quality_score": 0.72,
+      "facts": {
+        "place_id": "c01d0000-0001-4b01-8101-000000000001",
+        "name": "Heid Out Restaurant & Brewhouse",
+        "allowed_claims": ["in-house brewhouse", "downtown patio"],
+        "setting_tags": ["patio", "indoor"],
+        "sensory_tags": ["hop aroma"]
+      }
+    },
+    {
+      "place_id": "c01d0000-0001-4b01-8101-000000000002",
+      "place_name": "Local Lounge (unverified)",
+      "place_type": "bar",
+      "start_time": "19:30",
+      "duration_min": 60,
+      "estimated_cost_pp": 18,
+      "lat": null,
+      "lng": null,
+      "opens": null,
+      "closes": null,
+      "vibe_tags": ["casual"],
+      "pairing_tags": ["drinks"],
+      "quality_score": 0.5,
+      "facts": {
+        "place_id": "c01d0000-0001-4b01-8101-000000000002",
+        "name": "Local Lounge (unverified)",
+        "allowed_claims": [],
+        "setting_tags": [],
+        "sensory_tags": []
+      }
+    },
+    {
+      "place_id": "c01d0000-0001-4b01-8101-000000000003",
+      "place_name": "Riverside Walk (no hours on record)",
+      "place_type": "viewpoint",
+      "start_time": "20:45",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "lat": null,
+      "lng": null,
+      "opens": "",
+      "closes": "",
+      "vibe_tags": ["scenic", "relaxed"],
+      "pairing_tags": ["walk", "view"],
+      "quality_score": 0.55,
+      "facts": {
+        "place_id": "c01d0000-0001-4b01-8101-000000000003",
+        "name": "Riverside Walk (no hours on record)",
+        "allowed_claims": ["riverside path"],
+        "setting_tags": ["outdoor"],
+        "sensory_tags": ["river sound"]
+      }
+    }
+  ],
+  "packVoiceNote": "Cold-city thin: a faithful Foursquare-cold proxy. 2 of 3 stops have null coords and null/empty hours, so travel_pacing + open_at_arrival SKIP them and would read green. unverified_rate = 2/3 (~0.67) > UNVERIFIED_RATE_THRESHOLD — this fixture MUST flag an unverified_rate regression and fail the suite. It is the lead anti-vacuous-green anchor (T-09-06)."
+}

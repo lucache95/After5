@@ -1,0 +1,86 @@
+{
+  "id": "coldcity-usable-01-verified",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["relaxed", "scenic"],
+    "budget_per_person": 70,
+    "duration_min": 195,
+    "effort": "moderate",
+    "location": "out",
+    "intent": "impress",
+    "when": "future",
+    "future_date": "2026-09-12",
+    "time_of_day": "evening",
+    "note": "Small town but we found real places with hours and coords."
+  },
+  "stops": [
+    {
+      "place_id": "c01d0000-0003-4b01-8101-000000000001",
+      "place_name": "Fisher Peak Performing Arts Cafe",
+      "place_type": "cafe",
+      "start_time": "17:15",
+      "duration_min": 60,
+      "estimated_cost_pp": 16,
+      "lat": 49.5121,
+      "lng": -115.7702,
+      "opens": "08:00",
+      "closes": "21:00",
+      "vibe_tags": ["relaxed", "cozy"],
+      "pairing_tags": ["coffee", "dessert"],
+      "quality_score": 0.74,
+      "facts": {
+        "place_id": "c01d0000-0003-4b01-8101-000000000001",
+        "name": "Fisher Peak Performing Arts Cafe",
+        "allowed_claims": ["mountain-view windows", "local-art walls"],
+        "setting_tags": ["indoor"],
+        "sensory_tags": ["espresso steam"]
+      }
+    },
+    {
+      "place_id": "c01d0000-0003-4b01-8101-000000000002",
+      "place_name": "Allegra Mediterranean Kitchen",
+      "place_type": "restaurant",
+      "start_time": "18:45",
+      "duration_min": 90,
+      "estimated_cost_pp": 42,
+      "lat": 49.5119,
+      "lng": -115.7698,
+      "opens": "16:00",
+      "closes": "22:00",
+      "vibe_tags": ["relaxed", "warm"],
+      "pairing_tags": ["dinner"],
+      "quality_score": 0.81,
+      "facts": {
+        "place_id": "c01d0000-0003-4b01-8101-000000000002",
+        "name": "Allegra Mediterranean Kitchen",
+        "allowed_claims": ["wood-fired mains", "house-made pasta"],
+        "signature_items": ["wood-fired lamb", "house pappardelle"],
+        "setting_tags": ["indoor"],
+        "sensory_tags": ["wood smoke", "garlic"]
+      }
+    },
+    {
+      "place_id": "c01d0000-0003-4b01-8101-000000000003",
+      "place_name": "Rotary Park Riverside Lookout",
+      "place_type": "viewpoint",
+      "start_time": "20:30",
+      "duration_min": 30,
+      "estimated_cost_pp": 0,
+      "lat": 49.5097,
+      "lng": -115.766,
+      "opens": "06:00",
+      "closes": "23:00",
+      "vibe_tags": ["scenic", "relaxed"],
+      "pairing_tags": ["view", "walk", "sunset_spot"],
+      "quality_score": 0.79,
+      "facts": {
+        "place_id": "c01d0000-0003-4b01-8101-000000000003",
+        "name": "Rotary Park Riverside Lookout",
+        "allowed_claims": ["riverside boardwalk", "mountain skyline"],
+        "setting_tags": ["outdoor"],
+        "sensory_tags": ["river sound", "evening light"]
+      }
+    }
+  ],
+  "packVoiceNote": "Cold-city USABLE: a small market where every stop carries real coords + hours. unverified_rate = 0, well under UNVERIFIED_RATE_THRESHOLD — clears the threshold. Proves the gate is a data-quality bar, not a blanket cold-city reject: a genuinely-usable cold city passes. Schedule is monotonic (17:15 -> 18:45 -> 20:30, no overlap) and the sunset lookout lands in the golden-hour window."
+}

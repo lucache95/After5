@@ -16,7 +16,13 @@
 // zero network. A fixture MAY also ship its own `writtenSample` (a WrittenDate)
 // which dry mode prefers verbatim. Real runs pass `generateLLM` + `judgeLLM`.
 
-import type { Fixture, GateResult, JudgeScores, WrittenDate } from './types';
+import type {
+  Fixture,
+  FixtureStop,
+  GateResult,
+  JudgeScores,
+  WrittenDate,
+} from './types';
 import { runWritingPass, type InvokeLLM } from './writingPass';
 import { runGates } from './gates';
 import { judge, type JudgeResult } from './judge';
@@ -45,6 +51,15 @@ export interface FixtureResult {
   banned_copy: boolean;
   /** Judge per-dimension scores, if the judge ran. */
   judge_scores: JudgeScores | null;
+  /**
+   * Fraction of this fixture's stops we cannot fully verify (missing coords OR
+   * missing hours). A FIRST-CLASS scored signal: a thin cold city reads HIGH
+   * here and is flagged as a regression even though the null-data gates
+   * (travel_pacing / open_at_arrival) skip those very stops. Computed with the
+   * IDENTICAL predicate as production computeUnverifiedRate so eval and prod
+   * stay byte-identical. 0..1.
+   */
+  unverified_rate: number;
 }
 
 /** The full eval report. Shape is stable so baselines diff cleanly. */
@@ -57,6 +72,13 @@ export interface EvalReport {
   mode: 'dry' | 'live';
   /** Mean of all fixtures' final_score. */
   mean_score: number;
+  /**
+   * Mean unverified_rate per city (city = fixture_id prefix before the first
+   * hyphen, e.g. "kelowna", "coldcity"). Surfaces the cold-city data-thinness
+   * signal at the city level so a new on-the-fly market that collapses to
+   * mostly-null data is visible at a glance. 0..1 per city.
+   */
+  cities: Record<string, number>;
   /** Per-fixture results, sorted by fixture_id. */
   fixtures: FixtureResult[];
 }
@@ -68,7 +90,8 @@ export interface Regression {
     | 'mean_drop'
     | 'fixture_drop'
     | 'unsupported_claim'
-    | 'banned_copy';
+    | 'banned_copy'
+    | 'unverified_rate';
   fixture_id?: string;
   message: string;
 }
@@ -90,6 +113,42 @@ export interface ComparisonResult {
 export const MEAN_DROP_THRESHOLD = 3;
 /** Per-fixture final-score drop (baseline − current) that counts as a regression. */
 export const FIXTURE_DROP_THRESHOLD = 10;
+/**
+ * Max share of a fixture's stops that may be unverifiable (missing coords OR
+ * hours) before it is flagged as a regression. A genuinely usable cold city
+ * carries coords + hours for the large majority of its picks; a thin
+ * Foursquare-cold city collapses well past this. Set at 1/3 — one of three
+ * stops may be a thin pick, but half-or-more thin is a failure. This is the
+ * THRESHOLD that stops a thin cold city from reading vacuously green by
+ * leaning on gates that skip null-data stops (T-09-06).
+ */
+export const UNVERIFIED_RATE_THRESHOLD = 1 / 3;
+
+// ─────────────────────────────────────────────────────────────────────────
+// unverified_rate — the eval mirror of production computeUnverifiedRate.
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fraction of stops with null/undefined lat, lng OR falsy opens/closes. The
+ * predicate (`lat == null || lng == null || !opens || !closes`) is copied
+ * VERBATIM from supabase/functions/generate-plan/providers/unverified-rate.ts
+ * — FALSY on hours (not strict-null) so empty-string hours also count. Keep the
+ * predicate byte-identical: the parity test asserts eval === production. Empty
+ * pool → 0.
+ */
+export function computeUnverifiedRate(stops: FixtureStop[]): number {
+  if (stops.length === 0) return 0;
+  const unverified = stops.filter(
+    (s) => s.lat == null || s.lng == null || !s.opens || !s.closes,
+  ).length;
+  return unverified / stops.length;
+}
+
+/** Derive a city key from a fixture id: the segment before the first hyphen. */
+export function cityOf(fixtureId: string): string {
+  const i = fixtureId.indexOf('-');
+  return i === -1 ? fixtureId : fixtureId.slice(0, i);
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Dry-mode deterministic LLMs.
@@ -275,6 +334,7 @@ export async function gradeFixture(
     unsupported_claim,
     banned_copy,
     judge_scores: judgeResult ? judgeResult.scores : null,
+    unverified_rate: round2(computeUnverifiedRate(fixture.stops)),
   };
 }
 
@@ -306,11 +366,25 @@ export async function runEval(
           results.reduce((s, r) => s + r.final_score, 0) / results.length,
         );
 
+  // Per-city mean unverified_rate (city = fixture_id prefix before first hyphen).
+  const cityBuckets = new Map<string, number[]>();
+  for (const r of results) {
+    const city = cityOf(r.fixture_id);
+    const bucket = cityBuckets.get(city) ?? [];
+    bucket.push(r.unverified_rate);
+    cityBuckets.set(city, bucket);
+  }
+  const cities: Record<string, number> = {};
+  for (const [city, rates] of cityBuckets) {
+    cities[city] = round2(rates.reduce((s, x) => s + x, 0) / rates.length);
+  }
+
   const report: EvalReport = {
     generated_at: now().toISOString(),
     suite: options.suite ?? 'dategen/kelowna-v0',
     mode: dry ? 'dry' : 'live',
     mean_score: mean,
+    cities,
     fixtures: results,
   };
 
@@ -336,6 +410,8 @@ export async function runEval(
  *   - banned_copy:        a fixture newly fails the banned-copy gate.
  *   - mean_drop:          mean final score drops by more than MEAN_DROP_THRESHOLD.
  *   - fixture_drop:       any fixture's final score drops by more than FIXTURE_DROP_THRESHOLD.
+ *   - unverified_rate:    any fixture's unverified_rate exceeds UNVERIFIED_RATE_THRESHOLD
+ *                         (ABSOLUTE — a thin cold city fails regardless of baseline).
  */
 export function compareToBaseline(
   report: EvalReport,
@@ -387,6 +463,18 @@ export function compareToBaseline(
           message: `${cur.fixture_id}: score dropped ${round2(drop)} (${prev.final_score} → ${cur.final_score}), > ${FIXTURE_DROP_THRESHOLD}`,
         });
       }
+    }
+
+    // Unverifiable-data ceiling. ABSOLUTE (not a baseline diff): a fixture whose
+    // stops are mostly null-coord/null-hours is a thin cold city that the
+    // null-skipping gates would pass vacuously — so it FAILS the suite outright
+    // whenever it crosses the threshold, not only when it newly regresses.
+    if (cur.unverified_rate > UNVERIFIED_RATE_THRESHOLD) {
+      regressions.push({
+        kind: 'unverified_rate',
+        fixture_id: cur.fixture_id,
+        message: `${cur.fixture_id}: unverified_rate ${cur.unverified_rate} > ${round2(UNVERIFIED_RATE_THRESHOLD)} — too much null-coord/null-hours data to certify`,
+      });
     }
   }
 

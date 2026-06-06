@@ -1,0 +1,62 @@
+{
+  "id": "coldcity-thin-02-half-null",
+  "inputs": {
+    "occasion": "date",
+    "vibe": ["cozy", "low-key"],
+    "budget_per_person": 50,
+    "duration_min": 150,
+    "effort": "low",
+    "location": "out",
+    "intent": "chill",
+    "when": "tonight",
+    "time_of_day": "evening",
+    "note": "Quiet evening, nothing fancy."
+  },
+  "stops": [
+    {
+      "place_id": "c01d0000-0002-4b01-8101-000000000001",
+      "place_name": "The Black Star Cafe",
+      "place_type": "cafe",
+      "start_time": "17:30",
+      "duration_min": 60,
+      "estimated_cost_pp": 14,
+      "lat": 49.5108,
+      "lng": -115.7691,
+      "opens": "07:00",
+      "closes": "21:00",
+      "vibe_tags": ["cozy", "low-key"],
+      "pairing_tags": ["coffee", "dessert"],
+      "quality_score": 0.68,
+      "facts": {
+        "place_id": "c01d0000-0002-4b01-8101-000000000001",
+        "name": "The Black Star Cafe",
+        "allowed_claims": ["house-roasted coffee", "corner-window seating"],
+        "setting_tags": ["indoor"],
+        "sensory_tags": ["coffee roast"]
+      }
+    },
+    {
+      "place_id": "c01d0000-0002-4b01-8101-000000000002",
+      "place_name": "Main Street Wine Bar (hours unknown)",
+      "place_type": "wine_bar",
+      "start_time": "19:00",
+      "duration_min": 75,
+      "estimated_cost_pp": 30,
+      "lat": null,
+      "lng": null,
+      "opens": null,
+      "closes": null,
+      "vibe_tags": ["cozy"],
+      "pairing_tags": ["drinks"],
+      "quality_score": 0.5,
+      "facts": {
+        "place_id": "c01d0000-0002-4b01-8101-000000000002",
+        "name": "Main Street Wine Bar (hours unknown)",
+        "allowed_claims": [],
+        "setting_tags": [],
+        "sensory_tags": []
+      }
+    }
+  ],
+  "packVoiceNote": "Cold-city thin (boundary): exactly half (1 of 2) the stops are null-coord + null-hours. unverified_rate = 0.5 > UNVERIFIED_RATE_THRESHOLD (1/3) — flags an unverified_rate regression. Guards the boundary: even a single thin pick in a short itinerary pushes a small market over the line."
+}

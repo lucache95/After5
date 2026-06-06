@@ -59,8 +59,11 @@ export {
   buildDryWritten,
   dryGenerateLLM,
   dryJudgeLLM,
+  computeUnverifiedRate,
+  cityOf,
   MEAN_DROP_THRESHOLD,
   FIXTURE_DROP_THRESHOLD,
+  UNVERIFIED_RATE_THRESHOLD,
 } from './runEval';
 
 export type { Gate } from './gates';
