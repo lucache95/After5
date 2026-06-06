@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 09-01-PLAN.md (PLAN-01: tool-use copy pass + haversine hop-gate); next plan 09-02.
-last_updated: "2026-06-05T23:54:00.000Z"
-last_activity: 2026-06-05 -- Phase 9 Plan 01 executed (PLAN-01: migrated Sonnet copy pass to forced Anthropic tool-use; replaced drive_cluster string adjacency with haversine withinHop/MAX_HOP_KM + post-validate+repair; exported haversineKm; 67/67 deno tests green)
+stopped_at: Completed 09-02-PLAN.md (SOUND-01: 8 new vibe-matched ambient loops seeded + gated audio runbook + SQL verify of the existing auto-pick); next plan 09-03.
+last_updated: "2026-06-06T00:02:00.000Z"
+last_activity: 2026-06-05 -- Phase 9 Plan 02 executed (SOUND-01: idempotent upsert of 8 NEW ambient_sounds rows filling itinerary vibe gaps; SOUND-GENERATION.md gated ElevenLabs audio-gen + service_role upload for the 09-05 gate; sound01_vibe_auto_pick.sql proves the existing browse_feed/post_night vibe-overlap lateral auto-picks a NEW track; persist.ts UNCHANGED; advisor clean — row-only, no DDL)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 9 — Trustworthy Generation + Eval Harness (in progress)
-Plan: 01 complete (PLAN-01: forced tool-use copy pass via ITINERARY_TOOL/extractToolUseItineraries; haversine withinHop + MAX_HOP_KM=2.0 replaces drive_cluster adjacency; post-validate+repair of far hops; haversineKm exported) — next: 09-02
+Plan: 02 complete (SOUND-01: 8 new vibe-matched ambient_sounds rows seeded idempotently to widen the auto-pick pool; SOUND-GENERATION.md gated audio runbook; SQL verify that a generated date auto-resolves a vibe-overlapping NEW track via the existing lateral — persist.ts unchanged) — next: 09-03
 Status: Executing
-Last activity: 2026-06-05 -- Phase 9 Plan 01 executed (tool-use migration + haversine hop-gate; parseLLMResponse/clusterCompatible removed; 67/67 deno tests green; prod untouched)
+Last activity: 2026-06-05 -- Phase 9 Plan 02 executed (SOUND-01 expanded ambient library; row-only migration + gated ElevenLabs upload runbook + lateral-pick SQL test; advisor clean; prod untouched)
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -83,6 +83,7 @@ Last activity: 2026-06-05 -- Phase 9 Plan 01 executed (tool-use migration + have
 | Phase 07 P06 | 12 | 3 tasks | 3 files |
 | Phase 08 P01 | ~3 | 3 tasks | 3 files |
 | Phase 08 P04 | ~5 | 3 tasks | 7 files |
+| Phase 09 P02 | ~4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — Phase 8 Plan 01 executed: `foursquare.ts` corpus source (DATA-01), 16/16 deno tests green, no live key.
-Stopped at: Completed 08-01-PLAN.md; next plan in Phase 8.
+Last session: 2026-06-05 — Phase 9 Plan 02 executed: SOUND-01 expanded ambient library (8 new vibe-matched loops, idempotent upsert), gated ElevenLabs audio runbook, SQL verify of the existing vibe-overlap auto-pick; persist.ts unchanged; advisor clean (row-only, no DDL).
+Stopped at: Completed 09-02-PLAN.md; next plan 09-03 in Phase 9.
 Resume file: None

@@ -29,7 +29,7 @@ harness), and its ambient sound fits its cover.
 - [ ] **EVAL-01** — An eval harness scores generated dates with deterministic hard checks (proximity, hours-open-at-time, schedule monotonicity, budget sum, no hallucinated venues) + an Opus-4.8 LLM-judge rubric (coherence, desirability, feasibility, budget realism, local specificity), over a golden set that includes a cold on-the-fly city, surfacing `unverified_rate` per city, gated in CI.
 
 ### SOUND — fits the date
-- [ ] **SOUND-01** — More ambient tracks, and a generated date auto-receives a vibe-matched ambient sound (sound ↔ cover cohere via shared vibe tags; no image-ML matching).
+- [x] **SOUND-01** — More ambient tracks, and a generated date auto-receives a vibe-matched ambient sound (sound ↔ cover cohere via shared vibe tags; no image-ML matching).
 
 ### FLOW — into the dating product
 - [ ] **FLOW-01** — Generating a date becomes the primary way to create a night in the dating app (publishes to the feed); the legacy manual `/create` planner funnel (and its orphaned `/plan`/catalog surfaces) is retired or replaced.
@@ -75,7 +75,7 @@ app actually does, not what the code implies.
 | PLAN-01 | one-tap-generate | PLAN | Phase 9 | Complete (09-01) |
 | PLAN-02 | improve-loop | PLAN | Phase 9 | Pending |
 | EVAL-01 | eval-harness | EVAL | Phase 9 | Pending |
-| SOUND-01 | vibe-matched-sound | SOUND | Phase 9 | Pending |
+| SOUND-01 | vibe-matched-sound | SOUND | Phase 9 | Complete |
 | FLOW-01 | generate-into-dating | FLOW | Phase 10 | Pending |
 | UX-01 | ux-nav-brand-audit | UX | Phase 11 | Pending |
 | UX-02 | ux-remediation | UX | Phase 11 | Pending |
