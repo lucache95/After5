@@ -754,6 +754,76 @@ export function travelPacing(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Gate — schedule_monotonic (critical).
+// Stop start times must strictly increase AND a stop must not begin before the
+// previous stop's end + the estimated drive between them:
+//   start_time[i] + duration_min[i] + drive(i→i+1) ≤ start_time[i+1].
+// Catches time-travel (decreasing starts) and overlap (booking a stop before
+// the prior one could plausibly have finished). Reuses parseTime + the same
+// haversine→AVG_KMH drive estimate travel_pacing uses. Skips a pair only when a
+// start_time is unparseable (consistent with the package skip-on-missing
+// convention); when both times are present it never skips. The drive term is
+// added only when both stops carry coordinates — without coords it degrades to
+// a pure end-before-next-start check, still catching overlap and time-travel.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function scheduleMonotonic(
+  fixture: Fixture,
+  _date: WrittenDate,
+): GateResult {
+  const evidence: string[] = [];
+  const stops = fixture.stops;
+  for (let i = 1; i < stops.length; i++) {
+    const prev = stops[i - 1];
+    const cur = stops[i];
+    if (!prev || !cur) continue;
+    const prevStart = parseTime(prev.start_time);
+    const curStart = parseTime(cur.start_time);
+    if (prevStart === null || curStart === null) continue; // unparseable → skip pair.
+
+    // Time-travel: a later stop starts at or before the earlier one.
+    if (curStart <= prevStart) {
+      evidence.push(
+        `${cur.place_name} starts ${cur.start_time} at/before ${prev.place_name} (${prev.start_time}) — schedule not strictly increasing`,
+      );
+      continue;
+    }
+
+    // Overlap: the next stop begins before the previous one ends + travel.
+    let driveMin = 0;
+    if (
+      prev.lat != null &&
+      prev.lng != null &&
+      cur.lat != null &&
+      cur.lng != null
+    ) {
+      const km = haversineKm(prev.lat, prev.lng, cur.lat, cur.lng);
+      driveMin = (km / AVG_KMH) * 60;
+    }
+    const prevEnd = prevStart + (prev.duration_min ?? 0) + driveMin;
+    if (curStart < prevEnd) {
+      evidence.push(
+        `${cur.place_name} starts ${cur.start_time} but ${prev.place_name} runs until ~${minutesToHHMM(prevEnd)} (incl. ~${driveMin.toFixed(0)} min drive)`,
+      );
+    }
+  }
+  return result(
+    'schedule_monotonic',
+    'critical',
+    evidence.length === 0,
+    evidence,
+  );
+}
+
+/** Format minutes-since-midnight back to "HH:MM" for human-readable evidence. */
+function minutesToHHMM(mins: number): string {
+  const total = Math.round(mins);
+  const h = Math.floor(total / 60) % 24;
+  const m = ((total % 60) + 60) % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Gate 18 — first_date_safety (major, CONTEXT MODIFIER).
 // Only active for early/impress contexts. Stop 1 must not be a movie/loud-club/
 // high-formality dinner; stop 1 should be lower-pressure. Relaxes for
@@ -863,6 +933,7 @@ export const GATES: readonly Gate[] = [
   openAtArrival,
   timeOfDayOrder,
   travelPacing,
+  scheduleMonotonic,
   firstDateSafety,
 ];
 

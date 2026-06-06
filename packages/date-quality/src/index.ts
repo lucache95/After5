@@ -84,6 +84,7 @@ export {
   openAtArrival,
   timeOfDayOrder,
   travelPacing,
+  scheduleMonotonic,
   firstDateSafety,
   portfolioDiversity,
 } from './gates';

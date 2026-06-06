@@ -20,6 +20,7 @@ import {
   openAtArrival,
   timeOfDayOrder,
   travelPacing,
+  scheduleMonotonic,
   firstDateSafety,
   portfolioDiversity,
   runGates,
@@ -331,6 +332,63 @@ describe('travelPacing (gate 17)', () => {
   });
 });
 
+describe('scheduleMonotonic (gate)', () => {
+  it('passes a forward-ordered, non-overlapping schedule', () => {
+    const fx = makeFixture({
+      stops: [
+        makeStop({ start_time: '17:30', duration_min: 75, lat: 49.813, lng: -119.475 }),
+        makeStop({ start_time: '19:00', duration_min: 90, lat: 49.813, lng: -119.474 }),
+        makeStop({ start_time: '20:45', duration_min: 30, lat: 49.84, lng: -119.569 }),
+      ],
+    });
+    expect(scheduleMonotonic(fx, makeWrittenFor(fx)).pass).toBe(true);
+  });
+
+  it('fails (critical) on time-travel — a later stop starts earlier', () => {
+    const fx = makeFixture({
+      stops: [
+        makeStop({ start_time: '19:00', duration_min: 60, place_name: 'First' }),
+        makeStop({ start_time: '18:00', duration_min: 60, place_name: 'Second' }),
+      ],
+    });
+    const r = scheduleMonotonic(fx, makeWrittenFor(fx));
+    expect(r.pass).toBe(false);
+    expect(r.severity).toBe('critical');
+  });
+
+  it('fails (critical) on overlap — stop 2 starts before stop 1 finishes + travel', () => {
+    const fx = makeFixture({
+      stops: [
+        makeStop({ start_time: '18:00', duration_min: 90, lat: 49.888, lng: -119.495, place_name: 'A' }),
+        makeStop({ start_time: '18:30', duration_min: 60, lat: 49.886, lng: -119.49, place_name: 'B' }),
+      ],
+    });
+    const r = scheduleMonotonic(fx, makeWrittenFor(fx));
+    expect(r.pass).toBe(false);
+    expect(r.severity).toBe('critical');
+  });
+
+  it('skips gracefully when a start_time is unparseable', () => {
+    const fx = makeFixture({
+      stops: [
+        makeStop({ start_time: 'nope', duration_min: 60 }),
+        makeStop({ start_time: '18:00', duration_min: 60 }),
+      ],
+    });
+    expect(scheduleMonotonic(fx, makeWrittenFor(fx)).pass).toBe(true);
+  });
+
+  it('does NOT skip when times are present and wrong', () => {
+    const fx = makeFixture({
+      stops: [
+        makeStop({ start_time: '20:00', duration_min: 60 }),
+        makeStop({ start_time: '17:00', duration_min: 60 }),
+      ],
+    });
+    expect(scheduleMonotonic(fx, makeWrittenFor(fx)).pass).toBe(false);
+  });
+});
+
 describe('firstDateSafety (gate 18)', () => {
   it('passes a conversation-first opener for an impress date', () => {
     const fx = makeFixture({
@@ -366,11 +424,11 @@ describe('portfolioDiversity (gate 19)', () => {
 });
 
 describe('runGates / GATES registry', () => {
-  it('runs all 18 single-date gates plus portfolio_diversity (19 results)', () => {
-    expect(GATES).toHaveLength(18);
+  it('runs all 19 single-date gates plus portfolio_diversity (20 results)', () => {
+    expect(GATES).toHaveLength(19);
     const fx = makeFixture();
     const results = runGates(fx, makeWrittenFor(fx));
-    expect(results).toHaveLength(19);
+    expect(results).toHaveLength(20);
     expect(results[results.length - 1]!.gate).toBe('portfolio_diversity');
   });
   it('derives cap_if_fail from severity for every result', () => {

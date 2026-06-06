@@ -77,8 +77,8 @@ describe('gradeFixture', () => {
     const fx = makeFixture({
       inputs: makeInputs({ budget_per_person: 100 }),
       stops: [
-        makeStop({ place_type: 'winery', place_name: 'Vineyard A', estimated_cost_pp: 30, quality_score: 0.8 }),
-        makeStop({ place_type: 'restaurant', place_name: 'Bistro B', estimated_cost_pp: 40, quality_score: 0.9 }),
+        makeStop({ place_type: 'winery', place_name: 'Vineyard A', estimated_cost_pp: 30, quality_score: 0.8, start_time: '17:30', duration_min: 60 }),
+        makeStop({ place_type: 'restaurant', place_name: 'Bistro B', estimated_cost_pp: 40, quality_score: 0.9, start_time: '19:00', duration_min: 60 }),
       ],
     });
     const r = await gradeFixture(fx, {
