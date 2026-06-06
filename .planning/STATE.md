@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 09-02-PLAN.md (SOUND-01: 8 new vibe-matched ambient loops seeded + gated audio runbook + SQL verify of the existing auto-pick); next plan 09-03.
-last_updated: "2026-06-06T00:02:00.000Z"
-last_activity: 2026-06-05 -- Phase 9 Plan 02 executed (SOUND-01: idempotent upsert of 8 NEW ambient_sounds rows filling itinerary vibe gaps; SOUND-GENERATION.md gated ElevenLabs audio-gen + service_role upload for the 09-05 gate; sound01_vibe_auto_pick.sql proves the existing browse_feed/post_night vibe-overlap lateral auto-picks a NEW track; persist.ts UNCHANGED; advisor clean — row-only, no DDL)
+stopped_at: Completed 09-03-PLAN.md (EVAL-01: scheduleMonotonic critical gate + coldcity-v0 golden set + unverified_rate as a first-class scored signal that fails a thin cold city); next plan 09-04.
+last_updated: "2026-06-05T17:25:00.000Z"
+last_activity: 2026-06-05 -- Phase 9 Plan 03 executed (EVAL-01: extended @after5/date-quality — scheduleMonotonic gate, unverified_rate scored per fixture/per city with UNVERIFIED_RATE_THRESHOLD=1/3 mirroring production computeUnverifiedRate verbatim, 3 cold-city fixtures; thin city now FAILS the suite, parity+thin-fails tests green 73/73; baseline regen deferred to 09-04)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 9 — Trustworthy Generation + Eval Harness (in progress)
-Plan: 02 complete (SOUND-01: 8 new vibe-matched ambient_sounds rows seeded idempotently to widen the auto-pick pool; SOUND-GENERATION.md gated audio runbook; SQL verify that a generated date auto-resolves a vibe-overlapping NEW track via the existing lateral — persist.ts unchanged) — next: 09-03
+Plan: 03 complete (EVAL-01: scheduleMonotonic critical gate added to GATES; unverified_rate is now a first-class per-fixture/per-city scored signal copied verbatim from production computeUnverifiedRate, with UNVERIFIED_RATE_THRESHOLD=1/3 emitting an absolute 'unverified_rate' regression so a thin cold city FAILS the suite; coldcity-v0 golden set = 2 thin proxies + 1 usable) — next: 09-04
 Status: Executing
-Last activity: 2026-06-05 -- Phase 9 Plan 02 executed (SOUND-01 expanded ambient library; row-only migration + gated ElevenLabs upload runbook + lateral-pick SQL test; advisor clean; prod untouched)
+Last activity: 2026-06-05 -- Phase 9 Plan 03 executed (EVAL-01 closed the cold-city vacuous-green hole; eval/production metric parity asserted by test; 73/73 green; baseline regen deferred to 09-04)
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -45,7 +45,7 @@ Last activity: 2026-06-05 -- Phase 9 Plan 02 executed (SOUND-01 expanded ambient
 
 **Velocity:**
 
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -84,6 +84,7 @@ Last activity: 2026-06-05 -- Phase 9 Plan 02 executed (SOUND-01 expanded ambient
 | Phase 08 P01 | ~3 | 3 tasks | 3 files |
 | Phase 08 P04 | ~5 | 3 tasks | 7 files |
 | Phase 09 P02 | ~4 | 2 tasks | 3 files |
+| Phase 09 P03 | ~20 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — Phase 9 Plan 02 executed: SOUND-01 expanded ambient library (8 new vibe-matched loops, idempotent upsert), gated ElevenLabs audio runbook, SQL verify of the existing vibe-overlap auto-pick; persist.ts unchanged; advisor clean (row-only, no DDL).
-Stopped at: Completed 09-02-PLAN.md; next plan 09-03 in Phase 9.
+Last session: 2026-06-05 — Phase 9 Plan 03 executed: EVAL-01 extended @after5/date-quality — scheduleMonotonic critical gate, unverified_rate as a first-class scored signal (per fixture + per city) mirroring production computeUnverifiedRate verbatim, UNVERIFIED_RATE_THRESHOLD=1/3 absolute regression so a thin cold city fails the suite, coldcity-v0 golden set (2 thin + 1 usable). 73/73 green, typecheck clean. Baseline regen deferred to 09-04.
+Stopped at: Completed 09-03-PLAN.md; next plan 09-04 in Phase 9.
 Resume file: None
