@@ -13,9 +13,10 @@
 //   - The judge's knowledge is BOUNDED: it may only reason from the fixture
 //     metadata (inputs + frozen stops + fact-bank) and the generated copy. It
 //     must NOT invoke outside-world facts (real hours, real menus, real
-//     geography it wasn't told). The rubric is Kelowna-specific so
-//     city_context_fit can be judged from the locale the copy claims, not from
-//     the model's own city knowledge.
+//     geography it wasn't told). The rubric is PER-FIXTURE locale-aware (the
+//     city is derived from the fixture id, see cityForFixture) so
+//     city_context_fit is judged from the locale the copy claims — a cold-city
+//     fixture is graded against its own city, not Kelowna.
 //   - Output is JSON-only. We parse + validate strictly and THROW on anything
 //     malformed (not an object, missing a dimension, score out of 1..5 range,
 //     missing/empty evidence). A throw signals a judge-call failure to the
@@ -46,48 +47,89 @@ export interface JudgeResult {
 /** Options for `judge`. The LLM call is injected (tests mock it). */
 export interface JudgeOptions {
   invokeLLM: InvokeLLM;
+  /**
+   * The locale this fixture is judged against. Per-fixture so a cold-city
+   * fixture is judged from its own city, not from a hard-coded Kelowna. When
+   * omitted it is derived from the fixture id via {@link cityForFixture}.
+   */
+  judgeCity?: string;
 }
 
 const SCORE_MIN = 1;
 const SCORE_MAX = 5;
 
 /**
- * The locale the judge grades against. The harness is Kelowna-only today; the
- * rubric names the city explicitly so `city_context_fit` is judged from what
- * the copy claims about THIS locale rather than from the model's own world
- * knowledge (which is forbidden — see SYSTEM_PROMPT).
+ * The DEFAULT locale the judge grades against — Kelowna, the warm-city home
+ * suite. It is the fallback for fixtures whose city cannot be derived; the judge
+ * itself is per-fixture locale-aware (see {@link cityForFixture}).
  */
 export const JUDGE_CITY = 'Kelowna, BC';
 
 /**
- * The judge rubric / system prompt. Structure:
- *   1. Role + the single locale it grades for.
+ * Map a city key (the fixture-id prefix before the first hyphen) to its
+ * human-facing locale string. Cold-city fixtures author real Cranbrook, BC
+ * venues (Heid Out, Fisher Peak, Allegra), so the judge grades them against
+ * Cranbrook — never against Kelowna world-knowledge it must not invoke.
+ * Unknown keys fall back to the default {@link JUDGE_CITY}.
+ */
+const CITY_LOCALES: Record<string, string> = {
+  kelowna: 'Kelowna, BC',
+  coldcity: 'Cranbrook, BC',
+};
+
+/**
+ * Derive the locale a fixture should be judged against from its id. The city
+ * key is the segment before the first hyphen (mirrors runEval.cityOf); the
+ * locale string is looked up in {@link CITY_LOCALES} and defaults to
+ * {@link JUDGE_CITY} for an unrecognized prefix.
+ */
+export function cityForFixture(fixture: Fixture): string {
+  const i = fixture.id.indexOf('-');
+  const key = (i === -1 ? fixture.id : fixture.id.slice(0, i)).toLowerCase();
+  return CITY_LOCALES[key] ?? JUDGE_CITY;
+}
+
+/**
+ * Build the judge rubric / system prompt for a SPECIFIC locale. Structure:
+ *   1. Role + the locale it grades for.
  *   2. The hard knowledge boundary (fixture metadata + copy ONLY).
  *   3. The six dimensions, each with a one-line definition and a 1..5 anchor.
  *   4. The evidence requirement (one quote-or-reason per dimension).
  *   5. The strict JSON-only output contract (exact shape, no prose, no fences).
+ *
+ * The city is a PARAMETER (not hard-coded) so each fixture is judged against
+ * its own locale — a cold-city plan is graded for fit to its city, not Kelowna.
  */
-export const SYSTEM_PROMPT = [
-  `You are a demanding local editor in ${JUDGE_CITY}. You grade a single written date plan for quality. You are not the writer; you are the judge.`,
-  '',
-  'KNOWLEDGE BOUNDARY (strict): Judge ONLY from the user context and the place facts you are given plus the generated copy. Do NOT use outside knowledge about real venues, real hours, real menus, or real geography. If the copy claims something, judge whether it reads true and specific for the given facts — never against your own memory of the city.',
-  '',
-  'Score each of the SIX dimensions on an integer 1..5 scale (1 = unacceptable, 3 = mediocre, 5 = excellent). Anchors:',
-  '- desirability: would a real person in this city actually want to go on this date? 1 = nobody would tap it; 5 = genuinely want to go tonight.',
-  '- arc: does the sequence build — energy, intimacy, pacing — across the stops? 1 = flat or backwards; 5 = a deliberate, satisfying progression.',
-  '- vibe_coherence: do the stops and the copy hold one consistent vibe that matches the requested vibe? 1 = contradictory or off-brief; 5 = every beat reinforces the requested vibe.',
-  `- city_context_fit: does the copy read as grounded in ${JUDGE_CITY} (lake, wine country, this locale) rather than generic anywhere-copy? 1 = could be any city; 5 = unmistakably here.`,
-  '- specificity_taste: is the copy concrete and sensory (named items, real detail) rather than vague filler? 1 = vague/marketing-speak; 5 = sharp, specific, tasteful.',
-  '- hook: does the title + hook stop the scroll and earn a tap? 1 = forgettable; 5 = irresistible without being clickbait.',
-  '',
-  'EVIDENCE (required): For every dimension provide one short evidence string (≤ 200 chars) citing the specific copy or fact that justifies the score. Evidence must be non-empty for all six dimensions.',
-  '',
-  'OUTPUT (strict): Return ONLY a single JSON object, no markdown fences, no prose before or after. Exact shape:',
-  '{',
-  '  "scores": { "desirability": <1-5>, "arc": <1-5>, "vibe_coherence": <1-5>, "city_context_fit": <1-5>, "specificity_taste": <1-5>, "hook": <1-5> },',
-  '  "evidence": { "desirability": "<string>", "arc": "<string>", "vibe_coherence": "<string>", "city_context_fit": "<string>", "specificity_taste": "<string>", "hook": "<string>" }',
-  '}',
-].join('\n');
+export function buildSystemPrompt(city: string): string {
+  return [
+    `You are a demanding local editor in ${city}. You grade a single written date plan for quality. You are not the writer; you are the judge.`,
+    '',
+    'KNOWLEDGE BOUNDARY (strict): Judge ONLY from the user context and the place facts you are given plus the generated copy. Do NOT use outside knowledge about real venues, real hours, real menus, or real geography. If the copy claims something, judge whether it reads true and specific for the given facts — never against your own memory of the city.',
+    '',
+    'Score each of the SIX dimensions on an integer 1..5 scale (1 = unacceptable, 3 = mediocre, 5 = excellent). Anchors:',
+    '- desirability: would a real person in this city actually want to go on this date? 1 = nobody would tap it; 5 = genuinely want to go tonight.',
+    '- arc: does the sequence build — energy, intimacy, pacing — across the stops? 1 = flat or backwards; 5 = a deliberate, satisfying progression.',
+    '- vibe_coherence: do the stops and the copy hold one consistent vibe that matches the requested vibe? 1 = contradictory or off-brief; 5 = every beat reinforces the requested vibe.',
+    `- city_context_fit: does the copy read as grounded in ${city} (this locale's geography and character) rather than generic anywhere-copy? 1 = could be any city; 5 = unmistakably here.`,
+    '- specificity_taste: is the copy concrete and sensory (named items, real detail) rather than vague filler? 1 = vague/marketing-speak; 5 = sharp, specific, tasteful.',
+    '- hook: does the title + hook stop the scroll and earn a tap? 1 = forgettable; 5 = irresistible without being clickbait.',
+    '',
+    'EVIDENCE (required): For every dimension provide one short evidence string (≤ 200 chars) citing the specific copy or fact that justifies the score. Evidence must be non-empty for all six dimensions.',
+    '',
+    'OUTPUT (strict): Return ONLY a single JSON object, no markdown fences, no prose before or after. Exact shape:',
+    '{',
+    '  "scores": { "desirability": <1-5>, "arc": <1-5>, "vibe_coherence": <1-5>, "city_context_fit": <1-5>, "specificity_taste": <1-5>, "hook": <1-5> },',
+    '  "evidence": { "desirability": "<string>", "arc": "<string>", "vibe_coherence": "<string>", "city_context_fit": "<string>", "specificity_taste": "<string>", "hook": "<string>" }',
+    '}',
+  ].join('\n');
+}
+
+/**
+ * The default Kelowna rubric, kept as a constant for back-compat with callers
+ * that grade the warm-city home suite. New code should prefer
+ * {@link buildSystemPrompt} with the fixture's own locale.
+ */
+export const SYSTEM_PROMPT = buildSystemPrompt(JUDGE_CITY);
 
 /**
  * Build the user message: the bounded knowledge the judge may reason from —
@@ -97,10 +139,13 @@ export const SYSTEM_PROMPT = [
 export function buildJudgeUserMessage(
   writtenDate: WrittenDate,
   fixture: Fixture,
+  judgeCity: string = cityForFixture(fixture),
 ): string {
   const { inputs } = fixture;
   const lines: string[] = [];
 
+  lines.push(`LOCALE: ${judgeCity} — judge city_context_fit against THIS city only.`);
+  lines.push('');
   lines.push('USER CONTEXT (the brief the date must satisfy):');
   lines.push(`- Occasion: ${inputs.occasion}`);
   lines.push(`- Requested vibe: ${inputs.vibe.join(', ') || '(none specified)'}`);
@@ -210,9 +255,10 @@ export function parseJudgeResponse(text: string): JudgeResult {
 }
 
 /**
- * Judge one written date against its fixture. Builds the Kelowna rubric prompt,
- * calls the injected LLM, parses + validates the JSON, and returns the six
- * scores with their evidence. Throws on a malformed judge response.
+ * Judge one written date against its fixture. Builds the rubric prompt for the
+ * fixture's OWN locale (options.judgeCity, else cityForFixture), calls the
+ * injected LLM, parses + validates the JSON, and returns the six scores with
+ * their evidence. Throws on a malformed judge response.
  *
  * The runner only calls this AFTER deterministic gates pass; this function does
  * not know about gates or score caps (see score.ts → finalScore for capping).
@@ -222,8 +268,9 @@ export async function judge(
   fixture: Fixture,
   options: JudgeOptions,
 ): Promise<JudgeResult> {
-  const system = SYSTEM_PROMPT;
-  const user = buildJudgeUserMessage(writtenDate, fixture);
+  const city = options.judgeCity ?? cityForFixture(fixture);
+  const system = buildSystemPrompt(city);
+  const user = buildJudgeUserMessage(writtenDate, fixture, city);
   const raw = await options.invokeLLM({ system, user });
   return parseJudgeResponse(raw);
 }

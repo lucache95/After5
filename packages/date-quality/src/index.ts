@@ -37,6 +37,8 @@ export type {
 export {
   judge,
   buildJudgeUserMessage,
+  buildSystemPrompt,
+  cityForFixture,
   parseJudgeResponse,
   SYSTEM_PROMPT as JUDGE_SYSTEM_PROMPT,
   JUDGE_CITY,
