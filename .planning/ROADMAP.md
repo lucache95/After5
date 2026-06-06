@@ -88,7 +88,7 @@ Plans:
 - [x] 09-02-PLAN.md — SOUND-01: expanded ambient library + vibe-match auto-pick (verified via existing lateral)
 - [x] 09-03-PLAN.md — EVAL-01: scheduleMonotonic gate + cold-city fixtures + unverified_rate threshold
 - [x] 09-04-PLAN.md — EVAL-01: per-fixture JUDGE_CITY + live no-hallucination + baseline regen + CI gate
-- [ ] 09-05-PLAN.md — PLAN-02: single-stop swap + NL tweaks (coherence-preserving) + improve UI in /create
+- [x] 09-05-PLAN.md — PLAN-02: single-stop swap + NL tweaks (coherence-preserving) + improve UI in /create
 - [ ] 09-06-PLAN.md — phase gate: local-green suite + eval + visual-verify @420px + gated prod-apply
 **UI hint**: yes
 

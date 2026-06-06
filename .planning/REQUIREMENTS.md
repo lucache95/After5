@@ -23,7 +23,7 @@ harness), and its ambient sound fits its cover.
 
 ### PLAN — generation
 - [x] **PLAN-01** — A user generates a coherent multi-stop date for their city in one tap from real venues (hardened existing engine: any-city provider + PostGIS proximity hop-gate + tool-use structured output).
-- [ ] **PLAN-02** — A user can swap a single stop and apply natural-language tweaks ("cheaper", "more romantic", "later"), and the itinerary stays coherent (single-stop re-pick + intent parsing, persisted via `update_itinerary_stops`).
+- [x] **PLAN-02** — A user can swap a single stop and apply natural-language tweaks ("cheaper", "more romantic", "later"), and the itinerary stays coherent (single-stop re-pick + intent parsing, persisted via `update_itinerary_stops`).
 
 ### EVAL — prove it's good
 - [x] **EVAL-01** — An eval harness scores generated dates with deterministic hard checks (proximity, hours-open-at-time, schedule monotonicity, budget sum, no hallucinated venues) + an Opus-4.8 LLM-judge rubric (coherence, desirability, feasibility, budget realism, local specificity), over a golden set that includes a cold on-the-fly city, surfacing `unverified_rate` per city, gated in CI. _(Closed in 09-04: per-fixture judge locale, live noHallucinatedVenue, regenerated gate-v0 baseline, .github/workflows/eval.yml keyless-hard/judge-advisory CI gate.)_
@@ -73,7 +73,7 @@ app actually does, not what the code implies.
 | DATA-02 | city-preseed | DATA | Phase 8 | Complete |
 | DATA-03 | failloud-guards | DATA | Phase 8 | In Progress |
 | PLAN-01 | one-tap-generate | PLAN | Phase 9 | Complete (09-01) |
-| PLAN-02 | improve-loop | PLAN | Phase 9 | Pending |
+| PLAN-02 | improve-loop | PLAN | Phase 9 | Complete |
 | EVAL-01 | eval-harness | EVAL | Phase 9 | Complete (09-03, 09-04) |
 | SOUND-01 | vibe-matched-sound | SOUND | Phase 9 | Complete |
 | FLOW-01 | generate-into-dating | FLOW | Phase 10 | Pending |

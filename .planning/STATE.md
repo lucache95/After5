@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 09-04-PLAN.md (EVAL-01 CLOSED: per-fixture JUDGE_CITY + live noHallucinatedVenue + regenerated gate-v0 baseline + net-new .github/workflows/eval.yml keyless-hard/judge-advisory CI gate); next plan 09-05.
-last_updated: "2026-06-05T17:30:00.000Z"
-last_activity: 2026-06-05 -- Phase 9 Plan 04 executed (EVAL-01 CLOSED: judge grades each fixture against its own city — Cranbrook for coldcity, not hard-coded Kelowna; live noHallucinatedVenue resolves every place_id against a pinned offline places.snapshot.json, fabricated id = critical fail; baseline regenerated as gate-v0 [29 kelowna + usable cold city] capturing scheduleMonotonic + unverified_rate + cities map; eval.yml = keyless DRY hard gate + advisory continue-on-error live-judge job. 90/90 green, dry eval exits 0)
+stopped_at: Completed 09-05-PLAN.md (PLAN-02 CLOSED: single-stop swap [single-slot re-pick holding others + Haiku copy rewrite of only that stop] + NL tweaks [Haiku tool-use → constrained {budget_delta,vibe,intent,time_shift} knobs] + mandatory coherence re-validate [hop/budget/hours surface, never persist on break] + ImproveControls UI in /create; persist via update_itinerary_stops, caller-JWT owner check); next plan 09-06.
+last_updated: "2026-06-05T17:45:00.000Z"
+last_activity: 2026-06-05 -- Phase 9 Plan 05 executed (PLAN-02 CLOSED: improve loop. repickSlot re-picks ONE slot holding others + re-validates withinHop against BOTH neighbors; NL_TWEAK_TOOL forced Haiku tool-use → extractKnobs clamps budget_delta ±200 + drops out-of-enum intent (T-09-11); validateCoherence surfaces hop/budget/hours and returns 409 without persisting (T-09-13); handleImprove persists via update_itinerary_stops with a caller-scoped JWT client so auth.uid() owner check applies (T-09-12); ImproveControls = per-stop tweak + NL input in /create, coherence break → sonner toast not silent swap. 18 deno + 6 vitest green, full generate-plan suite 85/0, web typecheck clean)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 9 — Trustworthy Generation + Eval Harness (in progress)
-Plan: 04 complete (EVAL-01 CLOSED: per-fixture JUDGE_CITY via cityForFixture — coldcity judged as Cranbrook, BC not Kelowna; buildSystemPrompt(city) + judgeCity threaded through judge(); live noHallucinatedVenue resolves every emitted place_id against a pinned offline places.snapshot.json per city dir, fabricated id = CRITICAL fail; baseline regenerated as gate-v0 suite [29 kelowna + usable cold city, data-thin negatives excluded] capturing scheduleMonotonic + unverified_rate + cities map; net-new .github/workflows/eval.yml = keyless DRY deterministic HARD gate (exit 1 on regression) + advisory continue-on-error secret-gated live-judge job that never blocks merge) — next: 09-05
+Plan: 05 complete (PLAN-02 CLOSED: the customize/improve loop. improve.ts — repickSlot re-picks ONLY slot i holding every other stop's place_id, requires same place_type + open-at-slot + withinHop of BOTH neighbors, never invents; NL_TWEAK_TOOL forced Haiku tool-use → extractKnobs maps free text to a CONSTRAINED {budget_delta ±200, vibe[], intent enum, time_shift earlier|later|none} knob set + clampTweakText length-caps to 280 before the call (T-09-11); applyKnobsToInputs is a pure knob→PlanInputs map; validateCoherence re-checks every hop + budget sum + hours, returns issues[] and a 409 WITHOUT persisting on break (T-09-13); handleImprove refreshes only the swapped stop's copy (Pitfall 4), persists via update_itinerary_stops ONLY, using a caller-scoped anon+JWT client so auth.uid() owner check applies — non-owner 42501→403 (T-09-12); index.ts action discriminator routes swap_stop|nl_tweak. ImproveControls.tsx — per-stop tweak button + free-text NL input in CreateFlow's authed result, coherence break renders a sonner toast not a silent swap, ≥44px taps, Barbiecore. No new migration — m3+e11 RPC reused) — next: 09-06 (phase gate)
 Status: Executing
-Last activity: 2026-06-05 -- Phase 9 Plan 04 executed (EVAL-01 closed; the cold-city judge reasons about its own locale, fabricated venues fail the live check, CI gates exactly as CONTEXT locks; 90/90 green, dry eval exits 0)
+Last activity: 2026-06-05 -- Phase 9 Plan 05 executed (PLAN-02 closed; a user can swap one stop or apply NL tweaks and the night stays coherent + persisted; 18 deno + 6 vitest green, generate-plan suite 85/0, web typecheck clean)
 
 ## v2.0 Roadmap (phases 8–11)
 
