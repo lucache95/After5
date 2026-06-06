@@ -1,13 +1,14 @@
 'use client';
-// #85 — the two-door entry screen. The bottom-nav "+" lands here. One question:
-// "want us to build it, or are you driving?" Door 1 (build it for me) → the existing
-// generate funnel (/create/generate). Door 2 (start from scratch) → create an empty
-// itinerary via create_blank_itinerary, then open the §2A canvas (/plans/[id]/edit)
-// on it. Both converge on the same canvas. Anon never reaches this screen — the
-// /create page renders the generate funnel directly for them (door 1 only).
+// #85 / Phase 10 — the create entry screen. The bottom-nav "+" now lands directly on
+// the generate funnel (/create/generate); this chooser stays reachable for hosts who
+// navigate to /create. Generation is the primary path: "build it for me" is the one
+// dominant pink action → the existing generate funnel. The manual-from-scratch path is
+// DEMOTED to a quiet secondary "or build from scratch" link (not a co-equal door) that
+// still works end-to-end — createBlankItinerary → open the §2A canvas (/plans/[id]/edit).
+// Anon never reaches this screen — the /create page renders the generate funnel directly.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, PencilLine } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBlankItinerary } from '@after5/api-client';
 import { browserAfter5Client } from '@/lib/after5/client';
@@ -46,11 +47,11 @@ export function CreateChooser() {
           make a night
         </h1>
         <p className="mt-3 font-body text-base lowercase text-shell-ink/70">
-          want us to build it, or are you driving?
+          pick a vibe, we’ll plan the whole night.
         </p>
 
-        <div className="mt-8 flex flex-col gap-4">
-          {/* Door 1 — primary, pink */}
+        <div className="mt-8 flex flex-col items-start gap-5">
+          {/* Primary — generate. The one dominant pink action. */}
           <button
             type="button"
             onClick={() => router.push('/create/generate')}
@@ -64,30 +65,21 @@ export function CreateChooser() {
                 build it for me
               </span>
               <span className="mt-1 block font-body text-sm lowercase text-white/85">
-                pick a vibe, we’ll plan the whole night.
+                a full night, planned for you in a tap.
               </span>
             </span>
           </button>
 
-          {/* Door 2 — secondary, outline */}
+          {/* Demoted manual path — a quiet secondary link, not a co-equal door.
+              Still works: createBlankItinerary → /plans/[id]/edit. ≥44px tap via py-3. */}
           <button
             type="button"
             onClick={startFromScratch}
             disabled={starting}
             aria-busy={starting}
-            className="group flex w-full items-start gap-4 rounded-3xl border border-shell-ink/15 bg-white/70 px-5 py-5 text-left transition hover:border-shell-accent/50 active:scale-[0.99] disabled:opacity-60"
+            className="inline-flex min-h-[44px] items-center px-1 py-3 font-body text-sm lowercase text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 transition hover:text-shell-ink hover:decoration-shell-accent disabled:opacity-60"
           >
-            <span className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-shell-accent/10">
-              <PencilLine className="h-5 w-5 text-shell-accent" aria-hidden />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-heading text-xl lowercase text-shell-ink">
-                {starting ? 'opening a blank canvas…' : 'start from scratch'}
-              </span>
-              <span className="mt-1 block font-body text-sm lowercase text-shell-ink/70">
-                you already know the move. just build it.
-              </span>
-            </span>
+            {starting ? 'opening a blank canvas…' : 'or build from scratch'}
           </button>
         </div>
       </div>
