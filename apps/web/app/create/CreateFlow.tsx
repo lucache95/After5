@@ -74,17 +74,25 @@ export function CreateFlow({
   authed,
   cities,
   canPublish = false,
+  prefillCityId = null,
+  prefillCityName = null,
 }: {
   initialCity: string;
   authed: boolean;
   cities: KnownCity[];
   canPublish?: boolean;
+  /** The signed-in user's saved primary_city_id (Area 2), prefilled + changeable. */
+  prefillCityId?: string | null;
+  /** The saved city's display name, used to seed the picker. */
+  prefillCityName?: string | null;
 }) {
   const [phase, setPhase] = useState<Phase>('input');
   const [vibe, setVibe] = useState<string[]>([]);
   const [budget, setBudget] = useState(50);
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'evening' | 'all_day'>('evening');
-  const [city, setCity] = useState(initialCity);
+  // Returning authed users see their saved city prefilled; otherwise fall back to
+  // the geo-seeded initial text. A curated re-pick re-POSTs (handled in pickCity).
+  const [city, setCity] = useState(prefillCityName || initialCity);
   const [itineraries, setItineraries] = useState<GatedItinerary[]>([]);
   const [resultAuthed, setResultAuthed] = useState(authed);
   const [errorMsg, setErrorMsg] = useState('');
@@ -93,6 +101,25 @@ export function CreateFlow({
 
   function toggleVibe(id: string) {
     setVibe((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+  }
+
+  // Tapping a curated chip seeds the city text always; for a signed-in user it
+  // also writes their primary_city_id + warms the city (Area 2). The save is
+  // fire-and-forget: a failure shows a quiet notice and NEVER blocks generation.
+  function pickCity(c: KnownCity) {
+    setCity(c.name);
+    if (!authed) return;
+    fetch('/api/profile/city', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cityId: c.id }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('city_save_failed');
+      })
+      .catch(() => {
+        toast.error('couldn’t save your city — your date will still generate.');
+      });
   }
 
   async function generate() {
@@ -151,6 +178,7 @@ export function CreateFlow({
             city={city}
             setCity={setCity}
             cities={cities}
+            onPickCity={pickCity}
             canGenerate={canGenerate}
             loading={phase === 'loading'}
             errorMsg={errorMsg}
@@ -172,12 +200,13 @@ function InputScreen(props: {
   city: string;
   setCity: (s: string) => void;
   cities: KnownCity[];
+  onPickCity: (c: KnownCity) => void;
   canGenerate: boolean;
   loading: boolean;
   errorMsg: string;
   onGenerate: () => void;
 }) {
-  const { vibe, toggleVibe, budget, setBudget, timeOfDay, setTimeOfDay, city, setCity, cities, canGenerate, loading, errorMsg, onGenerate } = props;
+  const { vibe, toggleVibe, budget, setBudget, timeOfDay, setTimeOfDay, city, setCity, cities, onPickCity, canGenerate, loading, errorMsg, onGenerate } = props;
 
   // While a night generates, take over the screen with the polaroid loader.
   if (loading) {
@@ -292,7 +321,7 @@ function InputScreen(props: {
                 key={c.slug}
                 type="button"
                 aria-pressed={on}
-                onClick={() => setCity(c.name)}
+                onClick={() => onPickCity(c)}
                 className={cn(
                   'rounded-pill border px-3.5 py-2 font-body text-xs lowercase transition-colors',
                   on

@@ -17,9 +17,13 @@ export default async function GenerateNightPage() {
   } = await supabase.auth.getUser();
 
   const [{ data: cityRows }, { data: profile }] = await Promise.all([
-    supabase.from('cities').select('slug,name').eq('is_active', true).order('name'),
+    supabase.from('cities').select('id,slug,name').eq('is_active', true).order('name'),
     user
-      ? supabase.from('profiles').select('dating_enabled, verification').eq('id', user.id).maybeSingle()
+      ? supabase
+          .from('profiles')
+          .select('dating_enabled, verification, primary_city_id, primary_city:cities!profiles_primary_city_id_fkey(name)')
+          .eq('id', user.id)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -27,12 +31,21 @@ export default async function GenerateNightPage() {
   const initialCity = initialCityText(h.get('x-vercel-ip-city'));
   const canPublish = !!user && !!profile?.dating_enabled && profile.verification === 'verified';
 
+  // Prefill the saved home-city for a returning user (Area 2). The join may come
+  // back as an object or a single-element array depending on the FK shape; read
+  // the name defensively.
+  const prefillCityId = (profile?.primary_city_id as string | null) ?? null;
+  const joined = (profile as { primary_city?: { name?: string } | { name?: string }[] } | null)?.primary_city;
+  const prefillCityName = Array.isArray(joined) ? (joined[0]?.name ?? null) : (joined?.name ?? null);
+
   return (
     <CreateFlow
       initialCity={initialCity}
       authed={!!user}
       cities={cities}
       canPublish={canPublish}
+      prefillCityId={prefillCityId}
+      prefillCityName={prefillCityName}
     />
   );
 }

@@ -23,7 +23,7 @@ export default async function CreatePage() {
   // chips; the city field itself is free text (open-city), so any typed city generates.
   const { data: cityRows } = await supabase
     .from('cities')
-    .select('slug,name')
+    .select('id,slug,name')
     .eq('is_active', true)
     .order('name');
 
