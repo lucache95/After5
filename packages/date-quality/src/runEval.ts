@@ -247,14 +247,25 @@ export function dryJudgeLLM(): InvokeLLM {
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
+ * Reserved file name in a fixture directory that is NOT a fixture: the pinned
+ * places snapshot the live noHallucinatedVenue check resolves against. Skipped
+ * by {@link loadFixtures} so it never loads as a (malformed) fixture.
+ */
+export const PLACES_SNAPSHOT_FILE = 'places.snapshot.json';
+
+/**
  * Load + sort fixtures from a directory of `*.json` files. Node-only (uses
- * fs); kept out of the pure modules so the rest stays environment-free.
+ * fs); kept out of the pure modules so the rest stays environment-free. The
+ * reserved {@link PLACES_SNAPSHOT_FILE} is skipped — it is a snapshot, not a
+ * fixture.
  */
 export async function loadFixtures(dir: string): Promise<Fixture[]> {
   const { readdir, readFile } = await import('node:fs/promises');
   const path = await import('node:path');
   const entries = await readdir(dir);
-  const files = entries.filter((f) => f.endsWith('.json')).sort();
+  const files = entries
+    .filter((f) => f.endsWith('.json') && f !== PLACES_SNAPSHOT_FILE)
+    .sort();
   const fixtures: Fixture[] = [];
   for (const f of files) {
     const raw = await readFile(path.join(dir, f), 'utf8');

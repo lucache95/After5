@@ -1,9 +1,29 @@
 {
-  "generated_at": "2026-05-30T23:44:26.979Z",
-  "suite": "dategen/kelowna-v0",
+  "generated_at": "2026-06-06T00:18:19.316Z",
+  "suite": "dategen/gate-v0",
   "mode": "dry",
-  "mean_score": 69.83,
+  "mean_score": 62.67,
+  "cities": {
+    "coldcity": 0,
+    "kelowna": 0
+  },
   "fixtures": [
+    {
+      "fixture_id": "coldcity-usable-01-verified",
+      "final_score": 40,
+      "gradient_score": null,
+      "judged": false,
+      "failed_gates": [
+        "category_variety"
+      ],
+      "failed_critical_gates": [
+        "category_variety"
+      ],
+      "unsupported_claim": false,
+      "banned_copy": false,
+      "judge_scores": null,
+      "unverified_rate": 0
+    },
     {
       "fixture_id": "kelowna-adversarial-01-lowbudget-splurge-stops",
       "final_score": 40,
@@ -17,7 +37,8 @@
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-adversarial-02-tonight-barely-open",
@@ -32,7 +53,8 @@
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-adversarial-03-firstdate-long-drive-secluded",
@@ -47,7 +69,8 @@
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-adversarial-04-no-alcohol-drink-led",
@@ -62,25 +85,8 @@
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
-    },
-    {
-      "fixture_id": "kelowna-adversarial-05-sparse-venue-metadata",
-      "final_score": 80,
-      "gradient_score": 80,
-      "judged": true,
-      "failed_gates": [],
-      "failed_critical_gates": [],
-      "unsupported_claim": false,
-      "banned_copy": false,
-      "judge_scores": {
-        "desirability": 4,
-        "arc": 4,
-        "vibe_coherence": 4,
-        "city_context_fit": 4,
-        "specificity_taste": 4,
-        "hook": 4
-      }
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-adversarial-06-three-same-category",
@@ -95,7 +101,8 @@
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-adversarial-07-must-include-not-satisfied",
@@ -110,27 +117,25 @@
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-adversarial-08-golden-hour-wrong-window",
-      "final_score": 55,
-      "gradient_score": 80,
-      "judged": true,
+      "final_score": 40,
+      "gradient_score": null,
+      "judged": false,
       "failed_gates": [
-        "time_of_day_order"
+        "time_of_day_order",
+        "schedule_monotonic"
       ],
-      "failed_critical_gates": [],
+      "failed_critical_gates": [
+        "schedule_monotonic"
+      ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": {
-        "desirability": 4,
-        "arc": 4,
-        "vibe_coherence": 4,
-        "city_context_fit": 4,
-        "specificity_taste": 4,
-        "hook": 4
-      }
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-golden-01-known-excellent",
@@ -148,7 +153,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-golden-02-generic-but-valid",
@@ -166,25 +172,24 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-golden-03-hallucination-prone",
-      "final_score": 80,
-      "gradient_score": 80,
-      "judged": true,
-      "failed_gates": [],
-      "failed_critical_gates": [],
+      "final_score": 40,
+      "gradient_score": null,
+      "judged": false,
+      "failed_gates": [
+        "schedule_monotonic"
+      ],
+      "failed_critical_gates": [
+        "schedule_monotonic"
+      ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": {
-        "desirability": 4,
-        "arc": 4,
-        "vibe_coherence": 4,
-        "city_context_fit": 4,
-        "specificity_taste": 4,
-        "hook": 4
-      }
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-golden-04-logistically-awkward",
@@ -192,14 +197,17 @@
       "gradient_score": null,
       "judged": false,
       "failed_gates": [
-        "travel_pacing"
+        "travel_pacing",
+        "schedule_monotonic"
       ],
       "failed_critical_gates": [
-        "travel_pacing"
+        "travel_pacing",
+        "schedule_monotonic"
       ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": null
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-01-first-date-playful-walkable-evening",
@@ -217,7 +225,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-02-anniversary-romantic-lake-golden-hour",
@@ -235,7 +244,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-03-spontaneous-tonight-relaxed-short-drive-late",
@@ -253,25 +263,24 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-04-casual-foodie-flexible-drive-afternoon",
-      "final_score": 80,
-      "gradient_score": 80,
-      "judged": true,
-      "failed_gates": [],
-      "failed_critical_gates": [],
+      "final_score": 40,
+      "gradient_score": null,
+      "judged": false,
+      "failed_gates": [
+        "schedule_monotonic"
+      ],
+      "failed_critical_gates": [
+        "schedule_monotonic"
+      ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": {
-        "desirability": 4,
-        "arc": 4,
-        "vibe_coherence": 4,
-        "city_context_fit": 4,
-        "specificity_taste": 4,
-        "hook": 4
-      }
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-05-first-date-cozy-no-alcohol-walkable-evening",
@@ -289,7 +298,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-06-anniversary-scenic-splurge-golden-hour-flexible",
@@ -307,7 +317,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-07-casual-playful-activity-short-drive-afternoon",
@@ -325,7 +336,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-08-spontaneous-tonight-foodie-patio-walkable-evening",
@@ -343,25 +355,24 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-09-first-date-romantic-dessert-walkable-late",
-      "final_score": 80,
-      "gradient_score": 80,
-      "judged": true,
-      "failed_gates": [],
-      "failed_critical_gates": [],
+      "final_score": 40,
+      "gradient_score": null,
+      "judged": false,
+      "failed_gates": [
+        "schedule_monotonic"
+      ],
+      "failed_critical_gates": [
+        "schedule_monotonic"
+      ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": {
-        "desirability": 4,
-        "arc": 4,
-        "vibe_coherence": 4,
-        "city_context_fit": 4,
-        "specificity_taste": 4,
-        "hook": 4
-      }
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-10-casual-scenic-lake-walkable-golden-hour",
@@ -379,7 +390,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-11-anniversary-cozy-no-alcohol-evening-short-drive",
@@ -397,7 +409,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-12-spontaneous-tonight-playful-activity-walkable-evening",
@@ -415,25 +428,24 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-13-casual-foodie-dessert-walkable-afternoon",
-      "final_score": 80,
-      "gradient_score": 80,
-      "judged": true,
-      "failed_gates": [],
-      "failed_critical_gates": [],
+      "final_score": 40,
+      "gradient_score": null,
+      "judged": false,
+      "failed_gates": [
+        "schedule_monotonic"
+      ],
+      "failed_critical_gates": [
+        "schedule_monotonic"
+      ],
       "unsupported_claim": false,
       "banned_copy": false,
-      "judge_scores": {
-        "desirability": 4,
-        "arc": 4,
-        "vibe_coherence": 4,
-        "city_context_fit": 4,
-        "specificity_taste": 4,
-        "hook": 4
-      }
+      "judge_scores": null,
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-14-first-date-scenic-no-alcohol-short-drive-golden-hour",
@@ -451,7 +463,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-15-anniversary-romantic-winery-splurge-golden-hour-flexible-drive",
@@ -469,7 +482,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-16-casual-relaxed-all-day-morning-walkable-flexible-drive",
@@ -487,7 +501,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-17-spontaneous-tonight-foodie-patio-dessert-walkable-evening",
@@ -505,7 +520,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     },
     {
       "fixture_id": "kelowna-normal-18-anniversary-reconnect-cozy-no-alcohol-short-drive-evening",
@@ -523,7 +539,8 @@
         "city_context_fit": 4,
         "specificity_taste": 4,
         "hook": 4
-      }
+      },
+      "unverified_rate": 0
     }
   ]
 }

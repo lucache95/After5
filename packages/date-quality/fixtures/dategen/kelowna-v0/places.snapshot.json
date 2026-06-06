@@ -1,0 +1,310 @@
+[
+  {
+    "place_id": "0a1b2c3d-1111-4a01-8001-000000000001",
+    "place_name": "RauDZ Regional Table"
+  },
+  {
+    "place_id": "0a1b2c3d-1111-4a01-8001-000000000002",
+    "place_name": "Sandhill Wines Tasting Room"
+  },
+  {
+    "place_id": "0a1b2c3d-1111-4a01-8001-000000000003",
+    "place_name": "Bobby's Lakefront Lounge"
+  },
+  {
+    "place_id": "0a1b2c3d-2222-4a02-8002-000000000001",
+    "place_name": "Krafty Kitchen + Bar"
+  },
+  {
+    "place_id": "0a1b2c3d-2222-4a02-8002-000000000002",
+    "place_name": "Bean Scene Coffee House"
+  },
+  {
+    "place_id": "0a1b2c3d-2222-4a02-8002-000000000003",
+    "place_name": "Stuart Park Lakefront Walk"
+  },
+  {
+    "place_id": "0a1b2c3d-3333-4a03-8003-000000000001",
+    "place_name": "Downtown Kelowna Marina Meetup"
+  },
+  {
+    "place_id": "0a1b2c3d-3333-4a03-8003-000000000002",
+    "place_name": "Goats Peak Regional Park Trailhead"
+  },
+  {
+    "place_id": "0a1b2c3d-3333-4a03-8003-000000000003",
+    "place_name": "Lakeshore Cabin Hot Tub Rental"
+  },
+  {
+    "place_id": "0a1b2c3d-4444-4a04-8004-000000000001",
+    "place_name": "BNA Brewing Co. Taproom"
+  },
+  {
+    "place_id": "0a1b2c3d-4444-4a04-8004-000000000002",
+    "place_name": "Truck 59 Ciderhouse"
+  },
+  {
+    "place_id": "0a1b2c3d-4444-4a04-8004-000000000003",
+    "place_name": "Doc Willoughby's Pub Trivia"
+  },
+  {
+    "place_id": "0a1b2c3d-5555-4a05-8005-000000000001",
+    "place_name": "The Restaurant at the Lake"
+  },
+  {
+    "place_id": "0a1b2c3d-5555-4a05-8005-000000000002",
+    "place_name": "A Wine Bar Downtown"
+  },
+  {
+    "place_id": "0a1b2c3d-5555-4a05-8005-000000000003",
+    "place_name": "Lakeside Spot"
+  },
+  {
+    "place_id": "0a1b2c3d-6666-4a06-8006-000000000001",
+    "place_name": "Salt & Brick"
+  },
+  {
+    "place_id": "0a1b2c3d-6666-4a06-8006-000000000002",
+    "place_name": "Frankie We Salute You"
+  },
+  {
+    "place_id": "0a1b2c3d-6666-4a06-8006-000000000003",
+    "place_name": "Bouchons Bistro"
+  },
+  {
+    "place_id": "0a1b2c3d-7777-4a07-8007-000000000001",
+    "place_name": "Waterfront Wines Restaurant"
+  },
+  {
+    "place_id": "0a1b2c3d-7777-4a07-8007-000000000002",
+    "place_name": "Sunset Organic Bistro"
+  },
+  {
+    "place_id": "0a1b2c3d-7777-4a07-8007-000000000003",
+    "place_name": "Knox Mountain Apex Lookout"
+  },
+  {
+    "place_id": "0a1b2c3d-8888-4a08-8008-000000000001",
+    "place_name": "Sunset Ranch Sunset Terrace"
+  },
+  {
+    "place_id": "0a1b2c3d-8888-4a08-8008-000000000002",
+    "place_name": "Sprout Bread + Cafe"
+  },
+  {
+    "place_id": "0a1b2c3d-8888-4a08-8008-000000000003",
+    "place_name": "Kelowna Art Gallery"
+  },
+  {
+    "place_id": "0a1b2c3d-9001-4b01-8101-000000000001",
+    "place_name": "CedarCreek Estate Winery Terrace"
+  },
+  {
+    "place_id": "0a1b2c3d-9001-4b01-8101-000000000002",
+    "place_name": "Home Block at CedarCreek"
+  },
+  {
+    "place_id": "0a1b2c3d-9001-4b01-8101-000000000003",
+    "place_name": "Mission Hill Lookout Stroll"
+  },
+  {
+    "place_id": "0a1b2c3d-9002-4b02-8102-000000000001",
+    "place_name": "Twisted Tomato Pizzeria"
+  },
+  {
+    "place_id": "0a1b2c3d-9002-4b02-8102-000000000002",
+    "place_name": "Rotten Grape Wine Bar"
+  },
+  {
+    "place_id": "0a1b2c3d-9002-4b02-8102-000000000003",
+    "place_name": "Waterfront Boardwalk Stroll"
+  },
+  {
+    "place_id": "0a1b2c3d-9003-4b03-8103-000000000001",
+    "place_name": "Old Vines Restaurant at Quails' Gate"
+  },
+  {
+    "place_id": "0a1b2c3d-9003-4b03-8103-000000000002",
+    "place_name": "The Modest Butcher Tasting Counter"
+  },
+  {
+    "place_id": "0a1b2c3d-9003-4b03-8103-000000000003",
+    "place_name": "Bliss Bakery Dessert Stop"
+  },
+  {
+    "place_id": "0a1b2c3d-9004-4b04-8104-000000000001",
+    "place_name": "Myra Canyon Trestles Walk"
+  },
+  {
+    "place_id": "0a1b2c3d-9004-4b04-8104-000000000002",
+    "place_name": "Waterfront Wines Tasting Room"
+  },
+  {
+    "place_id": "0a1b2c3d-9004-4b04-8104-000000000003",
+    "place_name": "Sunset Organic Bistro"
+  },
+  {
+    "place_id": "a1b2c3d4-0001-4a01-9001-000000000101",
+    "place_name": "Doc Willoughby's Downtown Pub"
+  },
+  {
+    "place_id": "a1b2c3d4-0001-4a01-9001-000000000102",
+    "place_name": "Sandrine Chocolate & Pastry"
+  },
+  {
+    "place_id": "a1b2c3d4-0002-4a02-9002-000000000201",
+    "place_name": "Hotel Eldorado Boardwalk Patio"
+  },
+  {
+    "place_id": "a1b2c3d4-0002-4a02-9002-000000000202",
+    "place_name": "Waterfront Park Boardwalk"
+  },
+  {
+    "place_id": "a1b2c3d4-0002-4a02-9002-000000000203",
+    "place_name": "BNA Brewing Co. & Eatery"
+  },
+  {
+    "place_id": "a1b2c3d4-0003-4a03-9003-000000000301",
+    "place_name": "Krafty Kitchen + Bar"
+  },
+  {
+    "place_id": "a1b2c3d4-0003-4a03-9003-000000000302",
+    "place_name": "Stuart Park"
+  },
+  {
+    "place_id": "a1b2c3d4-0004-4a04-9004-000000000401",
+    "place_name": "Quails' Gate Estate Winery"
+  },
+  {
+    "place_id": "a1b2c3d4-0004-4a04-9004-000000000402",
+    "place_name": "Carmelis Goat Cheese Artisan"
+  },
+  {
+    "place_id": "a1b2c3d4-0004-4a04-9004-000000000403",
+    "place_name": "Sandhill Wines Tasting Room"
+  },
+  {
+    "place_id": "a1b2c3d4-0005-4a05-9005-000000000501",
+    "place_name": "Bright Jenny Coffee"
+  },
+  {
+    "place_id": "a1b2c3d4-0005-4a05-9005-000000000502",
+    "place_name": "Mosaic Books"
+  },
+  {
+    "place_id": "a1b2c3d4-0006-4a06-9006-000000000601",
+    "place_name": "Knox Mountain Park Lookout"
+  },
+  {
+    "place_id": "a1b2c3d4-0006-4a06-9006-000000000602",
+    "place_name": "RauDZ Regional Table"
+  },
+  {
+    "place_id": "a1b2c3d4-0007-4a07-9007-000000000701",
+    "place_name": "Knox Mountain Park Trail"
+  },
+  {
+    "place_id": "a1b2c3d4-0007-4a07-9007-000000000702",
+    "place_name": "The Train Station Pub"
+  },
+  {
+    "place_id": "a1b2c3d4-0008-4a08-9008-000000000801",
+    "place_name": "Salt & Brick"
+  },
+  {
+    "place_id": "a1b2c3d4-0008-4a08-9008-000000000802",
+    "place_name": "Parallel 49 Coffee Roasters"
+  },
+  {
+    "place_id": "a1b2c3d4-0009-4a09-9009-000000000901",
+    "place_name": "Bouchons Bistro"
+  },
+  {
+    "place_id": "a1b2c3d4-0009-4a09-9009-000000000902",
+    "place_name": "Stuart Park Waterfront Path"
+  },
+  {
+    "place_id": "a1b2c3d4-0010-4a10-9010-000000001001",
+    "place_name": "Tugboat Bay Beach"
+  },
+  {
+    "place_id": "a1b2c3d4-0010-4a10-9010-000000001002",
+    "place_name": "Bonfire Restaurant at The Cove Lakeside Resort"
+  },
+  {
+    "place_id": "a1b2c3d4-0011-4a11-9011-000000001101",
+    "place_name": "Frankie We Salute You"
+  },
+  {
+    "place_id": "a1b2c3d4-0011-4a11-9011-000000001102",
+    "place_name": "Bliss Bakery & Bistro"
+  },
+  {
+    "place_id": "a1b2c3d4-0012-4a12-9012-000000001201",
+    "place_name": "BNA Brewing Bowling Lanes"
+  },
+  {
+    "place_id": "a1b2c3d4-0012-4a12-9012-000000001202",
+    "place_name": "Red Bird Brewing Tasting Room"
+  },
+  {
+    "place_id": "a1b2c3d4-0013-4a13-9013-000000001301",
+    "place_name": "Kelowna Farmers' & Crafters' Market"
+  },
+  {
+    "place_id": "a1b2c3d4-0013-4a13-9013-000000001302",
+    "place_name": "Sandrine Chocolate & Pastry"
+  },
+  {
+    "place_id": "a1b2c3d4-0014-4a14-9014-000000001401",
+    "place_name": "Mission Creek Greenway"
+  },
+  {
+    "place_id": "a1b2c3d4-0014-4a14-9014-000000001402",
+    "place_name": "Pulp Fiction Coffee House"
+  },
+  {
+    "place_id": "a1b2c3d4-0015-4a15-9015-000000001501",
+    "place_name": "Quails' Gate Winery Tasting Room"
+  },
+  {
+    "place_id": "a1b2c3d4-0015-4a15-9015-000000001502",
+    "place_name": "Old Vines Restaurant"
+  },
+  {
+    "place_id": "a1b2c3d4-0015-4a15-9015-000000001503",
+    "place_name": "Rotary Beach Park"
+  },
+  {
+    "place_id": "a1b2c3d4-0016-4a16-9016-000000001601",
+    "place_name": "Bright Jenny Coffee"
+  },
+  {
+    "place_id": "a1b2c3d4-0016-4a16-9016-000000001602",
+    "place_name": "Kelowna Farmers' and Crafters' Market"
+  },
+  {
+    "place_id": "a1b2c3d4-0016-4a16-9016-000000001603",
+    "place_name": "Krafty Kitchen + Bar"
+  },
+  {
+    "place_id": "a1b2c3d4-0017-4a17-9017-000000001701",
+    "place_name": "Bouchons Bistro"
+  },
+  {
+    "place_id": "a1b2c3d4-0017-4a17-9017-000000001702",
+    "place_name": "BNA Brewing Co."
+  },
+  {
+    "place_id": "a1b2c3d4-0017-4a17-9017-000000001703",
+    "place_name": "BeyondVille Gelato"
+  },
+  {
+    "place_id": "a1b2c3d4-0018-4a18-9018-000000001801",
+    "place_name": "RauDZ Regional Table"
+  },
+  {
+    "place_id": "a1b2c3d4-0018-4a18-9018-000000001802",
+    "place_name": "Bean Scene Coffee Works"
+  }
+]

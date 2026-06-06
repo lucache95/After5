@@ -1,0 +1,96 @@
+name: date-quality eval
+
+# EVAL-01 CI gate. CONTEXT lock (Area 3): the DETERMINISTIC eval is the only
+# HARD gate (it must pass to merge); the Opus LLM judge is ADVISORY (warn-only,
+# never blocks a merge — avoids flaky-judge DoS and keeps the hard gate keyless).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/generate-plan/**'
+      - 'packages/date-quality/**'
+      - '.github/workflows/eval.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/generate-plan/**'
+      - 'packages/date-quality/**'
+      - '.github/workflows/eval.yml'
+
+concurrency:
+  group: date-quality-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # HARD GATE — deterministic, offline, NO API key. Exits nonzero on regression
+  # (the CLI calls process.exit(1)), so a regression FAILS the merge. This is the
+  # only blocking job (T-09-08: the hard gate needs no secret; T-09-09: dry mode
+  # still runs the schedule/budget/unverified-rate gates that protect quality).
+  eval-dry:
+    name: deterministic eval (hard gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck date-quality
+        run: pnpm --filter @after5/date-quality typecheck
+
+      - name: Unit tests
+        run: pnpm --filter @after5/date-quality test
+
+      - name: Deterministic eval (dry, keyless, hard-fail on regression)
+        run: pnpm --filter @after5/date-quality eval
+
+  # ADVISORY — the live Opus-4.8 judge + live noHallucinatedVenue resolution.
+  # Uses ANTHROPIC_API_KEY (CI secret, T-09-08) and NEVER blocks the merge:
+  # `continue-on-error: true` means a flaky judge or a missing key only WARNS
+  # (T-09-10 — the judge cannot DoS merges). Skipped automatically when the
+  # secret is absent (e.g. fork PRs).
+  eval-live-judge:
+    name: live judge (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Advisory live judge eval
+        # Advisory only: `|| true` keeps the step (and the job) green regardless
+        # of the judge outcome, so a flaky Opus judge or a missing key never
+        # blocks the merge. The output is for human review in the run log.
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY not set — skipping advisory live judge."
+            exit 0
+          fi
+          pnpm --filter @after5/date-quality eval -- --live || \
+            echo "::warning::advisory live judge reported findings (does not block merge)"

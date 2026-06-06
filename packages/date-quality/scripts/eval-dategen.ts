@@ -23,6 +23,8 @@ import {
   runEval,
   renderJson,
   renderMarkdown,
+  computeUnverifiedRate,
+  UNVERIFIED_RATE_THRESHOLD,
   type EvalReport,
 } from '../src/runEval';
 import type { Fixture, GateSeverity, WrittenStop } from '../src/types';
@@ -140,19 +142,22 @@ async function loadBaseline(): Promise<EvalReport | null> {
 }
 
 /**
- * The CLI GATING suite: the full Kelowna golden set plus the USABLE cold city.
- * The deliberately-thin cold-city fixtures (`coldcity-thin-*`) are anti-vacuous-
- * green NEGATIVE cases — by design they trip the absolute `unverified_rate`
- * regression and so would fail the suite forever; they are exercised in the
- * unit tests (runEval.test.ts), not in the green CI gate. Including the usable
- * cold city keeps the baseline cold-city-aware (the `cities` map carries both
- * kelowna and coldcity) while the gate stays legitimately green.
+ * The CLI GATING suite: every Kelowna + cold-city fixture EXCEPT the
+ * deliberately data-thin negatives. A fixture whose unverified_rate exceeds
+ * UNVERIFIED_RATE_THRESHOLD (the `coldcity-thin-*` proxies AND the
+ * `kelowna-adversarial-05` sparse-metadata case) is an anti-vacuous-green
+ * NEGATIVE case: 09-03 made unverified_rate an ABSOLUTE regression, so such a
+ * fixture trips it forever and would fail the gate eternally. Those negatives
+ * are exercised in the unit tests (runEval.test.ts asserts they DO flag); the
+ * green CI gate carries the fixtures that are MEANT to certify — including the
+ * usable cold city, so the baseline `cities` map stays cold-city-aware.
  */
-async function loadGateFixtures() {
+async function loadGateFixtures(): Promise<Fixture[]> {
   const kelowna = await loadFixtures(KELOWNA_DIR);
   const cold = await loadFixtures(COLDCITY_DIR);
-  const usableCold = cold.filter((f) => !f.id.includes('thin'));
-  return [...kelowna, ...usableCold];
+  return [...kelowna, ...cold].filter(
+    (f) => computeUnverifiedRate(f.stops) <= UNVERIFIED_RATE_THRESHOLD,
+  );
 }
 
 async function main(): Promise<void> {
