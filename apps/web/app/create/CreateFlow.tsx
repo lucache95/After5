@@ -15,6 +15,7 @@ import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { StopCard } from '@/components/itinerary/StopCard';
 import { BlurGateOverlay } from './BlurGateOverlay';
 import { PublishToFeedButton } from './PublishToFeedButton';
+import { ImproveControls } from './ImproveControls';
 import { PolaroidLoader } from '@/components/create/PolaroidLoader';
 import type { GatedItinerary } from '@/lib/create/blur-gate';
 import type { KnownCity } from '@/lib/create/cities';
@@ -343,12 +344,40 @@ function Results({
 
   // Authed: render the full ItineraryView (nothing is gated server-side).
   if (authed) {
-    const full = { ...active, stops: active.stops.map(asStop) } as unknown as Itinerary;
-    return (
-      <div>
-        <BackBar onRedo={onRedo} />
-        <ItineraryView itinerary={full} />
-        {active.id && (
+    return <AuthedResult active={active} canPublish={canPublish} onRedo={onRedo} />;
+  }
+
+  // Anon: hero + stop 1, then the locked region behind the overlay. The premium
+  // copy is already stripped server-side, so there's nothing real underneath.
+  const stop1 = active.stops[0];
+  return <AnonTeaser active={active} stop1={stop1 ? asStop(stop1) : null} onRedo={onRedo} city={firstNameCity} />;
+}
+
+// Authed result: the full plan + the improve loop. Stops live in local state so
+// a single-stop swap / NL tweak updates the rendered night in place (PLAN-02).
+function AuthedResult({
+  active,
+  canPublish,
+  onRedo,
+}: {
+  active: GatedItinerary;
+  canPublish: boolean;
+  onRedo: () => void;
+}) {
+  const [stops, setStops] = useState<Stop[]>(active.stops.map(asStop));
+  const full = { ...active, stops } as unknown as Itinerary;
+
+  return (
+    <div>
+      <BackBar onRedo={onRedo} />
+      <ItineraryView itinerary={full} />
+      {active.id && (
+        <>
+          <ImproveControls
+            itineraryId={active.id}
+            stops={stops}
+            onUpdated={setStops}
+          />
           <div className="mt-8 flex flex-col items-center gap-3 text-center">
             <p className="font-body text-sm lowercase text-shell-ink/70">
               want someone to actually go on it?
@@ -367,15 +396,10 @@ function Results({
               or tweak it on the canvas first
             </Link>
           </div>
-        )}
-      </div>
-    );
-  }
-
-  // Anon: hero + stop 1, then the locked region behind the overlay. The premium
-  // copy is already stripped server-side, so there's nothing real underneath.
-  const stop1 = active.stops[0];
-  return <AnonTeaser active={active} stop1={stop1 ? asStop(stop1) : null} onRedo={onRedo} city={firstNameCity} />;
+        </>
+      )}
+    </div>
+  );
 }
 
 function AnonTeaser({
