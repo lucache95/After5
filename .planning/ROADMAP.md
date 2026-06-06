@@ -103,7 +103,7 @@ Plans:
 **Plans**: 3 plans in 2 waves
 Plans:
 - [x] 10-01-PLAN.md — FLOW-01: make generation the primary path (+ tab/CTA → funnel) + demote the manual door (kept working) + verify no /places creation CTA
-- [ ] 10-02-PLAN.md — FLOW-01: city selector in the funnel → self-RLS primary_city_id write + fire-and-forget enqueueSeedCity (unblocks Phase-8 pre-seed) + prefill, never block on cold city
+- [x] 10-02-PLAN.md — FLOW-01: city selector in the funnel → self-RLS primary_city_id write + fire-and-forget enqueueSeedCity (unblocks Phase-8 pre-seed) + prefill, never block on cold city
 - [ ] 10-03-PLAN.md — phase gate: e2e primary-path (city→generate→improve→publish) + @420px visual-verify, local-green (no prod-bound DDL)
 **UI hint**: yes
 

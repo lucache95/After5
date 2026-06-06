@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 10-01-PLAN.md (FLOW-01 part 1/3: generation is the primary create path — CreateChooser shows generate as the one dominant pink action → /create/generate, manual-from-scratch demoted to a quiet 'or build from scratch' link that still works [createBlankItinerary → /plans/[id]/edit, no trap]; BottomTabShell '+' tab + UserMenu wedge route to /create/generate; retired the two resurrected 'build a date here' venue-creation CTAs on /places → neutral 'make a night' nav chrome); next plan 10-02 (city selector → primary_city_id write + enqueueSeedCity).
-last_updated: "2026-06-05T20:08:00.000Z"
-last_activity: 2026-06-05 -- Phase 10 Plan 01 executed (FLOW-01 part 1/3: TDD-demoted the manual door in CreateChooser [generate = dominant pink card; manual = quiet secondary link, preserved verbatim], routed the global '+' tab + UserMenu wedge to /create/generate, and retired the /places 'build a date here' CTAs [Rule-2 deviation: the plan called them nav chrome but the literal E21 copy IS a venue-creation CTA the verify gate forbids]. 4 CreateChooser tests green, full app/create suite 12/0, web typecheck clean on all changed files)
+stopped_at: Completed 10-02-PLAN.md (FLOW-01 part 2/3: city selection wired into the generate funnel — a curated chip tap by a signed-in user POSTs /api/profile/city, which validates the cityId as an active curated city then writes profiles.primary_city_id under self-update RLS [.eq id=auth.uid(), profiles_owner_all; no admin client] and fires enqueueSeedCity(cityId) fire-and-forget, unblocking the deferred Phase-8 background pre-seed; KnownCity gained id; the saved city prefills + re-posts on change; free-text + cold/unseeded city fall through 08-04 and never block generation; NO new migration). Next plan 10-03 (FLOW-01 e2e + visual gate).
+last_updated: "2026-06-06T03:13:00.000Z"
+last_activity: 2026-06-05 -- Phase 10 Plan 02 executed (TDD: thin RLS server route POST /api/profile/city does the self-scoped primary_city_id write + fire-and-forget enqueueSeedCity; funnel curated picks carry cities.id, post for authed users, prefill the saved city, and never block generation on a cold city. 10/10 new tests green [5 route + 5 funnel], app/create suite 17/17, web tsc clean. No deviations, no migration.)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 10 — Generation as the Primary Night Path (in progress)
-Plan: 01 complete (FLOW-01 part 1/3: re-prioritized the create entry surfaces so generating a date is the obvious primary path. CreateChooser.tsx — generate ("build it for me") is the single dominant pink shell-accent card routing to /create/generate; the manual-from-scratch door is DEMOTED to a quiet underlined "or build from scratch" secondary link (≥44px tap) that preserves startFromScratch() verbatim — createBlankItinerary → /plans/[id]/edit with loading/error toasts, no trap/dead link. BottomTabShell.tsx center "+" tab href → /create/generate (aria-current still matches the /create subtree). UserMenu.tsx "plan a date" wedge → /create/generate. /places "build a date here" CTAs (lines 55 + 118) retired → neutral "make a night" nav chrome [Rule-2 deviation: the plan's prose called them nav chrome, but the literal v1.0 E21 copy IS the resurrected venue-creation CTA the success criterion + verify gate forbid]. /create page.tsx left intact: authed → chooser, anon → funnel. TDD on Task 1: RED b0c8766 → GREEN 93dfa74; 4 CreateChooser tests green, full app/create suite 12/0, tsc clean on changed files) — next: 10-02 (city selector → self-RLS primary_city_id write + enqueueSeedCity)
+Plan: 02 complete (FLOW-01 part 2/3: city selection + the deferred Phase-8 pre-seed wiring. NEW thin RLS server route POST /api/profile/city — zod-uuid validates cityId, verifies it is an active curated city, writes profiles.primary_city_id under profiles_owner_all self-RLS [.eq id=user.id, NO admin client], then fires enqueueSeedCity(cityId) fire-and-forget [logged .catch, not awaited into the response] so a slow/failing queue still returns 200; 401 anon / 400 bad-or-unknown city never write or enqueue. KnownCity widened to carry cities.id [additive; the anon /create select widened to id,slug,name so its `as KnownCity[]` cast still compiles]. generate/page.tsx selects id,slug,name + reads the authed profile's primary_city_id + joined city name [profiles_primary_city_id_fkey], passing prefillCityId/prefillCityName to CreateFlow. In CreateFlow a curated chip tap seeds the city text always and — for a signed-in user only — POSTs {cityId} fire-and-forget [failure → quiet sonner notice, never disables the "make my date" CTA]; the saved city prefills as selected; free-text non-curated cities leave primary_city_id untouched and still generate; a cold/unseeded curated city falls through 08-04 and never blocks. NO migration [profiles_owner_all self-update suffices; advisor unaffected]. TDD: route RED 6868ae9 → GREEN 0dd893e [5/5]; funnel RED 05d48c7 → GREEN 0f10ee3 [5/5]; app/create suite 17/17, web tsc clean) — next: 10-03 (FLOW-01 e2e + visual gate)
 Status: Executing
-Last activity: 2026-06-05 -- Phase 10 Plan 01 executed (generation is now the dominant create path from the chooser + the global "+" tab + the UserMenu wedge; manual door demoted-but-working; /places creation CTAs retired; FLOW-01 stays open until 10-02/10-03 land the city selector + e2e/visual gate)
+Last activity: 2026-06-05 -- Phase 10 Plan 02 executed (the curated-city pick now writes the user's home city under self-RLS and warms it via enqueueSeedCity; saved city prefills + re-posts; cold city never blocks generation. FLOW-01 stays open until 10-03 lands the e2e/visual gate)
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -86,6 +86,7 @@ Last activity: 2026-06-05 -- Phase 10 Plan 01 executed (generation is now the do
 | Phase 09 P02 | ~4 | 2 tasks | 3 files |
 | Phase 09 P03 | ~20 | 2 tasks | 8 files |
 | Phase 09 P04 | ~25 | 2 tasks | 10 files |
+| Phase 10 P02 | ~2 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -144,6 +145,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — Phase 9 Plan 04 executed: EVAL-01 CLOSED. Per-fixture JUDGE_CITY (buildSystemPrompt(city) + cityForFixture: coldcity → Cranbrook, BC, not hard-coded Kelowna). Live noHallucinatedVenue in the runner resolves every emitted place_id against a pinned offline places.snapshot.json per city dir (fabricated id = critical fail; dry mode no-op). Baseline regenerated as the gate-v0 suite (29 kelowna + usable cold city; data-thin negatives coldcity-thin-* + kelowna-adversarial-05 excluded from the gate, asserted-to-fail in the unit suite) capturing scheduleMonotonic, unverified_rate, and the cities map. Net-new .github/workflows/eval.yml: keyless DRY deterministic HARD gate + advisory secret-gated continue-on-error live-judge job. 90/90 green, typecheck clean, dry eval exits 0.
-Stopped at: Completed 09-04-PLAN.md; next plan 09-05 in Phase 9.
+Last session: 2026-06-05 — Phase 10 Plan 02 executed: FLOW-01 part 2/3. The generate funnel now has a city selector — a curated chip tap by a signed-in user POSTs the new thin RLS route /api/profile/city, which validates the cityId as an active curated city, writes profiles.primary_city_id under profiles_owner_all self-update RLS (no admin client), then fires enqueueSeedCity(cityId) fire-and-forget (logged .catch, not awaited) so a queue hiccup still returns 200 — this is the only caller the deferred Phase-8 pre-seed was missing. KnownCity gained cities.id (additive; anon /create select widened to keep its cast compiling); the saved city prefills via the FK join + re-posts on change; free-text and cold/unseeded curated cities never block generation (08-04 fallthrough). NO migration. TDD both tasks (route 6868ae9→0dd893e, funnel 05d48c7→0f10ee3); 10/10 new + app/create 17/17 + web tsc clean. No deviations.
+Stopped at: Completed 10-02-PLAN.md; next plan 10-03 in Phase 10 (FLOW-01 e2e + visual gate).
 Resume file: None
