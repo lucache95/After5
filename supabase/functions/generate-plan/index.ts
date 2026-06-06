@@ -24,6 +24,7 @@ import { OnTheFlyProvider } from './providers/onthefly.ts';
 import { PipelineError } from './providers/pipeline.ts';
 import { resolveOpenCity, OpenCityError } from './open-city.ts';
 import { persist } from './persist.ts';
+import { ImproveInputSchema, handleImprove } from './improve.ts';
 import type { CityRecord } from './types.ts';
 
 // ─── Input schema ──────────────────────────────────────────────────────
@@ -81,6 +82,48 @@ serve(async (req: Request) => {
   try {
     // 1. Validate input
     const body = await req.json();
+
+    // ─── Improve dispatch (PLAN-02) ─────────────────────────────────────
+    // A body with action 'swap_stop' | 'nl_tweak' is the customize/improve
+    // loop, not a fresh generation. It re-picks one slot (or re-runs the
+    // pipeline with NL-parsed knobs), re-validates coherence, and persists via
+    // update_itinerary_stops — which re-checks auth.uid() + ownership. The
+    // write MUST run as the caller, so we build a client bound to the caller's
+    // JWT (NOT the service-role client) so auth.uid() resolves in the RPC.
+    if (body && (body.action === 'swap_stop' || body.action === 'nl_tweak')) {
+      const improveParsed = ImproveInputSchema.safeParse(body);
+      if (!improveParsed.success) {
+        return jsonResponse({ error: 'invalid_input', details: improveParsed.error.flatten() }, 400);
+      }
+      const authHeaderForImprove = req.headers.get('Authorization');
+      if (!authHeaderForImprove) {
+        return jsonResponse({ error: 'not_authenticated', message: 'sign in to tweak your plan.' }, 401);
+      }
+      // Caller-scoped client: forwards the JWT so RLS + the RPC's auth.uid()
+      // owner check apply (T-09-12). Service-role would bypass the owner gate.
+      const callerClient = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeaderForImprove } } },
+      );
+      const result = await handleImprove(improveParsed.data, callerClient, {
+        anthropicKey: Deno.env.get('ANTHROPIC_API_KEY')!,
+        haikuModel: Deno.env.get('ANTHROPIC_HAIKU_MODEL') ?? 'claude-haiku-4-5',
+        googleKey: Deno.env.get('GOOGLE_PLACES_API_KEY'),
+      });
+      return jsonResponse(
+        {
+          ok: result.ok,
+          itinerary_id: result.itinerary_id,
+          stops: result.stops,
+          issues: result.issues,
+          error: result.error,
+          code: result.code,
+        },
+        result.httpStatus,
+      );
+    }
+
     const parsed = InputSchema.safeParse(body);
     if (!parsed.success) {
       return jsonResponse({ error: 'invalid_input', details: parsed.error.flatten() }, 400);
