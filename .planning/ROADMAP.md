@@ -87,7 +87,7 @@ Plans:
 - [x] 09-01-PLAN.md — PLAN-01: tool-use copy pass + haversine hop-gate (one-tap any-city generate)
 - [x] 09-02-PLAN.md — SOUND-01: expanded ambient library + vibe-match auto-pick (verified via existing lateral)
 - [x] 09-03-PLAN.md — EVAL-01: scheduleMonotonic gate + cold-city fixtures + unverified_rate threshold
-- [ ] 09-04-PLAN.md — EVAL-01: per-fixture JUDGE_CITY + live no-hallucination + baseline regen + CI gate
+- [x] 09-04-PLAN.md — EVAL-01: per-fixture JUDGE_CITY + live no-hallucination + baseline regen + CI gate
 - [ ] 09-05-PLAN.md — PLAN-02: single-stop swap + NL tweaks (coherence-preserving) + improve UI in /create
 - [ ] 09-06-PLAN.md — phase gate: local-green suite + eval + visual-verify @420px + gated prod-apply
 **UI hint**: yes
@@ -119,7 +119,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. Compliant Any-City Venue Corpus | 5/6 | In progress | - |
-| 9. Trustworthy Generation + Eval Harness | 3/6 | In progress | - |
+| 9. Trustworthy Generation + Eval Harness | 4/6 | In progress | - |
 | 10. Generation as the Primary Night Path | 0/? | Not started | - |
 | 11. Page-by-Page UX & Nav Audit + Remediation | 0/? | Not started | - |
 

@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 09-03-PLAN.md (EVAL-01: scheduleMonotonic critical gate + coldcity-v0 golden set + unverified_rate as a first-class scored signal that fails a thin cold city); next plan 09-04.
-last_updated: "2026-06-05T17:25:00.000Z"
-last_activity: 2026-06-05 -- Phase 9 Plan 03 executed (EVAL-01: extended @after5/date-quality — scheduleMonotonic gate, unverified_rate scored per fixture/per city with UNVERIFIED_RATE_THRESHOLD=1/3 mirroring production computeUnverifiedRate verbatim, 3 cold-city fixtures; thin city now FAILS the suite, parity+thin-fails tests green 73/73; baseline regen deferred to 09-04)
+stopped_at: Completed 09-04-PLAN.md (EVAL-01 CLOSED: per-fixture JUDGE_CITY + live noHallucinatedVenue + regenerated gate-v0 baseline + net-new .github/workflows/eval.yml keyless-hard/judge-advisory CI gate); next plan 09-05.
+last_updated: "2026-06-05T17:30:00.000Z"
+last_activity: 2026-06-05 -- Phase 9 Plan 04 executed (EVAL-01 CLOSED: judge grades each fixture against its own city — Cranbrook for coldcity, not hard-coded Kelowna; live noHallucinatedVenue resolves every place_id against a pinned offline places.snapshot.json, fabricated id = critical fail; baseline regenerated as gate-v0 [29 kelowna + usable cold city] capturing scheduleMonotonic + unverified_rate + cities map; eval.yml = keyless DRY hard gate + advisory continue-on-error live-judge job. 90/90 green, dry eval exits 0)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 ## Current Position
 
 Phase: 9 — Trustworthy Generation + Eval Harness (in progress)
-Plan: 03 complete (EVAL-01: scheduleMonotonic critical gate added to GATES; unverified_rate is now a first-class per-fixture/per-city scored signal copied verbatim from production computeUnverifiedRate, with UNVERIFIED_RATE_THRESHOLD=1/3 emitting an absolute 'unverified_rate' regression so a thin cold city FAILS the suite; coldcity-v0 golden set = 2 thin proxies + 1 usable) — next: 09-04
+Plan: 04 complete (EVAL-01 CLOSED: per-fixture JUDGE_CITY via cityForFixture — coldcity judged as Cranbrook, BC not Kelowna; buildSystemPrompt(city) + judgeCity threaded through judge(); live noHallucinatedVenue resolves every emitted place_id against a pinned offline places.snapshot.json per city dir, fabricated id = CRITICAL fail; baseline regenerated as gate-v0 suite [29 kelowna + usable cold city, data-thin negatives excluded] capturing scheduleMonotonic + unverified_rate + cities map; net-new .github/workflows/eval.yml = keyless DRY deterministic HARD gate (exit 1 on regression) + advisory continue-on-error secret-gated live-judge job that never blocks merge) — next: 09-05
 Status: Executing
-Last activity: 2026-06-05 -- Phase 9 Plan 03 executed (EVAL-01 closed the cold-city vacuous-green hole; eval/production metric parity asserted by test; 73/73 green; baseline regen deferred to 09-04)
+Last activity: 2026-06-05 -- Phase 9 Plan 04 executed (EVAL-01 closed; the cold-city judge reasons about its own locale, fabricated venues fail the live check, CI gates exactly as CONTEXT locks; 90/90 green, dry eval exits 0)
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -85,6 +85,7 @@ Last activity: 2026-06-05 -- Phase 9 Plan 03 executed (EVAL-01 closed the cold-c
 | Phase 08 P04 | ~5 | 3 tasks | 7 files |
 | Phase 09 P02 | ~4 | 2 tasks | 3 files |
 | Phase 09 P03 | ~20 | 2 tasks | 8 files |
+| Phase 09 P04 | ~25 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — Phase 9 Plan 03 executed: EVAL-01 extended @after5/date-quality — scheduleMonotonic critical gate, unverified_rate as a first-class scored signal (per fixture + per city) mirroring production computeUnverifiedRate verbatim, UNVERIFIED_RATE_THRESHOLD=1/3 absolute regression so a thin cold city fails the suite, coldcity-v0 golden set (2 thin + 1 usable). 73/73 green, typecheck clean. Baseline regen deferred to 09-04.
-Stopped at: Completed 09-03-PLAN.md; next plan 09-04 in Phase 9.
+Last session: 2026-06-05 — Phase 9 Plan 04 executed: EVAL-01 CLOSED. Per-fixture JUDGE_CITY (buildSystemPrompt(city) + cityForFixture: coldcity → Cranbrook, BC, not hard-coded Kelowna). Live noHallucinatedVenue in the runner resolves every emitted place_id against a pinned offline places.snapshot.json per city dir (fabricated id = critical fail; dry mode no-op). Baseline regenerated as the gate-v0 suite (29 kelowna + usable cold city; data-thin negatives coldcity-thin-* + kelowna-adversarial-05 excluded from the gate, asserted-to-fail in the unit suite) capturing scheduleMonotonic, unverified_rate, and the cities map. Net-new .github/workflows/eval.yml: keyless DRY deterministic HARD gate + advisory secret-gated continue-on-error live-judge job. 90/90 green, typecheck clean, dry eval exits 0.
+Stopped at: Completed 09-04-PLAN.md; next plan 09-05 in Phase 9.
 Resume file: None
