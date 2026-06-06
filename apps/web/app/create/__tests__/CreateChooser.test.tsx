@@ -25,31 +25,38 @@ describe('CreateChooser', () => {
     createBlankItinerary.mockReset();
   });
 
-  it('renders both doors', () => {
+  it('presents generate as the dominant primary action routing to the funnel', async () => {
     render(<CreateChooser />);
-    expect(screen.getByRole('button', { name: /build it for me/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /start from scratch/i })).toBeInTheDocument();
-  });
-
-  it('door 1 routes to the generate funnel', async () => {
-    render(<CreateChooser />);
-    await userEvent.click(screen.getByRole('button', { name: /build it for me/i }));
+    const generate = screen.getByRole('button', { name: /build it for me/i });
+    expect(generate).toBeInTheDocument();
+    // The dominant action is the pink shell-accent card.
+    expect(generate.className).toContain('bg-shell-accent');
+    await userEvent.click(generate);
     expect(push).toHaveBeenCalledWith('/create/generate');
     expect(createBlankItinerary).not.toHaveBeenCalled();
   });
 
-  it('door 2 creates a blank itinerary then routes to its canvas', async () => {
+  it('demotes the manual door to a quiet secondary link, not a co-equal card', () => {
+    render(<CreateChooser />);
+    const manual = screen.getByRole('button', { name: /build from scratch/i });
+    expect(manual).toBeInTheDocument();
+    // It must NOT be a co-equal primary card: no pink fill, no bordered-card chrome.
+    expect(manual.className).not.toContain('bg-shell-accent');
+    expect(manual.className).not.toMatch(/border-shell-ink\/15/);
+  });
+
+  it('the demoted manual link still creates a blank itinerary then opens its canvas', async () => {
     createBlankItinerary.mockResolvedValue('blank-123');
     render(<CreateChooser />);
-    await userEvent.click(screen.getByRole('button', { name: /start from scratch/i }));
+    await userEvent.click(screen.getByRole('button', { name: /build from scratch/i }));
     await waitFor(() => expect(createBlankItinerary).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/plans/blank-123/edit'));
   });
 
-  it('door 2 does not route when the RPC fails', async () => {
+  it('the demoted manual link does not route when the RPC fails (no trap)', async () => {
     createBlankItinerary.mockRejectedValue(new Error('boom'));
     render(<CreateChooser />);
-    await userEvent.click(screen.getByRole('button', { name: /start from scratch/i }));
+    await userEvent.click(screen.getByRole('button', { name: /build from scratch/i }));
     await waitFor(() => expect(createBlankItinerary).toHaveBeenCalledTimes(1));
     expect(push).not.toHaveBeenCalled();
   });
