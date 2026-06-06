@@ -57,12 +57,32 @@ harness), and its ambient sound fits its cover.
 
 ## Audit methodology (UX-01)
 
-The UX-01 audit is **empirical, browser-driven** — not a code read. Use the Playwright / Chromium
-/ playwright-MCP browser tools to navigate **every** route in the running app (prod
-`ufufmcpnysvwtutpbian` deployment and/or forced-local), screenshot each page at the @420px
-mobile-first viewport, and check each against the nav/flow rubric + DESIGN-SYSTEM.md. The findings
-inventory cites real screenshots + concrete page URLs, so UX-02 remediation is grounded in what the
-app actually does, not what the code implies.
+The UX-01 audit is **empirical + INTERACTIVE browser-driven** — not a code read, and not just static
+screenshots. Use the **Playwright MCP** tools to drive a real Chromium browser through every route of
+the running app the way a user would, borrowing the proven loop from the Surkle project:
+
+**The loop:** `browser_navigate` → `browser_snapshot` (the a11y tree — best for finding elements,
+text, and MISSING back/up affordances) → `browser_take_screenshot` (the "how it looks" evidence) →
+`browser_click` / `browser_type` to actually walk the flow → `browser_console_messages` (JS errors)
++ `browser_network_requests` (failed 4xx/5xx) → reason → repeat. `browser_resize` to 420px for the
+mobile-first pass.
+
+**Auth + target:** drive the app **authed** (After5 recipe: local PKCE via `/login` + Mailpit, QA
+acct per `reference_local-qa-browser-login`; OR a prod authed session). Single interactive audit →
+local is fine; a parallel whole-app sweep → prod or per-agent worktrees (the
+`parallel_agents_worktree_isolation` rule). Phase 11 should first write a durable
+`docs/superpowers/playwright-authed-flow.md` recipe (After5 lacks one; Surkle's is the template).
+
+**Per-screen checklist** (every route): layout/overflow/spacing · broken/red-flashing images ·
+console errors · failed network (4xx/5xx) · dead/no-op buttons · broken nav / traps / missing
+back-up · @420px mobile parity · a11y · brand/design-system drift (DESIGN-SYSTEM.md) · the nav/flow
+rubric (working back/up, correct back-stack, no dead-ends).
+
+**Durable evidence:** screenshots → a dated audits dir (e.g. `docs/superpowers/audits/screenshots/
+<date>-<surface>.png`) + a findings markdown (bug · location/URL · repro · screenshot · severity), so
+UX-02 remediation is grounded in what the app actually DOES, not what the code implies. This replaces
+the lighter static capture-spec recipe used for v1.0/Phase-8-9 visual-verify (which only renders a
+known surface and can't catch dead buttons / broken nav / console+network errors).
 
 ## Traceability
 *(filled by the roadmapper — every REQ maps to exactly one phase)*
