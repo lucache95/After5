@@ -23,11 +23,33 @@ export function PhoneVerifyStep() {
       : msg || 'Something went wrong.';
   }
 
+  // Normalize to E.164 so the user never has to type the country code. A bare
+  // 10-digit North-American number (e.g. 403 921 6616) becomes +14039216616 —
+  // Twilio rejects +4039216616 (error 21211) because it's missing the +1.
+  // A number the user typed WITH a + (any country) is preserved.
+  function toE164(raw: string): string {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('+')) return '+' + trimmed.slice(1).replace(/\D/g, '');
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;   // 1 403 921 6616
+    if (digits.length === 10) return '+1' + digits;                            // 403 921 6616 (NANP)
+    return '+' + digits;                                                       // best-effort fallback
+  }
+
   async function sendCode() {
+    const e164 = toE164(phone);
+    // Guard before we hand it to the SMS provider: a complete number is +1 plus
+    // 10 digits = 12 chars (or longer for international). Anything shorter is a
+    // partial number — fail friendly instead of a raw Twilio 21211.
+    if (e164.replace(/\D/g, '').length < 11) {
+      setErrorMsg('Enter a full number with area code, e.g. 403 921 6616.');
+      setPhase('error');
+      return;
+    }
     setPhase('sending');
     setErrorMsg('');
     // Attach the phone to the CURRENT user (phone-change), never a sign-in.
-    const { error } = await browserAfter5Client().auth.updateUser({ phone });
+    const { error } = await browserAfter5Client().auth.updateUser({ phone: e164 });
     if (error) { setErrorMsg(friendly(error.message)); setPhase('error'); return; }
     setStage('enter_code');
     setPhase('idle');
@@ -38,7 +60,8 @@ export function PhoneVerifyStep() {
     setErrorMsg('');
     const client = browserAfter5Client();
     const { data: { session: pre } } = await client.auth.getSession();
-    const { data, error } = await client.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
+    // Verify against the SAME E.164 number the code was texted to (Supabase matches on it).
+    const { data, error } = await client.auth.verifyOtp({ phone: toE164(phone), token: code, type: 'phone_change' });
     if (error || !data?.session) { setErrorMsg(friendly(error?.message ?? 'That code did not work.')); setPhase('error'); return; }
     // Belt-and-braces: phone_change updates the current user; the uid must not change.
     if (pre?.user?.id && data.user?.id && data.user.id !== pre.user.id) {
