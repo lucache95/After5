@@ -45,3 +45,13 @@ The full `deno test` over generate-plan/ fails locally because `prompt.ts` impor
 unchanged `railway`/`select`/`prompt` test files. Phase-8 test files run SDK-free (43 pass).
 The 08-06 gate should run the full suite under `node_modules` (or `deno install` / set
 `nodeModulesDir: auto`) to close this.
+
+## UPDATE 2026-06-05 — Phase 9 bundles into this cutover
+Phase 9 (Trustworthy Generation + Eval Harness) is build-complete + locally green but its
+prod-bound steps SHIP WITH this Phase-8 cutover (the `generate-plan` edge deploy carries both
+phases' code). Add to the atomic gated op:
+- apply migration `20260606160000_sound01_ambient_loops_seed` (8 ambient rows)
+- deploy updated `generate-plan` (tool-use copy pass + haversine hop-gate + improve.ts) + `process-jobs`
+- generate + upload the 8 new ambient audio loops (ElevenLabs recipe → `docs/superpowers/SOUND-GENERATION.md`; service_role JWT to `ambient-sounds` bucket) — needs the ElevenLabs key
+- @420px visual-verify of the live improve-loop UI (ImproveControls in /create)
+- optional: set `ANTHROPIC_API_KEY` repo secret to enable the advisory live-judge CI job
