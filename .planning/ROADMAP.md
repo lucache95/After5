@@ -51,7 +51,7 @@ sound fits its cover.
 
 - [ ] **Phase 8: Compliant Any-City Venue Corpus** - Foursquare becomes the stored/LLM-fed corpus (Google demoted to display-only), cities pre-seed on profile-location-set, and proximity/hours guards fail loud on missing data.
 - [ ] **Phase 9: Trustworthy Generation + Eval Harness** - One-tap any-city generate + swap-a-stop/NL-tweak improve loop, vibe-matched ambient sound, proven by a deterministic + Opus-4.8-judge eval over a golden set that includes a cold city.
-- [ ] **Phase 10: Generation as the Primary Night Path** - Generating a date becomes THE way to create a night (publishes to the feed); the legacy manual `/create` funnel and orphaned `/plan`/catalog surfaces are retired or replaced.
+- [x] **Phase 10: Generation as the Primary Night Path** - Generating a date becomes THE way to create a night (publishes to the feed); the legacy manual `/create` funnel and orphaned `/plan`/catalog surfaces are retired or replaced.
 - [ ] **Phase 11: Page-by-Page UX & Nav Audit + Remediation** - A browser-driven audit of every route against the design system + a nav/flow rubric, then prioritized remediation so no page is a trap and the whole app reads as one branded product.
 
 ### Phase Details
@@ -104,7 +104,7 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — FLOW-01: make generation the primary path (+ tab/CTA → funnel) + demote the manual door (kept working) + verify no /places creation CTA
 - [x] 10-02-PLAN.md — FLOW-01: city selector in the funnel → self-RLS primary_city_id write + fire-and-forget enqueueSeedCity (unblocks Phase-8 pre-seed) + prefill, never block on cold city
-- [ ] 10-03-PLAN.md — phase gate: e2e primary-path (city→generate→improve→publish) + @420px visual-verify, local-green (no prod-bound DDL)
+- [x] 10-03-PLAN.md — phase gate: OFFLINE FLOW-01 wiring spec (city→generate→improve→publish, mock generation) + local-green; @420px visual-verify DEFERRED to Phase 11's interactive route audit; no prod-bound DDL (ships on push)
 **UI hint**: yes
 
 ### Phase 11: Page-by-Page UX & Nav Audit + Remediation

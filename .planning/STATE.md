@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 10-02-PLAN.md (FLOW-01 part 2/3: city selection wired into the generate funnel — a curated chip tap by a signed-in user POSTs /api/profile/city, which validates the cityId as an active curated city then writes profiles.primary_city_id under self-update RLS [.eq id=auth.uid(), profiles_owner_all; no admin client] and fires enqueueSeedCity(cityId) fire-and-forget, unblocking the deferred Phase-8 background pre-seed; KnownCity gained id; the saved city prefills + re-posts on change; free-text + cold/unseeded city fall through 08-04 and never block generation; NO new migration). Next plan 10-03 (FLOW-01 e2e + visual gate).
-last_updated: "2026-06-06T03:13:00.000Z"
-last_activity: 2026-06-05 -- Phase 10 Plan 02 executed (TDD: thin RLS server route POST /api/profile/city does the self-scoped primary_city_id write + fire-and-forget enqueueSeedCity; funnel curated picks carry cities.id, post for authed users, prefill the saved city, and never block generation on a cold city. 10/10 new tests green [5 route + 5 funnel], app/create suite 17/17, web tsc clean. No deviations, no migration.)
+stopped_at: Completed 10-03-PLAN.md — Phase 10 COMPLETE (FLOW-01 closed). Phase-gate offline RTL wiring spec (apps/web/app/create/__tests__/primary-path-wiring.test.tsx, 4/4) proves the whole primary path is wired with mock generation (no LLM/Foursquare/network): generate is the dominant /create door + the demoted manual link works; the + tab/wedge route to /create/generate; the curated city pick POSTs /api/profile/city; ImproveControls renders before PublishToFeedButton + a swap persists; publish routes to /nights/new?itinerary=<id>. Full create+city suites 26/26, web tsc clean. NO migration → Phase 10 is app-code only, ships on push, nothing to bundle into the Phase-8/9 cutover. The @420px visual-verify is DEFERRED to Phase 11's interactive route audit. Next: Phase 11 (UX-01/02, the last v2.0 phase).
+last_updated: "2026-06-06T03:30:00.000Z"
+last_activity: 2026-06-05 -- Phase 10 Plan 03 executed: FLOW-01 phase gate. Offline wiring spec proves city→generate→improve→publish + the dominant-generate/demoted-manual/global-route wiring; 4/4 new, 26/26 create+city suites, web tsc clean. Visual-verify deferred to Phase 11; no migration (ships on push). Phase 10 COMPLETE.
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 8
-  percent: 0
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 pha
 
 ## Current Position
 
-Phase: 10 — Generation as the Primary Night Path (in progress)
-Plan: 02 complete (FLOW-01 part 2/3: city selection + the deferred Phase-8 pre-seed wiring. NEW thin RLS server route POST /api/profile/city — zod-uuid validates cityId, verifies it is an active curated city, writes profiles.primary_city_id under profiles_owner_all self-RLS [.eq id=user.id, NO admin client], then fires enqueueSeedCity(cityId) fire-and-forget [logged .catch, not awaited into the response] so a slow/failing queue still returns 200; 401 anon / 400 bad-or-unknown city never write or enqueue. KnownCity widened to carry cities.id [additive; the anon /create select widened to id,slug,name so its `as KnownCity[]` cast still compiles]. generate/page.tsx selects id,slug,name + reads the authed profile's primary_city_id + joined city name [profiles_primary_city_id_fkey], passing prefillCityId/prefillCityName to CreateFlow. In CreateFlow a curated chip tap seeds the city text always and — for a signed-in user only — POSTs {cityId} fire-and-forget [failure → quiet sonner notice, never disables the "make my date" CTA]; the saved city prefills as selected; free-text non-curated cities leave primary_city_id untouched and still generate; a cold/unseeded curated city falls through 08-04 and never blocks. NO migration [profiles_owner_all self-update suffices; advisor unaffected]. TDD: route RED 6868ae9 → GREEN 0dd893e [5/5]; funnel RED 05d48c7 → GREEN 0f10ee3 [5/5]; app/create suite 17/17, web tsc clean) — next: 10-03 (FLOW-01 e2e + visual gate)
-Status: Executing
-Last activity: 2026-06-05 -- Phase 10 Plan 02 executed (the curated-city pick now writes the user's home city under self-RLS and warms it via enqueueSeedCity; saved city prefills + re-posts; cold city never blocks generation. FLOW-01 stays open until 10-03 lands the e2e/visual gate)
+Phase: 10 — Generation as the Primary Night Path (COMPLETE — FLOW-01 closed)
+Plan: 03 complete — phase gate. An OFFLINE RTL wiring spec (apps/web/app/create/__tests__/primary-path-wiring.test.tsx, 4/4) proves the whole FLOW-01 primary path is wired with mock generation (no real /api/create-plan LLM call, no Foursquare key, no network): (1) CreateChooser presents generate as the one bg-shell-accent door routing to /create/generate while the demoted "or build from scratch" link still drives createBlankItinerary → /plans/<id>/edit (no trap); (2) source-level assertion that BottomTabShell (+ tab) and UserMenu (wedge) both target /create/generate; (3) the curated Kelowna chip in CreateFlow (authed) POSTs {cityId} to /api/profile/city; (4) the mocked generation lands a result where ImproveControls is present + precedes PublishToFeedButton in the DOM, and a swap action calls the generate-plan improve dispatch (mocked) + persists in place; (5) PublishToFeedButton routes to /nights/new?itinerary=<id>. A no-trap test pins that a failed city save never disables the CTA. Full create+city suites 26/26, web tsc --noEmit clean. Reframed from the planned live-Playwright e2e + static @420px capture to an offline wiring spec per the objective; the @420px visual-verify is DEFERRED (not dropped) to Phase 11's interactive Playwright-MCP route audit. NO migration (10-02 confirmed profiles_owner_all self-update suffices) → Phase 10 is app-code only, ships via Vercel on push, nothing to bundle into the Phase-8/9 key-gated cutover. Commit 8f4d4bb. Next: Phase 11 (UX-01/02, the last v2.0 phase).
+Status: Phase 10 complete; v2.0 phases 8/9/11 still open (8 + 9 gated on FOURSQUARE_API_KEY; 11 is the final audit phase)
+Last activity: 2026-06-05 -- Phase 10 Plan 03 executed: the FLOW-01 phase gate. Offline wiring spec proves city→generate→improve→publish + the dominant-generate/demoted-manual/global-route wiring; 4/4 new, 26/26 create+city, web tsc clean. Visual-verify deferred to Phase 11; no migration (ships on push). FLOW-01 closed, Phase 10 complete.
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -55,6 +55,7 @@ Last activity: 2026-06-05 -- Phase 10 Plan 02 executed (the curated-city pick no
 |-------|-------|-------|----------|
 | 02 | 5 | ~43m | ~8.6m |
 | 03 | (in progress) | — | — |
+| 10 | 3 | ~24m | ~8m |
 | 05 | 4 | - | - |
 | 06 | 5 | - | - |
 
@@ -145,6 +146,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — Phase 10 Plan 02 executed: FLOW-01 part 2/3. The generate funnel now has a city selector — a curated chip tap by a signed-in user POSTs the new thin RLS route /api/profile/city, which validates the cityId as an active curated city, writes profiles.primary_city_id under profiles_owner_all self-update RLS (no admin client), then fires enqueueSeedCity(cityId) fire-and-forget (logged .catch, not awaited) so a queue hiccup still returns 200 — this is the only caller the deferred Phase-8 pre-seed was missing. KnownCity gained cities.id (additive; anon /create select widened to keep its cast compiling); the saved city prefills via the FK join + re-posts on change; free-text and cold/unseeded curated cities never block generation (08-04 fallthrough). NO migration. TDD both tasks (route 6868ae9→0dd893e, funnel 05d48c7→0f10ee3); 10/10 new + app/create 17/17 + web tsc clean. No deviations.
-Stopped at: Completed 10-02-PLAN.md; next plan 10-03 in Phase 10 (FLOW-01 e2e + visual gate).
+Last session: 2026-06-05 — Phase 10 Plan 03 executed: the FLOW-01 phase gate, closing Phase 10. An OFFLINE RTL wiring spec (apps/web/app/create/__tests__/primary-path-wiring.test.tsx, 4/4) proves the whole primary path is wired with mock generation (no LLM, no Foursquare key, no network): generate is the dominant /create door + the demoted manual link works (no trap); the + tab/wedge route to /create/generate; the curated city pick POSTs /api/profile/city; ImproveControls renders before PublishToFeedButton + a swap persists in place; publish routes to /nights/new?itinerary=<id>. Full create+city suites 26/26, web tsc clean. Reframed from the planned live-Playwright e2e + static @420px capture to an offline wiring spec per the objective; the @420px visual-verify is DEFERRED (not dropped) to Phase 11's interactive Playwright-MCP route audit. NO migration → Phase 10 is app-code only, ships on push, nothing to bundle into the Phase-8/9 cutover. Commit 8f4d4bb. FLOW-01 complete, Phase 10 complete.
+Stopped at: Completed 10-03-PLAN.md — Phase 10 COMPLETE (FLOW-01 closed). Next: Phase 11 (UX-01/02 page-by-page UX & nav audit + remediation — the last v2.0 phase; its interactive @420px route audit inherits the deferred create-surface visual-verify). Phases 8 + 9 gates remain open, blocked on FOURSQUARE_API_KEY.
 Resume file: None

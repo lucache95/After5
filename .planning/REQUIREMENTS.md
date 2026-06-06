@@ -32,7 +32,7 @@ harness), and its ambient sound fits its cover.
 - [x] **SOUND-01** — More ambient tracks, and a generated date auto-receives a vibe-matched ambient sound (sound ↔ cover cohere via shared vibe tags; no image-ML matching).
 
 ### FLOW — into the dating product
-- [ ] **FLOW-01** — Generating a date becomes the primary way to create a night in the dating app (publishes to the feed); the legacy manual `/create` planner funnel (and its orphaned `/plan`/catalog surfaces) is retired or replaced.
+- [x] **FLOW-01** — Generating a date becomes the primary way to create a night in the dating app (publishes to the feed); the legacy manual `/create` planner funnel (and its orphaned `/plan`/catalog surfaces) is retired or replaced.
 
 ### UX — page-by-page brand + navigation audit
 - [ ] **UX-01** — A systematic audit of **every** route/page and shared component against (a) the design system (DESIGN-SYSTEM.md / Barbiecore brand consistency) and (b) a navigation + flow rubric (every deep route has a working back/up affordance, no dead-ends or traps, correct tab/back-stack semantics, consistent chrome, sane entry/exit). Produces a severity-scored findings inventory covering the whole app surface (incl. the legacy planner surfaces being retired under FLOW-01).
@@ -96,7 +96,7 @@ known surface and can't catch dead buttons / broken nav / console+network errors
 | PLAN-02 | improve-loop | PLAN | Phase 9 | Complete |
 | EVAL-01 | eval-harness | EVAL | Phase 9 | Complete (09-03, 09-04) |
 | SOUND-01 | vibe-matched-sound | SOUND | Phase 9 | Complete |
-| FLOW-01 | generate-into-dating | FLOW | Phase 10 | Pending |
+| FLOW-01 | generate-into-dating | FLOW | Phase 10 | Complete |
 | UX-01 | ux-nav-brand-audit | UX | Phase 11 | Pending |
 | UX-02 | ux-remediation | UX | Phase 11 | Pending |
 
