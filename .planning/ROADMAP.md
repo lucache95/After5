@@ -100,7 +100,11 @@ Plans:
   1. From the create entry point, generating a date is the primary path, and a generated date publishes into the dating feed end-to-end.
   2. The legacy manual `/create` funnel and its orphaned `/plan`/catalog surfaces are retired or replaced — a user can no longer fall into a dead or competing creation funnel.
   3. The improve loop (swap a stop, NL tweaks) is reachable in the create flow before publish, so what lands in the feed is the refined date.
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
+Plans:
+- [ ] 10-01-PLAN.md — FLOW-01: make generation the primary path (+ tab/CTA → funnel) + demote the manual door (kept working) + verify no /places creation CTA
+- [ ] 10-02-PLAN.md — FLOW-01: city selector in the funnel → self-RLS primary_city_id write + fire-and-forget enqueueSeedCity (unblocks Phase-8 pre-seed) + prefill, never block on cold city
+- [ ] 10-03-PLAN.md — phase gate: e2e primary-path (city→generate→improve→publish) + @420px visual-verify, local-green (no prod-bound DDL)
 **UI hint**: yes
 
 ### Phase 11: Page-by-Page UX & Nav Audit + Remediation
@@ -120,7 +124,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 8. Compliant Any-City Venue Corpus | 5/6 | In progress | - |
 | 9. Trustworthy Generation + Eval Harness | 4/6 | In progress | - |
-| 10. Generation as the Primary Night Path | 0/? | Not started | - |
+| 10. Generation as the Primary Night Path | 0/3 | In progress | - |
 | 11. Page-by-Page UX & Nav Audit + Remediation | 0/? | Not started | - |
 
 ### Conventions (carried from v1.0)
