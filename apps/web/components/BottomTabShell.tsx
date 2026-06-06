@@ -50,7 +50,7 @@ export function BottomTabShell({ userId }: { userId?: string } = {}) {
             disc so it reads as the primary action, TikTok-style. */}
         <div className="flex flex-1 items-start justify-center">
           <Link
-            href="/create"
+            href="/create/generate"
             aria-label="create"
             aria-current={isActive(pathname, '/create') ? 'page' : undefined}
             className={cn(

@@ -151,9 +151,10 @@ export function UserMenu({ variant = 'on-light' }: { variant?: 'on-dark' | 'on-l
               {item.label}
             </Link>
           ))}
-          {/* discreet planner wedge — not part of the main dating IA */}
+          {/* discreet planner wedge — not part of the main dating IA. Phase 10:
+              points straight at the generate funnel. */}
           <Link
-            href="/create"
+            href="/create/generate"
             onClick={() => setOpen(false)}
             className="block border-t border-shell-ink/10 px-4 py-2.5 font-body text-xs lowercase text-shell-ink/55 transition-colors hover:bg-shell-pink/60 hover:text-shell-ink/80"
             role="menuitem"

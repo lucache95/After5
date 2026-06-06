@@ -53,7 +53,7 @@ export default async function PlacesIndexPage() {
         <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-4">
           <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">after5</Link>
           <Link href="/create" className="inline-flex items-center gap-1.5 rounded-pill bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95">
-            build a date here
+            make a night
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </Link>
         </nav>
@@ -118,7 +118,7 @@ export default async function PlacesIndexPage() {
             href="/create"
             className="inline-flex items-center gap-2 rounded-pill bg-shell-accent px-8 py-4 font-body text-base font-semibold lowercase text-white shadow-fun transition active:scale-95"
           >
-            build a date here
+            make a night
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </Link>
         </div>
