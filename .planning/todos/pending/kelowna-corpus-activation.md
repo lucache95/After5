@@ -2,8 +2,23 @@
 created: 2026-06-08
 title: Kelowna corpus activation — backfill (Google) + promote drafts → 3x the live pool
 area: venue-corpus / places / date-generator
-status: TABLED (ready to execute; user paused 2026-06-08)
+status: DONE (executed autonomously 2026-06-08) — see Outcome below + docs/kelowna-diversity-audit-2026-06-08.md
 ---
+
+## Outcome (2026-06-08, applied to PROD ufufmcpnysvwtutpbian — all reversible)
+- **Live pool 59 → 169** (2.86×). Every live row now has hours + coords.
+- Backfilled 41 hours + 10 coords via Google (`scripts/backfill-hours-coords.mjs`);
+  the old enrich script never wrote opens/closes/lat/lng.
+- Gated promotion: 104 promoted, 4 retail duds rejected (Spades Tactical, Art Knapp,
+  Okanagan Garden Centres, Rustic Chalk Decor), 12 held back (no Google hours).
+- Dead signals revived: **is_delighter 0 → 48**, food_focused 1 → 25, creative 1 → 13.
+- Sunset hole closed: **sunset_spot 0 → 3, viewpoint 1 → 4** (6 lookouts hand-added via
+  `scripts/seed-sunset-spots.mjs`); mis-typed experiences retyped out of `shop`.
+- Diversity audit: 19/21 supply categories meet target; all 14 demand archetypes ≥10.
+  Gaps: walks/waterfront (3/6+), markets/shopping (1/3+). See acquisition backlog.
+- Variety test: ~8 distinct structures / 12 dates — generator no longer repetitive.
+- Provenance/reversal SQL: `apps/web/scripts/sql/2026-06-08-kelowna-corpus-activation.applied.sql`.
+- Spec: `docs/superpowers/specs/2026-06-08-kelowna-corpus-activation-design.md`.
 
 ## The opportunity
 The curated Kelowna corpus is **179 venues but only 59 are live** — the generator only sees the 59.
