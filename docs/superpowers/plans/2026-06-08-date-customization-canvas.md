@@ -35,7 +35,7 @@
 
 ---
 
-## Task 1: Generate one itinerary, not three
+## Task 1: Generate one itinerary, not three ✅ DONE (commit 21cdfb2)
 
 **Files:**
 - Modify: `supabase/functions/generate-plan/providers/pipeline.ts:47-188`
