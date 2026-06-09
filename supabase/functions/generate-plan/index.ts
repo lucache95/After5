@@ -92,7 +92,7 @@ serve(async (req: Request) => {
     // update_itinerary_stops — which re-checks auth.uid() + ownership. The
     // write MUST run as the caller, so we build a client bound to the caller's
     // JWT (NOT the service-role client) so auth.uid() resolves in the RPC.
-    if (body && (body.action === 'swap_stop' || body.action === 'nl_tweak')) {
+    if (body && (body.action === 'swap_stop' || body.action === 'nl_tweak' || body.action === 'regenerate_title' || body.action === 'remove_stop')) {
       const improveParsed = ImproveInputSchema.safeParse(body);
       if (!improveParsed.success) {
         return jsonResponse({ error: 'invalid_input', details: improveParsed.error.flatten() }, 400);
@@ -121,6 +121,8 @@ serve(async (req: Request) => {
           issues: result.issues,
           error: result.error,
           code: result.code,
+          title: result.title,
+          hook: result.hook,
         },
         result.httpStatus,
       );

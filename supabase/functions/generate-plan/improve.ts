@@ -556,10 +556,14 @@ export async function handleImprove(
     if (!newCopy.ok) {
       return { ok: false, error: newCopy.error, code: 'llm_failed', httpStatus: 502 };
     }
-    const { error } = await supabase.from('itineraries')
+    const { data: updated, error } = await supabase.from('itineraries')
       .update({ title: newCopy.title, hook: newCopy.hook })
-      .eq('id', input.itinerary_id);
+      .eq('id', input.itinerary_id)
+      .select('id');
     if (error) return { ok: false, error: error.message, code: 'persist_failed', httpStatus: 500 };
+    if (!updated || updated.length === 0) {
+      return { ok: false, error: 'not your itinerary', code: 'not_owner', httpStatus: 403 };
+    }
     return { ok: true, itinerary_id: input.itinerary_id, stops: stops as ItineraryStop[], title: newCopy.title, hook: newCopy.hook, httpStatus: 200 };
   } else if (input.action === 'remove_stop') {
     // Bounds-check: stop_index must be within the current stops array.
