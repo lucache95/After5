@@ -342,15 +342,26 @@ function InputScreen(props: {
         </p>
       )}
 
-      {/* CTA */}
+      {/* CTA — neutral (not pale-pink) when disabled so it never reads as a
+          low-contrast active button; a hint names what's still needed (F2). */}
       <button
         type="button"
         onClick={onGenerate}
         disabled={!canGenerate}
-        className="mt-10 w-full rounded-pill bg-shell-accent px-6 py-4 font-body text-base font-semibold lowercase text-white shadow-fun transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        className={cn(
+          'mt-10 w-full rounded-pill px-6 py-4 font-body text-base font-semibold lowercase transition',
+          canGenerate
+            ? 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-[0.98]'
+            : 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35',
+        )}
       >
         {loading ? 'building your night…' : 'make my date'}
       </button>
+      {!canGenerate && !loading && (
+        <p className="mt-3 text-center font-body text-xs lowercase text-shell-ink/55">
+          {vibe.length < 1 ? 'pick a vibe to start' : 'add a city'}
+        </p>
+      )}
     </div>
   );
 }
