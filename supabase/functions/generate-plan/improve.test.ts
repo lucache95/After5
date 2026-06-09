@@ -12,6 +12,8 @@ import {
   extractKnobs,
   NL_TWEAK_TOOL,
   MAX_TWEAK_TEXT_LENGTH,
+  ImproveInputSchema,
+  handleImprove,
   type ImproveKnobs,
 } from './improve.ts';
 import type { Place, PlanInputs, ItineraryStop } from './types.ts';
@@ -258,4 +260,60 @@ Deno.test('NL_TWEAK_TOOL: schema constrains intent + time_shift to enums', () =>
   const props = NL_TWEAK_TOOL.input_schema.properties as Record<string, { enum?: string[] }>;
   assert(Array.isArray(props.intent.enum));
   assert(Array.isArray(props.time_shift.enum));
+});
+
+// ─── ImproveInputSchema: regenerate_title ────────────────────────────────────
+
+Deno.test('ImproveInputSchema: accepts regenerate_title with optional tone', () => {
+  const ok = ImproveInputSchema.safeParse({ action: 'regenerate_title', itinerary_id: 'abc', tone: 'romantic' });
+  assertEquals(ok.success, true);
+  const okNoTone = ImproveInputSchema.safeParse({ action: 'regenerate_title', itinerary_id: 'abc' });
+  assertEquals(okNoTone.success, true);
+  const badTone = ImproveInputSchema.safeParse({ action: 'regenerate_title', itinerary_id: 'abc', tone: 'nope' });
+  assertEquals(badTone.success, false);
+});
+
+// ─── handleImprove: regenerate_title ─────────────────────────────────────────
+
+Deno.test('handleImprove regenerate_title: returns a new title without touching stops', async () => {
+  const fakeStops = [
+    makeStop({ place_id: 'p1', place_name: 'A' }),
+    makeStop({ place_id: 'p2', place_name: 'B' }),
+  ];
+
+  // Stub supabase: returns an itinerary row on .from().select().eq().maybeSingle()
+  // and accepts .from().update().eq() for the title persist.
+  const fakeSupabase = {
+    from: (table: string) => ({
+      select: (_cols: string) => ({
+        eq: (_col: string, _val: string) => ({
+          maybeSingle: async () => ({
+            data: { id: 'it1', user_id: 'u1', template_id: null, stops: fakeStops, inputs: null, city_id: null, title: 'Old Title' },
+            error: null,
+          }),
+        }),
+      }),
+      update: (_vals: Record<string, unknown>) => ({
+        eq: (_col: string, _val: string) => Promise.resolve({ error: null }),
+      }),
+    }),
+  };
+
+  // Stub env: Anthropic client returns { title, hook } via text block
+  const fakeEnv = {
+    anthropicKey: 'fake',
+    haikuModel: 'fake-model',
+    _stubTitleResponse: { title: 'Golden Hour & Good Talk', hook: 'two hours, one sunset' },
+  };
+
+  const res = await handleImprove(
+    { action: 'regenerate_title', itinerary_id: 'it1', tone: 'romantic' },
+    // deno-lint-ignore no-explicit-any
+    fakeSupabase as any,
+    // deno-lint-ignore no-explicit-any
+    fakeEnv as any,
+  );
+  assertEquals(res.ok, true);
+  assertEquals(res.title, 'Golden Hour & Good Talk');
+  assertEquals(res.stops?.map((s) => s.place_id), ['p1', 'p2']); // frozen
 });

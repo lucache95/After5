@@ -330,6 +330,11 @@ export const ImproveInputSchema = z.discriminatedUnion('action', [
     itinerary_id: z.string().uuid(),
     tweak_text: z.string().min(1).max(MAX_TWEAK_TEXT_LENGTH),
   }),
+  z.object({
+    action: z.literal('regenerate_title'),
+    itinerary_id: z.string().min(1),
+    tone: z.enum(['romantic', 'playful', 'casual']).optional(),
+  }),
 ]);
 
 export type ImproveInput = z.infer<typeof ImproveInputSchema>;
@@ -338,6 +343,8 @@ export interface ImproveEnv {
   anthropicKey: string;
   haikuModel: string;
   googleKey?: string;
+  /** Test-only: if set, regenerateTitle returns this value without calling the API. */
+  _stubTitleResponse?: { title: string; hook: string };
 }
 
 export interface ImproveResult {
@@ -347,6 +354,8 @@ export interface ImproveResult {
   issues?: CoherenceIssue[];
   error?: string;
   code?: string;
+  title?: string | null;
+  hook?: string | null;
   httpStatus: number;
 }
 
@@ -408,6 +417,47 @@ async function rewriteStopCopy(
   } catch (e) {
     console.error('[improve] copy rewrite failed, leaving empty:', e);
     return '';
+  }
+}
+
+// Rewrite ONLY the title + hook for an itinerary whose stops are FROZEN. Mirrors
+// rewriteStopCopy's SDK call (plain messages, text block parse, same model). The
+// LLM never re-picks places; it only recrafts the display name + hook line.
+async function regenerateTitle(
+  env: ImproveEnv,
+  opts: { stops: ItineraryStop[]; currentTitle: string; tone?: string },
+): Promise<{ title: string; hook: string }> {
+  // Test-only escape hatch: bypass the real API call when a stub is injected.
+  if (env._stubTitleResponse) return env._stubTitleResponse;
+
+  try {
+    const client = new Anthropic({ apiKey: env.anthropicKey });
+    const stopNames = opts.stops.map((s) => s.place_name).join(' → ');
+    const toneInstruction = opts.tone
+      ? `Make it feel more ${opts.tone}.`
+      : 'Give it a fresh, different angle.';
+    const response = await client.messages.create({
+      model: env.haikuModel,
+      max_tokens: 256,
+      temperature: 0.8,
+      system:
+        `You write short, evocative date-night titles for After5. Rules: lowercase-friendly, no clichés, no em-dashes, no "magical"/"perfect"/"enchanting". ${toneInstruction} Return ONLY valid JSON with keys "title" (max 6 words) and "hook" (one line, max 12 words). No prose, no markdown.`,
+      messages: [
+        {
+          role: 'user',
+          content: `Current title: "${opts.currentTitle}"\nStops in order: ${stopNames}\n\nWrite a NEW title (max 6 words) and a one-line hook (max 12 words). Do not change the stops.`,
+        },
+      ],
+    });
+    const block = (response.content as Array<{ type: string; text?: string }>).find((b) => b.type === 'text');
+    const raw = block?.text?.trim() ?? '{}';
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const title = (typeof parsed.title === 'string' && parsed.title.trim()) ? parsed.title.trim() : opts.currentTitle;
+    const hook = (typeof parsed.hook === 'string' && parsed.hook.trim()) ? parsed.hook.trim() : '';
+    return { title, hook };
+  } catch (e) {
+    console.error('[improve] title rewrite failed, keeping current:', e);
+    return { title: opts.currentTitle, hook: '' };
   }
 }
 
@@ -477,6 +527,18 @@ export async function handleImprove(
     const pickPlace = candidates.find((c) => c.id === res.stop.place_id);
     res.stop.what_to_do = await rewriteStopCopy(env, res.stop, pickPlace);
     nextStops = res.stops;
+  } else if (input.action === 'regenerate_title') {
+    // Title-only rewrite: stops are FROZEN, only title + hook change.
+    const newCopy = await regenerateTitle(env, {
+      stops: stops as ItineraryStop[],
+      currentTitle: itin.title as string,
+      tone: input.tone,
+    });
+    const { error } = await supabase.from('itineraries')
+      .update({ title: newCopy.title, hook: newCopy.hook })
+      .eq('id', input.itinerary_id);
+    if (error) return { ok: false, error: error.message, code: 'persist_failed', httpStatus: 500 };
+    return { ok: true, itinerary_id: input.itinerary_id, stops: stops as ItineraryStop[], title: newCopy.title, hook: newCopy.hook, httpStatus: 200 };
   } else {
     // NL tweak — Haiku parses the (already-capped) text into knobs; re-run the
     // single-slot picker isn't enough, so we apply the knobs to the inputs and
