@@ -28,7 +28,7 @@ export function CoverEditor({
           <div className="mt-2 grid grid-cols-3 gap-2">
             {photos.map((url, i) => (
               <button
-                key={i}
+                key={url}
                 aria-label={`use ${url}`}
                 onClick={() => {
                   onApply(url);

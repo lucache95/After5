@@ -13,6 +13,9 @@ export function Sheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-shell-ink/30" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="w-full rounded-t-3xl bg-shell-base p-5 pb-8"
         onClick={(e) => e.stopPropagation()}
       >

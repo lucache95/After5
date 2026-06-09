@@ -41,4 +41,8 @@ test('drop this stop only shows with more than one stop, and removes', async () 
   expect(dropButtons.length).toBe(2);
   await userEvent.click(dropButtons[1]);
   await waitFor(() => expect(onApply).toHaveBeenCalledWith([{ place_id: 'p1', place_name: 'A' }]));
+  // the drop must send remove_stop for the clicked index, not a swap
+  expect(invoke).toHaveBeenCalledWith('generate-plan', {
+    body: { action: 'remove_stop', itinerary_id: 'it1', stop_index: 1 },
+  });
 });
