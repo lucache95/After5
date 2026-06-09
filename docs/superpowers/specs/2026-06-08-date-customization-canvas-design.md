@@ -38,6 +38,16 @@ process.
    per-piece edits (and Track B venues), not slot-machining.
 4. **Optional, not forced.** Every piece is AI-filled and publishable as-is. Editing is invited, never
    required. 90% publishing beats 90% perfectly customizing.
+5. **Maximize the ownership moment.** The instant a user swaps a stop, retitles, or shifts the timing,
+   it stops being "the AI's date" and becomes "my night." Design *and copy* amplify that:
+   - Call it **"your night,"** never "AI-generated date."
+   - Label edits as **specific creative acts**, never mechanical ones. "make it more romantic," "swap
+     this stop," "change the ending," "fresh cover" — not "regenerate." Specific actions feel like
+     authorship; "regenerate" feels like pulling a slot machine. **The word "regenerate" must not
+     appear in UI copy.**
+   - Target feeling: *"I described the night I wanted, After5 made something surprisingly good, I made
+     a couple tweaks, I published it."* Not *"I filled out a form."* The first creates hosts; the
+     second creates abandonment.
 
 ---
 
@@ -93,15 +103,15 @@ Each: **today / new work / controls / persistence.**
 - **Today:** Claude writes title + hook at generation; no edit control. NL-tweak can shift tone of the
   whole night.
 - **New:** a focused title/hook regenerate.
-- **Controls:** `regenerate` (new copy over the same stops) · `tone` (romantic / playful / casual) ·
-  `edit manually` (free text).
+- **Controls (UI copy):** `another take` (fresh title/hook over the same stops) ·
+  `more romantic / playful / casual` (tone shift) · `write my own` (manual). No "regenerate" wording.
 - **Persistence:** writes title/hook to the itinerary row immediately.
 
 ### 2. Cover image
 - **Today:** `generate-cover` (FLUX) produces a cover; no in-flow control.
 - **New:** surface regenerate + pick-from-venue-photos.
-- **Controls:** `regenerate` (new FLUX cover) · `pick from venue photos` (choose any stop's photo as the
-  cover). **Deferred:** upload-your-own (v1.1).
+- **Controls (UI copy):** `fresh cover` (new FLUX image) · `use a venue photo` (any stop's photo as the
+  cover). **Deferred:** upload-your-own (v1.1). No "regenerate" wording.
 - **Persistence:** writes `cover_image_url` to the itinerary row.
 
 ### 3. Stops
@@ -109,8 +119,9 @@ Each: **today / new work / controls / persistence.**
   `ImproveControls`. Swaps re-validate proximity/budget/hours server-side; incoherent results surface as
   a toast, never a silent swap.
 - **New:** search a *specific* venue by name (near the city) and insert it; add / remove a stop.
-- **Controls (per stop):** `swap` (exists) · `search a specific venue` (new) · `remove`. Plus
-  `+ add stop`. **Deferred:** manual reorder (v1.1).
+- **Controls (per stop, UI copy):** `swap this stop` (exists) · `find a specific spot` (search, new) ·
+  `drop this stop`. Plus `add a stop`. Copy idea: frame swapping the *final* stop as
+  **"change the ending."** **Deferred:** manual reorder (v1.1).
 - **Persistence:** via the existing improve dispatch (`update_itinerary_stops`), which re-validates
   coherence. Search/add must run the same proximity/budget/hours validation as swap.
 
