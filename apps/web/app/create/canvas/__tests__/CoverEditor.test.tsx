@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CoverEditor } from '../CoverEditor';
-
-const invoke = vi.fn();
-vi.mock('@/lib/after5/client', () => ({ browserAfter5Client: () => ({ functions: { invoke } }) }));
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -20,7 +17,6 @@ vi.mock('next/image', () => ({
 
 describe('CoverEditor', () => {
   beforeEach(() => {
-    invoke.mockReset();
     toastSuccess.mockReset();
     toastError.mockReset();
   });
@@ -28,15 +24,7 @@ describe('CoverEditor', () => {
   it('use a venue photo applies that stop photo as the cover', async () => {
     const onApply = vi.fn();
     const stops = [{ place_id: 'p1', place_name: 'A', photo_url: '/a.jpg' }];
-    render(
-      <CoverEditor
-        itineraryId="it1"
-        stops={stops as never}
-        current={null}
-        onApply={onApply}
-        onClose={() => {}}
-      />,
-    );
+    render(<CoverEditor stops={stops as never} onApply={onApply} onClose={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: 'use /a.jpg' }));
     expect(onApply).toHaveBeenCalledWith('/a.jpg');
   });
@@ -46,55 +34,18 @@ describe('CoverEditor', () => {
       { place_id: 'p1', place_name: 'A', photo_url: '/a.jpg' },
       { place_id: 'p2', place_name: 'B', photo_url: null },
     ];
-    render(
-      <CoverEditor
-        itineraryId="it1"
-        stops={stops as never}
-        current={null}
-        onApply={vi.fn()}
-        onClose={() => {}}
-      />,
-    );
+    render(<CoverEditor stops={stops as never} onApply={vi.fn()} onClose={() => {}} />);
     // getByRole throws if not found — confirms the photo button rendered
     screen.getByRole('button', { name: 'use /a.jpg' });
     // null photo should NOT produce a button
     expect(screen.queryByRole('button', { name: 'use null' })).toBeNull();
   });
 
-  it('fresh cover calls generate-cover and applies on success', async () => {
-    invoke.mockResolvedValue({
-      data: { processed: 1, results: [{ id: 'it1', cover: 'https://cdn.example.com/cover.webp' }] },
-      error: null,
-    });
-    const onApply = vi.fn();
-    render(
-      <CoverEditor
-        itineraryId="it1"
-        stops={[]}
-        current={null}
-        onApply={onApply}
-        onClose={() => {}}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /fresh cover/i }));
-    await waitFor(() => expect(onApply).toHaveBeenCalledWith('https://cdn.example.com/cover.webp'));
-    expect(toastSuccess).toHaveBeenCalled();
-  });
-
-  it('fresh cover shows error toast and does NOT call onApply on failure', async () => {
-    invoke.mockResolvedValue({ data: null, error: new Error('network') });
-    const onApply = vi.fn();
-    render(
-      <CoverEditor
-        itineraryId="it1"
-        stops={[]}
-        current={null}
-        onApply={onApply}
-        onClose={() => {}}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /fresh cover/i }));
-    await waitFor(() => expect(toastError).toHaveBeenCalled());
-    expect(onApply).not.toHaveBeenCalled();
+  it('shows an empty state when no stop has a photo', () => {
+    const stops = [{ place_id: 'p1', place_name: 'A', photo_url: null }];
+    render(<CoverEditor stops={stops as never} onApply={vi.fn()} onClose={() => {}} />);
+    expect(screen.queryByRole('button', { name: /use / })).toBeNull();
+    // getByText throws if not found — confirms the empty state rendered
+    screen.getByText(/no venue photos/i);
   });
 });
