@@ -31,12 +31,23 @@ export function DateCanvas({ itinerary, onStartOver }: { itinerary: Itinerary; o
     <main className="mx-auto min-h-dvh w-full max-w-[480px] bg-shell-base px-5 pb-28 pt-4">
       <header className="mb-4 flex items-center justify-between">
         <span className="font-heading text-xl lowercase text-shell-ink">your night</span>
-        <Link
-          href={`/nights/new?itinerary=${id}`}
-          className="inline-flex min-h-[44px] items-center rounded-pill bg-shell-accent px-5 font-body text-sm font-semibold lowercase text-white shadow-fun active:scale-95"
-        >
-          publish →
-        </Link>
+        {id ? (
+          <Link
+            href={`/nights/new?itinerary=${id}`}
+            className="inline-flex min-h-[44px] items-center rounded-pill bg-shell-accent px-5 font-body text-sm font-semibold lowercase text-white shadow-fun active:scale-95"
+          >
+            publish →
+          </Link>
+        ) : (
+          // No persisted id means there's nothing to publish yet — never link to
+          // /nights/new?itinerary= with an empty id (lands the user on a dead form).
+          <span
+            aria-disabled="true"
+            className="inline-flex min-h-[44px] items-center rounded-pill bg-shell-ink/10 px-5 font-body text-sm font-semibold lowercase text-shell-ink/35"
+          >
+            publish →
+          </span>
+        )}
       </header>
 
       <section className="overflow-hidden rounded-3xl bg-shell-pink/40 ring-1 ring-shell-ink/10">
