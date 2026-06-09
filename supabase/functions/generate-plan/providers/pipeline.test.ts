@@ -1,5 +1,6 @@
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { computeUnverifiedRate } from './unverified-rate.ts';
+import { TARGET_ITINERARY_COUNT } from './pipeline.ts';
 import type { Place } from '../types.ts';
 
 // Minimal Place factory — only coords + hours matter for unverified_rate.
@@ -35,6 +36,10 @@ function makePlace(overrides: Partial<Place>): Place {
     ...overrides,
   };
 }
+
+Deno.test('TARGET_ITINERARY_COUNT: canvas flow produces exactly 1 itinerary per request', () => {
+  assertEquals(TARGET_ITINERARY_COUNT, 1);
+});
 
 Deno.test('computeUnverifiedRate: 1 null-coord + 1 null-hours of 4 → 0.5', () => {
   const pool = [

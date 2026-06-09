@@ -26,6 +26,10 @@ import { PipelineError } from './pipeline-error.ts';
 // pipeline-error.ts so unit tests can import it without the Anthropic-SDK chain.
 export { PipelineError };
 
+// One AI draft per request (the customization canvas shapes that single date;
+// the old 3-candidate picker was removed). See the date-customization-canvas spec.
+export const TARGET_ITINERARY_COUNT = 1;
+
 export async function runPipeline(
   ctx: GenerationContext,
   opts?: { approvalStatuses?: string[] },
@@ -44,9 +48,9 @@ export async function runPipeline(
     throw new PipelineError('must_includes_unsatisfiable', 'No combination satisfies all must-includes for these inputs.', 422);
   }
 
-  // 4. Load templates and pick top 3
+  // 4. Load templates and pick top TARGET_ITINERARY_COUNT
   const allTemplates = await loadTemplates(supabase, inputs.occasion);
-  const topTemplates = selectTopTemplates(allTemplates, inputs, 3);
+  const topTemplates = selectTopTemplates(allTemplates, inputs, TARGET_ITINERARY_COUNT);
   if (topTemplates.length === 0) {
     throw new PipelineError('no_template_match', 'No template matches those inputs.', 422);
   }
@@ -181,11 +185,11 @@ export async function runPipeline(
     throw new PipelineError('no_valid_itineraries', 'Could not assemble valid itineraries from the candidate pool.', 422);
   }
 
-  // If we got fewer than 3 valid itineraries, try the remaining templates
-  if (itineraries.length < 3 && allTemplates.length > topTemplates.length) {
+  // If we got fewer than TARGET_ITINERARY_COUNT valid itineraries, try the remaining templates
+  if (itineraries.length < TARGET_ITINERARY_COUNT && allTemplates.length > topTemplates.length) {
     const remaining = allTemplates.filter((t) => !topTemplates.some((tt) => tt.id === t.id));
     for (const t of remaining) {
-      if (itineraries.length >= 3) break;
+      if (itineraries.length >= TARGET_ITINERARY_COUNT) break;
       const it = buildWithRetry(t);
       if (it) {
         itineraries.push(it);
