@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client } from '@/lib/after5/client';
+import { Sheet } from './Sheet';
 
 type Tone = 'romantic' | 'playful' | 'casual';
 
@@ -82,30 +83,3 @@ export function TitleEditor({ itineraryId, current, onApply, onClose }: {
   );
 }
 
-// Minimal bottom-sheet shell. Task 7 will extract this to ./Sheet.tsx for reuse.
-function Sheet({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end bg-shell-ink/30" onClick={onClose}>
-      <div
-        className="w-full rounded-t-3xl bg-shell-base p-5 pb-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <p className="font-heading text-lg lowercase text-shell-ink">{title}</p>
-          <button aria-label="close" onClick={onClose} className="min-h-[44px] px-2 text-shell-ink/60">
-            done
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
