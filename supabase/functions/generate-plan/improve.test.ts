@@ -326,6 +326,139 @@ Deno.test('regenerateTitle: returns ok:false on LLM error — does not swallow f
   if (!res.ok) assert(res.error.includes('network timeout'));
 });
 
+// ─── handleImprove helpers ────────────────────────────────────────────────────
+
+// Builds a minimal fake SupabaseClient that:
+//   • returns `row` on itineraries .select().eq().maybeSingle()
+//   • returns `row.stops` as Place stubs on places .select().in() (backfilled from stop coords)
+//   • accepts .rpc('update_itinerary_stops') with no error
+// This covers the full remove_stop dispatch path without any live Supabase or LLM calls.
+function makeFakeSupabaseWithItinerary(row: {
+  id: string;
+  user_id: string;
+  stops: Array<Partial<ItineraryStop> & { place_id: string; place_name: string }>;
+}) {
+  return {
+    // deno-lint-ignore no-explicit-any
+    from: (table: string): any => {
+      if (table === 'itineraries') {
+        return {
+          select: (_cols: string) => ({
+            eq: (_col: string, _val: string) => ({
+              maybeSingle: async () => ({
+                data: {
+                  id: row.id,
+                  user_id: row.user_id,
+                  template_id: null,
+                  stops: row.stops,
+                  inputs: null,
+                  city_id: null,
+                  title: 'Test Night',
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'places') {
+        // Return minimal Place stubs from the stop coords so coherence has coords.
+        // Use opens/closes spanning all hours so isOpenAt always passes in tests.
+        return {
+          select: (_cols: string) => ({
+            in: (_col: string, _ids: string[]) => ({
+              data: row.stops.map((s) => ({
+                id: s.place_id,
+                name: s.place_name,
+                type: s.place_type ?? 'cafe',
+                lat: s.lat ?? 49.88,
+                lng: s.lng ?? -119.49,
+                opens: '00:00',
+                closes: '23:59',
+                typical_per_person: s.estimated_cost_pp ?? 0,
+                typical_duration_min: s.duration_min ?? 60,
+                vibe_tags: [],
+                quality_score: 5,
+                feedback_score: 1,
+              })),
+              error: null,
+            }),
+          }),
+        };
+      }
+      return {};
+    },
+    // deno-lint-ignore no-explicit-any
+    rpc: (_fn: string, _args: Record<string, unknown>): any =>
+      Promise.resolve({ error: null }),
+  };
+}
+
+// Minimal ImproveEnv for tests that do NOT need a real LLM call (remove_stop
+// never calls Anthropic — it's pure structural edit + coherence).
+function makeFakeImproveEnv(_overrides: Partial<ImproveEnv> = {}): ImproveEnv {
+  return { anthropicKey: 'fake', haikuModel: 'fake-model', ..._overrides };
+}
+
+// ─── handleImprove: remove_stop ───────────────────────────────────────────────
+
+const REMOVE_STOP_UUID = '11111111-1111-1111-1111-111111111111';
+
+Deno.test('handleImprove remove_stop: drops the stop, reflows, stays coherent', async () => {
+  const stops = [
+    { place_id: 'p1', place_name: 'A', lat: 49.880, lng: -119.490, place_type: 'restaurant', start_time: '18:00', duration_min: 60, estimated_cost_pp: 10 },
+    { place_id: 'p2', place_name: 'B', lat: 49.881, lng: -119.491, place_type: 'cafe', start_time: '19:30', duration_min: 60, estimated_cost_pp: 10 },
+    { place_id: 'p3', place_name: 'C', lat: 49.882, lng: -119.492, place_type: 'bar', start_time: '21:00', duration_min: 60, estimated_cost_pp: 10 },
+  ];
+  const fakeSupabase = makeFakeSupabaseWithItinerary({ id: REMOVE_STOP_UUID, user_id: 'u1', stops });
+  const res = await handleImprove(
+    { action: 'remove_stop', itinerary_id: REMOVE_STOP_UUID, stop_index: 1 },
+    // deno-lint-ignore no-explicit-any
+    fakeSupabase as any,
+    makeFakeImproveEnv(),
+  );
+  assertEquals(res.ok, true);
+  assertEquals(res.stops?.map((s) => s.place_id), ['p1', 'p3']);
+});
+
+Deno.test('handleImprove remove_stop: refuses to leave fewer than 1 stop', async () => {
+  const stops = [
+    { place_id: 'p1', place_name: 'A', lat: 49.880, lng: -119.490, place_type: 'cafe', start_time: '18:00', duration_min: 60, estimated_cost_pp: 10 },
+  ];
+  const fakeSupabase = makeFakeSupabaseWithItinerary({ id: REMOVE_STOP_UUID, user_id: 'u1', stops });
+  const res = await handleImprove(
+    { action: 'remove_stop', itinerary_id: REMOVE_STOP_UUID, stop_index: 0 },
+    // deno-lint-ignore no-explicit-any
+    fakeSupabase as any,
+    makeFakeImproveEnv(),
+  );
+  assertEquals(res.ok, false);
+});
+
+Deno.test('handleImprove remove_stop: rejects out-of-range stop_index', async () => {
+  const stops = [
+    { place_id: 'p1', place_name: 'A', lat: 49.880, lng: -119.490, place_type: 'cafe', start_time: '18:00', duration_min: 60, estimated_cost_pp: 10 },
+    { place_id: 'p2', place_name: 'B', lat: 49.881, lng: -119.491, place_type: 'bar', start_time: '19:30', duration_min: 60, estimated_cost_pp: 10 },
+  ];
+  const fakeSupabase = makeFakeSupabaseWithItinerary({ id: REMOVE_STOP_UUID, user_id: 'u1', stops });
+  const res = await handleImprove(
+    { action: 'remove_stop', itinerary_id: REMOVE_STOP_UUID, stop_index: 5 },
+    // deno-lint-ignore no-explicit-any
+    fakeSupabase as any,
+    makeFakeImproveEnv(),
+  );
+  assertEquals(res.ok, false);
+});
+
+Deno.test('ImproveInputSchema: accepts remove_stop with uuid + stop_index', () => {
+  const ok = ImproveInputSchema.safeParse({ action: 'remove_stop', itinerary_id: REMOVE_STOP_UUID, stop_index: 0 });
+  assertEquals(ok.success, true);
+  const badId = ImproveInputSchema.safeParse({ action: 'remove_stop', itinerary_id: 'not-a-uuid', stop_index: 0 });
+  assertEquals(badId.success, false);
+  const negIdx = ImproveInputSchema.safeParse({ action: 'remove_stop', itinerary_id: REMOVE_STOP_UUID, stop_index: -1 });
+  assertEquals(negIdx.success, false);
+});
+
 // ─── handleImprove: regenerate_title ─────────────────────────────────────────
 
 Deno.test('handleImprove regenerate_title: returns a new title without touching stops', async () => {

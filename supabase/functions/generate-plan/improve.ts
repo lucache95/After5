@@ -335,6 +335,11 @@ export const ImproveInputSchema = z.discriminatedUnion('action', [
     itinerary_id: z.string().uuid(),
     tone: z.enum(['romantic', 'playful', 'casual']).optional(),
   }),
+  z.object({
+    action: z.literal('remove_stop'),
+    itinerary_id: z.string().uuid(),
+    stop_index: z.number().int().min(0),
+  }),
 ]);
 
 export type ImproveInput = z.infer<typeof ImproveInputSchema>;
@@ -556,6 +561,22 @@ export async function handleImprove(
       .eq('id', input.itinerary_id);
     if (error) return { ok: false, error: error.message, code: 'persist_failed', httpStatus: 500 };
     return { ok: true, itinerary_id: input.itinerary_id, stops: stops as ItineraryStop[], title: newCopy.title, hook: newCopy.hook, httpStatus: 200 };
+  } else if (input.action === 'remove_stop') {
+    // Bounds-check: stop_index must be within the current stops array.
+    if (input.stop_index < 0 || input.stop_index >= stops.length) {
+      return { ok: false, error: 'no such stop', code: 'bad_index', httpStatus: 400 };
+    }
+    // Filter out the target stop; a night must always have at least one stop.
+    const next = stops.filter((_s, i) => i !== input.stop_index);
+    if (next.length < 1) {
+      return {
+        ok: false,
+        error: 'a night needs at least one stop.',
+        code: 'too_few_stops',
+        httpStatus: 422,
+      };
+    }
+    nextStops = next;
   } else {
     // NL tweak — Haiku parses the (already-capped) text into knobs; re-run the
     // single-slot picker isn't enough, so we apply the knobs to the inputs and
