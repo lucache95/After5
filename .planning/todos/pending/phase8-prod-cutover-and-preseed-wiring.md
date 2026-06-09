@@ -55,3 +55,24 @@ phases' code). Add to the atomic gated op:
 - generate + upload the 8 new ambient audio loops (ElevenLabs recipe → `docs/superpowers/SOUND-GENERATION.md`; service_role JWT to `ambient-sounds` bucket) — needs the ElevenLabs key
 - @420px visual-verify of the live improve-loop UI (ImproveControls in /create)
 - optional: set `ANTHROPIC_API_KEY` repo secret to enable the advisory live-judge CI job
+
+## UPDATE 2026-06-08 — cutover APPLIED; two items remain
+**Applied to prod `ufufmcpnysvwtutpbian` (gated, verified):** `FOURSQUARE_API_KEY` edge secret set
++ validated live (HTTP 200). Migrations `20260606150000` (places fsq source + relabel) and
+`20260606150100` (seed_city job_type) applied — relabel moved 92 `discovered`→`google_legacy`,
+removed **0** active+live venues (59 curated intact). `generate-plan` + `process-jobs` redeployed.
+Security advisor: no new findings. Then a follow-up commit (5aa3eb3) fixed three any-city
+integration-seam bugs found by the smoke (env.foursquareKey unwired; city_slug='kelowna' default
+shadowing city_query; open-city geocode still on Google → swapped to Foursquare). Verified: typed
+"Kelowna" → curated; "Portland" → reaches the FSQ open-city + warm path.
+
+**STILL OPEN:**
+1. **Cold-city warm writes 0 rows → `city_warming` 503.** Root cause isolated: `passesQualityFloor`
+   (`foursquare.ts:106`) requires `rating >= 7.0` AND rating present; sparse-rating FSQ cold-city
+   results all fail it → empty corpus. Fix = an evidence-based relax (e.g. accept null-rating
+   venues gated on popularity, or lower the floor) tuned against the date-quality eval harness +
+   re-smoke a cold city. NOTE: FSQ free-tier rate-limits (429) under burst testing — pace the
+   diagnostic calls. Also cosmetic: `foursquare.ts geocodeCity` returns the top venue's name as the
+   city display name ("128 SW 3rd Ave…" instead of "Portland") — fix to read a locality field.
+2. **Ambient audio (SOUND-01)** — migration `20260606160000` + the 8 ElevenLabs loops still
+   DEFERRED (no `ELEVENLABS_API_KEY`). Hold the seed migration with the audio.
