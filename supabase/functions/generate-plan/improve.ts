@@ -332,7 +332,7 @@ export const ImproveInputSchema = z.discriminatedUnion('action', [
   }),
   z.object({
     action: z.literal('regenerate_title'),
-    itinerary_id: z.string().min(1),
+    itinerary_id: z.string().uuid(),
     tone: z.enum(['romantic', 'playful', 'casual']).optional(),
   }),
 ]);
@@ -343,8 +343,6 @@ export interface ImproveEnv {
   anthropicKey: string;
   haikuModel: string;
   googleKey?: string;
-  /** Test-only: if set, regenerateTitle returns this value without calling the API. */
-  _stubTitleResponse?: { title: string; hook: string };
 }
 
 export interface ImproveResult {
@@ -420,23 +418,37 @@ async function rewriteStopCopy(
   }
 }
 
+// The real Anthropic messages.create call used by regenerateTitle. Extracted so
+// tests can inject a stub without a test-only field on ImproveEnv.
+async function _realCreateMessage(
+  client: Anthropic,
+  params: Parameters<Anthropic['messages']['create']>[0],
+) {
+  return client.messages.create(params);
+}
+
+export type CreateMessageImpl = (
+  client: Anthropic,
+  params: Parameters<Anthropic['messages']['create']>[0],
+) => Promise<Awaited<ReturnType<Anthropic['messages']['create']>>>;
+
 // Rewrite ONLY the title + hook for an itinerary whose stops are FROZEN. Mirrors
 // rewriteStopCopy's SDK call (plain messages, text block parse, same model). The
 // LLM never re-picks places; it only recrafts the display name + hook line.
-async function regenerateTitle(
+// On any LLM failure, returns { ok: false } so the handler can skip the persist
+// entirely — no empty-hook data-loss on a transient API error.
+export async function regenerateTitle(
   env: ImproveEnv,
   opts: { stops: ItineraryStop[]; currentTitle: string; tone?: string },
-): Promise<{ title: string; hook: string }> {
-  // Test-only escape hatch: bypass the real API call when a stub is injected.
-  if (env._stubTitleResponse) return env._stubTitleResponse;
-
+  createMessageImpl: CreateMessageImpl = _realCreateMessage,
+): Promise<{ ok: true; title: string; hook: string } | { ok: false; error: string }> {
   try {
     const client = new Anthropic({ apiKey: env.anthropicKey });
     const stopNames = opts.stops.map((s) => s.place_name).join(' → ');
     const toneInstruction = opts.tone
       ? `Make it feel more ${opts.tone}.`
       : 'Give it a fresh, different angle.';
-    const response = await client.messages.create({
+    const response = await createMessageImpl(client, {
       model: env.haikuModel,
       max_tokens: 256,
       temperature: 0.8,
@@ -454,10 +466,10 @@ async function regenerateTitle(
     const parsed = JSON.parse(raw) as Record<string, string>;
     const title = (typeof parsed.title === 'string' && parsed.title.trim()) ? parsed.title.trim() : opts.currentTitle;
     const hook = (typeof parsed.hook === 'string' && parsed.hook.trim()) ? parsed.hook.trim() : '';
-    return { title, hook };
+    return { ok: true, title, hook };
   } catch (e) {
-    console.error('[improve] title rewrite failed, keeping current:', e);
-    return { title: opts.currentTitle, hook: '' };
+    console.error('[improve] title rewrite failed:', e);
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
 
@@ -534,6 +546,11 @@ export async function handleImprove(
       currentTitle: itin.title as string,
       tone: input.tone,
     });
+    // On LLM failure, do NOT persist — returning an error prevents blanking the
+    // stored hook on a transient API error (data-loss guard).
+    if (!newCopy.ok) {
+      return { ok: false, error: newCopy.error, code: 'llm_failed', httpStatus: 502 };
+    }
     const { error } = await supabase.from('itineraries')
       .update({ title: newCopy.title, hook: newCopy.hook })
       .eq('id', input.itinerary_id);
