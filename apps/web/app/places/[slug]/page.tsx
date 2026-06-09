@@ -14,6 +14,7 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { imageForStop, coverImageFor } from '@/lib/place-image';
 import { PhotoLightbox } from '@/components/PhotoLightbox';
+import { PlaceBackButton } from '@/components/PlaceBackButton';
 
 // Rich SEO-canonical page for a single Kelowna spot. Backed by enriched
 // Google Places data (rating, reviews, photos, hours, phone, website) plus
@@ -242,21 +243,15 @@ export default async function PlacePage(props: {
 
       <header className="absolute inset-x-0 top-0 z-50">
         <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Always-visible back affordance (F1) — history-aware, never a dead end. */}
+            <PlaceBackButton backHref={safeBackHref} />
             <Link
               href="/"
               className="font-heading text-xl lowercase tracking-tight text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
             >
               after5
             </Link>
-            {safeBackHref && (
-              <Link
-                href={safeBackHref}
-                className="hidden items-center gap-1.5 rounded-pill bg-white/15 px-3.5 py-1.5 font-body text-xs lowercase text-white backdrop-blur-md transition-colors hover:bg-white/25 sm:inline-flex"
-              >
-                ← back to your plan
-              </Link>
-            )}
           </div>
         </nav>
       </header>
