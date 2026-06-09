@@ -14,15 +14,15 @@ Deno.test('displayNameFromGeocode: takes the first address segment', () => {
 
 Deno.test('resolveOpenCity: blank query → 422', async () => {
   await assertRejects(
-    () => resolveOpenCity('   ', {} as never, { googleKey: 'k' }),
+    () => resolveOpenCity('   ', {} as never, { fsqKey: 'k' }),
     OpenCityError,
     'Type a city',
   );
 });
 
-Deno.test('resolveOpenCity: no google key → 503', async () => {
+Deno.test('resolveOpenCity: no foursquare key → 503', async () => {
   await assertRejects(
-    () => resolveOpenCity('Austin', {} as never, { googleKey: undefined }),
+    () => resolveOpenCity('Austin', {} as never, { fsqKey: undefined }),
     OpenCityError,
     'not configured',
   );
@@ -42,7 +42,7 @@ Deno.test('resolveOpenCity: reuses an existing ad-hoc row without geocoding', as
       };
     },
   };
-  const city = await resolveOpenCity('Austin', supabase as never, { googleKey: 'k' });
+  const city = await resolveOpenCity('Austin', supabase as never, { fsqKey: 'k' });
   assertEquals(city.id, 'c1');
   assertEquals(city.centroid_lat, 30.26);
 });

@@ -3,7 +3,7 @@
 //
 // Flow (only runs when a request sends `city_query` and city_slug didn't
 // resolve to a real cities row):
-//   1. geocode the typed string (Google Places Text Search → center + radius)
+//   1. geocode the typed string (Foursquare places/search `near` → center + radius)
 //   2. upsert a deterministic ad-hoc cities row (slug = "open-<slug>") with
 //      is_active = false so it never leaks into the public city list
 //   3. return its CityRecord
@@ -12,7 +12,8 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import type { CityRecord } from './types.ts';
-import { geocodeCity, slugify } from './google-places.ts';
+import { geocodeCity } from './foursquare.ts';
+import { slugify } from './google-places.ts';
 
 // Deterministic slug for an ad-hoc city so repeat generations reuse one row
 // (idempotent on conflict) instead of spawning a new city per request. Prefixed
@@ -45,13 +46,13 @@ export class OpenCityError extends Error {
 export async function resolveOpenCity(
   query: string,
   supabase: SupabaseClient,
-  opts: { googleKey?: string },
+  opts: { fsqKey?: string },
 ): Promise<CityRecord> {
   const trimmed = query.trim();
   if (!trimmed) {
     throw new OpenCityError('unknown_city', 'Type a city to build a night.', 422);
   }
-  if (!opts.googleKey) {
+  if (!opts.fsqKey) {
     throw new OpenCityError('generation_unavailable', 'Open-city generation is not configured yet.', 503);
   }
 
@@ -68,7 +69,7 @@ export async function resolveOpenCity(
     return existing as CityRecord;
   }
 
-  const geo = await geocodeCity(trimmed, { apiKey: opts.googleKey });
+  const geo = await geocodeCity(trimmed, { apiKey: opts.fsqKey });
   if (!geo) {
     throw new OpenCityError('unknown_city', `Couldn't find "${trimmed}". Try a city, state.`, 422);
   }
@@ -77,7 +78,7 @@ export async function resolveOpenCity(
   const row = {
     slug,
     name,
-    region: geo.name, // full formatted address as the region hint for warm queries
+    region: geo.name, // display name echoed back from the geocode as the region hint
     timezone: 'UTC', // scheduling uses explicit start_at / time_of_day, not city tz
     centroid_lat: geo.lat,
     centroid_lng: geo.lng,

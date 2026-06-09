@@ -58,8 +58,10 @@ const InputSchema = z.object({
   // /auth/callback can attach them to the user once they click the link.
   claim_email: z.string().email().optional(),
   // M1: additive + optional. Resolves which city's places + provider to use.
-  // Absent ⇒ 'kelowna' (byte-identical to pre-M1).
-  city_slug: z.string().min(1).max(60).default('kelowna'),
+  // Absent + no city_query ⇒ 'kelowna' (byte-identical to pre-M1). When absent
+  // but a city_query is present, the query drives resolution (see step 3) — the
+  // old `.default('kelowna')` here was shadowing every typed city with Kelowna.
+  city_slug: z.string().min(1).max(60).optional(),
   // Open-city: a free-text city/state the user typed. Only used when city_slug
   // does NOT match a curated cities row — then we geocode it, mint an ad-hoc
   // city around that center, and warm it on the fly. Curated callers ignore it.
@@ -174,31 +176,59 @@ serve(async (req: Request) => {
       anthropicKey: Deno.env.get('ANTHROPIC_API_KEY')!,
       anthropicModel: Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-6',
       googleKey: Deno.env.get('GOOGLE_PLACES_API_KEY'),
+      foursquareKey: Deno.env.get('FOURSQUARE_API_KEY'),
       railwayUrl: Deno.env.get('RAILWAY_GENERATOR_URL'),
       railwayToken: Deno.env.get('RAILWAY_API_TOKEN'),
     };
 
-    // 3. Resolve the city (M1). Default 'kelowna' keeps a no-city_slug request
-    //    byte-identical to today.
-    const citySlug = inputs.city_slug ?? 'kelowna';
-    const { data: cityRow } = await supabase
-      .from('cities')
-      .select('id,slug,name,region,timezone,centroid_lat,centroid_lng,default_radius_km')
-      .eq('slug', citySlug)
-      .maybeSingle();
+    // 3. Resolve the city. Precedence (this is the any-city seam that was broken —
+    //    the old `city_slug ?? 'kelowna'` default shadowed every typed city):
+    //    (a) explicit curated city_slug                                   → curated path
+    //    (b) free-text city_query naming a curated city WITH live venues  → that curated corpus
+    //    (c) free-text city_query otherwise                               → geocode + warm (open-city)
+    //    (d) neither slug nor query                                       → default 'kelowna'
+    const CITY_COLS = 'id,slug,name,region,timezone,centroid_lat,centroid_lng,default_radius_km';
 
-    // 3b. Open-city: the slug didn't match a curated row but the caller sent a
-    //     free-text city. Geocode it + mint an ad-hoc city, then force the
-    //     on-the-fly provider (curated providers have no data for it). The
-    //     frozen city_slug path (cityRow present) is untouched.
+    let cityRow: CityRecord | null = null;
+    let curatedSlug: string | null = null;
+
+    // (a) explicit slug
+    if (inputs.city_slug) {
+      const { data } = await supabase.from('cities').select(CITY_COLS).eq('slug', inputs.city_slug).maybeSingle();
+      if (data) { cityRow = data as CityRecord; curatedSlug = (data as CityRecord).slug; }
+    }
+
+    // (b) a typed city reuses a curated corpus ONLY when that named city actually has
+    //     live venues — otherwise an empty curated row would shadow a real on-the-fly warm.
+    //     "Kelowna, BC" → match on "Kelowna".
+    if (!cityRow && inputs.city_query) {
+      const nameGuess = inputs.city_query.split(',')[0].trim();
+      const { data: named } = await supabase.from('cities').select(CITY_COLS).ilike('name', nameGuess).limit(1);
+      const cand = named?.[0] as CityRecord | undefined;
+      if (cand) {
+        const { count } = await supabase
+          .from('places')
+          .select('id', { count: 'exact', head: true })
+          .eq('city_id', cand.id).eq('is_active', true).eq('approval_status', 'live');
+        if ((count ?? 0) > 0) { cityRow = cand; curatedSlug = cand.slug; }
+      }
+    }
+
+    // (d) legacy no-arg request → Kelowna.
+    if (!cityRow && !inputs.city_query) {
+      const { data } = await supabase.from('cities').select(CITY_COLS).eq('slug', 'kelowna').maybeSingle();
+      if (data) { cityRow = data as CityRecord; curatedSlug = (data as CityRecord).slug; }
+    }
+
     let city: CityRecord;
     let provider;
-    if (cityRow) {
-      city = cityRow as CityRecord;
-      provider = await selectProvider(citySlug, supabase);
+    if (cityRow && curatedSlug) {
+      city = cityRow;
+      provider = await selectProvider(curatedSlug, supabase);
     } else if (inputs.city_query) {
+      // (c) open-city: geocode the free text + warm venues via Foursquare (no Google).
       try {
-        city = await resolveOpenCity(inputs.city_query, supabase, { googleKey: env.googleKey });
+        city = await resolveOpenCity(inputs.city_query, supabase, { fsqKey: env.foursquareKey });
       } catch (e) {
         if (e instanceof OpenCityError) {
           return jsonResponse({ error: e.code, message: e.message }, e.httpStatus, extraHeaders);
@@ -207,7 +237,7 @@ serve(async (req: Request) => {
       }
       provider = OnTheFlyProvider;
     } else {
-      return jsonResponse({ error: 'unknown_city', message: `No city '${citySlug}'.` }, 422);
+      return jsonResponse({ error: 'unknown_city', message: `No city '${inputs.city_slug ?? ''}'.` }, 422);
     }
 
     // 5. Generate (provider runs the shared pipeline; on-the-fly warms first).
