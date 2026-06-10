@@ -84,7 +84,8 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
     try {
       const client = browserAfter5Client();
       const rows = await listMyPhotos(client, userId);
-      const urls = await signClearUrls(client, rows.map((r) => r.clear_path));
+      // Same width as the SSR pass so the browser cache lines up post-mutation.
+      const urls = await signClearUrls(client, rows.map((r) => r.clear_path), { width: 160 });
       setPhotos(rows.map((r, i) => ({
         id: r.id, clear_path: r.clear_path, url: urls[i] ?? null,
         is_primary: r.is_primary, sort_order: r.sort_order,

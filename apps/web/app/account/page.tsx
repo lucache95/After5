@@ -72,15 +72,14 @@ export default async function AccountPage() {
 
   // Owner photo gallery for the self-view (gallery first, legacy single-photo
   // fallback) — owner read passes RLS. Same block as /account/profile.
+  // width 400 ≈ the self-view ProfileCard slot at 2x; the sm identity polaroid
+  // reuses the same (cached, stable) url so the bytes download once.
   let selfPhotos: string[] = [];
   try {
     const rows = await listMyPhotos(supabase, user.id);
-    selfPhotos = await signClearUrls(supabase, rows.map((r) => r.clear_path));
+    selfPhotos = await signClearUrls(supabase, rows.map((r) => r.clear_path), { width: 400 });
     if (selfPhotos.length === 0 && profile?.clear_photo_url) {
-      const { data: signed } = await supabase.storage
-        .from('profile-photos')
-        .createSignedUrl(profile.clear_photo_url as string, 60 * 10);
-      if (signed?.signedUrl) selfPhotos = [signed.signedUrl];
+      selfPhotos = await signClearUrls(supabase, [profile.clear_photo_url as string], { width: 400 });
     }
   } catch {
     selfPhotos = [];
@@ -127,6 +126,7 @@ export default async function AccountPage() {
             label={primaryPhoto ? undefined : firstName}
             size="sm"
             tone="dating"
+            priority
           />
           <div className="min-w-0 flex-1">
             <p className="font-heading text-2xl lowercase leading-tight text-shell-ink">

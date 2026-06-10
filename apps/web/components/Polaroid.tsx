@@ -13,11 +13,14 @@ import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { cn } from '@/lib/cn';
 
+// `sizes` matches the rendered CSS width of each variant so next/image serves
+// a correctly-small srcset candidate (a flat 260px was making the optimizer
+// ship ~4x the pixels a sm polaroid needs).
 const SIZES = {
-  sm:  { wrap: 'w-[110px] pb-7  pt-1.5', img: 'h-[96px]  w-[100px]', label: 'text-[9px]'  },
-  md:  { wrap: 'w-[136px] pb-9  pt-2',   img: 'h-[120px] w-[124px]', label: 'text-[10px]' },
-  lg:  { wrap: 'w-[200px] pb-11 pt-2.5', img: 'h-[180px] w-[188px]', label: 'text-[11px]' },
-  xl:  { wrap: 'w-[260px] pb-12 pt-3',   img: 'h-[240px] w-[248px]', label: 'text-[11px]' },
+  sm:  { wrap: 'w-[110px] pb-7  pt-1.5', img: 'h-[96px]  w-[100px]', sizes: '100px', label: 'text-[9px]'  },
+  md:  { wrap: 'w-[136px] pb-9  pt-2',   img: 'h-[120px] w-[124px]', sizes: '124px', label: 'text-[10px]' },
+  lg:  { wrap: 'w-[200px] pb-11 pt-2.5', img: 'h-[180px] w-[188px]', sizes: '188px', label: 'text-[11px]' },
+  xl:  { wrap: 'w-[260px] pb-12 pt-3',   img: 'h-[240px] w-[248px]', sizes: '248px', label: 'text-[11px]' },
 } as const;
 
 type Size = keyof typeof SIZES;
@@ -48,6 +51,8 @@ interface PolaroidProps {
    * polaroids on dating surfaces don't flash the planner brand.
    */
   tone?: 'planner' | 'dating';
+  /** Set on above-the-fold polaroids so next/image preloads them (no lazy delay). */
+  priority?: boolean;
 }
 
 /** Local fallback image used when the primary src fails to load. */
@@ -62,6 +67,7 @@ export function Polaroid({
   href,
   className,
   tone = 'planner',
+  priority = false,
 }: PolaroidProps) {
   const tilt = rotation ?? tiltFor(label ?? src ?? '');
   const s = SIZES[size];
@@ -128,7 +134,8 @@ export function Polaroid({
             src={displaySrc}
             alt={alt}
             fill
-            sizes="260px"
+            sizes={s.sizes}
+            priority={priority}
             className="object-cover"
             onError={handleError}
           />

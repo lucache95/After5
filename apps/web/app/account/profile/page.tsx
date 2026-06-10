@@ -29,11 +29,12 @@ export default async function ProfileEditPage() {
     supabase.from('profile_prompts').select('id, label, placeholder').eq('is_active', true).order('sort_order', { ascending: true }),
   ]);
 
-  // M6 gallery: rows + fresh signed clear URLs (owner read passes the RLS policy).
+  // M6 gallery: rows + stable cached signed clear URLs (owner read passes the
+  // RLS policy). width 160 ≈ the 64–96px manager thumbnails at 2x.
   let photos: ManagedPhoto[] = [];
   try {
     const rows = await listMyPhotos(supabase, user.id);
-    const urls = await signClearUrls(supabase, rows.map((r) => r.clear_path));
+    const urls = await signClearUrls(supabase, rows.map((r) => r.clear_path), { width: 160 });
     photos = rows.map((r, i) => ({
       id: r.id, clear_path: r.clear_path, url: urls[i] ?? null,
       is_primary: r.is_primary, sort_order: r.sort_order,
@@ -45,10 +46,9 @@ export default async function ProfileEditPage() {
   // Legacy single-photo preview (pre-M6 grace, only used when no gallery rows).
   let photoUrl: string | null = null;
   if (photos.length === 0 && profile?.clear_photo_url) {
-    const { data: signed } = await supabase.storage
-      .from('profile-photos')
-      .createSignedUrl(profile.clear_photo_url as string, 60 * 10);
-    photoUrl = signed?.signedUrl ?? null;
+    const [signed] = await signClearUrls(supabase, [profile.clear_photo_url as string], { width: 160 })
+      .catch(() => [] as string[]);
+    photoUrl = signed ?? null;
   }
 
   const initial: ProfileEditorInitial = {

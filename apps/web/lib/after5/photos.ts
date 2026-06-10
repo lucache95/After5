@@ -4,6 +4,7 @@
 // (written by the generate-blur edge fn). profiles.clear_photo_url /
 // blurred_photo_url stay a denormalized mirror of the PRIMARY photo. All writes
 // go through the caller's RLS'd client (owner-scoped: .eq('user_id', userId)).
+import { unstable_cache } from 'next/cache';
 import type { After5Client } from '@after5/api-client';
 import { MAX_PHOTOS } from '@after5/validators';
 
@@ -121,14 +122,82 @@ export async function removePhoto(client: After5Client, userId: string, photo: P
   }
 }
 
+// ─── signed-URL signing + caching ────────────────────────────────────
+// Signed URLs used to be minted fresh on every request (ttl 600s): each page
+// view produced a NEW token → new URL → both the browser cache and the
+// next/image optimizer cache missed → every photo fully re-downloaded on every
+// view. Fix: mint 1h tokens and serve the SAME url for 30min via Next's data
+// cache (unstable_cache), keyed per storage path. The browser then sees a
+// stable URL and serves the bytes from its own cache; the worst-case cached
+// url still has ≥30min of token life left.
+const SIGN_TTL_S = 3600;
+const SIGN_REVALIDATE_S = 1800;
+
+export interface SignOptions {
+  /** Token lifetime in seconds. Defaults to SIGN_TTL_S (1h). */
+  ttl?: number;
+  /**
+   * Target render width in px (pass the ~2x device-pixel size of the slot).
+   * Served via Supabase storage's /render/image transform — verified live on
+   * prod (421KB original → 60KB at width 400). The local CLI stack ships with
+   * [storage.image_transformation] disabled (Pro-plan API), so transform is
+   * skipped there and the original object is signed instead.
+   */
+  width?: number;
+}
+
+// The local Supabase stack would 4xx on /render/image URLs (transform API off
+// in supabase/config.toml), so only request transforms against hosted projects.
+function transformsAvailable(): boolean {
+  return !/127\.0\.0\.1|localhost/.test(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
+}
+
+// Single-path signer. createSignedUrls (batch) does not support transform, so
+// signing is per-path; misses fan out in parallel and hits cost zero calls.
+async function signOne(client: After5Client, path: string, ttl: number, width?: number): Promise<string | null> {
+  const transform = width != null && transformsAvailable() ? { transform: { width } } : undefined;
+  const { data, error } = await client.storage.from(BUCKET).createSignedUrl(path, ttl, transform);
+  if (error) throw new Error(error.message);
+  return data?.signedUrl ?? null;
+}
+
+// Cache wrapper. unstable_cache needs the Next server runtime (incremental
+// cache); photos.ts is also bundled into the client (ProfileEditor) and runs
+// under vitest, where it either must not run or throws its "incrementalCache
+// missing" invariant — fall back to direct signing there (per-request URLs,
+// same as the old behavior).
+//
+// SECURITY NOTE — the cache key is the storage path (+ttl/width), NOT the
+// viewer: a cache hit can replay a URL minted by a different viewer. That is
+// acceptable because every calling surface only learns a path via an RLS'd
+// profile_photos row read at request time (owner / lock-party / blurred-public
+// policies), so possession of the path already implies DB-level authorization;
+// the storage signing policy was enforced for the viewer who minted the entry
+// ≤30min ago, and signed URLs already outlive revocation by their token TTL.
+async function signOneCached(client: After5Client, path: string, ttl: number, width?: number): Promise<string | null> {
+  if (typeof window !== 'undefined') return signOne(client, path, ttl, width);
+  try {
+    return await unstable_cache(
+      () => signOne(client, path, ttl, width),
+      ['after5-signed-photo', path, String(ttl), String(width ?? 'orig')],
+      { revalidate: SIGN_REVALIDATE_S },
+    )();
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('incrementalCache')) {
+      return signOne(client, path, ttl, width);
+    }
+    throw err;
+  }
+}
+
 // Sign clear-photo paths for the carousel/view. Server-side (the reveal page) the
 // passed client is RLS'd as the viewer, so signing only succeeds when the
-// reveal-gated storage policy passes.
-export async function signClearUrls(client: After5Client, paths: string[], ttl = 600): Promise<string[]> {
+// reveal-gated storage policy passes (see the cache-key note on signOneCached).
+export async function signClearUrls(client: After5Client, paths: string[], opts: SignOptions = {}): Promise<string[]> {
   if (paths.length === 0) return [];
-  const { data, error } = await client.storage.from(BUCKET).createSignedUrls(paths, ttl);
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((d) => d.signedUrl).filter((u): u is string => !!u);
+  const ttl = opts.ttl ?? SIGN_TTL_S;
+  const urls = await Promise.all(paths.map((p) => signOneCached(client, p, ttl, opts.width)));
+  return urls.filter((u): u is string => !!u);
 }
 
 // Sign BLURRED-photo paths (the reveal-ladder rung 1/2 host hint). Mechanically
@@ -136,7 +205,7 @@ export async function signClearUrls(client: After5Client, paths: string[], ttl =
 // authenticated viewer is authorized by storage policy profile_photos_blurred_read_v2.
 // The blurred asset IS the privacy artifact (already downscaled to 64px), so it is
 // safe to sign pre-match — NEVER sign the clear path on a pre-lock surface.
-export async function signBlurredUrls(client: After5Client, paths: string[], ttl = 600): Promise<string[]> {
+export async function signBlurredUrls(client: After5Client, paths: string[], opts: SignOptions = {}): Promise<string[]> {
   if (paths.length === 0) return [];
   // Defense-in-depth: the privacy invariant is enforced in the DB (storage policy
   // profile_photos_blurred_read_v2 only permits *_blurred.jpg reads), but fail fast
@@ -144,7 +213,7 @@ export async function signBlurredUrls(client: After5Client, paths: string[], ttl
   // pre-lock surface through the "blurred-only" signer.
   const bad = paths.filter((p) => !/_blurred\.jpe?g$/i.test(p));
   if (bad.length) throw new Error(`signBlurredUrls received non-blurred path(s): ${bad.join(', ')}`);
-  const { data, error } = await client.storage.from(BUCKET).createSignedUrls(paths, ttl);
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((d) => d.signedUrl).filter((u): u is string => !!u);
+  const ttl = opts.ttl ?? SIGN_TTL_S;
+  const urls = await Promise.all(paths.map((p) => signOneCached(client, p, ttl, opts.width)));
+  return urls.filter((u): u is string => !!u);
 }

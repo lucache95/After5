@@ -54,6 +54,8 @@ export function TeaserGallery({ cards }: { cards: TeaserCard[] }) {
                 size="lg"
                 rotation={TILTS[idx % TILTS.length]}
                 href={c.href}
+                // First gallery row can sit above the fold on tall phones — preload it.
+                priority={idx < 2}
               />
               <Link
                 href={c.href}
