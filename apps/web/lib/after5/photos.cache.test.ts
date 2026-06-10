@@ -52,7 +52,7 @@ describe('signed-url stability (unstable_cache wrapper)', () => {
     expect(createSignedUrl).toHaveBeenCalledTimes(1);
     expect(unstableCacheSpy).toHaveBeenCalledWith(
       expect.any(Function),
-      ['after5-signed-photo', 'u/p.jpg', '3600', 'orig'],
+      ['after5-signed-photo-v2', 'u/p.jpg', '3600', 'orig'],
       { revalidate: 1800 },
     );
   });
@@ -71,7 +71,11 @@ describe('signed-url stability (unstable_cache wrapper)', () => {
   it('passes the storage transform when width is set against a hosted project', async () => {
     const createSignedUrl = mintingSigner();
     await signClearUrls(clientWith(createSignedUrl), ['u/p.jpg'], { width: 400 });
-    expect(createSignedUrl).toHaveBeenCalledWith('u/p.jpg', 3600, { transform: { width: 400 } });
+    // Square contain box: width-only transforms do NOT preserve aspect ratio
+    // (prod returned 400×1080 from a 1080×1080 original — the "zoomed in" bug).
+    expect(createSignedUrl).toHaveBeenCalledWith('u/p.jpg', 3600, {
+      transform: { width: 400, height: 400, resize: 'contain' },
+    });
   });
 
   it('skips the transform on the local stack (image_transformation disabled in config.toml)', async () => {

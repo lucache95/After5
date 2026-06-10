@@ -154,8 +154,17 @@ function transformsAvailable(): boolean {
 
 // Single-path signer. createSignedUrls (batch) does not support transform, so
 // signing is per-path; misses fan out in parallel and hits cost zero calls.
+//
+// TRANSFORM SHAPE — width-only does NOT proportionally downscale: live repro on
+// prod returned 400×1080 from a 1080×1080 original (a center sliver), which CSS
+// object-cover then re-cropped into a "zoomed in" face. Pass a SQUARE bounding
+// box with resize:'contain' instead: pure proportional downscale (longest side
+// = width), aspect ratio always preserved; the rendering layer owns cropping.
 async function signOne(client: After5Client, path: string, ttl: number, width?: number): Promise<string | null> {
-  const transform = width != null && transformsAvailable() ? { transform: { width } } : undefined;
+  const transform =
+    width != null && transformsAvailable()
+      ? { transform: { width, height: width, resize: 'contain' as const } }
+      : undefined;
   const { data, error } = await client.storage.from(BUCKET).createSignedUrl(path, ttl, transform);
   if (error) throw new Error(error.message);
   return data?.signedUrl ?? null;
@@ -179,7 +188,9 @@ async function signOneCached(client: After5Client, path: string, ttl: number, wi
   try {
     return await unstable_cache(
       () => signOne(client, path, ttl, width),
-      ['after5-signed-photo', path, String(ttl), String(width ?? 'orig')],
+      // -v2: transform shape changed (square contain box) — new key segment so
+      // stale width-only URLs cached pre-fix don't serve for another 30min.
+      ['after5-signed-photo-v2', path, String(ttl), String(width ?? 'orig')],
       { revalidate: SIGN_REVALIDATE_S },
     )();
   } catch (err) {
