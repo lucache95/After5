@@ -39,12 +39,13 @@ steps are deferred:
 - DATA-02 (pre-seed + cold-start): cold-start built + local-green; background pre-seed built
   but unwired → Phase 10. Cold-start delivers the MVP functional core.
 
-## Known env gap (not a regression)
-The full `deno test` over generate-plan/ fails locally because `prompt.ts` imports
-`npm:@anthropic-ai/sdk` (unresolved without node_modules) — pre-existing, affects the
-unchanged `railway`/`select`/`prompt` test files. Phase-8 test files run SDK-free (43 pass).
-The 08-06 gate should run the full suite under `node_modules` (or `deno install` / set
-`nodeModulesDir: auto`) to close this.
+## Known env gap — CLOSED (2026-06-09)
+Run the full generate-plan deno suite with `--node-modules-dir=none` (resolves
+`npm:@anthropic-ai/sdk` from deno's global cache): 96/96 pass.
+**WARNING: never use `--node-modules-dir=auto` in this repo** — it drops a `.deno` dir into
+pnpm's root `node_modules`, which silently breaks vitest's jest-dom setup repo-wide
+(hundreds of `Invalid Chai property: toBeInTheDocument` failures). If it happens:
+`rm -rf node_modules/.deno && pnpm install --frozen-lockfile`.
 
 ## UPDATE 2026-06-05 — Phase 9 bundles into this cutover
 Phase 9 (Trustworthy Generation + Eval Harness) is build-complete + locally green but its

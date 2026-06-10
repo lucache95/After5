@@ -289,7 +289,12 @@ git commit -m "feat(generate-plan): add remove_stop improve action (reflow + coh
 
 ---
 
-## Task 4: Deploy the updated edge function
+## Task 4: Deploy the updated edge function ✅ DONE (2026-06-09)
+
+> Full deno suite 96/96 via `--node-modules-dir=none` (closes the known "needs node_modules" env
+> gap — and avoids the `--node-modules-dir=auto` hazard, which drops a `.deno` dir into pnpm's
+> root node_modules and breaks vitest's jest-dom setup repo-wide). Deployed `generate-plan` to
+> prod `ufufmcpnysvwtutpbian`; smoke: Kelowna generate returned exactly 1 itinerary.
 
 **Files:** none (deploy step).
 
@@ -851,7 +856,13 @@ git commit -m "feat(create): first-run hint + quiet confirmed start-over on the 
 
 ---
 
-## Task 11: Visual verification @420px
+## Task 11: Visual verification @420px ✅ DONE (2026-06-09, commit 42de272)
+
+> Scripted-Playwright capture of `/plans/[id]/edit` @420px (spec `apps/web/e2e/m3-canvas-visual.spec.ts`,
+> CAPTURE_VISUAL-gated). Rubric: all PASS. One real defect found+fixed: stop-card start-time input
+> clipped at 420px (w-24 siblings squeezed it) → w-20. Reported non-blocking: save+publish are two
+> identical stacked primaries (consider demoting save); the global "first 100 members" banner is
+> off-voice for dating surfaces (pre-existing, out of scope).
 
 **Files:** none (verification).
 
