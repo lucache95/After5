@@ -11,6 +11,8 @@ const { redirect, mockClient } = vi.hoisted(() => {
 vi.mock('next/navigation', () => ({ redirect: (p: string) => redirect(p) }));
 vi.mock('../InterestedList', () => ({ InterestedList: (props: { candidates: unknown[] }) => <div data-testid="list" data-count={props.candidates.length} /> }));
 vi.mock('@/components/ComingSoonBanner', () => ({ ComingSoonBanner: () => <div data-testid="coming-soon" /> }));
+// Client component (usePathname) — stub for this server-page unit test.
+vi.mock('@/components/BottomTabShell', () => ({ BottomTabShell: () => <nav data-testid="tab-bar" /> }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => mockClient.current }));
 
 import Page from '../page';
@@ -25,16 +27,27 @@ function buildClient(opts: {
     // instead of a raw feature_config read; the flag option drives its result.
     rpc: async (_fn: string) => ({ data: opts.flag ?? true, error: null }),
     from: (table: string) => ({
-      select: () => ({
-        eq: (_c: string, _v: string) => ({
+      select: () => {
+        // Self-returning chain so .eq().eq()… , .order().limit() all resolve.
+        type Chain = {
+          eq: () => Chain;
+          order: () => Chain;
+          limit: () => Promise<{ data: unknown[] }>;
+          maybeSingle: () => Promise<{ data: unknown }>;
+        };
+        const chain: Chain = {
+          eq: () => chain,
+          order: () => chain,
+          limit: async () => ({ data: opts.candidates ?? [] }),
           maybeSingle: async () => {
             if (table === 'date_instances') return { data: { id: 'inst-1', creator_id: opts.creatorId } };
-            if (table === 'feature_config') return { data: { value: opts.flag ?? true } };
+            if (table === 'feature_config') return { data: { value: opts.windowHours ?? 24 } };
+            if (table === 'offers') return { data: opts.offer ?? null };
             return { data: null };
           },
-          order: () => ({ then: undefined }),
-        }),
-      }),
+        };
+        return chain;
+      },
     }),
   };
 }
@@ -47,11 +60,24 @@ describe('interested page', () => {
     await expect(Page({ params: Promise.resolve({ slug: 'inst-1' }) })).rejects.toThrow(/REDIRECT:\/login/);
   });
 
-  it('renders a not-your-date 403 state for a non-host', async () => {
+  it('renders a not-your-date 403 state for a non-host (with the tab bar)', async () => {
     mockClient.current = buildClient({ userId: 'u2', creatorId: 'host-1' }) as Record<string, unknown>;
     const ui = await Page({ params: Promise.resolve({ slug: 'inst-1' }) });
     render(ui);
     expect(screen.getByText(/not your date/i)).toBeInTheDocument();
+    expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
+  });
+
+  it('renders the host list with a tab bar, a back arrow, and no "your interest" label', async () => {
+    mockClient.current = buildClient({ userId: 'host-1', creatorId: 'host-1' }) as Record<string, unknown>;
+    const ui = await Page({ params: Promise.resolve({ slug: 'inst-1' }) });
+    render(ui);
+    expect(screen.getByTestId('list')).toBeInTheDocument();
+    // Standing rule: every host surface keeps the bottom menu.
+    expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
+    // Drill-in back affordance stays; the candidate-side label does not.
+    expect(screen.getByRole('link', { name: /back to your nights/i })).toBeInTheDocument();
+    expect(screen.queryByText(/your interest/i)).not.toBeInTheDocument();
   });
 
   it('renders ComingSoonBanner when the flag is off', async () => {

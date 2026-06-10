@@ -51,7 +51,15 @@ vi.mock('vaul', () => {
   };
 });
 // MakeOfferModal is covered by its own test; stub so this test stays focused.
-vi.mock('../MakeOfferModal', () => ({ MakeOfferModal: () => <div data-testid="offer-modal" /> }));
+// The stub exposes a confirm button wired to onOffered so the optimistic
+// offer-sent flip is testable from here.
+vi.mock('../MakeOfferModal', () => ({
+  MakeOfferModal: ({ candidate, onOffered }: { candidate: { candidate_id: string }; onOffered: (id: string) => void }) => (
+    <button data-testid="offer-modal-confirm" onClick={() => onOffered(candidate.candidate_id)}>
+      stub confirm send
+    </button>
+  ),
+}));
 
 import { InterestedList } from '../InterestedList';
 
@@ -104,7 +112,51 @@ describe('InterestedList', () => {
     expect(screen.queryByRole('button', { name: /make offer to Nc/i })).not.toBeInTheDocument();
     rerender(<InterestedList {...base} activeOffer={{ candidate_id: 'a' }} candidates={[cand('a', 'offer_active', 1), cand('c', 'shortlisted', 2)]} />);
     expect(screen.queryByRole('button', { name: /make offer/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/offer out/i)).toBeInTheDocument();
+    expect(screen.getByText(/offer sent/i)).toBeInTheDocument();
+  });
+
+  // ── offer-sent state: optimistic + server-derived ───────────────────────────
+
+  it('optimistic: a successful send replaces "send it" with an inert "offer sent" pill', async () => {
+    const user = userEvent.setup();
+    render(<InterestedList {...base} candidates={[cand('a', 'shortlisted', 1), cand('c', 'shortlisted', 2)]} />);
+    await user.click(screen.getByRole('button', { name: /make offer to Na/i }));
+    // MakeOfferModal stub: confirm fires onOffered('a') like a real send success.
+    await user.click(screen.getByTestId('offer-modal-confirm'));
+    expect(screen.queryByRole('button', { name: /make offer/i })).not.toBeInTheDocument();
+    const pill = screen.getByText(/offer sent/i);
+    expect(pill).toBeInTheDocument();
+    expect(pill.tagName).toBe('SPAN'); // inert — nothing to double-tap
+    // withdraw escape hatch appears on the offered row.
+    expect(screen.getByRole('button', { name: /pull the offer back from Na/i })).toBeInTheDocument();
+  });
+
+  it('server-derived: an active offers row on load renders offer-sent, no send CTA', () => {
+    // match_make_offer flips the queue_entry to offer_active/rank-1 and inserts
+    // an active offers row; the page passes both on a cold load.
+    render(
+      <InterestedList
+        {...base}
+        activeOffer={{ candidate_id: 'a' }}
+        candidates={[cand('a', 'offer_active', 1), cand('c', 'shortlisted', 2)]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /make offer/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/offer sent/i)).toBeInTheDocument();
+  });
+
+  it('server-derived: the activeOffer prop alone gates the CTA even if the queue status lagged', () => {
+    // Defensive seam: offers row says active but the joined queue row still
+    // reads shortlisted — the CTA must stay gated (backend would raise P5003).
+    render(
+      <InterestedList
+        {...base}
+        activeOffer={{ candidate_id: 'a' }}
+        candidates={[cand('a', 'shortlisted', 1), cand('c', 'shortlisted', 2)]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /make offer/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/offer sent/i)).toBeInTheDocument();
   });
 
   it('mutes a candidate who is already booked elsewhere', async () => {
@@ -197,7 +249,7 @@ describe('InterestedList', () => {
         ]}
       />,
     );
-    expect(screen.getByText(/offer out/i)).toBeInTheDocument();
+    expect(screen.getByText(/offer sent/i)).toBeInTheDocument();
     expect(screen.getByText(/^accepted$/i)).toBeInTheDocument();
     expect(screen.getByText(/they passed/i)).toBeInTheDocument();
     expect(screen.getByText(/^expired$/i)).toBeInTheDocument();

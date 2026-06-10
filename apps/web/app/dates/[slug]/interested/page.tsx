@@ -7,6 +7,7 @@
 // shortlisted/interested candidates.
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { BottomTabShell } from '@/components/BottomTabShell';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
@@ -38,12 +39,13 @@ export default async function InterestedPage({
     return (
       <>
         <DeepRouteHeader backHref="/my-nights" backLabel="back to your nights" />
-        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-28 text-center">
           <div className="mx-auto max-w-[420px]">
             <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">not your date</h1>
             <p className="mt-4 font-body text-lg text-shell-ink/70">this list belongs to whoever posted the night.</p>
           </div>
         </main>
+        <BottomTabShell userId={user.id} />
       </>
     );
   }
@@ -92,7 +94,10 @@ export default async function InterestedPage({
 
   return (
     <>
-      <DeepRouteHeader backHref="/my-nights" backLabel="back to your nights" title="your interest" />
+      {/* Back affordance only — no label. The page's own h1 ("who's interested")
+          names the surface; "your interest" was the candidate-side phrase and
+          read wrong on the host side. */}
+      <DeepRouteHeader backHref="/my-nights" backLabel="back to your nights" />
       <InterestedList
         instanceId={instanceId}
         userId={user.id}
@@ -100,6 +105,7 @@ export default async function InterestedPage({
         activeOffer={offer ? { candidate_id: offer.candidate_id } : null}
         candidates={candidates}
       />
+      <BottomTabShell userId={user.id} />
     </>
   );
 }

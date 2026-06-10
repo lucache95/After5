@@ -80,7 +80,13 @@ export function InterestedList({
   const [declineFor, setDeclineFor] = useState<HostCandidate | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const offerActive = activeOffer !== null;
+  // One active offer per instance (match_make_offer step 8 raises P5003
+  // offer_already_active). Derive the gate from BOTH seams so it survives an
+  // optimistic send without a reload: the server prop (offers row with
+  // status='active') AND any row already flipped to offer_active — the RPC
+  // promotes the offered queue_entry to offer_active/rank-1 (step 13), and
+  // MakeOfferModal's onOffered mirrors that flip locally on success.
+  const offerActive = activeOffer !== null || rows.some((r) => r.status === 'offer_active');
 
   // Seam 5: append genuinely-new inserts (skip rows we already hold). The realtime
   // payload is the raw queue_entries row — no joined profile — so we append a
@@ -229,7 +235,8 @@ export function InterestedList({
   const rank1 = shortlisted[0];
 
   return (
-    <main className="flex min-h-dvh flex-col bg-shell-base px-5 pb-24 pt-7">
+    // pb-28 clears the fixed BottomTabShell the page mounts under this list.
+    <main className="flex min-h-dvh flex-col bg-shell-base px-5 pb-28 pt-7">
       <div className="mx-auto w-full max-w-[420px]">
         <h1 className="font-heading text-3xl lowercase text-shell-ink">who's interested</h1>
 
@@ -242,6 +249,9 @@ export function InterestedList({
               {shortlisted.map((c) => {
                 const isRank1 = c.candidate_id === rank1?.candidate_id;
                 const frozen = offerActive && isRank1;
+                // The row holding the live offer: optimistic flip (onOffered) or
+                // server-derived (offers row / queue status on load).
+                const offered = c.status === 'offer_active' || c.candidate_id === activeOffer?.candidate_id;
                 return (
                   <Reorder.Item
                     key={c.candidate_id}
@@ -258,9 +268,10 @@ export function InterestedList({
                       style={{ transform: `rotate(${stickerRotation(c.candidate_id)}deg)` }}
                     >
                       {frozen ? (
-                        <span className="flex items-center gap-1 rounded-full bg-shell-pink px-2 py-1 font-body text-xs lowercase text-shell-ink">
-                          <Lock className="h-3.5 w-3.5" aria-hidden /> offer out
-                        </span>
+                        // Lock replaces the drag grip — rank-1 can't move while the
+                        // offer is out. The "offer sent" pill on the right carries
+                        // the text, so the icon stays quiet.
+                        <Lock className="h-5 w-5 shrink-0 text-shell-ink/40" aria-hidden />
                       ) : (
                         <GripVertical className="h-5 w-5 shrink-0 text-shell-ink/40" aria-hidden />
                       )}
@@ -294,6 +305,13 @@ export function InterestedList({
                         >
                           send it
                         </button>
+                      )}
+                      {offered && offerActive && (
+                        // Inert pill where "send it" was — the offer went out;
+                        // a live-looking button here invites a double-tap.
+                        <span className="shrink-0 rounded-full bg-shell-pink px-4 py-2 font-body text-sm font-semibold lowercase text-shell-ink/70">
+                          offer sent
+                        </span>
                       )}
                     </div>
                   </Reorder.Item>
