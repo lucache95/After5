@@ -9,8 +9,9 @@
       "url": "https://mcp.vercel.com"
     },
     "playwright": {
-      "type": "http",
-      "url": "http://localhost:8931/mcp"
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
     },
     "magicpatterns": {
       "type": "http",
