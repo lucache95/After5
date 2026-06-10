@@ -49,8 +49,8 @@ sound fits its cover.
 
 ### Phases
 
-- [ ] **Phase 8: Compliant Any-City Venue Corpus** - Foursquare becomes the stored/LLM-fed corpus (Google demoted to display-only), cities pre-seed on profile-location-set, and proximity/hours guards fail loud on missing data.
-- [ ] **Phase 9: Trustworthy Generation + Eval Harness** - One-tap any-city generate + swap-a-stop/NL-tweak improve loop, vibe-matched ambient sound, proven by a deterministic + Opus-4.8-judge eval over a golden set that includes a cold city.
+- [x] **Phase 8: Compliant Any-City Venue Corpus** - Foursquare becomes the stored/LLM-fed corpus (Google demoted to display-only), cities pre-seed on profile-location-set, and proximity/hours guards fail loud on missing data. *(Prod cutover applied 2026-06-08. Known debt: cold-city quality floor writes 0 rows -> permanent city_warming; see pending todo.)*
+- [x] **Phase 9: Trustworthy Generation + Eval Harness** - One-tap any-city generate + swap-a-stop/NL-tweak improve loop, vibe-matched ambient sound, proven by a deterministic + Opus-4.8-judge eval over a golden set that includes a cold city. *(Live on prod via the Phase-8 cutover deploys. SOUND-01 ambient audio still deferred on ELEVENLABS_API_KEY.)*
 - [x] **Phase 10: Generation as the Primary Night Path** - Generating a date becomes THE way to create a night (publishes to the feed); the legacy manual `/create` funnel and orphaned `/plan`/catalog surfaces are retired or replaced.
 - [ ] **Phase 11: Page-by-Page UX & Nav Audit + Remediation** - A browser-driven audit of every route against the design system + a nav/flow rubric, then prioritized remediation so no page is a trap and the whole app reads as one branded product.
 
@@ -71,7 +71,7 @@ sound fits its cover.
 - [x] 08-03-PLAN.md — DATA-01/02: migration (source check + fsq_place_id full unique index + cities.seeded_at + google_legacy relabel) + SQL test
 - [x] 08-04-PLAN.md — DATA-01/02: re-source cold-start to Foursquare + google_legacy pool exclusion + city_warming fallback
 - [x] 08-05-PLAN.md — DATA-02: seed_city job type + handler + server-side dedup'd enqueue on profile-location-set
-- [ ] 08-06-PLAN.md — phase gate: local suite/migrations/advisor green, then key-gated live smoke + gated prod-apply (blocked on FOURSQUARE_API_KEY)
+- [x] 08-06-PLAN.md — phase gate: local suite/migrations/advisor green + key-gated live smoke + gated prod-apply (EXECUTED 2026-06-08 once FOURSQUARE_API_KEY landed; see 08-06-SUMMARY update)
 
 ### Phase 9: Trustworthy Generation + Eval Harness
 **Goal**: A user can generate a coherent multi-stop date for their own city in one tap, improve it with simple tweaks, and get a vibe-matched soundtrack — and the harness proves the result is genuinely good, including in a cold on-the-fly city.
@@ -89,7 +89,7 @@ Plans:
 - [x] 09-03-PLAN.md — EVAL-01: scheduleMonotonic gate + cold-city fixtures + unverified_rate threshold
 - [x] 09-04-PLAN.md — EVAL-01: per-fixture JUDGE_CITY + live no-hallucination + baseline regen + CI gate
 - [x] 09-05-PLAN.md — PLAN-02: single-stop swap + NL tweaks (coherence-preserving) + improve UI in /create
-- [ ] 09-06-PLAN.md — phase gate: local-green suite + eval + visual-verify @420px + gated prod-apply
+- [x] 09-06-PLAN.md — phase gate: local-green suite + eval + visual-verify @420px + gated prod-apply (prod-bound steps shipped with the 2026-06-08 Phase-8 cutover deploy; SOUND-01 audio assets deferred on ELEVENLABS_API_KEY)
 **UI hint**: yes
 
 ### Phase 10: Generation as the Primary Night Path

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AI Date-Planner
 status: executing
-stopped_at: Completed 10-03-PLAN.md — Phase 10 COMPLETE (FLOW-01 closed). Phase-gate offline RTL wiring spec (apps/web/app/create/__tests__/primary-path-wiring.test.tsx, 4/4) proves the whole primary path is wired with mock generation (no LLM/Foursquare/network): generate is the dominant /create door + the demoted manual link works; the + tab/wedge route to /create/generate; the curated city pick POSTs /api/profile/city; ImproveControls renders before PublishToFeedButton + a swap persists; publish routes to /nights/new?itinerary=<id>. Full create+city suites 26/26, web tsc clean. NO migration → Phase 10 is app-code only, ships on push, nothing to bundle into the Phase-8/9 cutover. The @420px visual-verify is DEFERRED to Phase 11's interactive route audit. Next: Phase 11 (UX-01/02, the last v2.0 phase).
-last_updated: "2026-06-06T03:30:00.000Z"
-last_activity: 2026-06-05 -- Phase 10 Plan 03 executed: FLOW-01 phase gate. Offline wiring spec proves city→generate→improve→publish + the dominant-generate/demoted-manual/global-route wiring; 4/4 new, 26/26 create+city suites, web tsc clean. Visual-verify deferred to Phase 11; no migration (ships on push). Phase 10 COMPLETE.
+stopped_at: Phases 8+9+10 COMPLETE and reconciled (2026-06-09). The key-gated Phase-8 cutover EXECUTED 2026-06-08 (FOURSQUARE_API_KEY set + validated; both migrations applied, relabel 92 discovered→google_legacy, 0 curated lost; generate-plan + process-jobs deployed; advisor clean; 3 any-city seam bugs found by smoke + fixed in 5aa3eb3). Phase-9 prod-bound steps shipped with that deploy (SOUND-01 audio still deferred on ELEVENLABS_API_KEY). Off-roadmap but shipped on main (pushed 9c44242, Vercel): the date-customization-canvas convergence (generate-1; regenerate_title + remove_stop improve actions; authed generations land on /plans/[id]/edit which gained AI title chips + ImproveControls; parallel DateCanvas deleted) + Kelowna corpus activation (live pool 59→184, all 21 supply categories at target). Web 614/614 + tsc clean; edge deno 96/96 (--node-modules-dir=none). Phase 11 pass 1 done ad-hoc (17/60 routes, F1+F2 fixed, F3 deferred). Next: finish Phase 11 (remaining ~43 routes + remediation), then audit-milestone.
+last_updated: "2026-06-09T18:30:00.000Z"
+last_activity: 2026-06-09 -- Reconciled GSD state with reality; merged feat/date-customization-canvas to main fast-forward + pushed (9c44242). Phases 8/9 marked complete (cutover applied 2026-06-08); canvas convergence + corpus activation live.
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  completed_phases: 3
+  total_plans: 15
+  completed_plans: 15
+  percent: 75
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03) · .planning/ROADMAP.md (v2.0 phases 8–11) · .planning/REQUIREMENTS.md (10 v2.0 reqs)
 
 **Core value (v2.0):** A user can generate a real, coherent multi-stop date for their own city in one tap — from legally-sourced (Foursquare) venues — make it better with simple tweaks, and publish it into the dating feed. The generated date is provably good (eval harness incl. a cold city) and its ambient sound fits its cover.
-**Current focus:** Phase 08 — compliant-any-city-venue-corpus (next: `/gsd:plan-phase 8`)
+**Current focus:** Phase 11 — page-by-page UX & nav audit + remediation (pass 1 of the audit done: 17/60 routes, F1/F2 fixed; next: remaining ~43 routes + remediation, then `/gsd:audit-milestone`)
 
 ## Current Position
 
-Phase: 10 — Generation as the Primary Night Path (COMPLETE — FLOW-01 closed)
-Plan: 03 complete — phase gate. An OFFLINE RTL wiring spec (apps/web/app/create/__tests__/primary-path-wiring.test.tsx, 4/4) proves the whole FLOW-01 primary path is wired with mock generation (no real /api/create-plan LLM call, no Foursquare key, no network): (1) CreateChooser presents generate as the one bg-shell-accent door routing to /create/generate while the demoted "or build from scratch" link still drives createBlankItinerary → /plans/<id>/edit (no trap); (2) source-level assertion that BottomTabShell (+ tab) and UserMenu (wedge) both target /create/generate; (3) the curated Kelowna chip in CreateFlow (authed) POSTs {cityId} to /api/profile/city; (4) the mocked generation lands a result where ImproveControls is present + precedes PublishToFeedButton in the DOM, and a swap action calls the generate-plan improve dispatch (mocked) + persists in place; (5) PublishToFeedButton routes to /nights/new?itinerary=<id>. A no-trap test pins that a failed city save never disables the CTA. Full create+city suites 26/26, web tsc --noEmit clean. Reframed from the planned live-Playwright e2e + static @420px capture to an offline wiring spec per the objective; the @420px visual-verify is DEFERRED (not dropped) to Phase 11's interactive Playwright-MCP route audit. NO migration (10-02 confirmed profiles_owner_all self-update suffices) → Phase 10 is app-code only, ships via Vercel on push, nothing to bundle into the Phase-8/9 key-gated cutover. Commit 8f4d4bb. Next: Phase 11 (UX-01/02, the last v2.0 phase).
-Status: Phase 10 complete; v2.0 phases 8/9/11 still open (8 + 9 gated on FOURSQUARE_API_KEY; 11 is the final audit phase)
-Last activity: 2026-06-05 -- Phase 10 Plan 03 executed: the FLOW-01 phase gate. Offline wiring spec proves city→generate→improve→publish + the dominant-generate/demoted-manual/global-route wiring; 4/4 new, 26/26 create+city, web tsc clean. Visual-verify deferred to Phase 11; no migration (ships on push). FLOW-01 closed, Phase 10 complete.
+Phase: 11 — Page-by-Page UX & Nav Audit + Remediation (IN PROGRESS; phases 8/9/10 complete)
+Plan: no formal PLANs yet — pass 1 of the UX-01 audit ran ad-hoc (scripted-Playwright collector, 17/60 routes @420px, evidence in phases/11-.../__audit__/): F1 /places/[slug] nav trap FIXED (PlaceBackButton), F2 /create/generate disabled-CTA contrast FIXED, F3 missing-h1 deferred. Remaining: ~43 routes (admin/legal/marketing/secondary) via the same collector (re-run with SERVICE_ROLE_KEY exported), then prioritized remediation. Known UX items already queued for remediation: save+publish twin stacked primaries on /plans/[id]/edit; the "first 100 members" banner off-voice on dating surfaces; residual legacy-Fraunces serif spots.
+Status: Phase 11 is the last open v2.0 phase. Carried debt outside it: cold-city quality-floor fix (DATA-02 gap — passesQualityFloor rating>=7.0 writes 0 rows on sparse-rating cold cities -> permanent city_warming), SOUND-01 ambient audio (needs ELEVENLABS_API_KEY), Database types regen (seed_city enum + fsq cols), post-activation scoring tune (a "romantic" request returned climb+escape-room; run the EVAL-01 harness against the 184-venue pool).
+Last activity: 2026-06-09 -- merged + pushed the canvas convergence; reconciled state.
 
 ## v2.0 Roadmap (phases 8–11)
 
@@ -146,6 +146,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-05 — Phase 10 Plan 03 executed: the FLOW-01 phase gate, closing Phase 10. An OFFLINE RTL wiring spec (apps/web/app/create/__tests__/primary-path-wiring.test.tsx, 4/4) proves the whole primary path is wired with mock generation (no LLM, no Foursquare key, no network): generate is the dominant /create door + the demoted manual link works (no trap); the + tab/wedge route to /create/generate; the curated city pick POSTs /api/profile/city; ImproveControls renders before PublishToFeedButton + a swap persists in place; publish routes to /nights/new?itinerary=<id>. Full create+city suites 26/26, web tsc clean. Reframed from the planned live-Playwright e2e + static @420px capture to an offline wiring spec per the objective; the @420px visual-verify is DEFERRED (not dropped) to Phase 11's interactive Playwright-MCP route audit. NO migration → Phase 10 is app-code only, ships on push, nothing to bundle into the Phase-8/9 cutover. Commit 8f4d4bb. FLOW-01 complete, Phase 10 complete.
-Stopped at: Completed 10-03-PLAN.md — Phase 10 COMPLETE (FLOW-01 closed). Next: Phase 11 (UX-01/02 page-by-page UX & nav audit + remediation — the last v2.0 phase; its interactive @420px route audit inherits the deferred create-surface visual-verify). Phases 8 + 9 gates remain open, blocked on FOURSQUARE_API_KEY.
+Last session: 2026-06-09 — Executed the date-customization-canvas plan via subagent-driven development, pivoting mid-build (user-approved) to CONVERGE on the existing /plans/[id]/edit editor instead of shipping a parallel DateCanvas: backend generate-1 + regenerate_title/remove_stop (owner-safe, caller-JWT routed) deployed to prod; editor gained AI title chips + ImproveControls (before publish — FLOW-01 intact); CreateFlow redirects authed generations to the editor. Visual-verified @420px (one real clipping fix). Repaired a repo-wide vitest breakage (deno --node-modules-dir=auto corrupts pnpm node_modules; use =none — recipe in phase8 pending todo). Merged to main fast-forward + pushed 9c44242 (Vercel deploy). Reconciled ROADMAP/STATE: phases 8+9 marked complete (cutover ran 2026-06-08), Phase 11 in progress.
+Stopped at: GSD state reconciled. Next: finish the Phase 11 audit (remaining ~43 routes) + remediation, then /gsd:audit-milestone → /gsd:complete-milestone v2.0. Carried debt listed under Current Position.
 Resume file: None

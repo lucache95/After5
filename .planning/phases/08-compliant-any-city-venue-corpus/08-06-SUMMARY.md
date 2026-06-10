@@ -1,12 +1,11 @@
 ---
 plan: 08-06
 phase: 08-compliant-any-city-venue-corpus
-status: partial
+status: complete
 autonomous: false
 requirements: [DATA-01, DATA-02, DATA-03]
 tasks_total: 3
-tasks_complete: 1
-blocked_on: FOURSQUARE_API_KEY (live smoke + prod cutover)
+tasks_complete: 3
 ---
 
 # Plan 08-06 Summary — Phase Gate (local-green DONE; prod cutover deferred, key-blocked)
@@ -47,3 +46,24 @@ type regen + live smoke. Prod `ufufmcpnysvwtutpbian` is UNTOUCHED. Tracked in th
   functional core: generation warms a cold city on-demand.
 
 ## Net: Phase 8 BUILD complete + locally green; prod cutover + background-preseed wiring carried forward.
+
+## UPDATE 2026-06-08/09 — Tasks 2+3 EXECUTED (key landed; cutover applied + verified)
+The user provided `FOURSQUARE_API_KEY` 2026-06-08 and the atomic gated op ran against prod
+`ufufmcpnysvwtutpbian`:
+- Key validated live (HTTP 200; NOTE: the new Places API uses LEGACY hex category IDs — the
+  `[ASSUMED]` integer IDs would 400; seed categories in fsq-seed.ts were already correct).
+- Migrations `20260606150000` + `20260606150100` applied: relabel moved 92 discovered→
+  google_legacy, removed 0 active+live venues (59 curated intact). Advisor: no new findings.
+- `generate-plan` + `process-jobs` deployed (and `generate-plan` redeployed 2026-06-09 with
+  generate-1 + `regenerate_title`/`remove_stop`; Kelowna smoke returns exactly 1 itinerary).
+- Follow-up commit 5aa3eb3 fixed 3 any-city integration-seam bugs found by the smoke
+  (env.foursquareKey unwired; `city_slug` default shadowing `city_query`; open-city geocode
+  still on Google → swapped to Foursquare).
+- The full generate-plan deno suite now runs green 96/96 via `--node-modules-dir=none`
+  (closes the known env gap; NEVER use `=auto` — corrupts pnpm node_modules).
+
+**Remaining known gap (tracked, NOT closing this phase):** cold-city warm writes 0 rows →
+permanent `city_warming` (`passesQualityFloor` requires rating ≥ 7.0 + present; sparse-rating
+cold FSQ results all fail). Fix = evidence-based relax tuned against the eval harness. Also:
+regen Database types (seed_city enum + fsq columns). Both in
+`.planning/todos/pending/phase8-prod-cutover-and-preseed-wiring.md`.
