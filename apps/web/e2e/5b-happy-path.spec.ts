@@ -6,7 +6,7 @@
 //   - new-interest candidate = button aria-label "add <name> to shortlist" (InterestedList)
 //   - rank-1 make-offer CTA = button "send it"; MakeOfferModal confirm = "send the offer"
 //   - offer success toast = "offer's out to <name>"
-//   - candidate offer screen header "you've got an offer"; expiry = role=timer; accept = "accept"
+//   - candidate offer screen header "<host> picked you"; expiry = role=timer; accept = "accept"
 //   - lock reveal = "see their profile" button → RevealModal shows the counterpart name
 // There is NO /offers index route, so we resolve the offer id via the service-role
 // seed client (a setup READ, not a faked user read — the candidate still accepts
@@ -79,7 +79,7 @@ test('5b happy path: swipe → shortlist → offer → accept → reveal (two co
 
   // 4. Candidate opens the offer, sees the countdown, accepts.
   await candPage.goto(`/offers/${offerId}`);
-  await expect(candPage.getByText(/you've got an offer/i)).toBeVisible();
+  await expect(candPage.getByText(/picked you/i)).toBeVisible();
   await expect(candPage.getByRole('timer')).toBeVisible();
   await candPage.getByRole('button', { name: /^accept$/i }).click();
 

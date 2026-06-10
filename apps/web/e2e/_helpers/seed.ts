@@ -32,7 +32,7 @@ async function createUser(sb: SupabaseClient, email: string): Promise<string> {
 async function promoteProfile(
   sb: SupabaseClient,
   userId: string,
-  opts: { firstName: string; birthdate: string; gender: string; prefs: string[]; verified?: boolean },
+  opts: { firstName: string; birthdate: string; gender: string; prefs: string[]; verified?: boolean; photo?: string },
 ) {
   // birthdate FIRST — the age-gate trigger requires it before dating_enabled can flip true.
   let { error } = await sb
@@ -53,10 +53,13 @@ async function promoteProfile(
       primary_city_id: city.id,
       distance_pref_km: 40,
       vibe_tags: ['cozy', 'creative', 'nightlife'],
-      // Local public asset — a remote host would need next.config images allow-listing
-      // and next/image throws (→ server error) on an un-configured hostname.
-      clear_photo_url: '/places/place-walk.jpg',
-      blurred_photo_url: '/places/place-walk.jpg',
+      // Local public assets — a remote host would need next.config images
+      // allow-listing and next/image throws (→ server error) on an
+      // un-configured hostname. Real PERSON portraits (public/seed/*.jpg,
+      // FLUX-generated like the prod seed hosts) — a street scene in the
+      // polaroid read as a bug during founder walkthroughs.
+      clear_photo_url: opts.photo ?? '/seed/portrait-man.jpg',
+      blurred_photo_url: opts.photo ?? '/seed/portrait-man.jpg',
       verification: opts.verified === false ? 'unverified' : 'verified',
       dating_enabled: opts.verified === false ? false : true,
       onboarding_step: 'done',
@@ -81,12 +84,14 @@ export async function seedTwoUsersAndNight(): Promise<SeedResult> {
     birthdate: '1992-04-12',
     gender: 'woman',
     prefs: ['man', 'woman'],
+    photo: '/seed/portrait-woman.jpg',
   });
   await promoteProfile(sb, candId, {
     firstName: `Jordan ${runId}`,
     birthdate: '1995-09-21',
     gender: 'man',
     prefs: ['woman'],
+    photo: '/seed/portrait-man.jpg',
   });
 
   // Host itinerary (FK target) → date_instance (status 'seeking').

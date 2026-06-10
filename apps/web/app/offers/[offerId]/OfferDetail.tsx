@@ -85,7 +85,9 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops,
   return (
     <main className="flex min-h-dvh flex-col items-center bg-shell-base px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-12">
       <div className="mx-auto w-full max-w-[420px]">
-        <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">you&apos;ve got an offer</h1>
+        {/* The moment: the host CHOSE them. Name the act, not the transaction —
+            "you've got an offer" read like a job posting (founder, 2026-06-10). */}
+        <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">{name} picked you</h1>
 
         <div className="mt-6 flex items-center gap-3">
           {/* Rung-2 host hint (REQ-E15 / D-03): a small 48px blurred avatar, secondary

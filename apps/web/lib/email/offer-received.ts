@@ -49,7 +49,7 @@ export function renderOfferReceivedEmail(
   const subject = `${fromText} sent you a night out`;
 
   const cardBody = `
-    ${eyebrow('you&rsquo;ve got an offer', BRAND.accent)}
+    ${eyebrow('you got picked', BRAND.accent)}
 
     <h1 style="margin:0 0 16px 0;font-family:${FONT_HEADING};font-size:30px;font-weight:400;line-height:1.1;color:${BRAND.ink};">
       ${greeting} &mdash; <span style="color:${BRAND.accent};">${from}</span> wants to take you out.
