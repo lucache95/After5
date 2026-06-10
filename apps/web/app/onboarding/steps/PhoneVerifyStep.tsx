@@ -4,10 +4,12 @@
 // type:'sms', which is a sign-in primitive that can swap the session to another
 // identity). Then confirmPhone (server writes the verified phone row) then
 // advanceOnboarding('selfie_verify').
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, confirmPhone, advanceOnboarding } from '@/lib/after5/client';
+
+const RESEND_THROTTLE_S = 30;
 
 export function PhoneVerifyStep() {
   const router = useRouter();
@@ -16,6 +18,25 @@ export function PhoneVerifyStep() {
   const [stage, setStage] = useState<'enter_phone' | 'enter_code'>('enter_phone');
   const [phase, setPhase] = useState<'idle' | 'sending' | 'verifying' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [sendAttempts, setSendAttempts] = useState(0);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, []);
+
+  function startResendThrottle() {
+    setResendCountdown(RESEND_THROTTLE_S);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setResendCountdown((n) => {
+        if (n <= 1) { clearInterval(countdownRef.current!); return 0; }
+        return n - 1;
+      });
+    }, 1000);
+  }
 
   function friendly(msg: string): string {
     return /rate.?limit|too.?many|over_/i.test(msg)
@@ -51,6 +72,8 @@ export function PhoneVerifyStep() {
     // Attach the phone to the CURRENT user (phone-change), never a sign-in.
     const { error } = await browserAfter5Client().auth.updateUser({ phone: e164 });
     if (error) { setErrorMsg(friendly(error.message)); setPhase('error'); return; }
+    setSendAttempts((n) => n + 1);
+    startResendThrottle();
     setStage('enter_code');
     setPhase('idle');
   }
@@ -62,9 +85,15 @@ export function PhoneVerifyStep() {
     const { data: { session: pre } } = await client.auth.getSession();
     // Verify against the SAME E.164 number the code was texted to (Supabase matches on it).
     const { data, error } = await client.auth.verifyOtp({ phone: toE164(phone), token: code, type: 'phone_change' });
-    if (error || !data?.session) { setErrorMsg(friendly(error?.message ?? 'That code did not work.')); setPhase('error'); return; }
+    if (error || !data?.session) {
+      setFailedAttempts((n) => n + 1);
+      setErrorMsg(friendly(error?.message ?? 'That code did not work.'));
+      setPhase('error');
+      return;
+    }
     // Belt-and-braces: phone_change updates the current user; the uid must not change.
     if (pre?.user?.id && data.user?.id && data.user.id !== pre.user.id) {
+      setFailedAttempts((n) => n + 1);
       setErrorMsg('We could not verify your number on this account. Please sign in again.');
       setPhase('error');
       return;
@@ -74,9 +103,19 @@ export function PhoneVerifyStep() {
       await advanceOnboarding(client, 'selfie_verify');
       router.push('/onboarding/verify');
     } catch (e) {
+      setFailedAttempts((n) => n + 1);
       setErrorMsg(e instanceof Error ? e.message : 'We could not confirm your number.');
       setPhase('error');
     }
+  }
+
+  function resetToPhoneEntry() {
+    setStage('enter_phone');
+    setCode('');
+    setPhase('idle');
+    setErrorMsg('');
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setResendCountdown(0);
   }
 
   const inputBase = cn(
@@ -127,13 +166,45 @@ export function PhoneVerifyStep() {
                 code.length < 6 || phase === 'verifying' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
               {phase === 'verifying' ? 'checking…' : "i'm in"}
             </button>
-            <button type="button" onClick={() => { setStage('enter_phone'); setCode(''); setPhase('idle'); }}
-              className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+            <button type="button" onClick={resetToPhoneEntry}
+              className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full min-h-[44px] px-1">
               use a different number
             </button>
           </>
         )}
       </div>
+
+      {stage === 'enter_code' && (
+        <div className="mt-4 flex items-center gap-3">
+          {resendCountdown > 0 ? (
+            <span className="font-body text-sm text-shell-ink/50">
+              resend in {resendCountdown}s
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={sendCode}
+              disabled={phase === 'sending'}
+              aria-busy={phase === 'sending'}
+              className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full min-h-[44px] px-1"
+            >
+              {phase === 'sending' ? 'sending…' : 'resend code'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {(failedAttempts > 0 || sendAttempts > 1) && (
+        <p className="mt-5 font-body text-[13px] text-shell-ink/50">
+          having trouble?{' '}
+          <a
+            href="mailto:hello@tryafter5.app"
+            className="underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded"
+          >
+            email hello@tryafter5.app
+          </a>
+        </p>
+      )}
     </div>
   );
 }

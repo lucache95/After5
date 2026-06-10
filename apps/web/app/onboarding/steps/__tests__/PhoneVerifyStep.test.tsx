@@ -81,4 +81,41 @@ describe('PhoneVerifyStep', () => {
     await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/wait|moment|too many/i));
   });
+
+  it('resend: resend code button appears once a code has been sent', async () => {
+    updateUser.mockResolvedValue({ error: null });
+    render(<PhoneVerifyStep />);
+    await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
+    await waitFor(() => expect(updateUser).toHaveBeenCalled());
+    // Either the resend button or countdown is shown once in code-entry stage
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: /resend code/i }) ??
+        screen.queryByText(/resend in/i),
+      ).not.toBeNull(),
+    );
+  });
+
+  it('resend: resend is throttled — shows countdown immediately after first send', async () => {
+    updateUser.mockResolvedValue({ error: null });
+    render(<PhoneVerifyStep />);
+    await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
+    await waitFor(() => expect(updateUser).toHaveBeenCalled());
+    // Should show "resend in Xs" (throttle active), not the resend button
+    await waitFor(() => expect(screen.getByText(/resend in/i)).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /resend code/i })).not.toBeInTheDocument();
+  });
+
+  it('use-a-different-number: returns to phone-entry state', async () => {
+    updateUser.mockResolvedValue({ error: null });
+    render(<PhoneVerifyStep />);
+    await userEvent.type(screen.getByLabelText(/phone/i), '+12505551234');
+    await userEvent.click(screen.getByRole('button', { name: /text me a code/i }));
+    await waitFor(() => expect(screen.getByLabelText(/6-digit code/i)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /use a different number/i }));
+    expect(screen.getByRole('button', { name: /text me a code/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/6-digit code/i)).not.toBeInTheDocument();
+  });
 });
