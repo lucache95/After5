@@ -27,6 +27,20 @@ describe('ReciprocalChooser', () => {
     expect(screen.getByText(/pottery/i)).toBeInTheDocument();
   });
 
+  it('renders a back affordance linking to /home', () => {
+    render(<ReciprocalChooser pairId="pair-1" instanceA={inst('a', 'jazz bar')} instanceB={inst('b', 'pottery')} />);
+    const backLink = screen.getByRole('link', { name: /back to home/i });
+    expect(backLink).toBeInTheDocument();
+    expect(backLink).toHaveAttribute('href', '/home');
+  });
+
+  it('renders a quiet decide-later link to /home', () => {
+    render(<ReciprocalChooser pairId="pair-1" instanceA={inst('a', 'jazz bar')} instanceB={inst('b', 'pottery')} />);
+    const laterLink = screen.getByRole('link', { name: /decide later/i });
+    expect(laterLink).toBeInTheDocument();
+    expect(laterLink).toHaveAttribute('href', '/home');
+  });
+
   it('picking calls resolveReciprocal and redirects to the chosen list', async () => {
     resolveReciprocal.mockResolvedValue(null);
     render(<ReciprocalChooser pairId="pair-1" instanceA={inst('a', 'jazz bar')} instanceB={inst('b', 'pottery')} />);
