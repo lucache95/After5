@@ -20,6 +20,11 @@ import { MatchError } from '@/lib/after5/match';
 beforeEach(() => { submitRating.mockReset(); push.mockReset(); toastFn.mockReset(); toastError.mockReset(); });
 
 describe('RatingForm', () => {
+  it('renders the consequence-transparency line near the submit button', () => {
+    render(<RatingForm lockId="lock-1" rateeId="them" />);
+    expect(screen.getByText(/your answers shape their reliability badge/i)).toBeInTheDocument();
+  });
+
   it('toggles default to null and submits selected booleans', async () => {
     submitRating.mockResolvedValue('ok');
     render(<RatingForm lockId="lock-1" rateeId="them" />);

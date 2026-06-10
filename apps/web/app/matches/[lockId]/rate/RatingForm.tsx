@@ -85,11 +85,14 @@ export function RatingForm({ lockId, rateeId }: { lockId: string; rateeId: strin
           </fieldset>
         ))}
       </div>
+      <p className="mt-5 font-body text-xs text-shell-ink/45">
+        your answers shape their reliability badge — answer straight.
+      </p>
       <button
         type="button"
         disabled={busy}
         onClick={onSubmit}
-        className="mt-7 min-h-[48px] w-full rounded-full bg-shell-accent font-body font-semibold lowercase text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+        className="mt-3 min-h-[48px] w-full rounded-full bg-shell-accent font-body font-semibold lowercase text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
       >
         submit
       </button>
