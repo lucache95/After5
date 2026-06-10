@@ -47,9 +47,13 @@ test('chat happy path: list → open → send → reply → both see both + rapp
   await expect(hostRow).toBeVisible({ timeout: 20_000 });
 
   // 2. Host opens the conversation; the header shows the counterpart's name; nudge is pre-hi.
+  // The unified inbox (#84) serves threads under /inbox/[threadId] too — a row click
+  // may land on either prefix depending on the surface; both render the same thread.
   await hostRow.click();
-  await expect(hostPage).toHaveURL(new RegExp(`/messages/${seed.threadId}`));
-  await expect(hostPage.getByRole('heading', { name: new RegExp(seed.candName, 'i') })).toBeVisible();
+  await expect(hostPage).toHaveURL(new RegExp(`/(messages|inbox)/${seed.threadId}`));
+  // Scope to the page banner — the thread surface can render a second
+  // same-name heading (night-context card), tripping strict mode.
+  await expect(hostPage.getByRole('banner').getByRole('heading', { name: new RegExp(seed.candName, 'i') })).toBeVisible();
   await expect(hostPage.getByText(/say hi before you lock in/i)).toBeVisible();
 
   // 3. Host sends a message; it appears in their own thread (own bubble).
@@ -60,7 +64,7 @@ test('chat happy path: list → open → send → reply → both see both + rapp
 
   // 4. Candidate opens the conversation; they SEE the host's message (realtime, or on load).
   await candPage.goto(`/messages/${seed.threadId}`);
-  await expect(candPage.getByRole('heading', { name: new RegExp(seed.hostName, 'i') })).toBeVisible();
+  await expect(candPage.getByRole('banner').getByRole('heading', { name: new RegExp(seed.hostName, 'i') })).toBeVisible();
   await expect(candPage.getByText(hostMsg)).toBeVisible({ timeout: 15_000 });
 
   // 5. Candidate replies; both contexts converge on both messages.
