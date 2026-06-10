@@ -7,14 +7,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const { push, refresh, savePreferences, advanceOnboarding, datingUpdate, toastSuccess } = vi.hoisted(() => ({
+const { push, refresh, savePreferences, advanceOnboarding, datingUpdate, toastSuccess, fetchMock } = vi.hoisted(() => ({
   push: vi.fn(),
   refresh: vi.fn(),
   savePreferences: vi.fn(async () => undefined),
   advanceOnboarding: vi.fn(async () => undefined),
   datingUpdate: vi.fn(() => ({ eq: async () => ({ error: null }) })),
   toastSuccess: vi.fn(),
+  // P0 default-city backfill goes through fetch('/api/profile/default-city').
+  fetchMock: vi.fn(async () => ({ ok: true })),
 }));
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }));
 vi.mock('sonner', () => ({ toast: { success: (...a: unknown[]) => toastSuccess(...a) } }));
@@ -39,8 +42,10 @@ const INITIAL: PreferencesInitial = {
 beforeEach(() => {
   push.mockClear(); refresh.mockClear(); savePreferences.mockClear();
   advanceOnboarding.mockClear(); datingUpdate.mockClear(); toastSuccess.mockClear();
+  fetchMock.mockClear();
   savePreferences.mockResolvedValue(undefined);
   advanceOnboarding.mockResolvedValue(undefined);
+  fetchMock.mockResolvedValue({ ok: true } as never);
 });
 
 describe('parseAgePref — canonical int4range parser (Pitfall 3)', () => {
@@ -75,6 +80,36 @@ describe('PreferencesForm — onboarding mode (behavior-preserving)', () => {
     await waitFor(() => expect(savePreferences).toHaveBeenCalledTimes(1));
     expect(advanceOnboarding).toHaveBeenCalledWith(expect.anything(), 'phone_verify');
     expect(push).toHaveBeenCalledWith('/onboarding/phone');
+  });
+});
+
+describe('PreferencesForm — P0 launch-city default (empty-feed fix)', () => {
+  it('the save POSTs /api/profile/default-city (the server backfills a null city)', async () => {
+    render(<PreferencesForm mode="onboarding" userId="u1" initial={INITIAL} />);
+    fireEvent.click(screen.getByRole('button', { name: 'next' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/profile/default-city', { method: 'POST' }));
+    // ordering: prefs are saved before the backfill fires
+    expect(savePreferences).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith('/onboarding/phone');
+  });
+
+  it('a failing backfill NEVER stalls the funnel — still advances + pushes', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<PreferencesForm mode="onboarding" userId="u1" initial={INITIAL} />);
+    fireEvent.click(screen.getByRole('button', { name: 'next' }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/phone'));
+    expect(advanceOnboarding).toHaveBeenCalledWith(expect.anything(), 'phone_verify');
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('invalid input never fires the backfill (no save, no city write)', async () => {
+    const bad: PreferencesInitial = { ...INITIAL, age_min: 50, age_max: 30 };
+    render(<PreferencesForm mode="onboarding" userId="u1" initial={bad} />);
+    fireEvent.click(screen.getByRole('button', { name: /next|try again/ }));
+    await screen.findByRole('alert');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

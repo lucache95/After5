@@ -77,6 +77,16 @@ export function DoneStep({
           <div role="alert" className="mx-auto mt-4 max-w-sm rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[15px] text-shell-ink">
             {datingGateMessage(gate.reason)}
           </div>
+          {/* not_verified is fixable right now — hand them the door (P2: the
+              calm not-yet-verified framing, never an invented id failure). */}
+          {gate.reason === 'not_verified' && (
+            <p className="mt-3">
+              <button type="button" onClick={() => router.push('/onboarding/verify')}
+                className="font-body text-sm font-medium lowercase text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 transition-colors hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+                finish verifying →
+              </button>
+            </p>
+          )}
         </>
       )}
 

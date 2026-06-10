@@ -89,6 +89,16 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
     try {
       const client = browserAfter5Client();
       await savePreferences(client, userId, parsed.data);
+      // P0 (empty-feed): the wizard never sets primary_city_id and the feed RPC
+      // NULLs out every row for a city-less viewer. Default the launch city
+      // server-side at the one write point every dating signup hits. Idempotent
+      // (the route never overwrites a set city) and non-blocking: a hiccup here
+      // must never stall the save or the funnel.
+      try {
+        await fetch('/api/profile/default-city', { method: 'POST' });
+      } catch (cityErr) {
+        console.warn('[preferences] default-city backfill skipped', cityErr);
+      }
       if (mode === 'onboarding') {
         await advanceOnboarding(client, 'phone_verify');
         router.push('/onboarding/phone');

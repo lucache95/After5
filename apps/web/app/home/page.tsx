@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { badgeFor, canEnableDating } from '@after5/business';
 import type { VerificationState } from '@after5/validators';
 import { homeState, primaryActionFor, itineraryToTeaser, type ItineraryRow } from '@/lib/onboarding/teaser';
+import { displayGateReason } from '@/lib/onboarding/dating-gate';
 import { HomeStateBanner } from './HomeStateBanner';
 import { MechanicExplainer } from './MechanicExplainer';
 import { TeaserGallery } from './TeaserGallery';
@@ -67,7 +68,9 @@ export default async function FirstSessionHome() {
           </p>
 
           <div className="mt-6">
-            <HomeStateBanner state={state} gate={{ ok: gate.ok, reason: gate.reason }} />
+            {/* displayGateReason: never claim an id-read failure to someone whose
+                id was never scanned (P2 — same honesty rule as the done step). */}
+            <HomeStateBanner state={state} gate={{ ok: gate.ok, reason: displayGateReason(gate.reason, verification) }} />
             {/* Exactly one primary action per state: for pending/failed/dating_off
                 the banner carries it, so the page CTA shows only when verified
                 (the only state whose action is 'explore'). Pink lives on the

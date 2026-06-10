@@ -4,6 +4,7 @@ import { DoneStep } from '../steps/DoneStep';
 import { createClient } from '@/lib/supabase/server';
 import { badgeFor, canEnableDating } from '@after5/business';
 import type { VerificationState } from '@after5/validators';
+import { displayGateReason } from '@/lib/onboarding/dating-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,5 +26,9 @@ export default async function DonePage() {
     onboarding_step: p?.onboarding_step ?? 'age_gate',
   });
 
-  return <OnboardingShell step={7}><DoneStep userId={user.id} badge={badge} gate={{ ok: gate.ok, reason: gate.reason }} /></OnboardingShell>;
+  // P2 (skip-to-done): a user who never scanned an id must see "not verified
+  // yet", not an invented "couldn't read your date of birth" failure.
+  const reason = displayGateReason(gate.reason, verification);
+
+  return <OnboardingShell step={7}><DoneStep userId={user.id} badge={badge} gate={{ ok: gate.ok, reason }} /></OnboardingShell>;
 }

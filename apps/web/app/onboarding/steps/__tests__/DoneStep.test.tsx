@@ -83,6 +83,22 @@ describe('DoneStep', () => {
     expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent(/you're in/i);
   });
 
+  it('P2 honest unverified state: not_verified shows the calm framing + a finish-verifying door, never an id-failure claim', async () => {
+    render(<DoneStep userId="u1" badge={{ verified: false, isNew: false }} gate={{ ok: false, reason: 'not_verified' }} />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/finish verifying to turn dating on/i);
+    // never invent an id-read failure for an id that was never scanned
+    expect(alert).not.toHaveTextContent(/date of birth|read your.*id/i);
+    await userEvent.click(screen.getByRole('button', { name: /finish verifying/i }));
+    expect(push).toHaveBeenCalledWith('/onboarding/verify');
+  });
+
+  it('P2: the verify door only renders for not_verified (a real post-scan failure keeps the support copy)', () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'birthdate_missing' }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(/date of birth/i);
+    expect(screen.queryByRole('button', { name: /finish verifying/i })).not.toBeInTheDocument();
+  });
+
   it('gate NOT ok: does not claim "verified" in the badge chip', () => {
     render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'under_18' }} />);
     // Badge chip should say "profile complete", not "verified"
