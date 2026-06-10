@@ -27,6 +27,9 @@ export interface PlanInputs {
   start_at?: string;
   // Anonymous claim flow — lowercased email tagged onto generated itineraries.
   claim_email?: string;
+  // Cross-call venue diversity — candidate place ids to hard-exclude (see
+  // InputSchema note in index.ts).
+  exclude_place_ids?: string[];
   // M1: additive + optional. Resolves which city's places + provider to use.
   // Absent ⇒ 'kelowna' (byte-identical to pre-M1 behavior).
   city_slug?: string;

@@ -39,7 +39,13 @@ export async function runPipeline(
   const approvalStatuses = opts?.approvalStatuses ?? ['live'];
 
   // 3. Filter candidate places
-  const candidates = await filterPlaces(supabase, inputs, city, approvalStatuses);
+  const fetched = await filterPlaces(supabase, inputs, city, approvalStatuses);
+  // Cross-call venue diversity (exclude_place_ids): hard-drop venues the
+  // caller already used elsewhere (seed batches, "post similar"). Fail-loud
+  // by design — an over-thinned pool hits the no_candidates 422 below and the
+  // caller chooses whether to retry without exclusions.
+  const excluded = new Set(inputs.exclude_place_ids ?? []);
+  const candidates = excluded.size > 0 ? fetched.filter((p) => !excluded.has(p.id)) : fetched;
   if (candidates.length < 3) {
     throw new PipelineError('no_candidates', 'Not enough places match those filters. Try widening budget or vibe.', 422);
   }

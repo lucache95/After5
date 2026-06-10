@@ -258,12 +258,20 @@ async function makeHost(h, cityId) {
 
 // One generation call = one itinerary id (generate-1). One retry on failure
 // (rate limits / transient LLM errors), then give up on that slot.
-async function generate(g, attempt = 1) {
+// excludeIds = venues other seed nights already use (cross-night diversity —
+// Woodhaven/D-Spot were opening/closing 4 of 11 nights each because every
+// generation call is independent). Hard-excluded server-side; a non-rate-limit
+// retry drops the exclusions so a thinned pool still fills the slot.
+async function generate(g, excludeIds = [], attempt = 1) {
   try {
     const res = await fetch(`${URL_}/functions/v1/generate-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${ANON}` },
-      body: JSON.stringify({ vibe: g.vibe, city_slug: 'kelowna', occasion: 'date', budget_per_person: g.budget, duration_min: 180 }),
+      body: JSON.stringify({
+        vibe: g.vibe, city_slug: 'kelowna', occasion: 'date',
+        budget_per_person: g.budget, duration_min: 180,
+        exclude_place_ids: excludeIds.slice(0, 120),
+      }),
     });
     const j = await res.json();
     const id = j.itineraries?.[0]?.id;
@@ -271,9 +279,11 @@ async function generate(g, attempt = 1) {
     return { id, title: j.itineraries[0].title };
   } catch (e) {
     if (attempt < 2) {
-      console.log(`  ! [${g.vibe.join('+')}] failed (${e.message.slice(0, 80)}) — retrying in 20s`);
+      const rateLimited = e.message.includes('rate_limited');
+      const retryExcl = rateLimited ? excludeIds : [];
+      console.log(`  ! [${g.vibe.join('+')}] failed (${e.message.slice(0, 80)}) — retrying in 20s${retryExcl.length ? '' : ' without exclusions'}`);
       await new Promise((r) => setTimeout(r, 20_000));
-      return generate(g, attempt + 1);
+      return generate(g, retryExcl, attempt + 1);
     }
     console.log(`  ✗ [${g.vibe.join('+')}] gave up: ${e.message.slice(0, 120)}`);
     return null;
@@ -309,11 +319,35 @@ async function main() {
   }
   const slots = topUp ? GEN.slice(existing.length) : GEN;
 
+  // Cross-night venue diversity: start the exclusion set from venues the
+  // already-live seed nights use (top-up), then grow it with each success so
+  // no two seed nights share a venue. The server hard-filters; generate()'s
+  // retry drops exclusions if a slot can't fill from the remaining pool.
+  const usedPlaceIds = new Set();
+  {
+    const { data: liveItins } = await sb.from('itineraries')
+      .select('stops, date_instances!inner(is_seed, status)')
+      .in('user_id', Object.values(hostIds))
+      .eq('date_instances.is_seed', true).eq('date_instances.status', 'seeking');
+    for (const it of liveItins ?? []) {
+      for (const s of Array.isArray(it.stops) ? it.stops : []) {
+        if (s.place_id) usedPlaceIds.add(s.place_id);
+      }
+    }
+  }
+
   // generate SEQUENTIALLY with spacing (rate-limit hazard, 2026-06-08).
   const itins = [];
   for (const g of slots) {
-    const r = await generate(g);
-    if (r) { itins.push({ ...r, gen: g }); console.log(`  ✓ [${g.vibe.join('+')}] ${r.title}`); }
+    const r = await generate(g, [...usedPlaceIds]);
+    if (r) {
+      itins.push({ ...r, gen: g });
+      console.log(`  ✓ [${g.vibe.join('+')}] ${r.title}`);
+      const { data: fresh } = await sb.from('itineraries').select('stops').eq('id', r.id).single();
+      for (const s of Array.isArray(fresh?.stops) ? fresh.stops : []) {
+        if (s.place_id) usedPlaceIds.add(s.place_id);
+      }
+    }
     await new Promise((res) => setTimeout(res, 2_000));
   }
   console.log(`generated ${itins.length}/${slots.length} kelowna itineraries`);

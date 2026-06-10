@@ -66,6 +66,13 @@ const InputSchema = z.object({
   // does NOT match a curated cities row — then we geocode it, mint an ad-hoc
   // city around that center, and warm it on the fly. Curated callers ignore it.
   city_query: z.string().trim().min(1).max(120).optional(),
+  // Cross-call venue diversity: place ids the caller wants left out of the
+  // candidate pool (e.g. the seed script excluding venues its other nights
+  // already use; later, "post one like this" excluding the source's venues).
+  // HARD filter, fail-loud: if exclusions thin the pool below viability the
+  // normal no_candidates 422 fires and the caller decides whether to retry
+  // without them.
+  exclude_place_ids: z.array(z.string().uuid()).max(120).default([]),
 });
 
 // ─── Rate-limit config ────────────────────────────────────────────────
