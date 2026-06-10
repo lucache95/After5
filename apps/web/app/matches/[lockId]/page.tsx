@@ -99,12 +99,21 @@ export default async function LockPage({
   try {
     const rows = await listMyPhotos(supabase, counterpart.id);
     photos = await signClearUrls(supabase, rows.map((r) => r.clear_path));
-    // Fallback: if no gallery rows yet (pre-M6 profiles), sign the legacy mirror.
+    // Fallback: if no gallery rows yet (pre-M6 profiles), use the legacy mirror.
+    // COHERENCE: the matches LIST renders clear_photo_url verbatim, so this
+    // surface must accept every shape the list accepts or the two disagree
+    // (live repro: list showed the photo, this hero showed the initial).
+    // A rooted path ('/...') is a public asset — render directly; anything
+    // else is a private storage path — sign it.
     if (photos.length === 0 && counterpart.clear_photo_url) {
-      const { data: signed } = await supabase.storage
-        .from('profile-photos')
-        .createSignedUrl(counterpart.clear_photo_url, 60 * 10);
-      if (signed?.signedUrl) photos = [signed.signedUrl];
+      if (counterpart.clear_photo_url.startsWith('/')) {
+        photos = [counterpart.clear_photo_url];
+      } else {
+        const { data: signed } = await supabase.storage
+          .from('profile-photos')
+          .createSignedUrl(counterpart.clear_photo_url, 60 * 10);
+        if (signed?.signedUrl) photos = [signed.signedUrl];
+      }
     }
   } catch {
     photos = [];
