@@ -110,3 +110,13 @@ describe('ProfileCard', () => {
     expect(screen.getByLabelText(/reliability: 88 percent, established/i)).toBeInTheDocument();
   });
 });
+
+it('multi-photo strip has prev/next chevrons and tappable dots (desktop affordance)', () => {
+  render(<ProfileCard name="Maya" age={29} place={null} photos={['https://x/1.jpg', 'https://x/2.jpg']} vibe_tags={[]} prompts={[]} />);
+  // at rest the strip sits on photo 1: only "next" shows, dots reflect position
+  expect(screen.queryByRole('button', { name: /previous photo/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /next photo/i })).toBeInTheDocument();
+  const dots = screen.getAllByRole('tab');
+  expect(dots).toHaveLength(2);
+  expect(dots[0]).toHaveAttribute('aria-selected', 'true');
+});

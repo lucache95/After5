@@ -3,10 +3,10 @@
 // native scroll-snap photo carousel (no new dependency), name+age heading,
 // pronouns, place, labelled prompt cards, and vibe sticker chips. NO PII
 // (instagram/email) unless explicitly passed by the post-reveal caller.
-import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { badgeFor, type VerificationState } from '@after5/business';
 import { Polaroid } from '@/components/Polaroid';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { cn } from '@/lib/cn';
 
 export interface ProfileCardPrompt {
@@ -68,22 +68,9 @@ export function ProfileCard({
           <Polaroid src={photos[0]} alt={name} size="xl" tone="dating" />
         </div>
       ) : (
-        <div
-          // data-vaul-no-drag: inside a vaul sheet (SelfViewSheet, RevealModal) the
-          // drawer's drag handler only recognizes VERTICALLY scrollable ancestors, so
-          // horizontal swipes on this strip would start a drawer drag instead of
-          // panning the carousel. The attribute is inert outside vaul.
-          data-vaul-no-drag
-          className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pt-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          role="group"
-          aria-label={`${name}'s photos`}
-        >
-          {photos.map((url, i) => (
-            <div key={url} className="relative aspect-[4/5] w-[78%] shrink-0 snap-center overflow-hidden rounded-2xl bg-shell-pink/30">
-              <Image src={url} alt={i === 0 ? name : `${name}, photo ${i + 1}`} fill sizes="320px" className="object-cover" />
-            </div>
-          ))}
-        </div>
+        // Swipeable strip + chevrons/dots (desktop mice can't drag a CSS scroll
+        // container) — see PhotoCarousel for the vaul no-drag note.
+        <PhotoCarousel name={name} photos={photos} />
       )}
 
       <div className="space-y-5 p-5">

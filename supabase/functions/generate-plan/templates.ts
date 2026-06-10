@@ -74,8 +74,18 @@ export function selectTopTemplates(
   inputs: PlanInputs,
   n = 3
 ): Template[] {
-  const eligible = templates.filter((t) =>
-    templateSatisfiesMustIncludes(t, inputs.must_includes ?? []),
+  // Location gate — mirrors filterPlaces' at_home scoping on the TEMPLATE side.
+  // At-home templates (geographic_rule = 'home', slots typed 'activity' meaning
+  // cook/games at home) carry vibes like romantic/cozy; without this gate they
+  // won selection for location='out' requests and filled their activity slots
+  // from the OUT venue pool — live repro: "romantic" seed nights assembling as
+  // climbing-gym + paddleboard double-activity plans. geographic_rule null/other
+  // = an out template.
+  const wantsHome = inputs.location === 'home';
+  const eligible = templates.filter(
+    (t) =>
+      (t.geographic_rule === 'home') === wantsHome &&
+      templateSatisfiesMustIncludes(t, inputs.must_includes ?? []),
   );
   const scored = eligible
     .map((t) => ({ t, score: scoreTemplate(t, inputs) }))
