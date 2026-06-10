@@ -88,8 +88,9 @@ const INPUTS: PlanInputs = {
 
 Deno.test('repickSlot: returns a DIFFERENT place of the same type, holding others', () => {
   const stops = [
-    makeStop({ place_id: 'a', place_type: 'restaurant', lat: 49.880, lng: -119.490 }),
-    makeStop({ place_id: 'b', place_type: 'cafe', lat: 49.881, lng: -119.491 }),
+    makeStop({ place_id: 'a', place_type: 'restaurant', lat: 49.880, lng: -119.490, start_time: '12:00' }),
+    // Afternoon slot: a cafe swap is only legal before the 17:00 evening-coffee gate.
+    makeStop({ place_id: 'b', place_type: 'cafe', lat: 49.881, lng: -119.491, start_time: '14:00' }),
   ];
   const candidates = [
     makePlace({ id: 'a', type: 'restaurant', lat: 49.880, lng: -119.490 }),
@@ -115,8 +116,9 @@ Deno.test('repickSlot: no alternate candidate surfaces, does not invent', () => 
 
 Deno.test('repickSlot: excludes a far-hop alternate (re-validates proximity)', () => {
   const stops = [
-    makeStop({ place_id: 'a', place_type: 'restaurant', lat: 49.880, lng: -119.490 }),
-    makeStop({ place_id: 'b', place_type: 'cafe', lat: 49.881, lng: -119.491 }),
+    makeStop({ place_id: 'a', place_type: 'restaurant', lat: 49.880, lng: -119.490, start_time: '12:00' }),
+    // Afternoon slot (see evening-coffee gate note above).
+    makeStop({ place_id: 'b', place_type: 'cafe', lat: 49.881, lng: -119.491, start_time: '14:00' }),
   ];
   const candidates = [
     makePlace({ id: 'a', type: 'restaurant', lat: 49.880, lng: -119.490 }),
@@ -727,4 +729,20 @@ Deno.test('handleImprove regenerate_title: not_owner when update returns empty r
   assertEquals(result.ok, false);
   assertEquals(result.code, 'not_owner');
   assertEquals(result.httpStatus, 403);
+});
+
+Deno.test('repickSlot: refuses to swap a cafe into an evening slot (date-flow rule)', () => {
+  const stops = [
+    makeStop({ place_id: 'a', place_type: 'restaurant', lat: 49.880, lng: -119.490, start_time: '18:00' }),
+    makeStop({ place_id: 'b', place_type: 'cafe', lat: 49.881, lng: -119.491, start_time: '19:00' }),
+  ];
+  const candidates = [
+    makePlace({ id: 'a', type: 'restaurant', lat: 49.880, lng: -119.490 }),
+    makePlace({ id: 'b', type: 'cafe', lat: 49.881, lng: -119.491 }),
+    // open late and nearby — but it's a cafe at 7pm, so the gate must reject it
+    makePlace({ id: 'c', type: 'cafe', name: 'Late Cafe', lat: 49.881, lng: -119.491, opens: '08:00', closes: '23:00', quality_score: 9 }),
+  ];
+  const res = repickSlot(stops, 1, candidates, INPUTS);
+  assertEquals(res.ok, false);
+  if (!res.ok) assertEquals(res.code, 'no_alternative');
 });

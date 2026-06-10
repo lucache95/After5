@@ -91,11 +91,12 @@ const BASE_INPUTS: PlanInputs = {
 
 Deno.test('buildItineraryFromTemplate: null-hours place admitted via relaxed path carries unverified:true', () => {
   const nullHours = makePlace({ id: 'nh', opens: null, closes: null });
+  // 10:00 start: the evening-coffee gate (cafe ≥17:00) must not interfere here.
   const it = buildItineraryFromTemplate(
     SINGLE_SLOT_TEMPLATE,
     [nullHours],
     BASE_INPUTS,
-    '18:00',
+    '10:00',
     new Set(),
     { skipHoursFilter: true },
   );
@@ -110,7 +111,7 @@ Deno.test('buildItineraryFromTemplate: fully-specified place is not unverified',
     SINGLE_SLOT_TEMPLATE,
     [ok],
     BASE_INPUTS,
-    '18:00',
+    '10:00',
     new Set(),
     {},
   );
@@ -260,16 +261,33 @@ Deno.test('buildItineraryFromTemplate: same-group runner-up loses slot 2 to a cl
   }
 });
 
+// The 'sweet' group now has a HARD one-per-plan cap (date-flow rule 2), so the
+// penalty-not-ban property is asserted on the 'drink' group instead — a
+// cocktail bar followed by an only-option brewery must still assemble.
+const DRINK_THEN_DRINK_TEMPLATE: Template = {
+  id: 't4',
+  name: 'drink then drink',
+  duration_min: 120,
+  suitable_for: ['date'],
+  vibe: [],
+  slots: [
+    { types: ['cocktail_bar'], duration_min: 60 },
+    { types: ['brewery'], duration_min: 60 },
+  ],
+  geographic_rule: null,
+  energy_curve: null,
+};
+
 Deno.test('buildItineraryFromTemplate: pool with ONLY same-group candidates still assembles (penalty, not ban)', () => {
   const realRandom = Math.random;
   Math.random = () => 0;
   try {
-    const cafe = makePlace({ id: 'cafe', type: 'cafe', lat: 49.8880, lng: -119.4960, quality_score: 10, feedback_score: 0 });
-    const bakery = makePlace({ id: 'bakery', type: 'bakery', lat: 49.8885, lng: -119.4955, quality_score: 10, feedback_score: 0 });
+    const bar = makePlace({ id: 'bar', type: 'cocktail_bar', lat: 49.8880, lng: -119.4960, quality_score: 10, feedback_score: 0 });
+    const brewery = makePlace({ id: 'brewery', type: 'brewery', lat: 49.8885, lng: -119.4955, quality_score: 10, feedback_score: 0 });
 
     const it = buildItineraryFromTemplate(
-      CAFE_THEN_ANY_TEMPLATE,
-      [cafe, bakery],
+      DRINK_THEN_DRINK_TEMPLATE,
+      [bar, brewery],
       BASE_INPUTS,
       '10:00',
       new Set(),
@@ -277,7 +295,86 @@ Deno.test('buildItineraryFromTemplate: pool with ONLY same-group candidates stil
     );
     assertEquals(it !== null, true);
     assertEquals(it!.stops.length, 2);
-    assertEquals(it!.stops[1].place_id, 'bakery'); // penalized but still fills the slot
+    assertEquals(it!.stops[1].place_id, 'brewery'); // penalized but still fills the slot
+  } finally {
+    Math.random = realRandom;
+  }
+});
+
+// ─── Hard date-flow rules (product, 2026-06-10) ──────────────────────────
+// 1. No cafes at/after 17:00 — coffee is a morning/afternoon thing; After5 is
+//    an evening product. HARD filter, applies even on the relaxed retry.
+// 2. Max one 'sweet' stop per plan — dessert→coffee is the same date twice,
+//    regardless of adjacency.
+
+Deno.test('date-flow: cafe is rejected for an evening slot even when open late', () => {
+  const lateCafe = makePlace({ id: 'late-cafe', type: 'cafe', opens: '08:00', closes: '22:00' });
+  const it = buildItineraryFromTemplate(
+    SINGLE_SLOT_TEMPLATE, // slot types: ['cafe']
+    [lateCafe],
+    BASE_INPUTS,
+    '18:00',
+    new Set(),
+    {},
+  );
+  assertEquals(it, null); // cafe-only slot at 18:00 is unfillable by design
+});
+
+Deno.test('date-flow: evening cafe gate also binds the relaxed (skipHoursFilter) retry', () => {
+  const nullHoursCafe = makePlace({ id: 'nh-cafe', type: 'cafe', opens: null, closes: null });
+  const it = buildItineraryFromTemplate(
+    SINGLE_SLOT_TEMPLATE,
+    [nullHoursCafe],
+    BASE_INPUTS,
+    '18:00',
+    new Set(),
+    { skipHoursFilter: true },
+  );
+  assertEquals(it, null);
+});
+
+Deno.test('date-flow: dessert is still allowed in the evening (only cafes are time-gated)', () => {
+  const dessertTemplate: Template = {
+    ...SINGLE_SLOT_TEMPLATE,
+    id: 't-dessert',
+    slots: [{ types: ['dessert'], duration_min: 60 }],
+  };
+  const gelato = makePlace({ id: 'gelato', type: 'dessert', opens: '12:00', closes: '22:00' });
+  const it = buildItineraryFromTemplate(dessertTemplate, [gelato], BASE_INPUTS, '18:00', new Set(), {});
+  assertEquals(it !== null, true);
+  assertEquals(it!.stops[0].place_id, 'gelato');
+});
+
+Deno.test('date-flow: second sweet stop is hard-rejected even when NOT adjacent', () => {
+  const realRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const sweetSandwichTemplate: Template = {
+      ...SINGLE_SLOT_TEMPLATE,
+      id: 't-sweet-sandwich',
+      duration_min: 180,
+      slots: [
+        { types: ['dessert'], duration_min: 60 },
+        { types: ['restaurant'], duration_min: 60 },
+        { types: ['bakery', 'park'], duration_min: 60 },
+      ],
+    };
+    const gelato = makePlace({ id: 'gelato', type: 'dessert', opens: '12:00', closes: '23:00', lat: 49.8880, lng: -119.4960 });
+    const resto = makePlace({ id: 'resto', type: 'restaurant', opens: '12:00', closes: '23:00', lat: 49.8884, lng: -119.4956 });
+    // Bakery out-scores the park on raw quality, but the one-sweet cap bans it.
+    const bakery = makePlace({ id: 'bakery', type: 'bakery', opens: '08:00', closes: '23:00', quality_score: 50, lat: 49.8888, lng: -119.4952 });
+    const park = makePlace({ id: 'park', type: 'park', opens: '06:00', closes: '23:00', quality_score: 1, lat: 49.8888, lng: -119.4952 });
+
+    const it = buildItineraryFromTemplate(
+      sweetSandwichTemplate,
+      [gelato, resto, bakery, park],
+      BASE_INPUTS,
+      '18:00',
+      new Set(),
+      {},
+    );
+    assertEquals(it !== null, true);
+    assertEquals(it!.stops.map((s) => s.place_id), ['gelato', 'resto', 'park']);
   } finally {
     Math.random = realRandom;
   }

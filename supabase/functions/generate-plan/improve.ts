@@ -30,7 +30,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0
 import { z } from 'npm:zod@3.23.8';
 
 import type { Place, PlanInputs, ItineraryStop, CityRecord } from './types.ts';
-import { withinHop, MAX_HOP_KM, isOpenAt } from './scoring.ts';
+import { withinHop, MAX_HOP_KM, isOpenAt, passesDateFlowRules } from './scoring.ts';
 import { haversineKm } from './places-filter.ts';
 import { filterPlaces } from './places-filter.ts';
 
@@ -174,11 +174,18 @@ export function repickSlot(
   const next = slotIndex < stops.length - 1 ? stopAsPlace(stops[slotIndex + 1], candidates) : undefined;
   const usedIds = new Set(stops.map((s) => s.place_id));
 
+  // Date-flow context for the swap = every stop EXCEPT the one being swapped
+  // (so swapping the plan's one sweet stop for another sweet venue stays legal).
+  const otherStops = stops
+    .filter((_, j) => j !== slotIndex)
+    .map((s) => ({ type: s.place_type }) as Place);
   const pool = candidates
     .filter((p) => p.is_active !== false)
     .filter((p) => p.type === current.place_type)
     .filter((p) => !usedIds.has(p.id))
     .filter((p) => isOpenAt(p, current.start_time))
+    // Hard date-flow rules: no cafe into an evening slot, max one sweet stop.
+    .filter((p) => passesDateFlowRules(p, current.start_time, otherStops))
     // Re-validate proximity against BOTH neighbors (Plan 09-01 hop-gate).
     .filter((p) => withinHop(prev, p) && (next ? withinHop(p, next) : true));
 
@@ -455,7 +462,10 @@ async function rewriteStopCopy(
         },
       ],
     });
-    const block = (response.content as Array<{ type: string; text?: string }>).find((b) => b.type === 'text');
+    // Non-streaming call: the SDK return type is a Message|Stream union, so
+    // narrow on 'content' before reading it (Stream has no content property).
+    const block = (('content' in response ? response.content : []) as Array<{ type: string; text?: string }>)
+      .find((b) => b.type === 'text');
     return block?.text?.trim() ?? '';
   } catch (e) {
     console.error('[improve] copy rewrite failed, leaving empty:', e);
@@ -506,7 +516,10 @@ export async function regenerateTitle(
         },
       ],
     });
-    const block = (response.content as Array<{ type: string; text?: string }>).find((b) => b.type === 'text');
+    // Non-streaming call: the SDK return type is a Message|Stream union, so
+    // narrow on 'content' before reading it (Stream has no content property).
+    const block = (('content' in response ? response.content : []) as Array<{ type: string; text?: string }>)
+      .find((b) => b.type === 'text');
     const raw = block?.text?.trim() ?? '{}';
     const parsed = JSON.parse(raw) as Record<string, string>;
     const title = (typeof parsed.title === 'string' && parsed.title.trim()) ? parsed.title.trim() : opts.currentTitle;

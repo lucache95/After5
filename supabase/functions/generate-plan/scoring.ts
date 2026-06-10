@@ -61,6 +61,36 @@ export const ENFORCED_GROUPS: ReadonlySet<string> = new Set(['food', 'drink', 's
 // slot still fills. A penalty, not a ban.
 export const SAME_GROUP_ADJACENCY_PENALTY = 8;
 
+// ─── Hard date-flow rules (product, 2026-06-10) ───────────────────────────
+// 1. No cafes at/after 5pm. After5 is an evening product; coffee is a
+//    morning/afternoon thing — a coffee-shop stop on a 7pm date reads wrong.
+//    Hard filter (not a penalty), applied on the slot's REAL estimated start
+//    even on the relaxed (hours-skipping) retry: relaxed mode exists to admit
+//    null-HOURS venues in thin cities, not to re-admit evening coffee.
+// 2. Max ONE 'sweet' stop per plan (cafe/bakery/dessert/ice_cream). The soft
+//    adjacency penalty allowed dessert→coffee whenever the two weren't
+//    consecutive (or the pool was thin) — two sit-down sugar stops is the
+//    same date twice regardless of spacing.
+export const EVENING_COFFEE_CUTOFF = '17:00';
+
+export function cafeAllowedAt(slotStart: string): boolean {
+  if (!slotStart) return true; // unknown time — cannot gate
+  return toMinutes(slotStart) < toMinutes(EVENING_COFFEE_CUTOFF);
+}
+
+/** Hard product gate for one candidate against one slot. `pickedSoFar` are the
+ * stops already chosen for THIS plan (any order/position). */
+export function passesDateFlowRules(p: Place, realSlotStart: string, pickedSoFar: Place[]): boolean {
+  if (p.type === 'cafe' && !cafeAllowedAt(realSlotStart)) return false;
+  if (
+    categoryGroupForType(p.type) === 'sweet' &&
+    pickedSoFar.some((x) => categoryGroupForType(x.type) === 'sweet')
+  ) {
+    return false;
+  }
+  return true;
+}
+
 interface ScoredPlace {
   place: Place;
   score: number;
@@ -326,6 +356,9 @@ export function buildItineraryFromTemplate(
     const slotStart = opts.skipHoursFilter ? '' : slotStarts[i];
     const matching = eligibleByType
       .filter((p) => placeMatchesSlot(p, slot, slotStart))
+      // Hard date-flow rules on the slot's REAL start (NOT the relaxed
+      // sentinel): no evening cafes, max one sweet stop per plan.
+      .filter((p) => passesDateFlowRules(p, slotStarts[i], picked))
       .map(
         (p) =>
           ({
@@ -348,7 +381,7 @@ export function buildItineraryFromTemplate(
   // predecessor and not already used. Preserves plan availability while
   // guaranteeing the shipped plan passes the gate. Stops with null coords are
   // excluded by withinHop (fail-loud) and so are never accepted as a repair.
-  repairFarHops(picked, slotMatches, usedAcrossBatch);
+  repairFarHops(picked, slotMatches, usedAcrossBatch, slotStarts);
 
   // Build stops with real timing using whichever places actually got picked
   // (drive_to_next is computed below, after we know the picks).
@@ -433,12 +466,16 @@ function repairFarHops(
   picked: Place[],
   slotMatches: ScoredPlace[][],
   usedAcrossBatch: Set<string>,
+  slotStarts: string[],
 ): void {
   for (let i = 1; i < picked.length; i++) {
     const prev = picked[i - 1];
     if (withinHop(prev, picked[i])) continue;
 
     const usedIds = new Set(picked.map((p) => p.id));
+    // Date-flow context for a swap at slot i = every OTHER pick in the plan
+    // (slotMatches[i] was only filtered against picks BEFORE slot i).
+    const others = picked.filter((_, j) => j !== i);
     const candidates = (slotMatches[i] ?? [])
       .map((sp) => sp.place)
       .filter(
@@ -446,7 +483,8 @@ function repairFarHops(
           p.id !== picked[i].id &&
           !usedIds.has(p.id) &&
           !usedAcrossBatch.has(p.id) &&
-          withinHop(prev, p),
+          withinHop(prev, p) &&
+          passesDateFlowRules(p, slotStarts[i] ?? '', others),
       );
     if (candidates.length === 0) continue; // can't repair — keep the far pick
 
@@ -543,6 +581,15 @@ export function injectDelighter(
   // stop (at least +2 score delta). Otherwise skip — don't force it.
   const delighterScore = pick.quality_score + pick.feedback_score;
   if (delighterScore <= weakest.score + 2) {
+    return { injected: false, delighter_place_id: null, replaced_place_id: null, action: 'skipped' };
+  }
+
+  // Hard date-flow rules also bind the delighter swap: no cafe sliding into an
+  // evening slot, and no second sweet stop entering a plan that has one (the
+  // stop being replaced doesn't count against the pick).
+  const keptStops = itinerary.stops.filter((s) => s !== weakest.stop);
+  const keptAsPlaces = keptStops.map((s) => ({ type: s.place_type }) as Place);
+  if (!passesDateFlowRules(pick, weakest.stop.start_time, keptAsPlaces)) {
     return { injected: false, delighter_place_id: null, replaced_place_id: null, action: 'skipped' };
   }
 

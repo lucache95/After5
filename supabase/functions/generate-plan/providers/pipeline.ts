@@ -181,13 +181,19 @@ export async function runPipeline(
       for (const stop of it.stops) usedAcrossBatch.add(stop.place_id);
     }
   }
-  if (itineraries.length === 0) {
-    throw new PipelineError('no_valid_itineraries', 'Could not assemble valid itineraries from the candidate pool.', 422);
-  }
 
-  // If we got fewer than TARGET_ITINERARY_COUNT valid itineraries, try the remaining templates
+  // If we got fewer than TARGET_ITINERARY_COUNT valid itineraries, fall back to
+  // the remaining templates IN SCORE ORDER before giving up. This block must
+  // run BEFORE the zero-check: with TARGET_ITINERARY_COUNT = 1 the old
+  // throw-first ordering meant one unfillable top template (e.g. its lead
+  // [cafe,bakery] slot at 18:00 dying on the evening-coffee gate) failed the
+  // whole call even though other templates assembled fine — live repro
+  // 2026-06-10: 4/12 seed vibes 422'd. selectTopTemplates re-ranks + re-applies
+  // the must-include eligibility filter, so the fallback never picks a template
+  // that can't satisfy the request.
   if (itineraries.length < TARGET_ITINERARY_COUNT && allTemplates.length > topTemplates.length) {
-    const remaining = allTemplates.filter((t) => !topTemplates.some((tt) => tt.id === t.id));
+    const ranked = selectTopTemplates(allTemplates, inputs, allTemplates.length);
+    const remaining = ranked.filter((t) => !topTemplates.some((tt) => tt.id === t.id));
     for (const t of remaining) {
       if (itineraries.length >= TARGET_ITINERARY_COUNT) break;
       const it = buildWithRetry(t);
@@ -196,6 +202,9 @@ export async function runPipeline(
         for (const stop of it.stops) usedAcrossBatch.add(stop.place_id);
       }
     }
+  }
+  if (itineraries.length === 0) {
+    throw new PipelineError('no_valid_itineraries', 'Could not assemble valid itineraries from the candidate pool.', 422);
   }
 
   // 5b. "One Weird Thing" — try to inject a delighter stop into each
