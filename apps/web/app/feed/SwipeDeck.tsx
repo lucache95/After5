@@ -219,21 +219,11 @@ export function SwipeDeck({
     }
   }
 
-  const exhausted = deck.length === 0 || i >= deck.length;
-  // A picked-day empty deck is NOT the full-screen empty state: the viewer needs
-  // the heading + day chips to stay on screen so they can pick another day.
-  // Everything else keeps the existing full-screen EmptyDeck branches.
-  if (exhausted && !(isDayScope && pickedDay)) {
-    return (
-      <EmptyDeck
-        tier={tier}
-        userId={userId}
-        filters={filters}
-        onLoosened={refetchFeed}
-      />
-    );
-  }
-
+  // Empty decks are NOT a separate full-screen page: the header, day chips, and
+  // quick-filter chips stay on screen for EVERY empty state so the viewer can
+  // adjust the thing that emptied the deck in place (the old full-screen
+  // EmptyDeck stranded them with no filter controls — founder repro 2026-06-10).
+  // The flavor of empty (picked-day / filtered / genuine) only swaps the body.
   return (
     <main className="flex min-h-dvh flex-col bg-shell-base px-5 pb-24 pt-7">
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
@@ -383,9 +373,8 @@ export function SwipeDeck({
               onOpenDetail={() => setDetailOpen(true)}
             />
           </div>
-        ) : (
-          /* picked-day empty: keep the header + day chips on screen so the viewer
-             can pick another day (the full-screen EmptyDeck would strand them). */
+        ) : isDayScope && pickedDay ? (
+          /* picked-day empty: try another day. */
           <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
             <p className="font-heading text-3xl lowercase text-shell-ink">
               nothing on {scopeLabel} yet.
@@ -401,6 +390,12 @@ export function SwipeDeck({
               .
             </p>
           </div>
+        ) : hasHardFilter(filters) ? (
+          /* filtered empty: name the most-restrictive filter + one-tap loosen. */
+          <FilteredEmptyBody userId={userId} filters={filters} onLoosened={refetchFeed} />
+        ) : (
+          /* genuinely empty: everyone's been seen. */
+          <GenuinelyEmptyBody tier={tier} />
         )}
 
         {current && (
@@ -613,26 +608,6 @@ function ActiveCard({
   );
 }
 
-// Empty / end-of-deck. Two distinct states (D-02): when a HARD filter is active the
-// deck is filtered-empty → name the most-restrictive hard filter + a one-tap loosen +
-// post-your-own. Otherwise the deck is genuinely-empty → keep the existing dry copy.
-function EmptyDeck({
-  tier,
-  userId = '',
-  filters = {},
-  onLoosened,
-}: {
-  tier: FeedTier;
-  userId?: string;
-  filters?: FeedFilters;
-  onLoosened?: () => void;
-}) {
-  if (hasHardFilter(filters)) {
-    return <FilteredEmptyDeck userId={userId} filters={filters} onLoosened={onLoosened} />;
-  }
-  return <GenuinelyEmptyDeck tier={tier} />;
-}
-
 // The most-restrictive hard filter + how to loosen it. Order of restrictiveness:
 // distance (tightest reach), then price, then host gender. Distance/price get a
 // concrete one-tap widen; gender gets a "drop it" loosen.
@@ -663,7 +638,8 @@ function mostRestrictive(filters: FeedFilters): Loosen {
   };
 }
 
-function FilteredEmptyDeck({
+// Inline (renders UNDER the persistent feed header — never its own <main>).
+function FilteredEmptyBody({
   userId,
   filters,
   onLoosened,
@@ -689,9 +665,9 @@ function FilteredEmptyDeck({
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-24 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
       <div className="mx-auto max-w-[420px]">
-        <p className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">
+        <p className="font-heading text-3xl lowercase leading-[1.1] text-shell-ink">
           nothing fits those filters.
         </p>
         <p className="mt-4 font-body text-lg text-shell-ink/70">{loosen.line}</p>
@@ -714,18 +690,17 @@ function FilteredEmptyDeck({
           .
         </p>
       </div>
-      <BottomTabShell />
-    </main>
+    </div>
   );
 }
 
 // Genuinely-empty (DESIGN-SYSTEM §3): funny-not-helpful, multi-city (no Kelowna).
 // Unchanged from the shipped copy.
-function GenuinelyEmptyDeck({ tier }: { tier: FeedTier }) {
+function GenuinelyEmptyBody({ tier }: { tier: FeedTier }) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-24 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
       <div className="mx-auto max-w-[420px]">
-        <p className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">
+        <p className="font-heading text-3xl lowercase leading-[1.1] text-shell-ink">
           that’s everyone for now.
         </p>
         <p className="mt-4 font-body text-lg text-shell-ink/70">
@@ -755,7 +730,6 @@ function GenuinelyEmptyDeck({ tier }: { tier: FeedTier }) {
           </p>
         )}
       </div>
-      <BottomTabShell />
-    </main>
+    </div>
   );
 }
