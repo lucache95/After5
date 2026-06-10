@@ -80,6 +80,17 @@ where source='curated' and name='Mission Creek Greenway Regional Park' and type=
 -- Recreational Trail, Rotary Marsh Park Loop, Abbott Street Heritage Walk (live
 -- 177 → 180) and set Knox Mountain Park's photo on the 2 photo-less Knox rows.
 
+-- ══ 2026-06-09 GAP-FILL PASS ═════════════════════════════════════════════════
+-- seed-gap-fills.mjs added: Mosaic Books (shop), Milkcrate Records (shop),
+-- Kelowna Floating Sauna (activity, is_delighter), Rusty's Sports Lounge
+-- (activity/billiards). live 180 → 184; ALL 21 supply categories meet target.
+--
+-- INCIDENT + FIX: the "Kelowna Night Market" searchText resolved to the SAME
+-- google_place_id as the existing Farmers' & Crafters' Market row; the upsert
+-- overwrote it (name/hours/vibe/insight). Restored via UPDATE (name, market,
+-- 08:00–13:00, morning, summer, casual/lively/fun, new insight). Seed scripts
+-- now check for an existing google_place_id and SKIP instead of upserting.
+
 -- ── REVERSAL (if needed) ──────────────────────────────────────────────────────
 -- Promotion/rejection: set approval_status back to 'draft' for the affected rows.
 -- Tags: array_remove(vibe_tags,'food_focused' / 'creative'); is_delighter=false.

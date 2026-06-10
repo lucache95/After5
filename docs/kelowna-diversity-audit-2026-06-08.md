@@ -24,9 +24,16 @@ snapshot. "after" = current live pool (**169**), computed live from prod.
 > Street seeded), **drafts 0** (8 promoted with estimated hours, 4 more duds
 > rejected: Viewpoint Drive is a street, Rutland Arena, Revelry nightclub,
 > Little Kitchen Academy is a kids' school), 0 rows missing photos/hours/coords,
-> Buffalo Rouge retyped → brewery. Remaining below-target: **markets/shopping
-> (1 / 3+)** only. At-home rows' backfilled coords are functionally inert (the
-> generator hard-partitions on `at_home`).
+> Buffalo Rouge retyped → brewery. At-home rows' backfilled coords are
+> functionally inert (the generator hard-partitions on `at_home`).
+>
+> **Gap-fill pass (same day): ALL 21 supply categories now meet target.** Live
+> pool **184**. Markets/shopping 1 → 3 ✅ (Mosaic Books, Milkcrate Records) and
+> the top P2 novelty targets landed: **Kelowna Floating Sauna** (delighter) +
+> Rusty's Sports Lounge (billiards). Lesson recorded: google_place_id upserts
+> can clobber existing curated rows — seed scripts now skip ids already in the
+> corpus (the Night Market query resolved to the farmers' market's listing and
+> briefly overwrote it; restored).
 
 ## Headline
 
