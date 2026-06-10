@@ -13,6 +13,12 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: (...a: unknown[]) => toastError(...a) },
 }));
 
+// CreateFlow reads useRouter at render (generated nights land on the canvas).
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+}));
+
 const KELOWNA = '22222222-2222-2222-2222-222222222222';
 const CITIES: KnownCity[] = [
   { id: KELOWNA, slug: 'kelowna', name: 'Kelowna' },

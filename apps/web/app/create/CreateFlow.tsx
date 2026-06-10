@@ -8,6 +8,7 @@
 // server-side, so the locked copy never reaches this component for anon.
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/cn';
@@ -86,6 +87,7 @@ export function CreateFlow({
   /** The saved city's display name, used to seed the picker. */
   prefillCityName?: string | null;
 }) {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>('input');
   const [vibe, setVibe] = useState<string[]>([]);
   const [budget, setBudget] = useState(50);
@@ -147,6 +149,13 @@ export function CreateFlow({
         city: string;
       } = await res.json();
       if (!data.itineraries?.length) throw new Error('no_itineraries');
+      // Generated nights land on the canvas (/plans/[id]/edit) — the converged
+      // customization surface (#85 door 1 = door 2). Leave phase at 'loading'
+      // so the polaroid loader stays up during navigation.
+      if (data.authed && data.itineraries[0]?.id) {
+        router.push(`/plans/${data.itineraries[0].id}/edit`);
+        return;
+      }
       setItineraries(data.itineraries);
       setResultAuthed(data.authed);
       setPhase('results');

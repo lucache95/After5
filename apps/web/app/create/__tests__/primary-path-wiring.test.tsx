@@ -13,13 +13,14 @@
 //   2. the global + tab / UserMenu wedge route to /create/generate.
 //   3. the funnel city pick POSTs /api/profile/city (writes primary_city_id +
 //      enqueues the seed server-side).
-//   4. generation (mocked) lands on a result where ImproveControls is present
-//      BEFORE the publish CTA, and an improve action persists in place.
-//   5. PublishToFeedButton routes to /nights/new?itinerary=<id> — the one
-//      publish path.
+//   4. generation (mocked) routes the authed user to the canvas
+//      (/plans/<id>/edit), where ImproveControls sits before publish
+//      (asserted in the ItineraryEditor spec).
+//   5. the canvas publish CTA routes to /nights/new?itinerary=<id> — the one
+//      publish path (asserted in the ItineraryEditor spec).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -50,16 +51,6 @@ vi.mock('@/lib/after5/client', () => ({
 const createBlankItinerary = vi.fn();
 vi.mock('@after5/api-client', () => ({
   createBlankItinerary: (...a: unknown[]) => createBlankItinerary(...a),
-}));
-
-// ItineraryView is a heavy presentational tree (gallery hero, maps, rails). The
-// WIRING gate only cares that the result surface renders, so stub it to a light
-// marker — the flow assertions live on the city POST, generate POST, improve
-// dispatch, and publish route, not the itinerary chrome.
-vi.mock('@/components/itinerary/ItineraryView', () => ({
-  ItineraryView: ({ itinerary }: { itinerary: { title?: string } }) => (
-    <div data-testid="itinerary-view">{itinerary.title}</div>
-  ),
 }));
 
 const KELOWNA = '22222222-2222-2222-2222-222222222222';
@@ -151,7 +142,7 @@ describe('FLOW-01 primary-path wiring (offline)', () => {
     expect(menu).toContain('/create/generate');
   });
 
-  it('criteria 3+4+5 — city POST → generate → improve(before publish) → publish routes to /nights/new', async () => {
+  it('criteria 3+4+5 — city POST → generate routes the authed user to the canvas', async () => {
     render(<CreateFlow initialCity="" authed cities={CITIES} canPublish />);
 
     // pick a vibe (gate) + the curated Kelowna chip → POST /api/profile/city.
@@ -159,30 +150,14 @@ describe('FLOW-01 primary-path wiring (offline)', () => {
     await userEvent.click(screen.getByRole('button', { name: /^kelowna$/i }));
     await waitFor(() => expect(bodyOf('/api/profile/city')).toEqual({ cityId: KELOWNA }));
 
-    // generate (mocked) → the result surface.
+    // generate (mocked) → the canvas: /plans/<id>/edit, the converged
+    // customization surface (#85 door 1 = door 2). The improve-before-publish
+    // ordering + the /nights/new?itinerary= publish route are asserted on the
+    // canvas itself in app/plans/[id]/edit/__tests__/ItineraryEditor.test.tsx.
     await userEvent.click(screen.getByRole('button', { name: /make my date/i }));
-    await waitFor(() => expect(screen.getByTestId('itinerary-view')).toBeInTheDocument());
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/plans/gen-itin-1/edit'));
     // generation POSTed the funnel inputs (offline mock, no LLM).
     expect(bodyOf('/api/create-plan')).toMatchObject({ city_query: 'Kelowna', vibe: ['creative'] });
-
-    // ImproveControls is present in the result, placed BEFORE the publish CTA.
-    const improve = screen.getByText(/not quite right\?/i).closest('section')!;
-    const publish = screen.getByRole('button', { name: /publish to the feed/i });
-    expect(improve).toBeInTheDocument();
-    // DOM order: the improve section precedes the publish button.
-    expect(improve.compareDocumentPosition(publish) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    // one improve action (swap a stop) persists in place via the mocked dispatch.
-    const swappedStops = [{ ...(GENERATED.stops[0]), place_id: 'c', place_name: 'New Studio' }, GENERATED.stops[1]];
-    invoke.mockResolvedValue({ data: { ok: true, stops: swappedStops }, error: null });
-    await userEvent.click(within(improve).getAllByRole('button', { name: /swap .* for another spot/i })[0]);
-    await waitFor(() => expect(invoke).toHaveBeenCalledWith('generate-plan', {
-      body: { action: 'swap_stop', itinerary_id: 'gen-itin-1', stop_index: 0 },
-    }));
-
-    // publish routes to the single post path carrying the itinerary id.
-    await userEvent.click(screen.getByRole('button', { name: /publish to the feed/i }));
-    expect(push).toHaveBeenCalledWith('/nights/new?itinerary=gen-itin-1');
   });
 
   it('no trap — a city-save failure never blocks generation', async () => {
@@ -200,6 +175,27 @@ describe('FLOW-01 primary-path wiring (offline)', () => {
     // the CTA stays live despite the failed save.
     expect(screen.getByRole('button', { name: /make my date/i })).not.toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: /make my date/i }));
-    await waitFor(() => expect(screen.getByTestId('itinerary-view')).toBeInTheDocument());
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/plans/gen-itin-1/edit'));
+  });
+
+  it('anon path — generation stays inline on the teaser, never the canvas', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url === '/api/create-plan') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ itineraries: [GENERATED], authed: false, city: 'Kelowna' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+    render(<CreateFlow initialCity="" authed={false} cities={CITIES} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /creative/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^kelowna$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /make my date/i }));
+
+    // the anon teaser renders inline — email capture, no canvas redirect.
+    await waitFor(() => expect(screen.getByText(/email me the full plan/i)).toBeInTheDocument());
+    expect(push).not.toHaveBeenCalledWith(expect.stringContaining('/edit'));
   });
 });

@@ -233,7 +233,7 @@ describe('AI title takes', () => {
 // ---------------------------------------------------------------------------
 
 describe('ImproveControls mounting', () => {
-  it('test 4a — cityId present → ImproveControls marker visible AND before publish CTA', () => {
+  it('test 4a — cityId present → ImproveControls marker visible AND before publish CTA', async () => {
     render(
       <ItineraryEditor
         itineraryId="itin-ic1"
@@ -251,6 +251,11 @@ describe('ImproveControls mounting', () => {
     const improveSection = screen.getByTestId('improve-controls');
     const publishBtn = screen.getByRole('button', { name: /publish this night/i });
     expect(improveSection.compareDocumentPosition(publishBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // FLOW-01 criterion 5 — the canvas publish CTA routes to the one publish
+    // path, carrying the itinerary id.
+    await userEvent.click(publishBtn);
+    expect(routerPush).toHaveBeenCalledWith('/nights/new?itinerary=itin-ic1');
   });
 
   it('test 4b — cityId null → ImproveControls absent', () => {

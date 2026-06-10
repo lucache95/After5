@@ -5,6 +5,12 @@ import userEvent from '@testing-library/user-event';
 const fetchMock = vi.fn();
 beforeEach(() => { fetchMock.mockReset(); vi.stubGlobal('fetch', fetchMock); });
 
+// CreateFlow reads useRouter at render (generated nights land on the canvas).
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+}));
+
 import { CreateFlow } from '../../../app/create/CreateFlow';
 
 const cities = [{ slug: 'kelowna', name: 'Kelowna' }];
