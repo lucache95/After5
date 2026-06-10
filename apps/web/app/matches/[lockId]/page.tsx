@@ -3,10 +3,11 @@
 // locks_party_read already hides non-party rows; the id check is defense-in-depth),
 // derives the counterpart + rating-window state, and renders LockDetail.
 //
-// Night data rides the SAME lock query: the instance embed carries the itinerary
-// title + stops + vibe_tags inline (itineraries select is USING(true); post-lock
-// the full plan is fair game — E13/E21). One query, no second itineraries read,
-// no get_night_detail RPC (that's the blind pre-lock scrubbing path).
+// Night data comes from get_lock_night_detail(p_lock) — the post-lock twin of
+// the blind feed RPC. get_night_detail(p_instance) requires status='seeking' +
+// starts_at > now() + creator <> viewer, all wrong for a locked/past night, so
+// it (and the RLS-fragile inline itinerary embed) always degraded to "plan's
+// being put together." The lock RPC gates ONLY on the viewer being a party.
 //
 // Tab destination: a dates-tab leaf keeps the Tier-1 bottom nav mounted (the
 // dates tab stays active via usePathname prefix match) plus a back affordance
@@ -18,21 +19,12 @@ import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
-import { normalizeNightDetailStops } from '@after5/api-client';
+import { normalizeNightDetailStops, type NightDetailStop } from '@after5/api-client';
 import { LockDetail } from './LockDetail';
 import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
 import { pickCounterpart, isRatingOpen, type LockRowWithParties, type RevealPrompt } from '../lock-view';
 
 export const dynamic = 'force-dynamic';
-
-// The detail page widens the list-page instance embed with the itinerary's
-// stops + vibe_tags (the list only needs the title). Typed locally so the
-// shared lock-view contract stays untouched.
-interface DetailItinerary {
-  title: string | null;
-  stops: unknown;
-  vibe_tags: string[] | null;
-}
 
 export default async function LockPage({
   params, searchParams,
@@ -54,7 +46,7 @@ export default async function LockPage({
       id, status, locked_at, rating_closed_at, cancel_reason, creator_id, matched_user_id, date_instance_id,
       creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns, verification, reliability_score ),
       matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns, verification, reliability_score ),
-      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range, itinerary_id, itinerary:itineraries ( title, stops, vibe_tags ) ),
+      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range ),
       thread:chat_threads!chat_threads_lock_id_fkey ( id )
     `)
     .eq('id', lockId)
@@ -117,9 +109,9 @@ export default async function LockPage({
   } catch {
     photos = [];
   }
-  // WR-01: a genuinely empty reveal (signing threw, or no rows + no mirror) must surface
-  // the held-blur "pull to retry" state in the ceremony rather than dissolving over a
-  // blank gradient. Thread the outcome down so RevealModal can hold instead of play.
+  // WR-01/fix-02: a genuinely empty reveal (signing threw, or no rows + no mirror)
+  // surfaces the honest post-lock empty state — initial-letter avatar + "no photo
+  // yet." — never a blur (identity is already revealed on this surface).
   if (photos.length === 0) photoError = true;
 
   // Join the counterpart's prompt answers to active prompt labels (server-side).
@@ -136,12 +128,26 @@ export default async function LockPage({
       .map((a) => ({ label: labelById.get(a.prompt_id) ?? a.prompt_id, answer: a.answer }));
   }
 
-  // E13/E21: the matched night, straight off the instance embed (no second query).
-  // Normalize the raw stops JSON HERE (rich/thin shape drift) before PlanTimeline.
-  const itin = ((lock.instance ?? {}) as { itinerary?: DetailItinerary | null }).itinerary ?? null;
-  const stops = normalizeNightDetailStops(itin?.stops);
-  const vibeTags = itin?.vibe_tags ?? null;
-  const nightTitle = itin?.title ?? null;
+  // E13/E21 + fix-02: the matched night via the party-gated get_lock_night_detail
+  // RPC (locked + past nights return; the pre-lock get_night_detail filters them
+  // out). Normalize the raw stops JSON HERE (rich/thin shape drift) before
+  // PlanTimeline. An RPC miss/error degrades to the empty-plan copy only.
+  let nightTitle: string | null = null;
+  let stops: NightDetailStop[] = [];
+  let vibeTags: string[] | null = null;
+  let nightWindowStart: string | null = null;
+  try {
+    const { data: nightRows } = await supabase.rpc('get_lock_night_detail', { p_lock: lockId });
+    const night = Array.isArray(nightRows) ? nightRows[0] : nightRows;
+    if (night) {
+      nightTitle = night.title ?? null;
+      stops = normalizeNightDetailStops(night.stops);
+      vibeTags = night.vibe_tags ?? null;
+      nightWindowStart = night.time_window_start ?? null;
+    }
+  } catch {
+    // degrade: LockDetail shows "plan's being put together."
+  }
 
   // E19 (REQ-E19 / D-03 / D-04): derive the soft reconfirm / check-in flags from the viewer's
   // own notification rows (RLS notifications_recipient_read scopes to user_id = auth.uid()).
@@ -181,7 +187,7 @@ export default async function LockPage({
         status={lock.status}
         counterpart={counterpart}
         threadId={threadId}
-        startsAt={lock.instance?.starts_at ?? null}
+        startsAt={lock.instance?.starts_at ?? nightWindowStart}
         ratingOpen={isRatingOpen(lock.instance)}
         justLocked={just === '1'}
         photos={photos}

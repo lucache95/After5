@@ -30,16 +30,16 @@ export interface LockDetailProps {
   // polaroid uses photos[0] (a real signed URL — fixes the long-standing
   // raw-private-path bug where the reveal photo never loaded).
   photos?: string[];
-  // WR-01: true when clear-photo signing failed (or there is no photo to reveal) so
-  // RevealModal holds the light-blur "pull to retry" state instead of dissolving over
-  // a blank gradient. The plan stays locked in regardless.
+  // WR-01/fix-02: true when there is no clear photo to reveal (zero gallery rows +
+  // no legacy mirror, or signing failed). RevealModal renders the honest post-lock
+  // empty state (initial avatar + "no photo yet.") — never a blur.
   photoError?: boolean;
   prompts?: RevealPrompt[];
-  /** The locked night's itinerary title, off the same instance embed as the stops. */
+  /** The locked night's itinerary title, off the same RPC row as the stops. */
   nightTitle?: string | null;
-  // E13: the matched night's full itinerary. Post-lock the whole plan is fair
-  // game. Normalized at the loader boundary (page.tsx reads the embedded
-  // itineraries.stops and runs normalizeNightDetailStops BEFORE passing —
+  // E13/fix-02: the matched night's full itinerary. Post-lock the whole plan is
+  // fair game. Normalized at the loader boundary (page.tsx calls
+  // get_lock_night_detail and runs normalizeNightDetailStops BEFORE passing —
   // PlanTimeline does NOT re-normalize, D-12/03-04). Empty ⇒ "plan's being put
   // together." degrade copy (a genuinely planless night only, never the default).
   stops?: NightDetailStop[];

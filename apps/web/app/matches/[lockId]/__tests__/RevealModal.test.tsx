@@ -50,4 +50,25 @@ describe('RevealModal', () => {
     );
     expect(container.textContent).not.toMatch(/bio/i);
   });
+
+  // fix-02 post-lock honesty: this modal only renders post-lock, so a missing
+  // photo must never blur the card or claim the reveal is still gated.
+  it('photoError renders clear (no blur) with the honest "no photo yet." line', () => {
+    const { container } = render(
+      <RevealModal open onOpenChange={vi.fn()} person={person} photos={[]} prompts={[]} photoError />,
+    );
+    expect(screen.getByText('no photo yet.')).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain('blur-[3px]');
+    expect(container.textContent).not.toMatch(/locked in|pull to retry/i);
+    // identity stays fully visible: name + age still render.
+    expect(screen.getByText('jamie, 28')).toBeInTheDocument();
+  });
+
+  it('photoError still shows the clear photo when one made it down (no empty-state line)', () => {
+    render(
+      <RevealModal open onOpenChange={vi.fn()} person={person} photos={['https://x/1']} prompts={[]} photoError />,
+    );
+    expect(screen.getByRole('img')).toBeInTheDocument();
+    expect(screen.queryByText('no photo yet.')).not.toBeInTheDocument();
+  });
 });

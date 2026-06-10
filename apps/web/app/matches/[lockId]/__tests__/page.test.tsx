@@ -1,7 +1,8 @@
 // apps/web/app/matches/[lockId]/__tests__/page.test.tsx
 // Loader-level tests for the match-detail page: tab-shell presence (a dates-tab
-// leaf never dead-ends), the night data riding the instance embed (title +
-// normalized stops, ONE query), and the isRatingOpen derivation both ways.
+// leaf never dead-ends), the night data riding the get_lock_night_detail RPC
+// (fix-02: title + normalized stops, party-gated, locked/past nights return),
+// and the isRatingOpen derivation both ways.
 // Mocking pattern mirrors app/matches/__tests__/page.test.tsx (throwing
 // redirect, swap-in mock client, unexpected tables throw). LockDetail itself is
 // stubbed to a prop probe — its rendering contract lives in LockDetail.test.tsx.
@@ -37,12 +38,14 @@ vi.mock('../LockDetail', () => ({
     ratingOpen: boolean;
     nightTitle?: string | null;
     stops?: { name: string }[];
+    startsAt?: string | null;
   }) => (
     <div
       data-testid="lock-detail"
       data-rating-open={String(p.ratingOpen)}
       data-night-title={p.nightTitle ?? ''}
       data-stops={(p.stops ?? []).map((s) => s.name).join('|')}
+      data-starts-at={p.startsAt ?? ''}
     />
   ),
 }));
@@ -75,24 +78,36 @@ const lock = (over: Partial<LockFixture> = {}): LockFixture => ({
     id: 'inst-1',
     starts_at: '2999-01-01T19:00:00Z',
     time_range: null,
-    itinerary_id: 'it-1',
-    itinerary: {
-      title: 'jazz bar + late night ramen',
-      stops: [
-        { place_name: 'Rooftop Bar', place_type: 'bar', start_time: '19:00' },
-        { place_name: 'Late-Night Ramen', place_type: 'food', start_time: '21:00' },
-      ],
-      vibe_tags: ['boozy'],
-    },
   },
   thread: { id: 'thread-1' },
   ...over,
 });
 
-function buildClient(opts: { userId: string | null; lock?: LockFixture | null }) {
+// fix-02: the night plan comes from the get_lock_night_detail RPC, not an embed.
+const night = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
+  date_instance_id: 'inst-1',
+  time_window_start: '2999-01-01T19:00:00Z',
+  title: 'jazz bar + late night ramen',
+  vibe_tags: ['boozy'],
+  stops: [
+    { place_name: 'Rooftop Bar', place_type: 'bar', start_time: '19:00' },
+    { place_name: 'Late-Night Ramen', place_type: 'food', start_time: '21:00' },
+  ],
+  ...over,
+});
+
+function buildClient(opts: {
+  userId: string | null;
+  lock?: LockFixture | null;
+  night?: Record<string, unknown> | null;
+}) {
   return {
     auth: {
       getUser: async () => ({ data: { user: opts.userId ? { id: opts.userId } : null } }),
+    },
+    rpc: async (fn: string) => {
+      if (fn !== 'get_lock_night_detail') throw new Error(`unexpected rpc: ${fn}`);
+      return { data: opts.night ? [opts.night] : [], error: null };
     },
     from: (table: string) => {
       if (table === 'locks') {
@@ -121,15 +136,15 @@ describe('LockPage', () => {
   });
 
   it('mounts the bottom tab shell + back-to-matches affordance (payoff screen never dead-ends)', async () => {
-    mockClient.current = buildClient({ userId: 'me', lock: lock() }) as Record<string, unknown>;
+    mockClient.current = buildClient({ userId: 'me', lock: lock(), night: night() }) as Record<string, unknown>;
     const ui = await call();
     render(ui);
     expect(screen.getByTestId('bottom-nav')).toBeInTheDocument();
     expect(screen.getByTestId('back-link')).toHaveAttribute('href', '/matches');
   });
 
-  it('threads the night title + normalized stops off the single instance embed', async () => {
-    mockClient.current = buildClient({ userId: 'me', lock: lock() }) as Record<string, unknown>;
+  it('threads the night title + normalized stops off get_lock_night_detail', async () => {
+    mockClient.current = buildClient({ userId: 'me', lock: lock(), night: night() }) as Record<string, unknown>;
     const ui = await call();
     render(ui);
     const detail = screen.getByTestId('lock-detail');
@@ -137,8 +152,28 @@ describe('LockPage', () => {
     expect(detail).toHaveAttribute('data-stops', 'Rooftop Bar|Late-Night Ramen');
   });
 
+  it('degrades to empty night data when the RPC returns nothing', async () => {
+    mockClient.current = buildClient({ userId: 'me', lock: lock(), night: null }) as Record<string, unknown>;
+    const ui = await call();
+    render(ui);
+    const detail = screen.getByTestId('lock-detail');
+    expect(detail).toHaveAttribute('data-night-title', '');
+    expect(detail).toHaveAttribute('data-stops', '');
+  });
+
+  it('falls back to the RPC time window when the instance embed is hidden', async () => {
+    mockClient.current = buildClient({
+      userId: 'me',
+      lock: lock({ instance: null }),
+      night: night(),
+    }) as Record<string, unknown>;
+    const ui = await call();
+    render(ui);
+    expect(screen.getByTestId('lock-detail')).toHaveAttribute('data-starts-at', '2999-01-01T19:00:00Z');
+  });
+
   it('derives ratingOpen=false for a future night (no rate CTA pre-date)', async () => {
-    mockClient.current = buildClient({ userId: 'me', lock: lock() }) as Record<string, unknown>;
+    mockClient.current = buildClient({ userId: 'me', lock: lock(), night: night() }) as Record<string, unknown>;
     const ui = await call();
     render(ui);
     expect(screen.getByTestId('lock-detail')).toHaveAttribute('data-rating-open', 'false');
@@ -153,10 +188,9 @@ describe('LockPage', () => {
           id: 'inst-2',
           starts_at: '2020-01-01T19:00:00Z',
           time_range: null,
-          itinerary_id: 'it-2',
-          itinerary: { title: 'pottery night', stops: [], vibe_tags: null },
         },
       }),
+      night: night({ title: 'pottery night', stops: [], time_window_start: '2020-01-01T19:00:00Z' }),
     }) as Record<string, unknown>;
     const ui = await call();
     render(ui);

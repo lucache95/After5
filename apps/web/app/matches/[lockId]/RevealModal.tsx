@@ -2,7 +2,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Drawer } from 'vaul';
 import { ProfileCard, type ProfileCardPrompt } from '@/components/ProfileCard';
-import { cn } from '@/lib/cn';
 import type { PartyProfile } from '../lock-view';
 
 // Soft expo-out: the un-blur should land like a breath, not a loading bar (UI-SPEC).
@@ -24,8 +23,11 @@ export function RevealModal({
   // flag so return visits open static (Pitfall 5). Reduced-motion shows the clear
   // photo immediately with a short opacity cross-fade; the flourish stays static.
   ceremony?: boolean;
-  // States (UI-SPEC §States): clear-photo signing failed upstream -> keep the
-  // light-blur held state + a quiet retry line. The plan stays locked in.
+  // States (UI-SPEC §States): no clear photo made it down (zero gallery rows +
+  // no legacy mirror, or signing failed). This modal only renders POST-LOCK, so
+  // identity is already revealed: never blur, never imply the reveal is still
+  // gated. ProfileCard's empty-photos branch shows the initial-letter avatar;
+  // this just adds a quiet "no photo yet." line.
   photoError?: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -62,9 +64,10 @@ export function RevealModal({
             )}
 
             {/* The reveal photo wrapper. Ceremony un-blurs it; otherwise it renders
-                clear immediately. photoError keeps it held at the light blur. */}
+                clear immediately. photoError renders clear too (post-lock: nothing
+                left to hide) — the avatar fallback lives in ProfileCard. */}
             <motion.div
-              className={cn('relative', photoError && 'blur-[3px]')}
+              className="relative"
               initial={
                 animate
                   ? { filter: 'blur(12px)', scale: 1.02, opacity: 0.85 }
@@ -101,9 +104,9 @@ export function RevealModal({
             </motion.div>
           </div>
 
-          {photoError && (
+          {photoError && photos.length === 0 && (
             <p className="mt-4 text-center font-body text-sm lowercase text-shell-ink/60">
-              couldn&apos;t load the photo. pull to retry. the plan&apos;s still locked in.
+              no photo yet.
             </p>
           )}
         </Drawer.Content>
