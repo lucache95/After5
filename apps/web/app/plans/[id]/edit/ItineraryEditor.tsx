@@ -12,7 +12,7 @@ import { updateItineraryStops } from '@after5/api-client';
 import { browserAfter5Client } from '@/lib/after5/client';
 import type { Stop } from '@/lib/itinerary-types';
 import type { Json } from '@after5/types';
-import { addBlankStop, patchStop, removeStop, validateStopsForSave } from '@/lib/itinerary/edit';
+import { addBlankStop, patchStop, removeStop, sortStopsByTime, validateStopsForSave } from '@/lib/itinerary/edit';
 import { googlePlaceToSubmission } from '@/lib/places/normalize';
 import { EditableStopCard } from './EditableStopCard';
 import { CoverPicker } from './CoverPicker';
@@ -132,7 +132,13 @@ export function ItineraryEditor({
   // best-effort record the pick to the admin promotion queue (owner RLS). A queue
   // failure is non-fatal — the stop still adds. We DON'T write to the curated
   // `places` table; the stop carries a `custom:<googleId>` id.
-  async function handleAddCustom(stop: Stop) {
+  async function handleAddCustom(rawStop: Stop) {
+    // Mirror the same sequential-time default as handleAdd: compute the "next"
+    // start_time from the current last stop, then apply it to the incoming venue.
+    const currentStops = rows.map((r) => r.stop);
+    const withTime = addBlankStop(currentStops);
+    const suggestedTime = withTime[withTime.length - 1].start_time;
+    const stop: Stop = { ...rawStop, start_time: suggestedTime };
     setRows((prev) => [...prev, { key: `s${nextKey}`, stop }]);
     setNextKey((k) => k + 1);
 
@@ -170,16 +176,26 @@ export function ItineraryEditor({
       toast.error(check.reason ?? 'fix the stops first');
       return;
     }
+    // Sort stops chronologically before persisting. Detect if a reorder happened
+    // so we can surface a non-silent nudge to the user.
+    const sorted = sortStopsByTime(stops);
+    const wasReordered = sorted.some((s, i) => s !== stops[i]);
     setSaving(true);
     const t = toast.loading('saving your changes...');
     try {
       await updateItineraryStops(browserAfter5Client(), {
         itinerary_id: itineraryId,
-        stops,
+        stops: sorted,
         title: title.trim() || undefined,
         cover_image_url: coverUrl ?? undefined,
       });
-      toast.success('saved. looking good.', { id: t });
+      // Reflect the canonical sorted order in the visible list after save.
+      setStops(sorted);
+      if (wasReordered) {
+        toast.success('reordered your stops by time.', { id: t });
+      } else {
+        toast.success('saved. looking good.', { id: t });
+      }
     } catch {
       toast.error('that didn’t save. try again?', { id: t });
     } finally {

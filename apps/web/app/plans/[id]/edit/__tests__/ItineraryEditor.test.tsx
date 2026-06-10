@@ -181,6 +181,62 @@ describe('ItineraryEditor', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Chronological stop order (CHANGE: sequential add default + sort-on-save)
+// ---------------------------------------------------------------------------
+
+describe('chronological stop ordering', () => {
+  beforeEach(() => {
+    updateItineraryStops.mockClear();
+    toastSuccess.mockReset();
+    toastError.mockReset();
+  });
+
+  it('(a) adding a stop after an 18:00+90min stop defaults the new stop to 19:30', async () => {
+    render(
+      <ItineraryEditor
+        itineraryId="itin-ord-1"
+        initialTitle="t"
+        initialCover={null}
+        initialStops={[{ place_id: 'p1', place_name: 'first', start_time: '18:00', duration_min: 90, estimated_cost_pp: 0 }]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /add a stop/i }));
+    // Two stop rows now rendered; grab all "start time" inputs.
+    const timeInputs = await waitFor(() => {
+      const inputs = screen.getAllByLabelText(/start time/i);
+      if (inputs.length < 2) throw new Error('second stop not yet rendered');
+      return inputs;
+    });
+    expect((timeInputs[1] as HTMLInputElement).value).toBe('19:30');
+  });
+
+  it('(b) saving out-of-order times persists them sorted and toasts the reorder nudge', async () => {
+    render(
+      <ItineraryEditor
+        itineraryId="itin-ord-2"
+        initialTitle="t"
+        initialCover={null}
+        initialStops={[
+          { place_id: 'p1', place_name: 'late stop',  start_time: '21:00', duration_min: 60, estimated_cost_pp: 0 },
+          { place_id: 'p2', place_name: 'early stop', start_time: '18:00', duration_min: 60, estimated_cost_pp: 0 },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => expect(updateItineraryStops).toHaveBeenCalled());
+    const call = updateItineraryStops.mock.calls[0][1] as { stops: { place_name: string; start_time: string }[] };
+    // Stops must be in ascending time order after save.
+    expect(call.stops[0].place_name).toBe('early stop');
+    expect(call.stops[1].place_name).toBe('late stop');
+    // Reorder nudge toast fired.
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith(
+      'reordered your stops by time.',
+      expect.anything(),
+    ));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // AI title takes (CHANGE 2)
 // ---------------------------------------------------------------------------
 
