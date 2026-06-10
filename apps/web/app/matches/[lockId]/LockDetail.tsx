@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Drawer } from 'vaul';
 import { toast } from 'sonner';
+import { ChevronRight } from 'lucide-react';
 import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import { stickerRotation } from '@/lib/sticker';
@@ -13,7 +14,8 @@ import { vibePalette } from '@after5/business';
 import { CancelWithReasonPicker, type CancelReason } from '@/app/dates/[slug]/interested/CancelWithReasonPicker';
 import type { LockRowWithParties, PartyProfile, RevealPrompt } from '../lock-view';
 import { PlanTimeline } from '@/components/PlanTimeline';
-import type { NightDetailStop } from '@/lib/after5/client';
+import { NightDetailSheet, feedNightFromDetail } from '@/app/feed/NightDetailSheet';
+import type { NightDetailNight, NightDetailStop } from '@/lib/after5/client';
 import { RevealModal } from './RevealModal';
 import { MatchConfirmation } from './MatchConfirmation';
 
@@ -44,6 +46,12 @@ export interface LockDetailProps {
   // together." degrade copy (a genuinely planless night only, never the default).
   stops?: NightDetailStop[];
   vibeTags?: string[] | null;
+  // Founder rule (2026-06-10): any night PREVIEW must tap through to the FULL
+  // date-plan view. The full get_lock_night_detail row, normalized at the page
+  // boundary, feeds NightDetailSheet as `preloaded` (the sheet's own
+  // get_night_detail is pre-lock-only and returns empty for a lock). null/omit ⇒
+  // the header stays a static label (never a dead tap target).
+  night?: NightDetailNight | null;
   // E19 (REQ-E19 / D-03 / D-04): soft reconfirm + check-in states, gated like ratingOpen.
   // Loader-derived from unacked date_reconfirm / safety_checkin notifications for this lock.
   // reconfirmDue: a live morning-of "still on?" the viewer hasn't acked.
@@ -86,9 +94,11 @@ function HeroPolaroid({ photo, name, seed, caption }: { photo: string | null; na
   );
 }
 
-export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], photoError = false, prompts = [], nightTitle = null, stops = [], vibeTags = null, reconfirmDue = false, reconfirmNoReply = false, checkinDue = false }: LockDetailProps) {
+export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ratingOpen, justLocked, photos = [], photoError = false, prompts = [], nightTitle = null, stops = [], vibeTags = null, night = null, reconfirmDue = false, reconfirmNoReply = false, checkinDue = false }: LockDetailProps) {
   const router = useRouter();
   const [revealOpen, setRevealOpen] = useState(false);
+  // Founder rule: the "the night" header taps open the FULL plan sheet.
+  const [planOpen, setPlanOpen] = useState(false);
   // E19: soft reconfirm / check-in acks are optimistic local dismissals + a sonner toast.
   // They never mutate lock state (D-03/D-04). "something's wrong" opens a vaul confirm sheet.
   const [reconfirmAcked, setReconfirmAcked] = useState(false);
@@ -317,9 +327,35 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
 
       {/* ——— the night: the actual plan you two locked in ——— */}
       <section className="mt-8 rounded-3xl border-2 border-shell-ink/10 bg-white p-5 shadow-fun">
-        <p className="font-body text-xs font-semibold lowercase tracking-[0.08em] text-shell-accent">the night</p>
-        {nightTitle && (
-          <h2 className="mt-1 font-heading text-2xl lowercase leading-tight text-shell-ink">{nightTitle.toLowerCase()}</h2>
+        {/* Founder rule: the header (eyebrow + title) is a real ≥44px tap target
+            that opens the FULL plan sheet. The button is a stretched overlay over
+            the header ONLY (the timeline below holds links — nesting interactive
+            elements inside one button would be invalid). No night row ⇒ static
+            header, never a dead tap. */}
+        {night ? (
+          <div className="group relative -m-2 flex min-h-[44px] items-center justify-between gap-3 rounded-2xl p-2 transition hover:bg-shell-pink/40 motion-reduce:transition-none">
+            <div className="min-w-0">
+              <p className="font-body text-xs font-semibold lowercase tracking-[0.08em] text-shell-accent">the night</p>
+              {nightTitle && (
+                <h2 className="mt-1 font-heading text-2xl lowercase leading-tight text-shell-ink">{nightTitle.toLowerCase()}</h2>
+              )}
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-shell-ink/40 transition group-hover:translate-x-0.5 group-hover:text-shell-ink/70 motion-reduce:transition-none" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setPlanOpen(true)}
+              className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+            >
+              <span className="sr-only">see the full plan</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="font-body text-xs font-semibold lowercase tracking-[0.08em] text-shell-accent">the night</p>
+            {nightTitle && (
+              <h2 className="mt-1 font-heading text-2xl lowercase leading-tight text-shell-ink">{nightTitle.toLowerCase()}</h2>
+            )}
+          </>
         )}
         {stops.length > 0 ? (
           <div className="mt-4">
@@ -333,6 +369,21 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
           <p className="mt-3 font-body text-sm text-shell-ink/60">plan&apos;s being put together.</p>
         )}
       </section>
+
+      {/* The FULL plan view — the same canonical sheet the feed uses, read-only
+          (no onCommit) and fed by the already-loaded get_lock_night_detail row
+          (`preloaded` — the pre-lock get_night_detail RPC would return empty for
+          a lock). Post-lock identity is fair game, so this is the ONE
+          E21-sanctioned linkSlugs caller besides the inline timeline above. */}
+      {night && (
+        <NightDetailSheet
+          night={feedNightFromDetail(night)}
+          preloaded={night}
+          open={planOpen}
+          onOpenChange={setPlanOpen}
+          linkSlugs
+        />
+      )}
 
       {status === 'active' && (
         <>

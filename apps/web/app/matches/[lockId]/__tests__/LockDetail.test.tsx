@@ -13,11 +13,22 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 const toastFn = vi.fn();
 const toastError = vi.fn();
 vi.mock('sonner', () => ({ toast: Object.assign((...a: unknown[]) => toastFn(...a), { error: (...a: unknown[]) => toastError(...a) }) }));
-// vaul renders into a portal; passthrough so drawer content is queryable.
+// vaul renders into a portal; passthrough so drawer content is queryable. Root
+// respects `open` so "tap → the sheet appears" is a real assertion (not
+// trivially-true always-rendered content).
 vi.mock('vaul', () => {
   const Pass = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
-  return { Drawer: Object.assign(Pass, { Root: Pass, Trigger: Pass, Portal: Pass, Overlay: Pass, Content: Pass, Title: Pass, Description: Pass, Close: Pass }) };
+  const Root = ({ children, open }: { children?: React.ReactNode; open?: boolean }) =>
+    open ? <div>{children}</div> : null;
+  return { Drawer: Object.assign(Pass, { Root, Trigger: Pass, Portal: Pass, Overlay: Pass, Content: Pass, Title: Pass, Description: Pass, Close: Pass }) };
 });
+// NightDetailSheet imports the browser client + get_night_detail; the lock surface
+// must NEVER call the pre-lock RPC (its WHERE excludes locked nights) — preloaded only.
+const getNightDetail = vi.fn();
+vi.mock('@/lib/after5/client', () => ({
+  browserAfter5Client: () => ({}),
+  getNightDetail: (...a: unknown[]) => getNightDetail(...a),
+}));
 // framer-motion (used by MatchConfirmation + the real RevealModal in this tree) — stub.
 // Pass through any motion.* tag (div/span/section/…) as a plain element, dropping the
 // animation-only props that aren't valid DOM attributes.
@@ -53,7 +64,7 @@ vi.mock('next/image', () => ({
 
 import { LockDetail, type LockDetailProps } from '../LockDetail';
 import type { PartyProfile } from '../../lock-view';
-import type { NightDetailStop } from '@/lib/after5/client';
+import type { NightDetailNight, NightDetailStop } from '@/lib/after5/client';
 
 const counterpart: PartyProfile = {
   id: 'p1', first_name: 'jamie', age: 28, city: 'portland', neighborhood: 'alberta',
@@ -77,7 +88,20 @@ function props(over: Partial<LockDetailProps> = {}): LockDetailProps {
   };
 }
 
-beforeEach(() => { cancelLock.mockReset(); refresh.mockReset(); toastFn.mockReset(); toastError.mockReset(); });
+// The full get_lock_night_detail row (normalized server-side) that page.tsx
+// threads in as `night` for the full-plan sheet.
+function nightDetail(over: Partial<NightDetailNight> = {}): NightDetailNight {
+  return {
+    date_instance_id: 'di-1',
+    time_window_start: '2026-06-01T19:00:00Z',
+    pay_setting: null, vibe_tags: ['hiking'], why_note: null, hook: 'the hook',
+    why_it_works: null, cover_image_url: null, title: 'jazz bar + late night ramen',
+    venue_neighborhood: null, is_seed: false, total_cost_pp: 40, total_duration_min: 120,
+    stops: [stop({ name: 'rooftop bar' })], ...over,
+  };
+}
+
+beforeEach(() => { cancelLock.mockReset(); refresh.mockReset(); toastFn.mockReset(); toastError.mockReset(); getNightDetail.mockReset(); });
 
 describe('LockDetail', () => {
   it('opens the reveal modal from the "see their profile" trigger', async () => {
@@ -155,14 +179,40 @@ describe('LockDetail', () => {
   it('active lock cancel flow calls cancelLock with the chosen reason', async () => {
     cancelLock.mockResolvedValue(null);
     render(<LockDetail {...props({ status: 'active' })} />);
-    // The detail-screen trigger and the picker's confirm both read "cancel this date"
-    // (the picker confirm starts disabled). Pick a reason, then click the enabled confirm.
+    // Open the cancel drawer from the detail-screen trigger first (the vaul Root
+    // mock respects `open`), then pick a reason and click the picker's confirm —
+    // both buttons read "cancel this date"; the confirm is the LAST one.
+    await userEvent.click(screen.getByRole('button', { name: /^cancel this date$/i }));
     await userEvent.click(screen.getByRole('radio', { name: /both of us called it off/i }));
-    // The picker's confirm is the LAST "cancel this date" button (after the detail trigger).
     const buttons = screen.getAllByRole('button', { name: /^cancel this date$/i });
     const confirm = buttons[buttons.length - 1];
     await userEvent.click(confirm);
     await waitFor(() => expect(cancelLock).toHaveBeenCalledWith('lock-1', 'mutual'));
     expect(refresh).toHaveBeenCalled();
+  });
+
+  // ——— founder rule: tapping a night preview opens the FULL date-plan view ———
+
+  it('"the night" header is a real button that opens the full-plan sheet (preloaded, no RPC)', async () => {
+    render(<LockDetail {...props({
+      nightTitle: 'jazz bar + late night ramen',
+      stops: [stop({ name: 'rooftop bar' })],
+      night: nightDetail(),
+    })} />);
+    // sheet content is NOT in the DOM before the tap (Root respects open)
+    expect(screen.getAllByText('jazz bar + late night ramen')).toHaveLength(1);
+    const btn = screen.getByRole('button', { name: /see the full plan/i });
+    await userEvent.click(btn);
+    // the sheet's hero title + timeline stop render alongside the inline card's
+    expect(screen.getAllByText('jazz bar + late night ramen').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('rooftop bar').length).toBeGreaterThan(1);
+    // post-lock surface NEVER calls the pre-lock get_night_detail RPC
+    expect(getNightDetail).not.toHaveBeenCalled();
+  });
+
+  it('no night detail row → no full-plan button (static header, never a dead tap)', () => {
+    render(<LockDetail {...props({ nightTitle: 'jazz bar + late night ramen', night: null })} />);
+    expect(screen.queryByRole('button', { name: /see the full plan/i })).not.toBeInTheDocument();
+    expect(screen.getByText('the night')).toBeInTheDocument();
   });
 });

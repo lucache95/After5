@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { acceptOffer, passOffer, withdraw, MatchError, messageForCode } from '@/lib/after5/match';
 import { vibePalette } from '@after5/business';
@@ -19,7 +20,8 @@ import { ExpiryCountdown } from './ExpiryCountdown';
 import { AccountGate, type GateReason } from './AccountGate';
 import { LocalTime } from '@/components/LocalTime';
 import { PlanTimeline } from '@/components/PlanTimeline';
-import type { NightDetailStop } from '@/lib/after5/client';
+import { NightDetailSheet, feedNightFromDetail } from '@/app/feed/NightDetailSheet';
+import type { NightDetailNight, NightDetailStop } from '@/lib/after5/client';
 
 export interface OfferDetailProps {
   offerId: string;
@@ -33,6 +35,12 @@ export interface OfferDetailProps {
   // BEFORE passing — PlanTimeline must NOT re-normalize, D-12/03-04). Empty ⇒ degrade.
   stops: NightDetailStop[];
   vibeTags: string[] | null;
+  // Founder rule (2026-06-10): any night PREVIEW must tap through to the FULL
+  // date-plan view. The page's SSR itinerary read shaped as a NightDetailNight,
+  // fed to NightDetailSheet as `preloaded` (zero client RPCs; get_night_detail is
+  // blind/pre-swipe-only — T-03-16). PRE-lock: linkSlugs stays OFF on this
+  // surface. null/omit ⇒ static header, never a dead tap.
+  night?: NightDetailNight | null;
 }
 
 const DATE_OPTS: Intl.DateTimeFormatOptions = {
@@ -43,11 +51,13 @@ const DATE_OPTS: Intl.DateTimeFormatOptions = {
   minute: '2-digit',
 };
 
-export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops, vibeTags }: OfferDetailProps) {
+export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops, vibeTags, night = null }: OfferDetailProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [expired, setExpired] = useState(false);
   const [gate, setGate] = useState<GateReason | null>(null);
+  // Founder rule: the "the night" header taps open the FULL plan sheet.
+  const [planOpen, setPlanOpen] = useState(false);
 
   if (gate) return <AccountGate reason={gate} />;
 
@@ -121,7 +131,30 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops,
         </div>
 
         <div className="mt-6">
-          <p className="font-body text-sm text-shell-accent">the night</p>
+          {/* Founder rule: the header (eyebrow + title) is a real ≥44px tap target
+              that opens the FULL plan sheet. Stretched overlay over the header ONLY
+              (the timeline below holds links — nested interactive elements are
+              invalid). No night row ⇒ static label, never a dead tap. */}
+          {night ? (
+            <div className="group relative -m-2 flex min-h-[44px] items-center justify-between gap-3 rounded-2xl p-2 transition hover:bg-shell-pink/40 motion-reduce:transition-none">
+              <div className="min-w-0">
+                <p className="font-body text-sm text-shell-accent">the night</p>
+                {night.title && (
+                  <h2 className="mt-1 font-heading text-2xl lowercase leading-tight text-shell-ink">{night.title.toLowerCase()}</h2>
+                )}
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-shell-ink/40 transition group-hover:translate-x-0.5 group-hover:text-shell-ink/70 motion-reduce:transition-none" aria-hidden />
+              <button
+                type="button"
+                onClick={() => setPlanOpen(true)}
+                className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+              >
+                <span className="sr-only">see the full plan</span>
+              </button>
+            </div>
+          ) : (
+            <p className="font-body text-sm text-shell-accent">the night</p>
+          )}
           <p className="mt-1 font-body text-base text-shell-ink">
             {date ? <LocalTime iso={date.startsAt} opts={DATE_OPTS} /> : 'details unlock when you accept'}
           </p>
@@ -133,6 +166,18 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops,
             <p className="mt-3 font-body text-sm text-shell-ink/60">the full plan unlocks here.</p>
           )}
         </div>
+
+        {/* The FULL plan view — the canonical feed sheet, read-only (no onCommit),
+            fed by the SSR itinerary read (`preloaded`; get_night_detail is
+            blind/pre-swipe-only). PRE-lock blind contract: linkSlugs stays OFF. */}
+        {night && (
+          <NightDetailSheet
+            night={feedNightFromDetail(night)}
+            preloaded={night}
+            open={planOpen}
+            onOpenChange={setPlanOpen}
+          />
+        )}
 
         <div className="mt-4">
           <ExpiryCountdown expiresAt={expiresAt} onExpire={() => setExpired(true)} />

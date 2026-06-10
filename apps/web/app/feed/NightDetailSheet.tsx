@@ -35,6 +35,36 @@ import { cn } from '@/lib/cn';
 // detail RPC) and renders the real itinerary. The blind FeedNight summary
 // renders immediately as the instant fallback while detail loads (or if it fails).
 
+/**
+ * Build the blind FeedNight summary the sheet's hero/chips need from an
+ * already-loaded NightDetailNight. For the read-only `preloaded` reuse
+ * (LockDetail / OfferDetail) where the surface never ran browse_feed: the
+ * feed-only slots (distance, ambient, fit, host hint, city) stay empty — the
+ * sheet tolerates all of them as null/false.
+ */
+export function feedNightFromDetail(detail: NightDetailNight): FeedNight {
+  return {
+    date_instance_id: detail.date_instance_id,
+    city_id: '',
+    time_window_start: detail.time_window_start,
+    pay_setting: detail.pay_setting,
+    vibe_tags: detail.vibe_tags,
+    why_note: detail.why_note,
+    cover_image_url: detail.cover_image_url,
+    title: detail.title,
+    venue_neighborhood: detail.venue_neighborhood,
+    is_seed: detail.is_seed,
+    distance_m: null,
+    ambient_sound_path: null,
+    ambient_sound_name: null,
+    fit: false,
+    host_blurred_photo_url: null,
+    host_first_name: null,
+    host_age: null,
+    city_name: null,
+  };
+}
+
 function km(distanceM: number | null): string | null {
   if (distanceM == null) return null;
   const value = distanceM / 1000;
@@ -109,6 +139,8 @@ export function NightDetailSheet({
   busy = false,
   onOpenChange,
   onCommit,
+  preloaded,
+  linkSlugs = false,
 }: {
   night: FeedNight | null;
   open: boolean;
@@ -121,8 +153,26 @@ export function NightDetailSheet({
    * and the sheet is purely the blind-safe plan.
    */
   onCommit?: (direction: 'left' | 'right') => void;
+  /**
+   * Pass an already-loaded detail row to SKIP the get_night_detail fetch
+   * entirely (settled immediately, no skeleton, zero RPCs). Required on the
+   * post-lock /matches and the offer surfaces: get_night_detail is the
+   * pre-lock feed path (WHERE excludes locked/past/own nights) and would
+   * resolve empty there — they already hold the row (get_lock_night_detail /
+   * the SSR itinerary read). `null` means "loaded, but no detail" (degrade to
+   * the blind summary); omit (undefined) to keep the self-fetching feed mode.
+   */
+  preloaded?: NightDetailNight | null;
+  /**
+   * E21 / D-01 pass-through to PlanTimeline. Default OFF (blind contract —
+   * venue identity must not leak pre-lock, T-07-12). ONLY the post-lock
+   * /matches lock surface may set this true.
+   */
+  linkSlugs?: boolean;
 }) {
-  const [detail, setDetail] = useState<NightDetailNight | null>(null);
+  // Preloaded mode: the caller owns the data, so the fetch machinery is inert.
+  const hasPreloaded = preloaded !== undefined;
+  const [fetched, setFetched] = useState<NightDetailNight | null>(null);
   // `settled` tracks whether the get_night_detail fetch has resolved/rejected yet.
   // We can't infer "still loading" from `detail === null` alone: a night with no
   // detail (or a broken RPC) legitimately resolves to null and must fall back to
@@ -132,21 +182,24 @@ export function NightDetailSheet({
   const instanceId = night?.date_instance_id ?? null;
 
   useEffect(() => {
-    if (!open || !instanceId) return;
-    let cancelled = false;
-    setDetail(null);
-    setSettled(false);
+    if (!open) return;
     setHookOpen(false);
+    if (hasPreloaded || !instanceId) return;
+    let cancelled = false;
+    setFetched(null);
+    setSettled(false);
     getNightDetail(browserAfter5Client(), instanceId)
-      .then((d) => { if (!cancelled) { setDetail(d); setSettled(true); } })
+      .then((d) => { if (!cancelled) { setFetched(d); setSettled(true); } })
       .catch((err) => {
         // Fall back to the blind summary, but log so a broken RPC doesn't degrade silently in prod.
         // eslint-disable-next-line no-console
         console.warn('[night-detail] get_night_detail failed; showing blind summary', err);
-        if (!cancelled) { setDetail(null); setSettled(true); }
+        if (!cancelled) { setFetched(null); setSettled(true); }
       });
     return () => { cancelled = true; };
-  }, [open, instanceId]);
+  }, [open, instanceId, hasPreloaded]);
+
+  const detail = hasPreloaded ? preloaded : fetched;
 
   if (!night) return null;
   const pal = vibePalette(night.vibe_tags);
@@ -181,7 +234,8 @@ export function NightDetailSheet({
   // E25 (D-02): while get_night_detail is in flight, hold the new card's shape with
   // a silent shimmer. Once the fetch settles — even to null (no detail / RPC error) —
   // drop to the blind summary rather than stranding on the skeleton. Reduced-motion-friendly.
-  const pending = !settled && open;
+  // Preloaded mode never pends: the data arrived with the props.
+  const pending = !hasPreloaded && !settled && open;
 
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
@@ -321,7 +375,7 @@ export function NightDetailSheet({
                   <p className="mb-2 font-body text-[11px] font-bold lowercase tracking-[0.16em] text-shell-ink/50">
                     the night
                   </p>
-                  <PlanTimeline stops={stops} accent={pal.accent} vibeTags={night.vibe_tags} />
+                  <PlanTimeline stops={stops} accent={pal.accent} vibeTags={night.vibe_tags} linkSlugs={linkSlugs} />
                 </div>
               )}
 

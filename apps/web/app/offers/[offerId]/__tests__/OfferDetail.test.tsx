@@ -23,10 +23,25 @@ vi.mock('next/image', () => ({
   // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
   default: (props: Record<string, unknown>) => <img {...(props as Record<string, never>)} />,
 }));
+// vaul (the full-plan sheet) reads real CSS transforms jsdom can't compute; stub to
+// plain DOM. Root respects `open` so "tap → the sheet appears" is a real assertion.
+vi.mock('vaul', () => {
+  const Pass = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
+  const Root = ({ children, open }: { children?: React.ReactNode; open?: boolean }) =>
+    open ? <div>{children}</div> : null;
+  return { Drawer: Object.assign(Pass, { Root, Trigger: Pass, Portal: Pass, Overlay: Pass, Content: Pass, Title: Pass, Description: Pass, Close: Pass }) };
+});
+// NightDetailSheet imports the browser client + get_night_detail; the offer surface
+// threads the SSR-loaded plan as `preloaded` so the RPC must never fire here.
+const getNightDetail = vi.fn();
+vi.mock('@/lib/after5/client', () => ({
+  browserAfter5Client: () => ({}),
+  getNightDetail: (...a: unknown[]) => getNightDetail(...a),
+}));
 
 import { OfferDetail, type OfferDetailProps } from '../OfferDetail';
 import { MatchError } from '@/lib/after5/match';
-import type { NightDetailStop } from '@/lib/after5/client';
+import type { NightDetailNight, NightDetailStop } from '@/lib/after5/client';
 
 const future = new Date(Date.now() + 3600_000).toISOString();
 const past = new Date(Date.now() - 10_000).toISOString();
@@ -54,6 +69,18 @@ function props(over: Partial<OfferDetailProps> = {}): OfferDetailProps {
   };
 }
 
+// The SSR-loaded itinerary detail the page threads in as `night` for the sheet.
+function nightDetail(over: Partial<NightDetailNight> = {}): NightDetailNight {
+  return {
+    date_instance_id: 'inst-1',
+    time_window_start: new Date('2026-06-01T19:00:00Z').toISOString(),
+    pay_setting: null, vibe_tags: ['chill'], why_note: null, hook: 'the hook',
+    why_it_works: null, cover_image_url: null, title: 'jazz bar + late night ramen',
+    venue_neighborhood: null, is_seed: false, total_cost_pp: 40, total_duration_min: 120,
+    stops: [stop({ name: 'rooftop bar', place_slug: 'rooftop-bar' })], ...over,
+  };
+}
+
 beforeEach(() => {
   acceptOffer.mockReset();
   passOffer.mockReset();
@@ -61,6 +88,7 @@ beforeEach(() => {
   push.mockReset();
   toastError.mockReset();
   toastSuccess.mockReset();
+  getNightDetail.mockReset();
 });
 
 describe('OfferDetail', () => {
@@ -146,5 +174,32 @@ describe('OfferDetail', () => {
   it('null date renders the unlock-on-accept placeholder', () => {
     render(<OfferDetail {...props({ date: null })} />);
     expect(screen.getByText(/details unlock when you accept/i)).toBeInTheDocument();
+  });
+
+  // ——— founder rule: tapping a night preview opens the FULL date-plan view ———
+
+  it('"the night" header is a real button that opens the full-plan sheet (preloaded, blind)', async () => {
+    const { container } = render(<OfferDetail {...props({
+      stops: [stop({ name: 'rooftop bar', place_slug: 'rooftop-bar' })],
+      night: nightDetail(),
+    })} />);
+    const btn = screen.getByRole('button', { name: /see the full plan/i });
+    await userEvent.click(btn);
+    // the sheet's hero title + timeline stop render alongside the inline card's
+    expect(screen.getAllByText('jazz bar + late night ramen').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('rooftop bar').length).toBeGreaterThan(1);
+    // preloaded — the blind RPC never fires from this surface
+    expect(getNightDetail).not.toHaveBeenCalled();
+    // PRE-lock: linkSlugs stays off — no /places venue link may leak anywhere
+    const placeLinks = Array.from(container.querySelectorAll('a[href]')).filter((a) =>
+      (a.getAttribute('href') ?? '').includes('/places/'),
+    );
+    expect(placeLinks).toHaveLength(0);
+  });
+
+  it('no night detail → no full-plan button (static header, never a dead tap)', () => {
+    render(<OfferDetail {...props({ night: null })} />);
+    expect(screen.queryByRole('button', { name: /see the full plan/i })).not.toBeInTheDocument();
+    expect(screen.getByText('the night')).toBeInTheDocument();
   });
 });

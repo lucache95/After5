@@ -19,7 +19,7 @@ import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { signBlurredUrls } from '@/lib/after5/photos';
-import { normalizeNightDetailStops } from '@after5/api-client';
+import { normalizeNightDetailStops, type NightDetailNight } from '@after5/api-client';
 import { OfferDetail } from './OfferDetail';
 import { AccountGate } from './AccountGate';
 import { deriveGateReason } from './gate';
@@ -99,14 +99,40 @@ export default async function OfferPage({
   // JSON HERE (rich/thin shape drift) before handing to PlanTimeline (D-12/03-04).
   let stops: ReturnType<typeof normalizeNightDetailStops> = [];
   let vibeTags: string[] | null = null;
+  // Founder rule: the same read also fills a NightDetailNight so OfferDetail can
+  // open the FULL plan sheet (preloaded — no client RPC; get_night_detail is
+  // blind/pre-swipe-only and would return empty here). All fields are blind-safe
+  // itinerary columns the feed already exposes; the feed-only slots the table
+  // doesn't carry (venue_neighborhood / is_seed) stay empty — the sheet
+  // tolerates nulls. starts_at is already shown minute-precise on this page,
+  // so threading it as time_window_start leaks nothing new.
+  let night: NightDetailNight | null = null;
   if (instance?.itinerary_id) {
     const { data: it } = await supabase
       .from('itineraries')
-      .select('stops, vibe_tags')
+      .select('stops, vibe_tags, title, hook, why_it_works, why_note, cover_image_url, pay_setting, total_cost_pp, total_duration_min')
       .eq('id', instance.itinerary_id)
       .maybeSingle();
     stops = normalizeNightDetailStops(it?.stops);
     vibeTags = (it?.vibe_tags as string[] | null) ?? null;
+    if (it) {
+      night = {
+        date_instance_id: offer.date_instance_id ?? '',
+        time_window_start: instance.starts_at ?? '',
+        pay_setting: (it.pay_setting as string | null) ?? null,
+        vibe_tags: vibeTags,
+        why_note: it.why_note ?? null,
+        hook: it.hook ?? null,
+        why_it_works: it.why_it_works ?? null,
+        cover_image_url: it.cover_image_url ?? null,
+        title: it.title ?? null,
+        venue_neighborhood: null,
+        is_seed: false,
+        total_cost_pp: it.total_cost_pp ?? null,
+        total_duration_min: it.total_duration_min ?? null,
+        stops,
+      };
+    }
   }
 
   return (
@@ -130,6 +156,7 @@ export default async function OfferPage({
         date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
         stops={stops}
         vibeTags={vibeTags}
+        night={night}
       />
     </>
   );

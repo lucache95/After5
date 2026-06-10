@@ -19,7 +19,7 @@ import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
-import { normalizeNightDetailStops, type NightDetailStop } from '@after5/api-client';
+import { normalizeNightDetailStops, type NightDetailNight, type NightDetailStop } from '@after5/api-client';
 import { LockDetail } from './LockDetail';
 import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
 import { pickCounterpart, isRatingOpen, type LockRowWithParties, type RevealPrompt } from '../lock-view';
@@ -145,13 +145,35 @@ export default async function LockPage({
   let stops: NightDetailStop[] = [];
   let vibeTags: string[] | null = null;
   let nightWindowStart: string | null = null;
+  // Founder rule: the FULL detail row, threaded to LockDetail → NightDetailSheet
+  // as `preloaded` (the sheet's own get_night_detail is pre-lock-only and returns
+  // empty for a lock). Same column shape as get_night_detail (fix02), so the
+  // whole row maps 1:1 onto NightDetailNight — nothing dropped anymore
+  // (hook / why_it_works / cover / pay / cost / duration ride along).
+  let night: NightDetailNight | null = null;
   try {
     const { data: nightRows } = await supabase.rpc('get_lock_night_detail', { p_lock: lockId });
-    const night = Array.isArray(nightRows) ? nightRows[0] : nightRows;
-    if (night) {
-      nightTitle = night.title ?? null;
-      stops = normalizeNightDetailStops(night.stops);
-      vibeTags = night.vibe_tags ?? null;
+    const row = Array.isArray(nightRows) ? nightRows[0] : nightRows;
+    if (row) {
+      night = {
+        date_instance_id: row.date_instance_id,
+        time_window_start: row.time_window_start,
+        pay_setting: row.pay_setting ?? null,
+        vibe_tags: row.vibe_tags ?? null,
+        why_note: row.why_note ?? null,
+        hook: row.hook ?? null,
+        why_it_works: row.why_it_works ?? null,
+        cover_image_url: row.cover_image_url ?? null,
+        title: row.title ?? null,
+        venue_neighborhood: row.venue_neighborhood ?? null,
+        is_seed: row.is_seed === true,
+        total_cost_pp: row.total_cost_pp ?? null,
+        total_duration_min: row.total_duration_min ?? null,
+        stops: normalizeNightDetailStops(row.stops),
+      };
+      nightTitle = night.title;
+      stops = night.stops;
+      vibeTags = night.vibe_tags;
       nightWindowStart = night.time_window_start ?? null;
     }
   } catch {
@@ -205,6 +227,7 @@ export default async function LockPage({
         nightTitle={nightTitle}
         stops={stops}
         vibeTags={vibeTags}
+        night={night}
         reconfirmDue={reconfirmDue}
         reconfirmNoReply={reconfirmNoReply}
         checkinDue={checkinDue}

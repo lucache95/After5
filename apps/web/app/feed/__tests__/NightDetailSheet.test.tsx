@@ -114,6 +114,41 @@ describe('NightDetailSheet', () => {
     expect(screen.queryByRole('button', { name: /expand the route map/i })).not.toBeInTheDocument();
   });
 
+  it('preloaded: renders the full detail immediately with ZERO get_night_detail calls', () => {
+    render(
+      <NightDetailSheet
+        night={feedNight}
+        open
+        onOpenChange={noop}
+        preloaded={detail({ stops: [stop({ name: 'pottery studio' })] })}
+      />,
+    );
+    // the real timeline + the preloaded stop are there at first paint...
+    expect(screen.getByText('the night')).toBeInTheDocument();
+    expect(screen.getByText('pottery studio')).toBeInTheDocument();
+    // ...no skeleton hold (settled immediately)...
+    expect(screen.queryByTestId('detail-skeleton')).not.toBeInTheDocument();
+    // ...and the pre-lock RPC is never touched (it would return empty for a lock).
+    expect(getNightDetail).not.toHaveBeenCalled();
+  });
+
+  it('preloaded + linkSlugs: the post-lock caller gets the /places slug link', () => {
+    const { container } = render(
+      <NightDetailSheet
+        night={feedNight}
+        open
+        onOpenChange={noop}
+        linkSlugs
+        preloaded={detail({ stops: [stop({ name: 'pottery studio', place_slug: 'pottery-studio' })] })}
+      />,
+    );
+    const placeLinks = Array.from(container.querySelectorAll('a[href]')).filter((a) =>
+      (a.getAttribute('href') ?? '').includes('/places/pottery-studio'),
+    );
+    expect(placeLinks).toHaveLength(1);
+    expect(getNightDetail).not.toHaveBeenCalled();
+  });
+
   it('blind contract: the sheet never renders a /places slug link', async () => {
     getNightDetail.mockResolvedValue(
       detail({ stops: [stop({ name: 'pottery studio', place_slug: 'pottery-studio', lat: 49.88, lng: -119.49 })] }),
