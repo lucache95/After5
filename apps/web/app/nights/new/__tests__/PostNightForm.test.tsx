@@ -7,7 +7,7 @@ const postNight = vi.fn().mockResolvedValue('inst-1');
 const reachPreview = vi.fn().mockResolvedValue(42);
 const mockPush = vi.fn();
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }), usePathname: () => '/nights/new' }));
 vi.mock('@/lib/after5/client', () => ({
   browserAfter5Client: () => ({}),
   postNight: (...a: unknown[]) => postNight(...a),

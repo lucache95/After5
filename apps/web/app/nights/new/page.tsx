@@ -45,6 +45,7 @@ export default async function NewNightPage({
       itineraryId={itinerary}
       primaryCityId={primaryCityId}
       cityName={cityName}
+      userId={user.id}
     />
   );
 }

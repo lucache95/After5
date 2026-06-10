@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { BottomTabShell } from '@/components/BottomTabShell';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Sparkles, Pause, Play, ChevronDown } from 'lucide-react';
@@ -93,9 +94,12 @@ export function PostNightForm({
   itineraryId,
   primaryCityId = null,
   cityName = null,
+  userId,
 }: {
   plans: Plan[];
   ambientSounds?: AmbientSound[];
+  /** Tier-1 bottom nav (standing rule: every in-app surface keeps the bottom menu). */
+  userId?: string;
   // E11: when the host arrives from the Door-2 publish CTA (/nights/new?itinerary=)
   // the canvas plan is pre-selected.
   itineraryId?: string;
@@ -409,11 +413,11 @@ export function PostNightForm({
   // ── Empty state ──────────────────────────────────────────────────────────
   if (plans.length === 0) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-6 text-center">
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-6 pb-28 text-center">
         <div className="mx-auto max-w-[420px]">
-          <p className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">
+          <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">
             no plans yet.
-          </p>
+          </h1>
           <p className="mt-3 font-body text-[15px] text-shell-ink/70">
             go cook one first, then post it.
           </p>
@@ -424,13 +428,14 @@ export function PostNightForm({
             build a plan
           </Link>
         </div>
+        <BottomTabShell userId={userId} />
       </main>
     );
   }
 
   // ── Main form ────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-dvh bg-shell-base px-5 pb-12 pt-8">
+    <main className="min-h-dvh bg-shell-base px-5 pb-28 pt-8">
       <div className="mx-auto max-w-[420px]">
         {/* Header */}
         <header className="mb-7">
@@ -767,6 +772,7 @@ export function PostNightForm({
           </button>
         </form>
       </div>
+      <BottomTabShell userId={userId} />
     </main>
   );
 }
