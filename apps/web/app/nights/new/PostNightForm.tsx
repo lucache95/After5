@@ -341,7 +341,10 @@ export function PostNightForm({
         search_radius_km: radius,
       });
       toast.success("posted. it's live.");
-      router.push('/home');
+      // Land on the night you just posted (/my-nights upcoming), not generic home —
+      // the post-publish payoff is SEEING your night live, and home's cold-start
+      // copy ("we're warming up your first nights") contradicts the toast.
+      router.push('/my-nights');
     } catch (err) {
       console.error('[PostNightForm] post failed', err);
       const msg =
