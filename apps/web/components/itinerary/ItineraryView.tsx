@@ -7,6 +7,7 @@
 //   2. Title + meta + action chips below the gallery
 //   3. Two-column body: content (story / map / timeline) + sticky right rail
 
+import Link from 'next/link';
 import { ItineraryGalleryHero } from './ItineraryGalleryHero';
 import { ItineraryMap } from './ItineraryMap';
 import { StopCard } from './StopCard';
@@ -14,7 +15,6 @@ import { ItineraryActions } from './ItineraryActions';
 import { ModifierCard } from './ModifierCard';
 import { AnchorNav } from './AnchorNav';
 import { CuratorCard } from './CuratorCard';
-import { SavePlanButton } from './SavePlanButton';
 import { ThingsToKnow } from './ThingsToKnow';
 import { SimilarPlans } from './SimilarPlans';
 import { Polaroid } from '@/components/Polaroid';
@@ -216,13 +216,16 @@ export function ItineraryView({
                 final price depends on what you order. these are mid-range guesses.
               </div>
 
-              {/* Save toggle — first action so it sits highest. Auth-aware:
-                  unauthed clicks bounce through /login and auto-save on return. */}
-              {itinerary.id && (
-                <div className="mt-5">
-                  <SavePlanButton itineraryId={itinerary.id} />
-                </div>
-              )}
+              {/* Save retired (audit P2-F13): bookmarks were collection behavior.
+                  The loop-aligned action is making a night of your own. */}
+              <div className="mt-5">
+                <Link
+                  href="/create/generate"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-shell-accent px-5 font-body text-sm font-semibold lowercase text-white shadow-fun transition active:scale-95"
+                >
+                  make it my night →
+                </Link>
+              </div>
 
               <div className="mt-3 border-t border-shell-ink/10 pt-5">
                 <ItineraryActions itinerary={itinerary} />

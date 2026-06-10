@@ -2,7 +2,7 @@
 // REQ-E3: the /account hub is an identity-forward profile home. These tests assert
 // the enhanced surface renders identity (name/age/city + a verification chip), a
 // self-view trigger, the three secondary links (edit/preferences/notifications),
-// keeps the existing working links (loop + post-a-night + saved-plans + sign-out),
+// keeps the existing working links (loop + post-a-night + sign-out),
 // and renders NO marketing/onboarding teaser copy.
 // Supabase-mock pattern mirrors apps/web/app/my-nights/__tests__/page.test.tsx.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -70,18 +70,6 @@ function buildClient(opts: {
       from: () => ({ createSignedUrl: async () => ({ data: null }) }),
     },
     from: (table: string) => {
-      // saved_plans count head-query: select(_, {count, head}) -> eq() -> awaited.
-      if (table === 'saved_plans') {
-        return {
-          select: (_cols: string, _opts?: unknown) => ({
-            eq: () => ({
-              order: () => ({ limit: async () => ({ data: [] }) }),
-              then: (resolve: (v: { data: unknown; count: number }) => unknown) =>
-                resolve({ data: [], count: 0 }),
-            }),
-          }),
-        };
-      }
       if (table === 'profile_prompts') {
         return {
           select: () => ({
@@ -212,7 +200,6 @@ describe('AccountPage (profile hub — REQ-E3)', () => {
     expect(hrefs).toContain('/matches');
     expect(hrefs).toContain('/my-nights');
     expect(hrefs).toContain('/nights/new'); // post a night
-    expect(screen.getByText('saved plans')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
 
