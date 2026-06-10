@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reorder, useReducedMotion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateItineraryStops } from '@after5/api-client';
 import { browserAfter5Client } from '@/lib/after5/client';
@@ -188,6 +188,24 @@ export function ItineraryEditor({
   }
 
   return (
+    <>
+      {/* Minimal escape chrome — history-aware: pop if there's in-app history,
+          else fall back to /home. Does not compete with the publish CTA. */}
+      <div className="sticky top-0 z-30 border-b border-shell-ink/10 bg-shell-base/90 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[480px] items-center px-4 py-3">
+          <button
+            type="button"
+            aria-label="close editor"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+              else router.push('/home');
+            }}
+            className="-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-shell-ink/70 transition hover:text-shell-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none"
+          >
+            <X className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+          </button>
+        </div>
+      </div>
     <main className="mx-auto w-full max-w-[480px] px-4 py-6 font-body text-shell-ink">
       <h1 className="font-heading text-3xl lowercase text-shell-ink">
         {isBlankCanvas ? 'what’s the move?' : 'edit your night'}
@@ -292,11 +310,12 @@ export function ItineraryEditor({
         />
       )}
 
+      {/* save changes — secondary treatment so it doesn't compete with publish */}
       <button
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="mt-8 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent px-6 font-body text-base font-semibold lowercase text-white shadow-fun transition hover:opacity-90 disabled:opacity-50"
+        className="mt-8 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-white/80 px-6 font-body text-base font-semibold lowercase text-shell-ink ring-1 ring-shell-ink/15 transition hover:bg-white hover:ring-shell-ink/25 disabled:opacity-50"
       >
         {saving ? 'saving...' : 'save changes'}
       </button>
@@ -313,5 +332,6 @@ export function ItineraryEditor({
         </button>
       </div>
     </main>
+    </>
   );
 }

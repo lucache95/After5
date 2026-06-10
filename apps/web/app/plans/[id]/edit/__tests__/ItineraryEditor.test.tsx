@@ -124,6 +124,12 @@ describe('CustomVenueSearch', () => {
 });
 
 describe('ItineraryEditor', () => {
+  it('renders a close/back affordance', () => {
+    render(<ItineraryEditor itineraryId="itin-1" initialTitle="t" initialCover={null}
+      initialStops={[{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 60, estimated_cost_pp: 20 }]} />);
+    expect(screen.getByRole('button', { name: /close editor/i })).toBeInTheDocument();
+  });
+
   it('saves edited stops via the RPC', async () => {
     render(<ItineraryEditor itineraryId="itin-1" initialTitle="t" initialCover={null}
       initialStops={[{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 60, estimated_cost_pp: 20 }]} />);
