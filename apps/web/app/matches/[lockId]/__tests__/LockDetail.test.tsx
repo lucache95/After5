@@ -83,7 +83,25 @@ describe('LockDetail', () => {
   it('opens the reveal modal from the "see their profile" trigger', async () => {
     render(<LockDetail {...props()} />);
     await userEvent.click(screen.getByRole('button', { name: /see their profile/i }));
-    expect(screen.getByText('jamie, 28')).toBeInTheDocument();
+    // the hero h1 reads "jamie, 28" AND the opened ProfileCard repeats it
+    // (vaul is a passthrough mock, so presence + the working trigger is the contract).
+    expect(screen.getAllByText('jamie, 28').length).toBeGreaterThan(1);
+  });
+
+  it('the reveal hero shows name + age and the initial-avatar fallback when no photo', () => {
+    render(<LockDetail {...props()} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'jamie, 28' })).toBeInTheDocument();
+    // no signed photo → brand initial avatar inside the polaroid, never a blank
+    expect(screen.getByText('j')).toBeInTheDocument();
+  });
+
+  it('message is the one primary; see their profile stays quiet secondary', () => {
+    render(<LockDetail {...props()} />);
+    const message = screen.getByRole('link', { name: /message jamie/i });
+    const profile = screen.getByRole('button', { name: /see their profile/i });
+    expect(message.className).toContain('bg-shell-accent');
+    expect(profile.className).not.toContain('bg-shell-accent');
+    expect(profile.className).not.toContain('bg-shell-pink');
   });
 
   it('links to the conversation thread instead of the old phase-7 placeholder', () => {
@@ -116,13 +134,16 @@ describe('LockDetail', () => {
   });
 
   it('renders "the night" plan via PlanTimeline when stops are present', () => {
-    render(<LockDetail {...props({ stops: [
+    render(<LockDetail {...props({ nightTitle: 'jazz bar + late night ramen', stops: [
       stop({ name: 'rooftop bar', cost_pp: 22 }),
       stop({ name: 'late-night ramen', cost_pp: 0 }),
     ] })} />);
     expect(screen.getByText('the night')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'jazz bar + late night ramen' })).toBeInTheDocument();
     expect(screen.getByText('rooftop bar')).toBeInTheDocument();
     expect(screen.getByText('late-night ramen')).toBeInTheDocument();
+    // a real night never shows the degrade copy
+    expect(screen.queryByText("plan's being put together.")).not.toBeInTheDocument();
   });
 
   it('shows the degrade copy when a lock has no stops (never a blank section)', () => {

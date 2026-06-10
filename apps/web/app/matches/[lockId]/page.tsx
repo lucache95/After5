@@ -2,10 +2,21 @@
 // embeds (locks has 3 profiles FKs — bug class 4), gates to participants (RLS
 // locks_party_read already hides non-party rows; the id check is defense-in-depth),
 // derives the counterpart + rating-window state, and renders LockDetail.
+//
+// Night data rides the SAME lock query: the instance embed carries the itinerary
+// title + stops + vibe_tags inline (itineraries select is USING(true); post-lock
+// the full plan is fair game — E13/E21). One query, no second itineraries read,
+// no get_night_detail RPC (that's the blind pre-lock scrubbing path).
+//
+// Tab destination: a dates-tab leaf keeps the Tier-1 bottom nav mounted (the
+// dates tab stays active via usePathname prefix match) plus a back affordance
+// to /matches — the payoff screen must never dead-end.
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
+import { BottomTabShell } from '@/components/BottomTabShell';
+import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { normalizeNightDetailStops } from '@after5/api-client';
 import { LockDetail } from './LockDetail';
@@ -13,6 +24,15 @@ import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
 import { pickCounterpart, isRatingOpen, type LockRowWithParties, type RevealPrompt } from '../lock-view';
 
 export const dynamic = 'force-dynamic';
+
+// The detail page widens the list-page instance embed with the itinerary's
+// stops + vibe_tags (the list only needs the title). Typed locally so the
+// shared lock-view contract stays untouched.
+interface DetailItinerary {
+  title: string | null;
+  stops: unknown;
+  vibe_tags: string[] | null;
+}
 
 export default async function LockPage({
   params, searchParams,
@@ -34,7 +54,7 @@ export default async function LockPage({
       id, status, locked_at, rating_closed_at, cancel_reason, creator_id, matched_user_id, date_instance_id,
       creator:profiles!locks_creator_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns, verification, reliability_score ),
       matched:profiles!locks_matched_user_id_fkey ( id, first_name, age, city, neighborhood, clear_photo_url, vibe_tags, prompt_answers, pronouns, verification, reliability_score ),
-      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range, itinerary_id ),
+      instance:date_instances!locks_date_instance_id_fkey ( id, starts_at, time_range, itinerary_id, itinerary:itineraries ( title, stops, vibe_tags ) ),
       thread:chat_threads!chat_threads_lock_id_fkey ( id )
     `)
     .eq('id', lockId)
@@ -45,12 +65,13 @@ export default async function LockPage({
     return (
       <>
         <DeepRouteHeader backHref="/matches" backLabel="back to matches" />
-        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-28 text-center">
           <div className="mx-auto max-w-[420px]">
             <h1 className="font-heading text-5xl lowercase leading-[1.05] text-shell-ink">that&apos;s not your match</h1>
             <p className="mt-4 font-body text-lg text-shell-ink/70">this one isn&apos;t yours to see.</p>
           </div>
         </main>
+        <BottomTabShell userId={user.id} />
       </>
     );
   }
@@ -65,12 +86,13 @@ export default async function LockPage({
     return (
       <>
         <DeepRouteHeader backHref="/matches" backLabel="back to matches" />
-        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 text-center">
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-shell-base px-8 pb-28 text-center">
           <div className="mx-auto max-w-[420px]">
             <h1 className="font-heading text-3xl lowercase text-shell-ink">couldn&apos;t load that</h1>
             <p className="mt-3 font-body text-shell-ink/70">something glitched. head back and try again.</p>
           </div>
         </main>
+        <BottomTabShell userId={user.id} />
       </>
     );
   }
@@ -114,21 +136,12 @@ export default async function LockPage({
       .map((a) => ({ label: labelById.get(a.prompt_id) ?? a.prompt_id, answer: a.answer }));
   }
 
-  // E13: render the matched night's full plan. Post-lock the whole itinerary is
-  // fair game; the lock participant reads the instance (locks_party_read) → its
-  // itinerary_id → itineraries.stops (itineraries_readable_by_id USING(true)).
+  // E13/E21: the matched night, straight off the instance embed (no second query).
   // Normalize the raw stops JSON HERE (rich/thin shape drift) before PlanTimeline.
-  let stops: ReturnType<typeof normalizeNightDetailStops> = [];
-  let vibeTags: string[] | null = null;
-  if (lock.instance?.itinerary_id) {
-    const { data: it } = await supabase
-      .from('itineraries')
-      .select('stops, vibe_tags')
-      .eq('id', lock.instance.itinerary_id)
-      .maybeSingle();
-    stops = normalizeNightDetailStops(it?.stops);
-    vibeTags = (it?.vibe_tags as string[] | null) ?? null;
-  }
+  const itin = ((lock.instance ?? {}) as { itinerary?: DetailItinerary | null }).itinerary ?? null;
+  const stops = normalizeNightDetailStops(itin?.stops);
+  const vibeTags = itin?.vibe_tags ?? null;
+  const nightTitle = itin?.title ?? null;
 
   // E19 (REQ-E19 / D-03 / D-04): derive the soft reconfirm / check-in flags from the viewer's
   // own notification rows (RLS notifications_recipient_read scopes to user_id = auth.uid()).
@@ -161,11 +174,8 @@ export default async function LockPage({
 
   return (
     <>
-      <DeepRouteHeader
-        backHref="/matches"
-        backLabel="back to matches"
-        title={counterpart.first_name ?? undefined}
-      />
+      {/* Back-only chrome — the hero owns the name (single h1, no duplicate). */}
+      <DeepRouteHeader backHref="/matches" backLabel="back to matches" />
       <LockDetail
         lockId={lock.id}
         status={lock.status}
@@ -177,12 +187,15 @@ export default async function LockPage({
         photos={photos}
         photoError={photoError}
         prompts={prompts}
+        nightTitle={nightTitle}
         stops={stops}
         vibeTags={vibeTags}
         reconfirmDue={reconfirmDue}
         reconfirmNoReply={reconfirmNoReply}
         checkinDue={checkinDue}
       />
+      <NotificationToast userId={user.id} />
+      <BottomTabShell userId={user.id} />
     </>
   );
 }

@@ -157,6 +157,58 @@ test.describe('matches redesign visual-capture @420px (forced-local, CAPTURE_VIS
     }
   });
 
+  // /matches/[lockId] redesign: the reveal is the hero. Reuses the SAME seed
+  // shape as the dates-tab capture — an upcoming active lock (with chat thread)
+  // and a past completed ratable lock — and shoots both detail states.
+  test('match detail: upcoming payoff + past ratable', async ({ browser }) => {
+    const seed = await seedChatThread();
+    let past: { instanceId: string; lockId: string } | null = null;
+    try {
+      const upcomingLockId = await promoteThreadToLock(seed);
+      past = await seedCompletedPastLock(seed);
+      await prettify(seed);
+
+      const ctx = await browser.newContext({ viewport: VIEWPORT });
+      const candPage = await loginAs(ctx, seed.candEmail);
+
+      // — upcoming: hero polaroid, ONE primary (message), NO rate CTA pre-date —
+      await candPage.goto(`/matches/${upcomingLockId}`);
+      expect(candPage.url(), 'detail bounced to /login → seed/login failed').not.toContain('/login');
+      await expect(candPage.getByRole('heading', { level: 1, name: /maya/i })).toBeVisible({ timeout: 20_000 });
+      await expect(candPage.getByRole('link', { name: /message maya/i })).toBeVisible();
+      await expect(candPage.getByRole('button', { name: /see their profile/i })).toBeVisible();
+      await expect(candPage.getByRole('link', { name: /rate this date/i })).toHaveCount(0);
+      // the night rides the instance embed
+      await expect(candPage.getByText('jazz bar + late night ramen')).toBeVisible();
+      // tab shell present with a back affordance — never a dead end
+      await expect(candPage.getByRole('navigation', { name: 'primary' })).toBeVisible();
+      await expect(candPage.getByRole('link', { name: /back to matches/i })).toBeVisible();
+      // viewport capture (not fullPage): fixed bottom nav paints mid-page on
+      // fullPage shots — the @420px viewport is the honest read.
+      await candPage.waitForTimeout(800);
+      await candPage.screenshot({ path: '/tmp/match-detail.png' });
+      await candPage.evaluate(() => window.scrollTo({ top: document.body.scrollHeight }));
+      await candPage.waitForTimeout(400);
+      await candPage.screenshot({ path: '/tmp/match-detail-night.png' });
+
+      // — past ratable: rate CTA exists ONLY now —
+      await candPage.goto(`/matches/${past.lockId}`);
+      await expect(candPage.getByRole('link', { name: /rate this date/i })).toBeVisible({ timeout: 20_000 });
+      await expect(candPage.getByText('pottery + wine on the patio')).toBeVisible();
+      await candPage.waitForTimeout(800);
+      await candPage.screenshot({ path: '/tmp/match-detail-ratable.png' });
+      await ctx.close();
+    } finally {
+      if (past) {
+        const sb = admin();
+        await sb.from('locks').delete().eq('id', past.lockId);
+        await sb.from('locks').delete().eq('date_instance_id', seed.instanceId);
+        await sb.from('date_instances').delete().eq('id', past.instanceId);
+      }
+      await cleanupChat(seed);
+    }
+  });
+
   test('dates tab: empty state', async ({ browser }) => {
     const seed = await seedTwoUsersAndNight();
     try {
