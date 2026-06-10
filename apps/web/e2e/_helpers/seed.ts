@@ -55,24 +55,32 @@ function seedAssetBytes(file: string): Buffer {
 // rows through signClearUrls/signBlurredUrls — mirror columns alone left the
 // reveal showing "no photo yet." during founder demos.
 async function seedProfilePhoto(sb: SupabaseClient, userId: string, publicAssetPath: string) {
+  // Founder rule: seed galleries look like REAL galleries — primary portrait
+  // plus a second candid shot of the same persona (portrait-<x>-2.jpg), so the
+  // carousel/reveal surfaces exercise multi-photo behavior.
   const base = path.basename(publicAssetPath, '.jpg'); // e.g. 'portrait-woman'
-  const clearBytes = seedAssetBytes(`${base}.jpg`);
-  const blurredBytes = seedAssetBytes(`${base}_blurred.jpg`);
+  const shots = [`${base}.jpg`, `${base}-2.jpg`];
 
-  const photoId = randomUUID();
-  const clearPath = `${userId}/${photoId}.jpg`;
-  const blurredPath = `${userId}/${photoId}_blurred.jpg`;
+  for (let i = 0; i < shots.length; i++) {
+    const stem = shots[i].replace(/\.jpg$/, '');
+    const clearBytes = seedAssetBytes(`${stem}.jpg`);
+    const blurredBytes = seedAssetBytes(`${stem}_blurred.jpg`);
 
-  let r = await sb.storage.from(PHOTO_BUCKET).upload(clearPath, clearBytes, { contentType: 'image/jpeg', upsert: true });
-  if (r.error) throw new Error(`upload clear ${userId}: ${r.error.message}`);
-  r = await sb.storage.from(PHOTO_BUCKET).upload(blurredPath, blurredBytes, { contentType: 'image/jpeg', upsert: true });
-  if (r.error) throw new Error(`upload blurred ${userId}: ${r.error.message}`);
+    const photoId = randomUUID();
+    const clearPath = `${userId}/${photoId}.jpg`;
+    const blurredPath = `${userId}/${photoId}_blurred.jpg`;
 
-  const { error } = await sb.from('profile_photos').insert({
-    id: photoId, user_id: userId, clear_path: clearPath, blurred_path: blurredPath,
-    sort_order: 0, is_primary: true,
-  });
-  if (error) throw new Error(`profile_photos ${userId}: ${error.message}`);
+    let r = await sb.storage.from(PHOTO_BUCKET).upload(clearPath, clearBytes, { contentType: 'image/jpeg', upsert: true });
+    if (r.error) throw new Error(`upload clear ${userId}: ${r.error.message}`);
+    r = await sb.storage.from(PHOTO_BUCKET).upload(blurredPath, blurredBytes, { contentType: 'image/jpeg', upsert: true });
+    if (r.error) throw new Error(`upload blurred ${userId}: ${r.error.message}`);
+
+    const { error } = await sb.from('profile_photos').insert({
+      id: photoId, user_id: userId, clear_path: clearPath, blurred_path: blurredPath,
+      sort_order: i, is_primary: i === 0,
+    });
+    if (error) throw new Error(`profile_photos ${userId}: ${error.message}`);
+  }
 }
 
 // Storage objects do NOT cascade when the auth user is deleted — remove the
