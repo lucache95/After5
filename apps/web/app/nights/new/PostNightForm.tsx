@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Sparkles, Pause, Play } from 'lucide-react';
+import { Sparkles, Pause, Play, ChevronDown } from 'lucide-react';
 import {
   browserAfter5Client, postNight, reachPreview, updateItineraryStops, ambientSoundUrl, type AmbientSound,
 } from '@/lib/after5/client';
@@ -22,6 +22,48 @@ interface Plan {
   title: string | null;
   cover_image_url: string | null;
   vibe_tags: string[] | null;
+  // Picker meta + inline preview, straight off the itineraries row (stops is a
+  // JSON column there). Optional so a thinner row degrades to title-only.
+  stops?: unknown;
+  total_cost_pp?: number | null;
+  total_duration_min?: number | null;
+}
+
+// How many plans show before the "show all N plans" expander. Six keeps the
+// picker one comfortable screen at 420px instead of a radio wall.
+const PLANS_FOLD = 6;
+
+interface PlanStopLine {
+  name: string;
+  time: string | null;
+}
+
+// Defensive parse of the stops JSON column. Stops written by the planner carry
+// place_name + start_time; anything malformed falls back quietly.
+function parsePlanStops(raw: unknown): PlanStopLine[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((s, i) => {
+    if (typeof s !== 'object' || s === null) return [];
+    const o = s as Record<string, unknown>;
+    const name =
+      typeof o.place_name === 'string' && o.place_name.trim() !== ''
+        ? o.place_name
+        : `stop ${i + 1}`;
+    const time = typeof o.start_time === 'string' && o.start_time !== '' ? o.start_time : null;
+    return [{ name, time }];
+  });
+}
+
+// The card meta line: `3 stops · ~2.5 hr · $45 pp`. Missing fields drop their
+// segment; an itinerary with nothing derivable renders no line at all.
+function planMetaLine(plan: Plan, stopCount: number): string | null {
+  const parts: string[] = [];
+  if (stopCount > 0) parts.push(`${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}`);
+  if (plan.total_duration_min != null && plan.total_duration_min > 0) {
+    parts.push(`~${Math.round((plan.total_duration_min / 60) * 10) / 10} hr`);
+  }
+  if (plan.total_cost_pp != null) parts.push(`$${Math.round(plan.total_cost_pp)} pp`);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 // ISO string for the datetime-local min attribute (now, rounded to the minute)
@@ -67,6 +109,15 @@ export function PostNightForm({
     () => (itineraryId && plans.some((p) => p.id === itineraryId) ? itineraryId : ''),
   );
   const [startsAt, setStartsAt] = useState('');
+
+  // ── Fold: first PLANS_FOLD plans, then a one-way "show all" expander. A
+  // ?itinerary= preselect that lands beyond the fold auto-expands so the
+  // selected card is always visible.
+  const [showAllPlans, setShowAllPlans] = useState(() => {
+    if (!itineraryId) return false;
+    return plans.findIndex((p) => p.id === itineraryId) >= PLANS_FOLD;
+  });
+  const visiblePlans = showAllPlans ? plans : plans.slice(0, PLANS_FOLD);
 
   // ── E11 creator controls ──────────────────────────────────────────────────
   // Targeting defaults are inclusive + overridable (never reads as exclusion):
@@ -245,7 +296,7 @@ export function PostNightForm({
   // together (select-follows-focus is the standard pattern for radios).
   const radioRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const selectedIndex = plans.findIndex((p) => p.id === selectedId);
+  const selectedIndex = visiblePlans.findIndex((p) => p.id === selectedId);
   // If nothing is selected, the first radio holds the tabstop.
   const tabStopIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
@@ -254,10 +305,10 @@ export function PostNightForm({
   }
 
   function focusRadio(index: number) {
-    const count = plans.length;
+    const count = visiblePlans.length;
     if (count === 0) return;
     const wrapped = ((index % count) + count) % count;
-    const next = plans[wrapped];
+    const next = visiblePlans[wrapped];
     if (!next) return;
     setSelectedId(next.id);
     // Defer focus until React commits the new selection so the ring follows.
@@ -284,7 +335,7 @@ export function PostNightForm({
         break;
       case 'End':
         e.preventDefault();
-        focusRadio(plans.length - 1);
+        focusRadio(visiblePlans.length - 1);
         break;
       default:
         break;
@@ -403,7 +454,7 @@ export function PostNightForm({
               role="radiogroup"
               aria-label="pick a plan"
             >
-              {plans.map((plan, idx) => (
+              {visiblePlans.map((plan, idx) => (
                 <PlanCard
                   key={plan.id}
                   plan={plan}
@@ -417,6 +468,25 @@ export function PostNightForm({
                 />
               ))}
             </div>
+
+            {/* One-way expander past the fold. Selection keeps working across
+                it: expanding only appends radios to the same radiogroup. */}
+            {!showAllPlans && plans.length > PLANS_FOLD && (
+              <button
+                type="button"
+                aria-expanded={false}
+                onClick={() => setShowAllPlans(true)}
+                className={cn(
+                  'mt-3 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-full bg-white/60 font-body text-[13px] font-semibold lowercase text-shell-ink/65 ring-1 ring-shell-ink/10 transition',
+                  'hover:ring-shell-accent/40 hover:text-shell-ink active:scale-95',
+                  'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                  'motion-reduce:transition-none',
+                )}
+              >
+                show all {plans.length} plans
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            )}
           </fieldset>
 
           {/* ── When picker ── */}
@@ -725,24 +795,20 @@ function PlanCard({
   setRef,
 }: PlanCardProps) {
   const tags = (plan.vibe_tags ?? []).filter(Boolean).slice(0, 4);
+  const title = plan.title?.toLowerCase() ?? 'untitled plan';
+  const stops = parsePlanStops(plan.stops);
+  const meta = planMetaLine(plan, stops.length);
+  // Inline stop preview — expands in place, no navigation.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const stopsId = `plan-stops-${plan.id}`;
 
   return (
-    <motion.button
-      ref={setRef}
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      tabIndex={isTabStop ? 0 : -1}
-      onClick={onSelect}
-      onKeyDown={onKeyDown}
+    <motion.div
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={reduceMotion ? false : { opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 6) * 0.04, type: 'spring', stiffness: 400, damping: 32 }}
-      whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       className={cn(
-        // Base: full-width tappable card, ≥44px target, left-aligned text
-        'flex w-full items-start gap-3 rounded-3xl bg-white/80 p-3 text-left transition',
-        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+        'rounded-3xl bg-white/80 transition',
         'motion-reduce:transition-none',
         // Selected ring
         selected
@@ -750,57 +816,142 @@ function PlanCard({
           : 'ring-1 ring-shell-ink/10 shadow-subtle hover:ring-shell-accent/40',
       )}
     >
-      {/* Thumbnail */}
-      <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl bg-shell-base">
-        {plan.cover_image_url ? (
-          <Image
-            src={plan.cover_image_url}
-            alt=""
-            fill
-            sizes="72px"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Sparkles
-              className="h-6 w-6 text-shell-accent/40"
-              aria-hidden
-            />
-          </div>
+      {/* The radio proper. preview + remix live OUTSIDE this button (siblings,
+          not nested interactives) so tapping them never changes selection. */}
+      <motion.button
+        ref={setRef}
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        tabIndex={isTabStop ? 0 : -1}
+        onClick={onSelect}
+        onKeyDown={onKeyDown}
+        whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+        className={cn(
+          // Base: full-width tappable target, ≥44px (72px thumb), left-aligned
+          'flex w-full items-start gap-3 rounded-t-3xl p-3 text-left transition',
+          'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+          'motion-reduce:transition-none',
         )}
+      >
+        {/* Thumbnail */}
+        <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl bg-shell-base">
+          {plan.cover_image_url ? (
+            <Image
+              src={plan.cover_image_url}
+              alt=""
+              fill
+              sizes="72px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Sparkles
+                className="h-6 w-6 text-shell-accent/40"
+                aria-hidden
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="font-heading text-[17px] lowercase leading-tight text-shell-ink line-clamp-2">
+            {title}
+          </p>
+
+          {meta && (
+            <p className="mt-1 font-body text-[12px] lowercase text-shell-ink/55 [font-variant-numeric:tabular-nums]">
+              {meta}
+            </p>
+          )}
+
+          {tags.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="vibe tags">
+              {tags.map((tag) => (
+                <li
+                  key={tag}
+                  className="rounded-full bg-shell-accent px-2.5 py-0.5 font-body text-[11px] font-semibold text-white shadow-md"
+                  style={{ transform: `rotate(${stickerRotation(tag)}deg)` }}
+                >
+                  {tag.toLowerCase()}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Selection indicator */}
+        <div
+          aria-hidden
+          className={cn(
+            'mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition',
+            selected
+              ? 'border-shell-accent bg-shell-accent'
+              : 'border-shell-ink/20 bg-transparent',
+          )}
+        />
+      </motion.button>
+
+      {/* Quiet footer: peek inside, or take it to the canvas to remix before
+          posting. Both ≥44px targets, both separate from the radio. */}
+      <div className="flex items-center justify-between border-t border-shell-ink/10 px-1.5">
+        <button
+          type="button"
+          aria-expanded={previewOpen}
+          aria-controls={previewOpen ? stopsId : undefined}
+          aria-label={`preview ${title}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewOpen((v) => !v);
+          }}
+          className={cn(
+            'flex min-h-[44px] items-center gap-1 rounded-full px-2.5 font-body text-[13px] lowercase text-shell-ink/60 transition',
+            'hover:text-shell-ink active:scale-95',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+            'motion-reduce:transition-none',
+          )}
+        >
+          preview
+          <ChevronDown
+            className={cn('h-3.5 w-3.5 transition', previewOpen && 'rotate-180')}
+            aria-hidden
+          />
+        </button>
+        <Link
+          href={`/plans/${plan.id}/edit`}
+          aria-label={`remix ${title}`}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'flex min-h-[44px] items-center rounded-full px-2.5 font-body text-[13px] lowercase text-shell-ink/60 transition',
+            'hover:text-shell-accent active:scale-95',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+            'motion-reduce:transition-none',
+          )}
+        >
+          remix →
+        </Link>
       </div>
 
-      {/* Content */}
-      <div className="min-w-0 flex-1 pt-0.5">
-        <p className="font-heading text-[17px] lowercase leading-tight text-shell-ink line-clamp-2">
-          {plan.title?.toLowerCase() ?? 'untitled plan'}
-        </p>
-
-        {tags.length > 0 && (
-          <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="vibe tags">
-            {tags.map((tag) => (
+      {/* Inline stop preview: the ordered run of the night, name · time. */}
+      {previewOpen && (
+        stops.length > 0 ? (
+          <ol id={stopsId} className="space-y-1.5 border-t border-shell-ink/10 px-4 py-3">
+            {stops.map((s, i) => (
               <li
-                key={tag}
-                className="rounded-full bg-shell-accent px-2.5 py-0.5 font-body text-[11px] font-semibold text-white shadow-md"
-                style={{ transform: `rotate(${stickerRotation(tag)}deg)` }}
+                key={`${s.name}-${i}`}
+                className="font-body text-[13px] lowercase text-shell-ink/70 [font-variant-numeric:tabular-nums]"
               >
-                {tag.toLowerCase()}
+                {s.time ? `${s.name.toLowerCase()} · ${s.time}` : s.name.toLowerCase()}
               </li>
             ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Selection indicator */}
-      <div
-        aria-hidden
-        className={cn(
-          'mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition',
-          selected
-            ? 'border-shell-accent bg-shell-accent'
-            : 'border-shell-ink/20 bg-transparent',
-        )}
-      />
-    </motion.button>
+          </ol>
+        ) : (
+          <p id={stopsId} className="border-t border-shell-ink/10 px-4 py-3 font-body text-[13px] lowercase text-shell-ink/55">
+            no stops on this one yet. remix it to add some.
+          </p>
+        )
+      )}
+    </motion.div>
   );
 }

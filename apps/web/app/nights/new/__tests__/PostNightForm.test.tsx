@@ -15,9 +15,16 @@ vi.mock('@/lib/after5/client', () => ({
   ambientSoundUrl: (p: string | null) => (p ? `https://x/${p}` : null),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// Strip framer-motion-only props so React doesn't warn about unknown DOM attrs
+type MotionExtras = {
+  children?: React.ReactNode;
+  initial?: unknown;
+  animate?: unknown;
+  transition?: unknown;
+  whileTap?: unknown;
+};
 vi.mock('framer-motion', () => ({
   motion: {
-    // Strip framer-motion-only props so React doesn't warn about unknown DOM attrs
     button: ({
       children,
       initial: _i,
@@ -25,14 +32,18 @@ vi.mock('framer-motion', () => ({
       transition: _t,
       whileTap: _wt,
       ...props
-    }: React.HTMLAttributes<HTMLButtonElement> & {
-      children?: React.ReactNode;
-      initial?: unknown;
-      animate?: unknown;
-      transition?: unknown;
-      whileTap?: unknown;
-    }) => (
+    }: React.HTMLAttributes<HTMLButtonElement> & MotionExtras) => (
       <button {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}>{children}</button>
+    ),
+    div: ({
+      children,
+      initial: _i,
+      animate: _a,
+      transition: _t,
+      whileTap: _wt,
+      ...props
+    }: React.HTMLAttributes<HTMLDivElement> & MotionExtras) => (
+      <div {...props}>{children}</div>
     ),
   },
   useReducedMotion: () => false,
@@ -189,6 +200,98 @@ describe('PostNightForm creator controls (E11)', () => {
 
   it('has no a11y violations with the creator controls', async () => {
     const { container } = render(<PostNightForm plans={[plan('a')]} ambientSounds={sounds} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('PostNightForm plan picker (meta, preview, remix, show-all)', () => {
+  const richPlan = {
+    id: 'rich',
+    title: 'Plan rich',
+    cover_image_url: null,
+    vibe_tags: ['jazz'],
+    stops: [
+      { place_id: 's1', place_name: 'Bar Susu', start_time: '19:00', duration_min: 60, estimated_cost_pp: 20 },
+      { place_id: 's2', place_name: 'Noodle House', start_time: '20:15', duration_min: 60, estimated_cost_pp: 15 },
+      { place_id: 's3', place_name: 'Lookout Walk', start_time: '21:30', duration_min: 30, estimated_cost_pp: 10 },
+    ],
+    total_cost_pp: 45,
+    total_duration_min: 150,
+  };
+
+  it('renders the meta line derived from the itinerary row', () => {
+    render(<PostNightForm plans={[richPlan]} />);
+    expect(screen.getByText('3 stops · ~2.5 hr · $45 pp')).toBeInTheDocument();
+  });
+
+  it('omits the meta line when nothing is derivable', () => {
+    render(<PostNightForm plans={[plan('a')]} />);
+    expect(screen.queryByText(/stops ·|~.* hr|\$\d+ pp/)).not.toBeInTheDocument();
+  });
+
+  it('preview expands the ordered stop list inline without changing selection', async () => {
+    render(<PostNightForm plans={[richPlan]} />);
+    const toggle = screen.getByRole('button', { name: /preview plan rich/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const items = screen.getAllByRole('listitem')
+      .map((li) => li.textContent)
+      .filter((t) => t?.includes('·') && /\d{2}:\d{2}/.test(t ?? ''));
+    expect(items).toEqual(['bar susu · 19:00', 'noodle house · 20:15', 'lookout walk · 21:30']);
+    // expanding the preview must NOT select the radio
+    expect(screen.getByRole('radio', { name: /plan rich/i })).toHaveAttribute('aria-checked', 'false');
+
+    // and it collapses again
+    await userEvent.click(toggle);
+    expect(screen.queryByText('bar susu · 19:00')).not.toBeInTheDocument();
+  });
+
+  it('remix links to the plan canvas and does not change selection', async () => {
+    render(<PostNightForm plans={[richPlan]} />);
+    const remix = screen.getByRole('link', { name: /remix plan rich/i });
+    expect(remix).toHaveAttribute('href', '/plans/rich/edit');
+    // jsdom can't navigate; block the default so the click still exercises the
+    // component's handlers without a "not implemented" stderr.
+    remix.addEventListener('click', (e) => e.preventDefault());
+    await userEvent.click(remix);
+    expect(screen.getByRole('radio', { name: /plan rich/i })).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('folds at 6 plans behind a show-all expander; selection works past the fold', async () => {
+    const many = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(plan);
+    render(<PostNightForm plans={many} />);
+    const group = screen.getByRole('radiogroup', { name: /pick a plan/i });
+    expect(within(group).getAllByRole('radio')).toHaveLength(6);
+
+    const expander = screen.getByRole('button', { name: /show all 8 plans/i });
+    await userEvent.click(expander);
+    expect(within(group).getAllByRole('radio')).toHaveLength(8);
+    expect(screen.queryByRole('button', { name: /show all/i })).not.toBeInTheDocument();
+
+    const h = screen.getByRole('radio', { name: /plan h/i });
+    await userEvent.click(h);
+    expect(h).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('no expander when the list fits within the fold', () => {
+    render(<PostNightForm plans={[plan('a'), plan('b')]} />);
+    expect(screen.queryByRole('button', { name: /show all/i })).not.toBeInTheDocument();
+  });
+
+  it('a preselected ?itinerary= beyond the fold renders visible and selected', () => {
+    const many = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(plan);
+    render(<PostNightForm plans={many} itineraryId="h" />);
+    const h = screen.getByRole('radio', { name: /plan h/i });
+    expect(h).toHaveAttribute('aria-checked', 'true');
+    // the fold auto-expanded, so no expander remains
+    expect(screen.queryByRole('button', { name: /show all/i })).not.toBeInTheDocument();
+  });
+
+  it('has no a11y violations with a preview open', async () => {
+    const { container } = render(<PostNightForm plans={[richPlan]} />);
+    await userEvent.click(screen.getByRole('button', { name: /preview plan rich/i }));
     expect(await axe(container)).toHaveNoViolations();
   });
 });
