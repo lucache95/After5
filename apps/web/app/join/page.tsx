@@ -57,7 +57,7 @@ export default function JoinPage() {
               href="/create"
               className="rounded-full bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95"
             >
-              plan a night
+              make my date
             </Link>
           </div>
         </nav>

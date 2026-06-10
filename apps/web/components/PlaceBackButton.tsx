@@ -20,7 +20,14 @@ const CLS = cn(
   'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40 motion-reduce:transition-none',
 );
 
-export function PlaceBackButton({ backHref }: { backHref: string | null }) {
+export function PlaceBackButton({
+  backHref,
+  fallbackHref = '/places',
+}: {
+  backHref: string | null;
+  /** Where to push when there's no in-app history. Defaults to /places. */
+  fallbackHref?: string;
+}) {
   const router = useRouter();
 
   if (backHref) {
@@ -38,7 +45,7 @@ export function PlaceBackButton({ backHref }: { backHref: string | null }) {
       aria-label="go back"
       onClick={() => {
         if (typeof window !== 'undefined' && window.history.length > 1) router.back();
-        else router.push('/places');
+        else router.push(fallbackHref);
       }}
       className={CLS}
     >

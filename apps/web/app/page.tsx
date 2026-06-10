@@ -68,7 +68,7 @@ export default function HomePage() {
       <section className="mx-auto w-full max-w-[480px] px-6 py-10">
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-shell-ink/10 p-6 text-center">
           <p className="font-body text-sm text-shell-ink/70">just want to plan a date? we still do that.</p>
-          <Link href="/create" className="rounded-full border-2 border-shell-ink/15 px-6 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95">plan a night</Link>
+          <Link href="/create" className="rounded-full border-2 border-shell-ink/15 px-6 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95">make my date</Link>
         </div>
       </section>
 

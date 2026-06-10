@@ -39,7 +39,7 @@ export function LandingHero() {
           let&apos;s go
         </Link>
         <Link href="/create" className="font-body text-sm lowercase text-shell-ink/55 underline decoration-shell-ink/25 underline-offset-4 transition hover:text-shell-ink">
-          or just plan a night
+          or just make my date
         </Link>
       </div>
     </section>
