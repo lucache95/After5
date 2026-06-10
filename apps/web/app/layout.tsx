@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 import { Inter, Fraunces, Caprasimo, Fredoka } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { PostHogProvider } from './PostHogProvider';
-import { EarlyAccessBanner } from '@/components/EarlyAccessBanner';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import './globals.css';
 
@@ -81,10 +80,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster richColors position="top-center" />
         <ServiceWorkerRegistrar />
         <Suspense fallback={null}>
-          <EarlyAccessBanner />
           {/* Relative wrapper scopes absolute-positioned headers (e.g. the
-              homepage hero nav) to start *below* the promo banner instead
-              of behind it at the top of the viewport. */}
+              homepage hero nav). */}
           <div className="relative">
             <PostHogProvider>{children}</PostHogProvider>
           </div>
