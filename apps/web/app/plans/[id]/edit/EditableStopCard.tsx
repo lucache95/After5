@@ -57,7 +57,7 @@ export function EditableStopCard({
                 className={fieldClass}
               />
             </div>
-            <div className="w-24">
+            <div className="w-20">
               <label className={labelClass} htmlFor={`stop-mins-${index}`}>minutes</label>
               <input
                 id={`stop-mins-${index}`}
@@ -70,7 +70,7 @@ export function EditableStopCard({
                 className={fieldClass}
               />
             </div>
-            <div className="w-24">
+            <div className="w-20">
               <label className={labelClass} htmlFor={`stop-cost-${index}`}>cost</label>
               <input
                 id={`stop-cost-${index}`}
