@@ -17,7 +17,10 @@ const STEP_ROUTES_BY_INDEX: string[] = [
 
 export function OnboardingShell({ step, children }: { step: number; children: React.ReactNode }) {
   const router = useRouter();
-  const prevRoute = step > 1 ? STEP_ROUTES_BY_INDEX[step - 1] : null;
+  // No back chip on the first step (nothing before it) or the final done step
+  // (the verify guard makes back a self-loop or a surprise exit to /home).
+  const prevRoute =
+    step > 1 && step < ONBOARDING_STEPS.length ? STEP_ROUTES_BY_INDEX[step - 1] : null;
 
   return (
     <main className="min-h-dvh bg-shell-base">
