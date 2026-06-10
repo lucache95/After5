@@ -12,7 +12,7 @@ export const revalidate = 3600;
 const SITE = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
-  title: 'every kelowna spot we plan with · after5',
+  title: 'every kelowna spot we plan with',
   description:
     'browse every restaurant, bar, hike, viewpoint, and park after5 builds kelowna date plans around. hand-picked by locals.',
   alternates: { canonical: `${SITE}/places` },

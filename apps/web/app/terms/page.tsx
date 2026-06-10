@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'terms · after5',
+  title: 'terms',
   description: 'terms of using after5.',
 };
 

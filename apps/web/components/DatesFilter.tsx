@@ -193,7 +193,7 @@ export function DatesFilter({ items }: { items: DateRow[] }) {
                   <span className="mx-1.5 text-border">·</span>
                   <span>{totalHr} hr</span>
                   <span className="mx-1.5 text-border">·</span>
-                  <span>{stops.length} stops</span>
+                  <span>{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>
                 </p>
                 {it.generated_at && (
                   <p className="mt-1 text-xs text-muted">

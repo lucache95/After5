@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { BackButton } from '@/components/BackButton';
 import { ItineraryView } from '@/components/itinerary/ItineraryView';
 import { FeedbackPulse } from '@/components/itinerary/FeedbackPulse';
 import { OtherDates } from '@/components/itinerary/OtherDates';
@@ -80,7 +81,7 @@ export async function generateMetadata(props: {
   const canonical = `${SITE_URL}/dates/${slug}`;
 
   return {
-    title: `${title} — a kelowna date plan · after5`,
+    title: `${title} — a kelowna date plan`,
     description: desc.slice(0, 160),
     alternates: { canonical },
     openGraph: {
@@ -187,12 +188,15 @@ export default async function DatePage(props: { params: Promise<{ slug: string }
 
       <header className="sticky top-0 z-50 border-b border-shell-ink/10 bg-shell-base/85 backdrop-blur-md">
         <nav className="mx-auto flex max-w-content items-center justify-between px-6 py-4 md:px-10 md:py-5">
-          <Link
-            href="/"
-            className="font-heading text-xl lowercase tracking-tight text-shell-accent"
-          >
-            after5
-          </Link>
+          <div className="flex items-center gap-3">
+            <BackButton fallbackHref="/dates" />
+            <Link
+              href="/"
+              className="font-heading text-xl lowercase tracking-tight text-shell-accent"
+            >
+              after5
+            </Link>
+          </div>
           <Link
             href="/create"
             className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-5 py-2.5 font-body text-sm lowercase text-white transition-transform hover:-translate-y-0.5 md:px-6"

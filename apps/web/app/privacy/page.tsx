@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'privacy · after5',
+  title: 'privacy',
   description: 'how after5 handles your data.',
 };
 

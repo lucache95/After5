@@ -6,7 +6,7 @@ import { PLACE_TYPES } from '@/lib/taxonomy';
 const SITE = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
-  title: 'kelowna places by category · after5',
+  title: 'kelowna places by category',
   description: 'browse kelowna by category: restaurants, wineries, breweries, escape rooms, hikes, viewpoints, and more.',
   alternates: { canonical: `${SITE}/types` },
 };

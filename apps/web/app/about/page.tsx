@@ -8,7 +8,7 @@ import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
 
 export const metadata: Metadata = {
-  title: 'about · after5',
+  title: 'about',
   description:
     'after5 is the dating app where you match on the night, not the face — built by people who actually go out.',
 };

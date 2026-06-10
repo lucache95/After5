@@ -6,7 +6,7 @@ import { NEIGHBORHOODS } from '@/lib/taxonomy';
 const SITE = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
-  title: 'kelowna neighborhoods · after5',
+  title: 'kelowna neighborhoods',
   description: 'browse kelowna by area: downtown, mission, pandosy, west kelowna, lake country, peachland. places and date plans by neighborhood.',
   alternates: { canonical: `${SITE}/neighborhoods` },
 };

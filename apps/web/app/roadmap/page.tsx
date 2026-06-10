@@ -9,7 +9,7 @@ import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
 
 export const metadata: Metadata = {
-  title: 'roadmap · after5',
+  title: 'roadmap',
   description:
     'where after5 is today, what\'s coming next, and how we\'ll handle pricing. built in the open.',
 };
@@ -71,7 +71,7 @@ export default function RoadmapPage() {
               href="/create"
               className="rounded-full bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95"
             >
-              plan a night
+              make my date
             </Link>
           </div>
         </nav>

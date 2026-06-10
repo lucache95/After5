@@ -16,7 +16,7 @@ export async function generateMetadata(props: { params: Promise<{ vibe: string }
   const v = findVibe(vibe);
   if (!v) return {};
   return {
-    title: `${v.label.toLowerCase()} dates in kelowna · after5`,
+    title: `${v.label.toLowerCase()} dates in kelowna`,
     description: `${v.blurb} real ${v.label.toLowerCase()} spots and date plans in kelowna, picked by locals.`,
     alternates: { canonical: `${SITE}/vibes/${v.slug}` },
   };

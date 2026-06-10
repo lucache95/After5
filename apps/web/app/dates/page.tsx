@@ -15,7 +15,7 @@ export const revalidate = 60;
 const SITE_URL = 'https://tryafter5.app';
 
 export const metadata: Metadata = {
-  title: 'every kelowna date plan we\'ve built · after5',
+  title: 'every kelowna date plan we\'ve built',
   description:
     'browse hundreds of kelowna date plans: romantic, chill, adventurous, cozy. real places, real timing, real costs. pick one or plan your own.',
   alternates: { canonical: `${SITE_URL}/dates` },
@@ -90,7 +90,7 @@ export default async function DatesIndexPage() {
           every date plan we&apos;ve built
         </h1>
         <p className="mt-6 max-w-prose font-body text-base text-shell-ink/70 md:text-lg">
-          {items.length} plans. real places, real timing, real costs. pick one or
+          {items.length} {items.length === 1 ? 'plan' : 'plans'}. real places, real timing, real costs. pick one or
           steal an idea before you build your own.
         </p>
       </section>

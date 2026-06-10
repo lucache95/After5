@@ -190,7 +190,7 @@ export function FeedbackForm({
         <div className="mt-10 space-y-6">
           {stops.map((stop, idx) => (
             <StopCard
-              key={stop.place_id}
+              key={stop.place_id || `stop-${idx}`}
               stop={stop}
               idx={idx}
               vote={votes[idx]}

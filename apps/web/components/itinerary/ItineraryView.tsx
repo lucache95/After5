@@ -174,7 +174,7 @@ export function ItineraryView({
               <ol className="space-y-10">
                 {itinerary.stops.map((s, i) => (
                   <StopCard
-                    key={s.place_id}
+                    key={s.place_id || `stop-${i}`}
                     stop={s}
                     index={i}
                     isLast={i === itinerary.stops.length - 1}
