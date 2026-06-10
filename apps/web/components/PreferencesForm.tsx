@@ -28,6 +28,18 @@ export interface PreferencesInitial {
 const GENDERS = GenderSchema.options;
 const DEALBREAKERS = DealbreakerSchema.options;
 
+// Display labels for the hard-nos section. Keys MUST match DealbreakerSchema values
+// exactly — these are stored values; only the visible label changes.
+const DEALBREAKER_LABEL: Record<string, string> = {
+  smoking: 'smokers',
+  wants_kids: 'wants kids',
+  no_kids: "doesn't want kids",
+  drinks_alcohol: 'drinks',
+  no_alcohol: "doesn't drink",
+  has_pets: 'has pets',
+  no_pets: 'no pets',
+};
+
 export interface PreferencesFormProps {
   mode: 'onboarding' | 'account';
   userId: string;
@@ -134,7 +146,7 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
         <legend className="mb-3 font-body text-sm font-semibold lowercase text-shell-ink">hard nos</legend>
         <div className="flex flex-wrap gap-2.5">
           {DEALBREAKERS.map((d) => (
-            <StickerChip key={d} label={d.replace(/_/g, ' ')} role="checkbox"
+            <StickerChip key={d} label={DEALBREAKER_LABEL[d] ?? d.replace(/_/g, ' ')} role="checkbox"
               selected={dealbreakers.includes(d)} onToggle={() => toggle(dealbreakers, d, setDealbreakers)} />
           ))}
         </div>

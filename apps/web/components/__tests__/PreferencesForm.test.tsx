@@ -5,6 +5,7 @@
 // correct (Pitfall 3).
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 const { push, refresh, savePreferences, advanceOnboarding, datingUpdate, toastSuccess } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -93,6 +94,35 @@ describe('PreferencesForm — invalid input blocks save (both modes)', () => {
     await screen.findByRole('alert');
     expect(savePreferences).not.toHaveBeenCalled();
     expect(advanceOnboarding).not.toHaveBeenCalled();
+  });
+});
+
+describe('PreferencesForm — pill labels (audit pass-2: lowercase + natural hard-nos)', () => {
+  it('gender chips render lowercase (woman / man / nonbinary)', () => {
+    render(<PreferencesForm mode="onboarding" userId="u1" initial={INITIAL} />);
+    // All three gender options should appear lowercase
+    expect(screen.getByRole('radio', { name: 'woman' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'man' })).toBeInTheDocument();
+  });
+
+  it('hard-no chips use natural dealbreaker labels (no double-negative)', () => {
+    render(<PreferencesForm mode="onboarding" userId="u1" initial={INITIAL} />);
+    // "smoking" → "smokers"
+    expect(screen.getByRole('checkbox', { name: 'smokers' })).toBeInTheDocument();
+    // "wants_kids" → "wants kids"
+    expect(screen.getByRole('checkbox', { name: 'wants kids' })).toBeInTheDocument();
+    // "no_kids" → "doesn't want kids" (not the double-negative "no kids")
+    expect(screen.getByRole('checkbox', { name: "doesn't want kids" })).toBeInTheDocument();
+  });
+
+  it('selecting a hard-no chip stores the original schema value, not the display label', async () => {
+    render(<PreferencesForm mode="onboarding" userId="u1" initial={INITIAL} />);
+    // Click "smokers" chip — stored value must be "smoking"
+    await userEvent.click(screen.getByRole('checkbox', { name: 'smokers' }));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      expect.anything(), 'u1', expect.objectContaining({ dealbreakers: ['smoking'] }),
+    ));
   });
 });
 
