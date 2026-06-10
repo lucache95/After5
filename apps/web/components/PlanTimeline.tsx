@@ -23,8 +23,12 @@ import { LocalTime } from '@/components/LocalTime';
 // `linkSlugs` off so venue identity never leaks (T-07-12); only the post-lock LockDetail
 // sets it true. A stop with no slug degrades to plain text — never a broken /places link.
 
-// Hour-truncated, lowercase local time for a stop — blind-safe (never minute-
-// precise) and tiny, e.g. "7pm". Returns a <LocalTime> so it stays SSR-safe.
+// Compact lowercase local time for a stop, minute-precise when off the hour
+// ("6pm", "6:50pm"). Stop start_times are the itinerary's generic plan times,
+// not the scheduled night — the actual night start stays hour-truncated by the
+// RPC (the blind contract lives there). Hour-only display here made sorted
+// plans read as out-of-order (18:00/18:50 both showed "6pm").
+// Returns a <LocalTime> so it stays SSR-safe.
 function StopTime({ iso }: { iso: string | null }) {
   if (!iso) return null;
   // Stop start_time can arrive as a bare "HH:MM" clock string (legacy seed
@@ -33,7 +37,12 @@ function StopTime({ iso }: { iso: string | null }) {
   return (
     <LocalTime
       iso={isoish}
-      format={(d) => d.toLocaleTimeString('en-US', { hour: 'numeric' }).toLowerCase().replace(/\s/g, '')}
+      format={(d) =>
+        d
+          .toLocaleTimeString('en-US', { hour: 'numeric', minute: d.getMinutes() === 0 ? undefined : '2-digit' })
+          .toLowerCase()
+          .replace(/\s/g, '')
+      }
       fallback=""
     />
   );
