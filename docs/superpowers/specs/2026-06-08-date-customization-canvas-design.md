@@ -1,7 +1,17 @@
 # Date Customization Canvas — Design Spec
 
 **Date:** 2026-06-08
-**Status:** Draft for review
+**Status:** SHIPPED VIA CONVERGENCE — see addendum
+
+> **ADDENDUM (2026-06-09, user-approved):** during implementation we found the existing
+> `/plans/[id]/edit` editor (`ItineraryEditor`, #85 "§2A canvas") already delivers this spec's
+> canvas — and more (cover upload, stop reorder, custom venue search). Rather than ship a second,
+> weaker canvas, we converged: authed generation now lands directly on `/plans/[id]/edit`, which
+> gained the spec's net-new pieces — AI title "another take"/tone (new `regenerate_title` improve
+> action) and the improve loop (swap/NL-tweak) for generated nights. generate-1 and `remove_stop`
+> shipped as specified. The standalone `DateCanvas`/sheet components described below were built,
+> reviewed, then deleted in favor of the converged surface. Product principles (one date, the
+> night is the hero, no "regenerate" copy) still apply and are honored by the editor.
 **Track:** A (customization flow). Track B (venue corpus) is parallel + non-blocking — see
 `/.planning/todos/pending/kelowna-corpus-activation.md`.
 

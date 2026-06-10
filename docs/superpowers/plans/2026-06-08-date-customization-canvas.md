@@ -77,7 +77,7 @@ git commit -m "feat(generate-plan): produce one itinerary per request (canvas fl
 
 ---
 
-## Task 2: `regenerate_title` improve action (backend)
+## Task 2: `regenerate_title` improve action (backend) ✅ DONE (commits f0b6dc2, 3e07f0f)
 
 **Files:**
 - Modify: `supabase/functions/generate-plan/improve.ts` (schema ≈322, `handleImprove` ≈437)
@@ -204,7 +204,9 @@ git commit -m "feat(generate-plan): add regenerate_title improve action (frozen 
 
 ---
 
-## Task 3: `remove_stop` improve action (backend)
+## Task 3: `remove_stop` improve action (backend) ✅ DONE (commit ab15da6)
+
+> **Integration fix (commit baa0790):** wired `regenerate_title` + `remove_stop` into the `index.ts` improve dispatch guard (they were unrouted → dead), added `title`/`hook` to the improve response, made `regenerate_title` persist owner-safe (`.select('id')` → `not_owner` 403 on RLS silent-deny). Required for Tasks 2/3 to function in prod.
 
 **Files:**
 - Modify: `supabase/functions/generate-plan/improve.ts`
@@ -309,7 +311,7 @@ Invoke generate-plan with a Kelowna request (anon key) and assert the response h
 
 ---
 
-## Task 5: `DateCanvas` — the night + edit chips + publish
+## Task 5: `DateCanvas` — the night + edit chips + publish ✅ DONE (commits 1cffe35, 30ee7eb) — folded in Task 10 (hint + quiet start-over)
 
 **Files:**
 - Create: `apps/web/app/create/canvas/DateCanvas.tsx`
@@ -439,7 +441,7 @@ git commit -m "feat(create): DateCanvas — night hero + edit chips + publish CT
 
 ---
 
-## Task 6: `TitleEditor` sheet
+## Task 6: `TitleEditor` sheet ✅ DONE (commit a909537)
 
 **Files:**
 - Create: `apps/web/app/create/canvas/TitleEditor.tsx`
@@ -555,7 +557,9 @@ git commit -m "feat(create): TitleEditor sheet (another take / tone / write my o
 
 ---
 
-## Task 7: `CoverEditor` sheet
+## Task 7: `CoverEditor` sheet ✅ DONE (commits 80e3336, bbc7ce2)
+
+> **MVP scope cut:** in-editor "fresh cover" (AI) DEFERRED to v1.1 — `generate-cover` is service-role/admin-only (Replicate cost) and would need an authed + rate-limited server route. CoverEditor ships venue-photo-selection only (free, client-only). Props are now `{ stops, onApply, onClose }` (no `itineraryId`/`current`). Shared `Sheet` extracted to `canvas/Sheet.tsx`.
 
 **Files:**
 - Create: `apps/web/app/create/canvas/CoverEditor.tsx`
@@ -650,7 +654,7 @@ git commit -m "feat(create): CoverEditor sheet (fresh cover / use a venue photo)
 
 ---
 
-## Task 8: `StopsEditor` sheet (swap + remove)
+## Task 8: `StopsEditor` sheet (swap + remove) ✅ DONE (commits f4900f7, 26d29e7)
 
 **Files:**
 - Create: `apps/web/app/create/canvas/StopsEditor.tsx`
@@ -753,7 +757,20 @@ git commit -m "feat(create): StopsEditor sheet (swap / change the ending / drop 
 
 ---
 
-## Task 9: Wire the canvas into the create flow (replace the 3-candidate picker)
+## Task 9: Wire the canvas into the create flow ✅ DONE — REVISED BY CONVERGENCE DECISION (commits 60a8707, 41330df)
+
+> **CONVERGENCE DECISION (2026-06-09, user-approved):** mid-execution we found the codebase already
+> had a richer canvas — `ItineraryEditor` at `/plans/[id]/edit` (#85 "§2A canvas": manual title,
+> cover pick + upload, stop rename/reorder/remove, custom venue search/add, publish CTA). Building
+> `DateCanvas` alongside it would have duplicated a better surface. Resolution:
+> - **Scrapped** `app/create/canvas/` (DateCanvas, TitleEditor, CoverEditor, StopsEditor, Sheet) — deleted in 41330df.
+> - **ItineraryEditor gained the net-new AI affordances** (60a8707): "another take" / tone title chips
+>   (the `regenerate_title` backend from Task 2) + `ImproveControls` (swap/NL-tweak) mounted for
+>   generated nights (`city_id` present), placed before publish to keep FLOW-01 intact.
+> - **CreateFlow** now lands authed generations directly on `/plans/[id]/edit` (door 1 = door 2);
+>   anon teaser + authed-without-id fallback unchanged. FLOW-01 wiring spec updated accordingly.
+> - Tasks 5–8 and 10 below produced components that were superseded and deleted; their reviewed
+>   patterns (invoke/toast idioms, copy rules) carried into the editor work. Backend Tasks 1–3 stand.
 
 **Files:**
 - Modify: `apps/web/app/create/CreateFlow.tsx` (the `Results` render path + the `generate()` success branch)
@@ -798,7 +815,7 @@ git commit -m "feat(create): land single generated date on DateCanvas (retire 3-
 
 ---
 
-## Task 10: First-run hint + quiet restart
+## Task 10: First-run hint + quiet restart ✅ DONE (folded into Task 5, commit 1cffe35)
 
 **Files:**
 - Modify: `apps/web/app/create/canvas/DateCanvas.tsx`
