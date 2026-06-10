@@ -13,7 +13,7 @@
 import { filterPlaces, coversAllMustIncludes } from '../places-filter.ts';
 import { computeUnverifiedRate } from './unverified-rate.ts';
 import { loadTemplates, selectTopTemplates } from '../templates.ts';
-import { buildItineraryFromTemplate, injectDelighter } from '../scoring.ts';
+import { buildItineraryFromTemplate, injectDelighter, categoryGroupForType, ENFORCED_GROUPS } from '../scoring.ts';
 import type { TasteContext } from '../scoring.ts';
 import { writeItineraries } from '../prompt.ts';
 import { selectPack, isSurpriseMe, packIsSatisfiable, enforceSequenceRules } from '../editorial-packs.ts';
@@ -361,20 +361,9 @@ function pickModifiersForBatch(
   return picked;
 }
 
-// Map place_type → broad category so we can detect adjacency violations.
-// Adjacent stops in the same group feel monotonous (two bars in a row,
-// two cafes back-to-back). Cross-group adjacency (cafe → restaurant) is
-// fine. Outdoor/view/activity are not enforced — feeling fresh outside
-// matters less than the food/drink/sweet rhythm.
-function categoryGroupForType(t: string | undefined | null): string {
-  if (!t) return 'other';
-  if (t === 'restaurant') return 'food';
-  if (t === 'winery' || t === 'brewery' || t === 'cocktail_bar') return 'drink';
-  if (t === 'cafe' || t === 'dessert' || t === 'ice_cream' || t === 'bakery') return 'sweet';
-  return 'other';
-}
-
-const ENFORCED_GROUPS = new Set(['food', 'drink', 'sweet']);
+// categoryGroupForType + ENFORCED_GROUPS now live in scoring.ts (shared with
+// the selection-time same-group adjacency penalty in scorePlace, so the picker
+// avoids the violation and this pass only mops up what slips through).
 
 // Walks the stops list, finds adjacent pairs in the same enforced category
 // group, and tries to swap the second stop with a candidate from the same

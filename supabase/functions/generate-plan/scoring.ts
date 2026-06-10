@@ -35,6 +35,32 @@ import { haversineKm } from './places-filter.ts';
 // Kelowna). drive_cluster stays for display but no longer gates adjacency.
 export const MAX_HOP_KM = 2.0;
 
+// ─── Experience groups (same-experience adjacency) ───────────────────────
+// Map place_type → broad experience group so selection can avoid two
+// near-identical experiences back-to-back (bakery → cafe is two sit-down
+// coffee-ish stops in a row; cocktail bar → brewery is two drink stops).
+// Cross-group adjacency (cafe → restaurant) is fine. Outdoor/view/activity
+// types are deliberately ungrouped ('other') — repetition there reads as a
+// theme, not a rut. Shared by the scorePlace penalty (selection time) and
+// pipeline.ts fixAdjacency (post-assembly backstop).
+export function categoryGroupForType(t: string | undefined | null): string {
+  if (!t) return 'other';
+  if (t === 'restaurant') return 'food';
+  if (t === 'winery' || t === 'brewery' || t === 'cocktail_bar') return 'drink';
+  if (t === 'cafe' || t === 'dessert' || t === 'ice_cream' || t === 'bakery') return 'sweet';
+  return 'other';
+}
+
+export const ENFORCED_GROUPS: ReadonlySet<string> = new Set(['food', 'drink', 'sweet']);
+
+// Penalty applied when a candidate shares an enforced experience group with the
+// stop picked immediately before it. Sized to outweigh the usual tie-breakers
+// (same-type -3, vibe overlaps at ±1.5 each, pairing ±1.5) so a close-scoring
+// different-group candidate wins the slot, while staying well under the -100
+// same-place wall — on a thin pool where ONLY same-group candidates exist, the
+// slot still fills. A penalty, not a ban.
+export const SAME_GROUP_ADJACENCY_PENALTY = 8;
+
 interface ScoredPlace {
   place: Place;
   score: number;
@@ -158,6 +184,18 @@ function scorePlace(
   // post-validated + repaired against MAX_HOP_KM (see buildItineraryFromTemplate).
   const prevPicked = alreadyPicked[alreadyPicked.length - 1];
   if (!withinHop(prevPicked, p)) score -= 5;
+
+  // Same-experience adjacency: penalize a candidate whose experience group
+  // (cafe-like / drink-like / food) matches the stop picked immediately before
+  // it — a bakery right after a cafe is the same date twice. Soft penalty, not
+  // a filter: a thin pool with only same-group candidates still fills the slot.
+  // pipeline.ts fixAdjacency remains the post-assembly backstop.
+  if (prevPicked) {
+    const prevGroup = categoryGroupForType(prevPicked.type);
+    if (ENFORCED_GROUPS.has(prevGroup) && categoryGroupForType(p.type) === prevGroup) {
+      score -= SAME_GROUP_ADJACENCY_PENALTY;
+    }
+  }
 
   // Tonight bias: low-friction places are easier to pull off on short
   // notice (no reservations, easy parking, quick in/out). Strong nudge.

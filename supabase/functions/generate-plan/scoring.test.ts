@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { buildItineraryFromTemplate, isOpenAt, withinHop, MAX_HOP_KM } from './scoring.ts';
+import { buildItineraryFromTemplate, isOpenAt, withinHop, MAX_HOP_KM, categoryGroupForType } from './scoring.ts';
 import { haversineKm } from './places-filter.ts';
 import type { Place, PlanInputs, Template } from './types.ts';
 
@@ -193,5 +193,92 @@ Deno.test('buildItineraryFromTemplate: repairs a far second stop with a nearer i
     const a = it!.stops[i - 1];
     const b = it!.stops[i];
     assertEquals(haversineKm(a.lat!, a.lng!, b.lat!, b.lng!) <= MAX_HOP_KM, true);
+  }
+});
+
+// ─── same-experience adjacency penalty (selection time) ──────────────────
+// A candidate whose experience group matches the previous pick (cafe→bakery,
+// brewery→cocktail_bar) is penalized in scorePlace so a close-scoring
+// different-group candidate wins the slot. It is a PENALTY, not a ban: a pool
+// with only same-group candidates must still assemble.
+
+Deno.test('categoryGroupForType: cafe-like, drink-like, food groups; outdoors ungrouped', () => {
+  assertEquals(categoryGroupForType('cafe'), 'sweet');
+  assertEquals(categoryGroupForType('bakery'), 'sweet');
+  assertEquals(categoryGroupForType('dessert'), 'sweet');
+  assertEquals(categoryGroupForType('ice_cream'), 'sweet');
+  assertEquals(categoryGroupForType('brewery'), 'drink');
+  assertEquals(categoryGroupForType('cocktail_bar'), 'drink');
+  assertEquals(categoryGroupForType('winery'), 'drink');
+  assertEquals(categoryGroupForType('restaurant'), 'food');
+  assertEquals(categoryGroupForType('park'), 'other');
+  assertEquals(categoryGroupForType(null), 'other');
+});
+
+// Slot 2 admits both a bakery (same 'sweet' group as the slot-1 cafe) and a
+// brewery. The bakery out-scores the brewery on raw quality (+4), but the -8
+// same-group adjacency penalty flips the order so the brewery wins. Math.random
+// is pinned to 0 so the stochastic top-K picker deterministically takes the
+// top-scored candidate.
+const CAFE_THEN_ANY_TEMPLATE: Template = {
+  id: 't3',
+  name: 'cafe then second stop',
+  duration_min: 120,
+  suitable_for: ['date'],
+  vibe: [],
+  slots: [
+    { types: ['cafe'], duration_min: 60 },
+    { types: ['bakery', 'brewery'], duration_min: 60 },
+  ],
+  geographic_rule: null,
+  energy_curve: null,
+};
+
+Deno.test('buildItineraryFromTemplate: same-group runner-up loses slot 2 to a close-scoring different-group candidate', () => {
+  const realRandom = Math.random;
+  Math.random = () => 0; // pickFromTop → always the top-scored candidate
+  try {
+    const cafe = makePlace({ id: 'cafe', type: 'cafe', lat: 49.8880, lng: -119.4960, quality_score: 10, feedback_score: 0 });
+    // Bakery beats brewery by +4 raw — within the -8 adjacency penalty.
+    const bakery = makePlace({ id: 'bakery', type: 'bakery', lat: 49.8885, lng: -119.4955, quality_score: 10, feedback_score: 0 });
+    const brewery = makePlace({ id: 'brewery', type: 'brewery', lat: 49.8885, lng: -119.4955, quality_score: 6, feedback_score: 0 });
+
+    const it = buildItineraryFromTemplate(
+      CAFE_THEN_ANY_TEMPLATE,
+      [cafe, bakery, brewery],
+      BASE_INPUTS,
+      '10:00',
+      new Set(),
+      {},
+    );
+    assertEquals(it !== null, true);
+    assertEquals(it!.stops[0].place_id, 'cafe');
+    // Without the adjacency penalty the bakery (raw 10 vs 6) would win.
+    assertEquals(it!.stops[1].place_id, 'brewery');
+  } finally {
+    Math.random = realRandom;
+  }
+});
+
+Deno.test('buildItineraryFromTemplate: pool with ONLY same-group candidates still assembles (penalty, not ban)', () => {
+  const realRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const cafe = makePlace({ id: 'cafe', type: 'cafe', lat: 49.8880, lng: -119.4960, quality_score: 10, feedback_score: 0 });
+    const bakery = makePlace({ id: 'bakery', type: 'bakery', lat: 49.8885, lng: -119.4955, quality_score: 10, feedback_score: 0 });
+
+    const it = buildItineraryFromTemplate(
+      CAFE_THEN_ANY_TEMPLATE,
+      [cafe, bakery],
+      BASE_INPUTS,
+      '10:00',
+      new Set(),
+      {},
+    );
+    assertEquals(it !== null, true);
+    assertEquals(it!.stops.length, 2);
+    assertEquals(it!.stops[1].place_id, 'bakery'); // penalized but still fills the slot
+  } finally {
+    Math.random = realRandom;
   }
 });

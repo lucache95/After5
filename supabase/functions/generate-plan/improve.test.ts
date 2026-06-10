@@ -184,6 +184,78 @@ Deno.test('validateCoherence: surfaces a closed-at-slot stop', () => {
   assert(r.issues.some((i) => i.kind === 'hours'));
 });
 
+// ─── validateCoherence: schedule order (runtime mirror of scheduleMonotonic) ──
+
+Deno.test('validateCoherence: surfaces out-of-order start times (6pm → 7pm → 6pm)', () => {
+  const stops = [
+    makeStop({ place_id: 'a', start_time: '18:00', lat: 49.880, lng: -119.490 }),
+    makeStop({ place_id: 'b', start_time: '19:00', lat: 49.881, lng: -119.491 }),
+    makeStop({ place_id: 'c', start_time: '18:00', lat: 49.882, lng: -119.492 }),
+  ];
+  const places = new Map<string, Place>([
+    ['a', makePlace({ id: 'a', lat: 49.880, lng: -119.490 })],
+    ['b', makePlace({ id: 'b', lat: 49.881, lng: -119.491 })],
+    ['c', makePlace({ id: 'c', lat: 49.882, lng: -119.492 })],
+  ]);
+  const r = validateCoherence(stops, places, INPUTS);
+  assertEquals(r.coherent, false);
+  const order = r.issues.find((i) => i.kind === 'order');
+  assert(order, 'expected an order issue');
+  if (order?.kind === 'order') {
+    assertEquals(order.index, 2); // stop 3 is the offender
+    assert(order.message.includes('out of order'));
+  }
+});
+
+Deno.test('validateCoherence: equal start times are out of order too (eval scheduleMonotonic semantics)', () => {
+  const stops = [
+    makeStop({ place_id: 'a', start_time: '18:00', lat: 49.880, lng: -119.490 }),
+    makeStop({ place_id: 'b', start_time: '18:00', lat: 49.881, lng: -119.491 }),
+  ];
+  const places = new Map<string, Place>([
+    ['a', makePlace({ id: 'a', lat: 49.880, lng: -119.490 })],
+    ['b', makePlace({ id: 'b', lat: 49.881, lng: -119.491 })],
+  ]);
+  const r = validateCoherence(stops, places, INPUTS);
+  assertEquals(r.coherent, false);
+  assert(r.issues.some((i) => i.kind === 'order'));
+});
+
+Deno.test('validateCoherence: unparseable start time is an order violation (fail loud)', () => {
+  const stops = [
+    makeStop({ place_id: 'a', start_time: '18:00', lat: 49.880, lng: -119.490 }),
+    makeStop({ place_id: 'b', start_time: 'evening', lat: 49.881, lng: -119.491 }),
+  ];
+  const places = new Map<string, Place>([
+    ['a', makePlace({ id: 'a', lat: 49.880, lng: -119.490 })],
+    ['b', makePlace({ id: 'b', lat: 49.881, lng: -119.491 })],
+  ]);
+  const r = validateCoherence(stops, places, INPUTS);
+  assertEquals(r.coherent, false);
+  const order = r.issues.find((i) => i.kind === 'order');
+  assert(order, 'expected an order issue for the unreadable time');
+  if (order?.kind === 'order') {
+    assertEquals(order.index, 1);
+    assert(order.message.includes('unreadable'));
+  }
+});
+
+Deno.test('validateCoherence: strictly increasing start times pass the order check', () => {
+  const stops = [
+    makeStop({ place_id: 'a', start_time: '18:00', lat: 49.880, lng: -119.490, estimated_cost_pp: 10 }),
+    makeStop({ place_id: 'b', start_time: '19:15', lat: 49.881, lng: -119.491, estimated_cost_pp: 10 }),
+    makeStop({ place_id: 'c', start_time: '20:30', lat: 49.882, lng: -119.492, estimated_cost_pp: 10 }),
+  ];
+  const places = new Map<string, Place>([
+    ['a', makePlace({ id: 'a', lat: 49.880, lng: -119.490 })],
+    ['b', makePlace({ id: 'b', lat: 49.881, lng: -119.491 })],
+    ['c', makePlace({ id: 'c', lat: 49.882, lng: -119.492 })],
+  ]);
+  const r = validateCoherence(stops, places, INPUTS);
+  assertEquals(r.coherent, true);
+  assertEquals(r.issues.length, 0);
+});
+
 // ─── applyKnobsToInputs: NL-knob mapping ──────────────────────────────────
 
 Deno.test('applyKnobsToInputs: cheaper lowers budget', () => {

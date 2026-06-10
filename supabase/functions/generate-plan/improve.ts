@@ -249,22 +249,62 @@ function qualityScore(p: Place, inputs: PlanInputs): number {
 export type CoherenceIssue =
   | { kind: 'proximity'; from: number; to: number; km: number; message: string }
   | { kind: 'budget'; total: number; ceiling: number; message: string }
-  | { kind: 'hours'; index: number; message: string };
+  | { kind: 'hours'; index: number; message: string }
+  | { kind: 'order'; index: number; message: string };
 
 export interface CoherenceResult {
   coherent: boolean;
   issues: CoherenceIssue[];
 }
 
-// Re-validate proximity (hop-gate) + budget + hours after a swap/tweak. Surfaces
-// every break as a human-readable issue rather than letting an incoherent date
-// ship (T-09-13). Budget ceiling mirrors scoring.ts: max(budget*1.3, 50).
+// Strict "HH:MM" → minutes-since-midnight, or null when unreadable. Mirrors the
+// eval harness's parseTime (packages/date-quality gates.ts) so runtime and eval
+// agree on what counts as a parseable schedule time.
+function parseHHMM(hhmm: string | null | undefined): number | null {
+  if (!hhmm) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+// Re-validate schedule order + proximity (hop-gate) + budget + hours after a
+// swap/tweak. Surfaces every break as a human-readable issue rather than letting
+// an incoherent date ship (T-09-13). Budget ceiling mirrors scoring.ts:
+// max(budget*1.3, 50).
 export function validateCoherence(
   stops: ItineraryStop[],
   places: Map<string, Place>,
   inputs: PlanInputs,
 ): CoherenceResult {
   const issues: CoherenceIssue[] = [];
+
+  // Order — start_times must be STRICTLY increasing (mirrors the eval gate
+  // scheduleMonotonic: equal start times count as out of order too). Unlike the
+  // eval, an unparseable time is itself a violation — runtime can't vouch for a
+  // schedule it can't read.
+  for (let i = 0; i < stops.length; i++) {
+    const cur = parseHHMM(stops[i].start_time);
+    if (cur === null) {
+      issues.push({
+        kind: 'order',
+        index: i,
+        message: `stop ${i + 1} has an unreadable start time ("${stops[i].start_time ?? ''}"), so the schedule can't be checked.`,
+      });
+      continue;
+    }
+    if (i === 0) continue;
+    const prev = parseHHMM(stops[i - 1].start_time);
+    if (prev !== null && cur <= prev) {
+      issues.push({
+        kind: 'order',
+        index: i,
+        message: `the times are out of order — stop ${i + 1} starts before the one before it.`,
+      });
+    }
+  }
 
   // Proximity — every consecutive hop must be within MAX_HOP_KM.
   for (let i = 1; i < stops.length; i++) {
