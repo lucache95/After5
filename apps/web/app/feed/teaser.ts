@@ -51,13 +51,18 @@ export interface TeaserRow {
   } | null;
 }
 
-const TEASER_SELECT =
+const TEASER_SELECT_BASE =
   'id, city_id, starts_at, is_seed,' +
   ' itineraries!inner(pay_setting, vibe_tags, why_note, cover_image_url, title),' +
   ' cities!inner(name),' +
   ' places(neighborhood),' +
-  ' creator:profiles!date_instances_creator_id_fkey!inner(blurred_photo_url, first_name, age,' +
-  ' dealbreakers, smokes, drinks, has_pets, wants_kids)';
+  ' creator:profiles!date_instances_creator_id_fkey!inner(blurred_photo_url, first_name, age';
+const TEASER_SELECT = TEASER_SELECT_BASE + ', dealbreakers, smokes, drinks, has_pets, wants_kids)';
+// Pre-migration fallback: prod doesn't have the dlb01 lifestyle columns until
+// 20260609120000/-100 are gated-applied. Selecting them there would 42703 and
+// break the teaser, so on undefined-column errors we retry without the facts
+// and skip dealbreaker filtering. Remove once dlb01/dlb02 are live on prod.
+const TEASER_SELECT_LEGACY = TEASER_SELECT_BASE + ')';
 
 // ── DLB: app-side mirror of the SQL dealbreaker_blocks helper ────────────────
 // (20260609120100_dlb02_browse_feed_dealbreakers.sql). The teaser bypasses the
@@ -139,6 +144,12 @@ export function toTeaserNight(row: TeaserRow): FeedNight {
   };
 }
 
+// PostgREST undefined-column (42703) — the dlb01 columns aren't on this DB yet.
+function isMissingFactColumns(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '42703' || /smokes|wants_kids|has_pets|drinks/.test(error.message ?? '');
+}
+
 export async function teaserFeed(viewerId: string, limit = 20): Promise<FeedNight[]> {
   const admin = createAdminClient();
   // DLB: a teaser viewer may already have dealbreakers/facts saved (the
@@ -149,19 +160,26 @@ export async function teaserFeed(viewerId: string, limit = 20): Promise<FeedNigh
     .select('dealbreakers, smokes, drinks, has_pets, wants_kids')
     .eq('id', viewerId)
     .maybeSingle();
-  const { data, error } = await admin
-    .from('date_instances')
-    .select(TEASER_SELECT)
-    .eq('status', 'seeking')
-    .eq('moderation_status', 'approved')
-    .gt('starts_at', new Date().toISOString())
-    .neq('creator_id', viewerId)
-    .eq('creator.verification', 'verified')
-    .eq('creator.dating_enabled', true)
-    .eq('creator.account_state', 'active')
-    .not('creator.standing', 'in', '("suspended","locked_ban")')
-    .order('starts_at', { ascending: true })
-    .limit(limit);
+  const query = (select: string) =>
+    admin
+      .from('date_instances')
+      .select(select)
+      .eq('status', 'seeking')
+      .eq('moderation_status', 'approved')
+      .gt('starts_at', new Date().toISOString())
+      .neq('creator_id', viewerId)
+      .eq('creator.verification', 'verified')
+      .eq('creator.dating_enabled', true)
+      .eq('creator.account_state', 'active')
+      .not('creator.standing', 'in', '("suspended","locked_ban")')
+      .order('starts_at', { ascending: true })
+      .limit(limit);
+  let { data, error } = await query(TEASER_SELECT);
+  if (error && isMissingFactColumns(error)) {
+    // Pre-dlb01 schema: degrade to the legacy projection, no dealbreaker gate.
+    console.warn('[teaserFeed] lifestyle columns missing (pre-dlb01 schema), skipping dealbreaker gate');
+    ({ data, error } = await query(TEASER_SELECT_LEGACY));
+  }
   if (error) throw error;
   // Filter AFTER the limit (no SQL-side join expression here): the teaser may
   // under-fill by however many rows the gate hides — acceptable for the

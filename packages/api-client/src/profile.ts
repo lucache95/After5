@@ -69,7 +69,19 @@ export async function savePreferences(
     if (prefs[k] !== undefined) patch[k] = prefs[k];
   }
   const { error } = await client.from('profiles').update(patch as never).eq('id', userId);
-  if (error) throw error;
+  if (error) {
+    // Pre-dlb01 schema fallback: until 20260609120000 is gated-applied to prod,
+    // the lifestyle columns don't exist there. Never block the preferences save
+    // (it gates the onboarding funnel) — retry without the facts and warn.
+    const missingFacts =
+      (error.code === '42703' || /smokes|wants_kids|has_pets|drinks/.test(error.message ?? '')) &&
+      ['smokes', 'drinks', 'has_pets', 'wants_kids'].some((k) => k in patch);
+    if (!missingFacts) throw error;
+    console.warn('[savePreferences] lifestyle columns missing (pre-dlb01 schema), saving without facts');
+    for (const k of ['smokes', 'drinks', 'has_pets', 'wants_kids']) delete patch[k];
+    const { error: retryError } = await client.from('profiles').update(patch as never).eq('id', userId);
+    if (retryError) throw retryError;
+  }
 }
 
 // ─── Feed filters (E10) ────────────────────────────────────────────────
