@@ -1,10 +1,19 @@
-// Seed a "bunch" of rich, swipeable nights into the feed across the live cities
-// (Kelowna + Vancouver). Uses REAL generation (generate-plan edge fn) for the
-// itineraries, hosted by a small set of clearly-tagged, broadly-visible SEED
-// profiles (email '*@after5.seed', date_instances.is_seed = true) so they're
-// trivially cleanable.
+// Seed a "bunch" of rich, swipeable nights into the Kelowna feed. Uses REAL
+// generation (generate-plan edge fn) for the itineraries, hosted by a small set
+// of clearly-tagged, broadly-visible SEED profiles (email '*@after5.seed',
+// date_instances.is_seed = true) so they're trivially cleanable.
 //
 //   node scripts/seed-feed-dates.mjs
+//
+// 2026-06-09 refresh (post corpus-activation, post generate-1):
+//   * generate-plan now returns ONE itinerary per call (was ~3), so the GEN list
+//     is 12 calls across the vibes the 184-venue corpus now actually supports.
+//   * Calls run SEQUENTIALLY with spacing — a parallel burst tripped Anthropic
+//     rate limits during the corpus variety test (2026-06-08).
+//   * KELOWNA-ONLY: Vancouver has 0 live places (google_legacy relabel), so its
+//     old seed nights are cleaned up and not replaced. Single-city MVP.
+//   * Real (non-seed) nights are untouched — cleanup only removes @after5.seed
+//     hosts and their rows.
 //
 // Reads SUPABASE_SECRET_KEY (prod service role) + the anon key + the prod URL from
 // apps/web/.env.local. Idempotent: deletes prior seed hosts + their seed nights first.
@@ -25,24 +34,35 @@ const sb = createClient(URL_, SERVICE, { auth: { autoRefreshToken: false, persis
 const SEED_PHOTO = '/places/place-walk.jpg';
 const BROAD_PREFS = ['man', 'woman', 'nonbinary'];
 
-// 4 broadly-visible seed hosts: mixed gender, both live cities, wide prefs/age.
+// 3 broadly-visible Kelowna seed hosts: mixed gender, wide prefs/age, so the
+// 12 nights spread 4-per-host instead of looking like one spammy account.
 const HOSTS = [
-  { key: 'kel-w', email: 'seed-host-1@after5.seed', name: 'Maya',   gender: 'woman', city: 'kelowna',   birthdate: '1994-05-10' },
-  { key: 'kel-m', email: 'seed-host-2@after5.seed', name: 'Liam',   gender: 'man',   city: 'kelowna',   birthdate: '1991-11-02' },
-  { key: 'van-w', email: 'seed-host-3@after5.seed', name: 'Priya',  gender: 'woman', city: 'vancouver', birthdate: '1996-02-21' },
-  { key: 'van-m', email: 'seed-host-4@after5.seed', name: 'Noah',   gender: 'man',   city: 'vancouver', birthdate: '1990-08-15' },
+  { key: 'kel-w',  email: 'seed-host-1@after5.seed', name: 'Maya', gender: 'woman', city: 'kelowna', birthdate: '1994-05-10' },
+  { key: 'kel-m',  email: 'seed-host-2@after5.seed', name: 'Liam', gender: 'man',   city: 'kelowna', birthdate: '1991-11-02' },
+  { key: 'kel-w2', email: 'seed-host-5@after5.seed', name: 'Ava',  gender: 'woman', city: 'kelowna', birthdate: '1997-07-23' },
 ];
 
-// generation requests → which city + vibes. Each returns ~3 itineraries.
+// 12 generation requests spanning the post-activation corpus variety: each call
+// returns ONE itinerary (generate-1). Vibes chosen to exercise the categories the
+// diversity audit brought to target (sunset/viewpoints, activities, foodie,
+// creative, budget + boujee spread).
 const GEN = [
-  { city: 'kelowna',   vibe: ['creative'], budget: 70 },
-  { city: 'kelowna',   vibe: ['foodie'],   budget: 90 },
-  { city: 'vancouver', vibe: ['chill'],    budget: 70 },
-  { city: 'vancouver', vibe: ['romantic'], budget: 110 },
+  { vibe: ['romantic'],                 budget: 80 },
+  { vibe: ['adventurous'],              budget: 60 },
+  { vibe: ['food_focused'],             budget: 90 },
+  { vibe: ['creative'],                 budget: 70 },
+  { vibe: ['chill'],                    budget: 50 },
+  { vibe: ['romantic', 'unique'],       budget: 70 },
+  { vibe: ['fun', 'lively'],            budget: 60 },
+  { vibe: ['cozy'],                     budget: 55 },
+  { vibe: ['adventurous', 'casual'],    budget: 65 },
+  { vibe: ['food_focused', 'boujee'],   budget: 110 },
+  { vibe: ['unique'],                   budget: 60 },
+  { vibe: ['chill', 'romantic'],        budget: 75 },
 ];
 
 async function cityIds() {
-  const { data, error } = await sb.from('cities').select('id,slug').in('slug', ['kelowna', 'vancouver']);
+  const { data, error } = await sb.from('cities').select('id,slug').eq('slug', 'kelowna');
   if (error) throw error;
   return Object.fromEntries(data.map((c) => [c.slug, c.id]));
 }
@@ -79,15 +99,28 @@ async function makeHost(h, cityId) {
   return id;
 }
 
-async function generate(g) {
-  const res = await fetch(`${URL_}/functions/v1/generate-plan`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${ANON}` },
-    body: JSON.stringify({ vibe: g.vibe, city_slug: g.city, occasion: 'date', budget_per_person: g.budget, duration_min: 180 }),
-  });
-  const j = await res.json();
-  if (!j.itineraries?.length) throw new Error(`generate ${g.city}/${g.vibe}: ${JSON.stringify(j).slice(0, 200)}`);
-  return j.itineraries.map((it) => it.id).filter(Boolean);
+// One generation call = one itinerary id (generate-1). One retry on failure
+// (rate limits / transient LLM errors), then give up on that slot.
+async function generate(g, attempt = 1) {
+  try {
+    const res = await fetch(`${URL_}/functions/v1/generate-plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${ANON}` },
+      body: JSON.stringify({ vibe: g.vibe, city_slug: 'kelowna', occasion: 'date', budget_per_person: g.budget, duration_min: 180 }),
+    });
+    const j = await res.json();
+    const id = j.itineraries?.[0]?.id;
+    if (!id) throw new Error(JSON.stringify(j).slice(0, 160));
+    return { id, title: j.itineraries[0].title };
+  } catch (e) {
+    if (attempt < 2) {
+      console.log(`  ! [${g.vibe.join('+')}] failed (${e.message.slice(0, 80)}) — retrying in 20s`);
+      await new Promise((r) => setTimeout(r, 20_000));
+      return generate(g, attempt + 1);
+    }
+    console.log(`  ✗ [${g.vibe.join('+')}] gave up: ${e.message.slice(0, 120)}`);
+    return null;
+  }
 }
 
 async function main() {
@@ -95,38 +128,35 @@ async function main() {
   console.log(`cleanup: removed ${removed} prior seed host(s)`);
   const cities = await cityIds();
 
-  // hosts per city
   const hostIds = {};
   for (const h of HOSTS) hostIds[h.key] = await makeHost(h, cities[h.city]);
   console.log(`created ${HOSTS.length} seed hosts`);
 
-  // generate (parallel) → itinerary ids per city
-  const byCity = { kelowna: [], vancouver: [] };
-  const gen = await Promise.all(GEN.map(async (g) => ({ city: g.city, ids: await generate(g) })));
-  for (const r of gen) byCity[r.city].push(...r.ids);
-  console.log(`generated itineraries: kelowna=${byCity.kelowna.length} vancouver=${byCity.vancouver.length}`);
+  // generate SEQUENTIALLY with spacing (rate-limit hazard, 2026-06-08).
+  const itins = [];
+  for (const g of GEN) {
+    const r = await generate(g);
+    if (r) { itins.push(r); console.log(`  ✓ [${g.vibe.join('+')}] ${r.title}`); }
+    await new Promise((res) => setTimeout(res, 2_000));
+  }
+  console.log(`generated ${itins.length}/${GEN.length} kelowna itineraries`);
+  if (itins.length === 0) throw new Error('no itineraries generated — aborting before touching date_instances');
 
-  // build date_instances: distribute each city's itineraries across that city's 2 hosts.
-  const rows = [];
-  let dayOffset = 1;
-  const assign = (city, hostKeys) => {
-    byCity[city].forEach((itinId, i) => {
-      const startsAt = new Date(Date.now() + dayOffset * 24 * 3600 * 1000);
-      startsAt.setUTCHours(2, 0, 0, 0); // ~evening PT
-      rows.push({
-        itinerary_id: itinId, creator_id: hostIds[hostKeys[i % hostKeys.length]],
-        city_id: cities[city], starts_at: startsAt.toISOString(),
-        duration_min: 180, status: 'seeking', moderation_status: 'approved', is_seed: true,
-      });
-      dayOffset += 1;
-    });
-  };
-  assign('kelowna', ['kel-w', 'kel-m']);
-  assign('vancouver', ['van-w', 'van-m']);
+  // build date_instances: spread across the hosts and the next ~2 weeks of evenings.
+  const hostKeys = HOSTS.map((h) => h.key);
+  const rows = itins.map((it, i) => {
+    const startsAt = new Date(Date.now() + (i + 1) * 24 * 3600 * 1000);
+    startsAt.setUTCHours(2, 0, 0, 0); // ~evening PT
+    return {
+      itinerary_id: it.id, creator_id: hostIds[hostKeys[i % hostKeys.length]],
+      city_id: cities.kelowna, starts_at: startsAt.toISOString(),
+      duration_min: 180, status: 'seeking', moderation_status: 'approved', is_seed: true,
+    };
+  });
 
   const { data: inserted, error } = await sb.from('date_instances').insert(rows).select('id');
   if (error) throw new Error(`date_instances insert: ${error.message}`);
-  console.log(`SEEDED ${inserted.length} swipeable nights (is_seed=true) across kelowna + vancouver`);
+  console.log(`SEEDED ${inserted.length} swipeable kelowna nights (is_seed=true)`);
 }
 
 main().catch((e) => { console.error('SEED FAILED:', e.message); process.exit(1); });
