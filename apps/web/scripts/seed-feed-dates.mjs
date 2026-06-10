@@ -323,17 +323,29 @@ async function main() {
   // already-live seed nights use (top-up), then grow it with each success so
   // no two seed nights share a venue. The server hard-filters; generate()'s
   // retry drops exclusions if a slot can't fill from the remaining pool.
+  // Two plain queries, FAIL LOUD: the embed-filter version of this read
+  // (itineraries ← date_instances!inner) errored silently (`error` ignored),
+  // so wave-3 nights regenerated with an EMPTY exclusion set and collided
+  // with every kept night (live repro 2026-06-10: 8 venue collisions).
   const usedPlaceIds = new Set();
   {
-    const { data: liveItins } = await sb.from('itineraries')
-      .select('stops, date_instances!inner(is_seed, status)')
-      .in('user_id', Object.values(hostIds))
-      .eq('date_instances.is_seed', true).eq('date_instances.status', 'seeking');
-    for (const it of liveItins ?? []) {
-      for (const s of Array.isArray(it.stops) ? it.stops : []) {
-        if (s.place_id) usedPlaceIds.add(s.place_id);
+    const { data: liveInst, error: instErr } = await sb.from('date_instances')
+      .select('itinerary_id')
+      .in('creator_id', Object.values(hostIds))
+      .eq('is_seed', true).eq('status', 'seeking');
+    if (instErr) throw new Error(`live seed instances: ${instErr.message}`);
+    const itinIds = (liveInst ?? []).map((r) => r.itinerary_id).filter(Boolean);
+    if (itinIds.length) {
+      const { data: liveItins, error: itinErr } = await sb.from('itineraries')
+        .select('stops').in('id', itinIds);
+      if (itinErr) throw new Error(`live seed itineraries: ${itinErr.message}`);
+      for (const it of liveItins ?? []) {
+        for (const s of Array.isArray(it.stops) ? it.stops : []) {
+          if (s.place_id) usedPlaceIds.add(s.place_id);
+        }
       }
     }
+    console.log(`venue exclusions seeded from ${itinIds.length} live night(s): ${usedPlaceIds.size} place ids`);
   }
 
   // generate SEQUENTIALLY with spacing (rate-limit hazard, 2026-06-08).
