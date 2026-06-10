@@ -106,15 +106,21 @@ function DetailSkeleton() {
 export function NightDetailSheet({
   night,
   open,
-  busy,
+  busy = false,
   onOpenChange,
   onCommit,
 }: {
   night: FeedNight | null;
   open: boolean;
-  busy: boolean;
+  /** disables the commit CTAs while a swipe RPC is in flight. @default false */
+  busy?: boolean;
   onOpenChange: (open: boolean) => void;
-  onCommit: (direction: 'left' | 'right') => void;
+  /**
+   * Swipe deciders for the sticky skip / i'm-in bar. Omit for the READ-ONLY
+   * reuse (inbox standby rows — the viewer already slid in): the bar is hidden
+   * and the sheet is purely the blind-safe plan.
+   */
+  onCommit?: (direction: 'left' | 'right') => void;
 }) {
   const [detail, setDetail] = useState<NightDetailNight | null>(null);
   // `settled` tracks whether the get_night_detail fetch has resolved/rejected yet.
@@ -379,7 +385,9 @@ export function NightDetailSheet({
             )}
           </div>
 
-          {/* Sticky bottom CTA — decide after reading. Skip / i'm in. */}
+          {/* Sticky bottom CTA — decide after reading. Skip / i'm in. Hidden in
+              read-only reuse (no onCommit — e.g. the inbox standby row). */}
+          {onCommit && (
           <div className="flex shrink-0 items-center justify-center gap-6 border-t border-shell-ink/10 bg-shell-base/95 px-5 py-4 backdrop-blur">
             <button
               type="button"
@@ -411,6 +419,7 @@ export function NightDetailSheet({
               i&rsquo;m in
             </button>
           </div>
+          )}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
