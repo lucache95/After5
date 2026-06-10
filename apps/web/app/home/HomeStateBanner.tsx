@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Clock, ShieldAlert } from 'lucide-react';
 import type { HomeState } from '@/lib/onboarding/teaser';
+import { datingGateMessage } from '@/lib/onboarding/dating-gate';
 import { EnableDatingButton } from './EnableDatingButton';
 
 export function HomeStateBanner({ state, gate }: { state: HomeState; gate?: { ok: boolean; reason?: string } }) {
@@ -39,6 +40,36 @@ export function HomeStateBanner({ state, gate }: { state: HomeState; gate?: { ok
           className="min-h-[44px] shrink-0 rounded-full bg-shell-accent px-4 py-2 font-body text-[13px] font-semibold lowercase text-white transition hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none motion-reduce:hover:scale-100">
           finish verifying
         </Link>
+      </div>
+    );
+  }
+
+  // dating_off + blocked gate (real-user fix): the old raw gate-message span read
+  // like a permanent error dump. Render a calm branded notice card instead, and
+  // branch on the actual reason: 'not_verified' is merely in-progress (route to
+  // verify, never a failure claim); the rest get one support action. Deliberately
+  // not dismissible — the user does need to resolve it.
+  if (gate && !gate.ok) {
+    const verifyPending = gate.reason === 'not_verified';
+    return (
+      <div className="mb-6 rounded-3xl bg-shell-pink/60 px-5 py-4 ring-1 ring-shell-accent/10">
+        <p className="font-body text-sm font-semibold lowercase text-shell-ink">
+          {verifyPending ? 'one last check before dating turns on' : 'one thing before dating turns on'}
+        </p>
+        <p className="mt-1 font-body text-[13px] leading-relaxed text-shell-ink/70">
+          {datingGateMessage(gate.reason)}
+        </p>
+        {verifyPending ? (
+          <Link href="/onboarding/verify"
+            className="mt-3 inline-flex min-h-[40px] items-center rounded-full bg-white px-4 font-body text-[13px] font-semibold lowercase text-shell-ink ring-1 ring-shell-ink/10 transition hover:ring-shell-ink/25 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none">
+            finish verifying
+          </Link>
+        ) : (
+          <a href="mailto:hello@tryafter5.app"
+            className="mt-3 inline-flex min-h-[40px] items-center rounded-full bg-white px-4 font-body text-[13px] font-semibold lowercase text-shell-ink ring-1 ring-shell-ink/10 transition hover:ring-shell-ink/25 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none">
+            email us
+          </a>
+        )}
       </div>
     );
   }

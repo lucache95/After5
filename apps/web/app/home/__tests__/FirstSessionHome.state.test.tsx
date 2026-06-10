@@ -29,3 +29,33 @@ describe('HomeStateBanner (state → render + single primary action)', () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe('HomeStateBanner — blocked dating gate (branded notice, not an error dump)', () => {
+  it('dating_off + blocked gate renders the calm notice card with one support action', () => {
+    render(<HomeStateBanner state="dating_off" gate={{ ok: false, reason: 'birthdate_missing' }} />);
+    expect(screen.getByText(/one thing before dating turns on/i)).toBeInTheDocument();
+    expect(screen.getByText(/date of birth/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /email us/i })).toHaveAttribute('href', 'mailto:hello@tryafter5.app');
+    // No raw "turn dating on" affordance while the gate is blocked.
+    expect(screen.queryByRole('button', { name: /turn dating on/i })).not.toBeInTheDocument();
+  });
+
+  it('not_verified gate: in-progress copy + verify link, never a failure claim', () => {
+    render(<HomeStateBanner state="dating_off" gate={{ ok: false, reason: 'not_verified' }} />);
+    expect(screen.getByText(/one last check before dating turns on/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /finish verifying/i })).toHaveAttribute('href', '/onboarding/verify');
+    expect(screen.queryByRole('link', { name: /email us/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/couldn't|failed|blocked/i)).not.toBeInTheDocument();
+  });
+
+  it('verified state never shows the gate card, even with a blocked gate object', () => {
+    const { container } = render(<HomeStateBanner state="verified" gate={{ ok: false, reason: 'birthdate_missing' }} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('dating_off with an ok gate keeps the normal flip-dating-on banner', () => {
+    render(<HomeStateBanner state="dating_off" gate={{ ok: true }} />);
+    expect(screen.getByRole('button', { name: /turn dating on/i })).toBeInTheDocument();
+    expect(screen.queryByText(/one thing before dating turns on/i)).not.toBeInTheDocument();
+  });
+});

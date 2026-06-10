@@ -1,5 +1,8 @@
 'use client';
-// Step 7 (done): celebrate + "turn dating on" + route to the first-session home.
+// Step 7 (done): celebrate + "turn dating on" + route to the payoff. The primary
+// navigation CTA targets /feed in BOTH gate states (real-user fix: landing on the
+// cold-start /home after onboarding had zero payoff; the teaser feed lets even
+// gate-blocked users browse real nights). A quiet secondary still goes to /home.
 // Enabling is gated by canEnableDating (computed server-side, passed as `gate`);
 // the DB age-gate trigger remains the hard enforcement.
 import { useState } from 'react';
@@ -93,9 +96,22 @@ export function DoneStep({
             {phase === 'enabling' ? 'turning on…' : phase === 'error' ? 'try again' : 'turn dating on'}
           </button>
         ) : null}
+        {/* Payoff CTA — always targets /feed. Pink when it IS the primary (gate
+            blocked, or dating just turned on); outlined while "turn dating on"
+            holds the pink, so exactly one pink button per state. */}
+        <button type="button" onClick={() => router.push('/feed')}
+          className={cn(
+            'flex min-h-[48px] items-center justify-center gap-2 rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
+            datingOn || !gate.ok
+              ? 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95'
+              : 'border-2 border-shell-ink/15 text-shell-ink hover:border-shell-ink/30 active:scale-95',
+          )}>
+          see tonight&apos;s nights <ArrowRight className="h-4 w-4" aria-hidden />
+        </button>
         <button type="button" onClick={() => router.push('/home')}
-          className="inline-flex items-center gap-2 font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
-          take me in <ArrowRight className="h-4 w-4" aria-hidden />
+          className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
+          home
         </button>
       </div>
     </div>

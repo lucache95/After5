@@ -33,6 +33,41 @@ describe('PreferencesStep', () => {
     expect(push).toHaveBeenCalledWith('/onboarding/phone');
   });
 
+  it('age input: deletable to empty, leading zero stripped while typing (the "019" bug)', async () => {
+    render(<PreferencesStep userId="u1" initial={initial} />);
+    const ageFrom = screen.getByLabelText(/age from/i);
+    await userEvent.clear(ageFrom);
+    expect(ageFrom).toHaveValue(''); // deleting to empty must work
+    await userEvent.type(ageFrom, '019');
+    expect(ageFrom).toHaveValue('19'); // never renders a trapped leading 0
+  });
+
+  it('age input: typed value submits as a number', async () => {
+    savePreferences.mockResolvedValue(undefined);
+    advanceOnboarding.mockResolvedValue('phone_verify');
+    render(<PreferencesStep userId="u1" initial={initial} />);
+    const ageFrom = screen.getByLabelText(/age from/i);
+    await userEvent.clear(ageFrom);
+    await userEvent.type(ageFrom, '19');
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      expect.anything(), 'u1', expect.objectContaining({ age_min: 19, age_max: 40 }),
+    ));
+  });
+
+  it('age input: empty field blocks submit with the validation alert', async () => {
+    render(<PreferencesStep userId="u1" initial={initial} />);
+    await userEvent.clear(screen.getByLabelText(/age from/i));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/age range/i));
+    expect(savePreferences).not.toHaveBeenCalled();
+  });
+
+  it('hard nos: clarifying helper line renders under the heading', () => {
+    render(<PreferencesStep userId="u1" initial={initial} />);
+    expect(screen.getByText(/anyone who matches one of these is an instant no/i)).toBeInTheDocument();
+  });
+
   it('error: age_max below age_min is rejected before any save', async () => {
     render(<PreferencesStep userId="u1" initial={{ ...initial, age_min: 40, age_max: 30 }} />);
     await userEvent.click(screen.getByRole('button', { name: /next/i }));

@@ -52,8 +52,12 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
   const router = useRouter();
   const [gender, setGender] = useState(initial.gender || 'woman');
   const [wants, setWants] = useState<string[]>(initial.gender_preferences.length ? initial.gender_preferences : ['man']);
-  const [ageMin, setAgeMin] = useState(initial.age_min || 25);
-  const [ageMax, setAgeMax] = useState(initial.age_max || 40);
+  // Ages live as STRINGS while editing (real-user fix): a controlled number
+  // input renders Number('') as 0 and typing appends ("019"); a string field
+  // can be deleted to '' and re-typed. Digits only, leading zeros stripped on
+  // change; parsed to numbers at submit, where '' blocks with the usual alert.
+  const [ageMin, setAgeMin] = useState(String(initial.age_min || 25));
+  const [ageMax, setAgeMax] = useState(String(initial.age_max || 40));
   const [distance, setDistance] = useState(initial.distance_pref_km || 40);
   const [dealbreakers, setDealbreakers] = useState<string[]>(initial.dealbreakers);
   const [phase, setPhase] = useState<'idle' | 'saving' | 'error'>('idle');
@@ -63,8 +67,17 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   }
 
+  function cleanAge(v: string): string {
+    return v.replace(/\D+/g, '').replace(/^0+/, '');
+  }
+
   async function handleSave() {
-    const candidate = { gender, gender_preferences: wants, age_min: ageMin, age_max: ageMax, distance_pref_km: distance, dealbreakers };
+    if (ageMin === '' || ageMax === '') {
+      setErrorMsg('age range needs both numbers (18 to 99).');
+      setPhase('error');
+      return;
+    }
+    const candidate = { gender, gender_preferences: wants, age_min: Number(ageMin), age_max: Number(ageMax), distance_pref_km: distance, dealbreakers };
     const parsed = PreferencesInputSchema.safeParse(candidate);
     if (!parsed.success) {
       setErrorMsg(parsed.error.issues[0]?.message ?? 'Please check your preferences.');
@@ -128,11 +141,13 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
 
       <div className="mt-6 grid grid-cols-2 gap-4">
         <label className="font-body text-sm font-semibold lowercase text-shell-ink">age from
-          <input type="number" min={18} max={99} value={ageMin} onChange={(e) => setAgeMin(Number(e.target.value))}
+          <input type="text" inputMode="numeric" autoComplete="off" maxLength={2} value={ageMin}
+            onChange={(e) => setAgeMin(cleanAge(e.target.value))}
             className={numberClass} />
         </label>
         <label className="font-body text-sm font-semibold lowercase text-shell-ink">age to
-          <input type="number" min={18} max={99} value={ageMax} onChange={(e) => setAgeMax(Number(e.target.value))}
+          <input type="text" inputMode="numeric" autoComplete="off" maxLength={2} value={ageMax}
+            onChange={(e) => setAgeMax(cleanAge(e.target.value))}
             className={numberClass} />
         </label>
       </div>
@@ -143,7 +158,11 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
       </label>
 
       <fieldset className="mt-6">
-        <legend className="mb-3 font-body text-sm font-semibold lowercase text-shell-ink">hard nos</legend>
+        <legend className="mb-1 font-body text-sm font-semibold lowercase text-shell-ink">hard nos</legend>
+        {/* Clarifier (real-user fix). Deliberately promise-free: dealbreakers are
+            stored but matching does not enforce them yet, so no "we'll never show
+            you" claims here until the feed/match SQL actually filters on them. */}
+        <p className="mb-3 font-body text-[13px] text-shell-ink/60">anyone who matches one of these is an instant no for you.</p>
         <div className="flex flex-wrap gap-2.5">
           {DEALBREAKERS.map((d) => (
             <StickerChip key={d} label={DEALBREAKER_LABEL[d] ?? d.replace(/_/g, ' ')} role="checkbox"

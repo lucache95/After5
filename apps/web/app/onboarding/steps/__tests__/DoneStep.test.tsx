@@ -21,11 +21,31 @@ describe('DoneStep', () => {
     expect(screen.getByText(/verified.*new/i)).toBeInTheDocument();
   });
 
-  it('success: turning dating on writes dating_enabled then routes home', async () => {
+  it('success: turning dating on writes dating_enabled; payoff CTA routes to /feed', async () => {
     render(<DoneStep userId="u1" badge={{ verified: true, isNew: true }} />);
     await userEvent.click(screen.getByRole('button', { name: /turn dating on/i }));
     await waitFor(() => expect(enableEq).toHaveBeenCalled());
-    await userEvent.click(screen.getByRole('button', { name: /take me in/i }));
+    await userEvent.click(screen.getByRole('button', { name: /see tonight's nights/i }));
+    expect(push).toHaveBeenCalledWith('/feed');
+  });
+
+  it('aha loop: primary CTA targets /feed in BOTH gate states', async () => {
+    // gate ok
+    const ok = render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: true }} />);
+    await userEvent.click(screen.getByRole('button', { name: /see tonight's nights/i }));
+    expect(push).toHaveBeenCalledWith('/feed');
+    ok.unmount();
+    push.mockReset();
+    // gate blocked (the current prod default: birthdate_missing)
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'birthdate_missing' }} />);
+    await userEvent.click(screen.getByRole('button', { name: /see tonight's nights/i }));
+    expect(push).toHaveBeenCalledWith('/feed');
+    expect(enableEq).not.toHaveBeenCalled(); // browsing never silently flips dating on
+  });
+
+  it('quiet secondary still routes to /home', async () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: true }} />);
+    await userEvent.click(screen.getByRole('button', { name: /^home$/i }));
     expect(push).toHaveBeenCalledWith('/home');
   });
 
@@ -39,11 +59,12 @@ describe('DoneStep', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 
-  it('gate blocked: shows friendly message, no enable button, always shows Enter After5', () => {
+  it('gate blocked: shows friendly message, no enable button, payoff + home CTAs present', () => {
     render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'birthdate_missing' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent(/date of birth/i);
     expect(screen.queryByRole('button', { name: /turn dating on/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /take me in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /see tonight's nights/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^home$/i })).toBeInTheDocument();
   });
 
   it('gate ok: renders celebration headline "you\'re in."', () => {
