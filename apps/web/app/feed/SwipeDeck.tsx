@@ -79,6 +79,7 @@ export function SwipeDeck({
   tier = 'live',
   userId = '',
   filters = {},
+  canAct = true,
 }: {
   initial: FeedNight[];
   tier?: FeedTier;
@@ -86,6 +87,13 @@ export function SwipeDeck({
   userId?: string;
   /** The viewer's persisted feed_filters (seeds chips + the empty-state branch). */
   filters?: FeedFilters;
+  /**
+   * F1 (launch): false for a signed-in but PRE-VERIFICATION viewer — the deck
+   * renders read-only. Interest (right) routes to a verify prompt → /onboarding
+   * instead of record_swipe; pass (left) just advances locally (nothing persists
+   * pre-verification). Filters are hidden (no prefs exist yet to filter with).
+   */
+  canAct?: boolean;
 }) {
   const router = useRouter();
   const [deck, setDeck] = useState(initial);
@@ -132,6 +140,20 @@ export function SwipeDeck({
 
   async function commit(direction: Direction) {
     if (!current || busy) return false;
+    // F1: pre-verification the deck is browse-only. The interest action is the
+    // gate — friendly prompt + CTA into onboarding, no record_swipe call ever.
+    if (!canAct) {
+      if (direction === 'right') {
+        toast('verify to match on this night — takes 2 minutes', {
+          action: { label: 'verify me', onClick: () => router.push('/onboarding') },
+        });
+        return false; // card snaps back; the night stays on top
+      }
+      // pass: keep browsing — advance locally, nothing persists pre-verification.
+      setDetailOpen(false);
+      setI((n) => n + 1);
+      return true;
+    }
     setBusy(true);
     try {
       await recordSwipe(browserAfter5Client(), current.date_instance_id, direction);
@@ -176,18 +198,22 @@ export function SwipeDeck({
             </button>
           </h1>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setFilterOpen(true)}
-              aria-label="filters"
-              className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-shell-ink shadow-subtle transition',
-                'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
-                'motion-reduce:transition-none motion-reduce:hover:scale-100',
-              )}
-            >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            </button>
+            {/* F1: filters are preference-driven — hidden pre-verification (the
+                teaser feed is the default audience; there are no prefs to filter). */}
+            {canAct && (
+              <button
+                type="button"
+                onClick={() => setFilterOpen(true)}
+                aria-label="filters"
+                className={cn(
+                  'flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-shell-ink shadow-subtle transition',
+                  'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                  'motion-reduce:transition-none motion-reduce:hover:scale-100',
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden />
+              </button>
+            )}
             <button
               type="button"
               onClick={toggleMute}
@@ -211,7 +237,9 @@ export function SwipeDeck({
         </header>
 
         {/* Quick-filter chips (D-04): shortcuts into the sheet. An active chip flips to
-            accent and shows its value; a brand-new searcher sees all three inactive. */}
+            accent and shows its value; a brand-new searcher sees all three inactive.
+            Hidden pre-verification along with the sheet (F1). */}
+        {canAct && (
         <div role="group" aria-label="quick filters" className="mb-5 flex flex-wrap gap-2">
           {QUICK_CHIPS.map(({ key, label }) => {
             const value = chipValue(key, filters);
@@ -236,6 +264,7 @@ export function SwipeDeck({
             );
           })}
         </div>
+        )}
 
         <div className="relative flex-1">
           {/* peeking cards behind the active one — depth, not interactive */}
@@ -260,13 +289,15 @@ export function SwipeDeck({
           onCommit={(direction) => void commit(direction)}
         />
 
-        <FilterSheet
-          open={filterOpen}
-          onOpenChange={setFilterOpen}
-          userId={userId}
-          current={filters}
-          onApplied={refetchFeed}
-        />
+        {canAct && (
+          <FilterSheet
+            open={filterOpen}
+            onOpenChange={setFilterOpen}
+            userId={userId}
+            current={filters}
+            onApplied={refetchFeed}
+          />
+        )}
 
         <div className="mt-6 flex items-center justify-center gap-6">
           <button

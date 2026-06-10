@@ -4,6 +4,7 @@ import { browseFeed, type FeedFilters, type FeedNight } from '@after5/api-client
 import { feedColdStartTier } from '@after5/business';
 import { signBlurredUrls } from '@/lib/after5/photos';
 import { SwipeDeck } from './SwipeDeck';
+import { teaserFeed } from './teaser';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,11 +16,20 @@ export default async function FeedPage() {
   // filter is active (filtered-empty vs genuinely-empty) and the chips reflect values.
   const { data: p } = await supabase
     .from('profiles').select('dating_enabled, verification, feed_filters').eq('id', user.id).maybeSingle();
-  if (!p?.dating_enabled || p.verification !== 'verified') redirect('/onboarding');
+  // F1 (launch): pre-verification users BROWSE read-only — no more redirect wall.
+  // The gate moved to the ACTION: SwipeDeck canAct=false routes the interest tap
+  // to a verify prompt → /onboarding. Anon users still bounce to /login above.
+  const canAct = !!p?.dating_enabled && p?.verification === 'verified';
 
   // feed_filters is jsonb; the inclusive default is an empty object.
-  const filters = (p.feed_filters ?? {}) as FeedFilters;
-  const nights = await browseFeed(supabase, { limit: 20 }).catch(() => []);
+  const filters = (p?.feed_filters ?? {}) as FeedFilters;
+  // The personalized RPC returns an EMPTY set for un-onboarded profiles (empty
+  // gender_preferences + null age/city NULL out its mutual gates — see teaser.ts),
+  // so teaser viewers get the default-audience query. Same blind projection;
+  // host-hint signing below runs through the identical blurred-only signer.
+  const nights = canAct
+    ? await browseFeed(supabase, { limit: 20 }).catch(() => [])
+    : await teaserFeed(user.id).catch(() => []);
 
   // E15 (REQ-E15 / D-01): sign the host blurred-photo PATHS server-side (the RPC returns
   // relative paths; only the app can mint signed urls). PRIVACY INVARIANT: we sign ONLY
@@ -29,7 +39,7 @@ export default async function FeedPage() {
   const revealed = await revealHostHints(supabase, nights);
 
   const tier = feedColdStartTier({ compatibleOpen: nights.length, totalOpen: nights.length });
-  return <SwipeDeck initial={revealed} tier={tier} userId={user.id} filters={filters} />;
+  return <SwipeDeck initial={revealed} tier={tier} userId={user.id} filters={filters} canAct={canAct} />;
 }
 
 // Replace each FeedNight's host_blurred_photo_url RELATIVE PATH with a signed url, using

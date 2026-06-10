@@ -15,13 +15,23 @@ vi.mock('@/lib/after5/client', () => ({
   // M4: SwipeDeck resolves each card's ambient path to a public URL.
   ambientSoundUrl: (p: string | null) => (p ? `https://x/${p}` : null),
 }));
-// SwipeDeck refetches the feed via router.refresh() after an apply/loosen.
-// usePathname is also exported here because BottomTabShell (rendered inside the
-// empty states) reads it.
+// SwipeDeck refetches the feed via router.refresh() after an apply/loosen, and
+// (F1) the teaser-mode verify CTA pushes /onboarding. usePathname is also
+// exported here because BottomTabShell (rendered inside the empty states) reads it.
 const routerRefresh = vi.fn();
+const routerPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: routerRefresh }),
+  useRouter: () => ({ refresh: routerRefresh, push: routerPush }),
   usePathname: () => '/feed',
+}));
+// F1 teaser mode raises a sonner toast with a verify CTA; capture it so the tests
+// can assert the prompt fired (and follow its action into /onboarding).
+const toastFn = vi.fn();
+const toastError = vi.fn();
+vi.mock('sonner', () => ({
+  toast: Object.assign((...a: unknown[]) => toastFn(...a), {
+    error: (...a: unknown[]) => toastError(...a),
+  }),
 }));
 // vaul's pointer-drag dismissal reads real CSS transform matrices that jsdom
 // doesn't compute, so we stub the Drawer primitives to plain DOM. The blind
@@ -40,6 +50,9 @@ beforeEach(() => {
   recordSwipe.mockClear();
   saveFeedFilters.mockReset().mockResolvedValue(undefined);
   routerRefresh.mockClear();
+  routerPush.mockClear();
+  toastFn.mockClear();
+  toastError.mockClear();
 });
 
 describe('SwipeDeck', () => {
@@ -132,5 +145,57 @@ describe('SwipeDeck — E10 quick chips + recovery empty state', () => {
     expect(screen.getByText(/that.s everyone for now/i)).toBeInTheDocument();
     expect(screen.getByText(/touch grass/i)).toBeInTheDocument();
     expect(screen.queryByText(/nothing fits those filters/i)).not.toBeInTheDocument();
+  });
+});
+
+// F1 (launch): a signed-in pre-verification viewer browses read-only. The gate
+// moved off the page (no redirect) onto the ACTION: interest → verify prompt.
+describe('SwipeDeck — teaser mode for pre-verification viewers (launch F1)', () => {
+  it('renders the nights read-only: cards visible, filter affordances hidden', () => {
+    render(<SwipeDeck initial={[night('a', { title: 'Pottery + ramen' })]} userId="u1" canAct={false} />);
+    // the night card renders fully (browse works)
+    expect(screen.getByText(/pottery \+ ramen/i)).toBeInTheDocument();
+    // filters are preference-driven — hidden until onboarding creates prefs
+    expect(screen.queryByRole('group', { name: /quick filters/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^filters$/i })).not.toBeInTheDocument();
+  });
+
+  it('heart tap → verify prompt with an /onboarding CTA, NOT a swipe call', async () => {
+    render(<SwipeDeck initial={[night('a'), night('b')]} userId="u1" canAct={false} />);
+    await userEvent.click(screen.getAllByRole('button', { name: /interested/i })[0]);
+    expect(recordSwipe).not.toHaveBeenCalled();
+    expect(toastFn).toHaveBeenCalledWith(
+      expect.stringMatching(/verify to match on this night/i),
+      expect.objectContaining({ action: expect.objectContaining({ label: 'verify me' }) }),
+    );
+    // the CTA routes into onboarding
+    const opts = toastFn.mock.calls[0][1] as { action: { onClick: () => void } };
+    opts.action.onClick();
+    expect(routerPush).toHaveBeenCalledWith('/onboarding');
+    // the card stays on top (nothing advanced, nothing persisted)
+    expect(screen.getByText(/2 left/i)).toBeInTheDocument();
+  });
+
+  it('pass tap advances locally without recording a swipe (keep browsing)', async () => {
+    render(<SwipeDeck initial={[night('a'), night('b')]} userId="u1" canAct={false} />);
+    await userEvent.click(screen.getAllByRole('button', { name: /nope/i })[0]);
+    expect(recordSwipe).not.toHaveBeenCalled();
+    expect(screen.getByText(/1 left/i)).toBeInTheDocument();
+  });
+
+  it('interest from inside the detail sheet is gated the same way', async () => {
+    render(<SwipeDeck initial={[night('a')]} userId="u1" canAct={false} />);
+    fireEvent.keyDown(screen.getByRole('button', { name: /tap to read the full plan/i }), { key: 'Enter' });
+    const sheetButtons = await screen.findAllByRole('button', { name: /interested/i });
+    await userEvent.click(sheetButtons[sheetButtons.length - 1]);
+    expect(recordSwipe).not.toHaveBeenCalled();
+    expect(toastFn).toHaveBeenCalled();
+  });
+
+  it('verified default (canAct omitted) still records swipes — behavior unchanged', async () => {
+    render(<SwipeDeck initial={[night('a'), night('b')]} userId="u1" />);
+    await userEvent.click(screen.getAllByRole('button', { name: /interested/i })[0]);
+    await waitFor(() => expect(recordSwipe).toHaveBeenCalledWith(expect.anything(), 'a', 'right'));
+    expect(toastFn).not.toHaveBeenCalled();
   });
 });
