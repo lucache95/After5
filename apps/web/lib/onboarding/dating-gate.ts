@@ -2,14 +2,14 @@
 export function datingGateMessage(reason?: string): string {
   switch (reason) {
     case 'birthdate_missing':
-      return "We couldn't read your date of birth from your ID. Email hello@tryafter5.app and we'll sort it out.";
+      return "we couldn't read your date of birth from your id. email hello@tryafter5.app and we'll sort it out.";
     case 'under_18':
-      return 'After5 dating is 18+.';
+      return 'after5 dating is 18+.';
     case 'not_verified':
-      return 'Finish verifying to turn dating on.';
+      return 'finish verifying to turn dating on.';
     case 'onboarding_incomplete':
-      return 'Finish setting up your profile first.';
+      return 'finish setting up your profile first.';
     default:
-      return "We couldn't turn dating on. Email hello@tryafter5.app and we'll help.";
+      return "we couldn't turn dating on. email hello@tryafter5.app and we'll help.";
   }
 }

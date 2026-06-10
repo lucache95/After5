@@ -50,14 +50,32 @@ export function DoneStep({
         />
       </motion.div>
 
-      <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-sm font-semibold lowercase text-shell-accent">
-        <BadgeCheck className="h-4 w-4" aria-hidden />
-        {badge.verified ? 'verified' : 'profile complete'}{badge.isNew ? ' · new' : ''}
-      </div>
-      <h1 className="mt-6 font-heading text-4xl lowercase text-shell-ink">you&apos;re in.</h1>
-      <p className="mt-4 font-body text-[15px] leading-relaxed text-shell-ink/70">
-        profile&apos;s set and verified. flip dating on and we&apos;ll start warming up your first nights nearby.
-      </p>
+      {gate.ok ? (
+        <>
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-sm font-semibold lowercase text-shell-accent">
+            <BadgeCheck className="h-4 w-4" aria-hidden />
+            {badge.verified ? 'verified' : 'profile complete'}{badge.isNew ? ' · new' : ''}
+          </div>
+          <h1 className="mt-6 font-heading text-4xl lowercase text-shell-ink">you&apos;re in.</h1>
+          <p className="mt-4 font-body text-[15px] leading-relaxed text-shell-ink/70">
+            profile&apos;s set and verified. flip dating on and we&apos;ll start warming up your first nights nearby.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-sm font-semibold lowercase text-shell-ink/60">
+            <BadgeCheck className="h-4 w-4" aria-hidden />
+            {'profile complete'}{badge.isNew ? ' · new' : ''}
+          </div>
+          <h1 className="mt-6 font-heading text-4xl lowercase text-shell-ink">almost there.</h1>
+          <p className="mt-4 font-body text-[15px] leading-relaxed text-shell-ink/70">
+            your profile&apos;s set — one thing&apos;s blocking dating:
+          </p>
+          <div role="alert" className="mx-auto mt-4 max-w-sm rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[15px] text-shell-ink">
+            {datingGateMessage(gate.reason)}
+          </div>
+        </>
+      )}
 
       {phase === 'error' && (
         <div role="alert" className="mx-auto mt-5 max-w-sm rounded-2xl border border-shell-accent/30 bg-white/70 px-4 py-3 font-body text-[13px] text-shell-ink">{errorMsg}</div>
@@ -74,9 +92,7 @@ export function DoneStep({
               phase === 'enabling' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
             {phase === 'enabling' ? 'turning on…' : phase === 'error' ? 'try again' : 'turn dating on'}
           </button>
-        ) : (
-          <p role="alert" className="mx-auto max-w-sm font-body text-[13px] text-shell-ink/70">{datingGateMessage(gate.reason)}</p>
-        )}
+        ) : null}
         <button type="button" onClick={() => router.push('/home')}
           className="inline-flex items-center gap-2 font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full">
           take me in <ArrowRight className="h-4 w-4" aria-hidden />

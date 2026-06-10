@@ -45,4 +45,28 @@ describe('DoneStep', () => {
     expect(screen.queryByRole('button', { name: /turn dating on/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /take me in/i })).toBeInTheDocument();
   });
+
+  it('gate ok: renders celebration headline "you\'re in."', () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: true }} />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/you're in/i);
+    // No blocking alert
+    expect(screen.queryByText(/almost there/i)).not.toBeInTheDocument();
+  });
+
+  it('gate NOT ok: renders "almost there" headline and gate message prominently — no "verified" in headline', () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'not_verified' }} />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/almost there/i);
+    // Gate message is prominent (not a footnote)
+    expect(screen.getByRole('alert')).toHaveTextContent(/finish verifying/i);
+    // No "you're in" or "verified" in the headline
+    expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent(/you're in/i);
+  });
+
+  it('gate NOT ok: does not claim "verified" in the badge chip', () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: false }} gate={{ ok: false, reason: 'under_18' }} />);
+    // Badge chip should say "profile complete", not "verified"
+    // The gate-blocked branch renders "profile complete" regardless of badge.verified
+    expect(screen.getByText(/profile complete/i)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/18\+/i);
+  });
 });
