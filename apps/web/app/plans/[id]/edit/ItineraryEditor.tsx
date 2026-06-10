@@ -119,8 +119,9 @@ export function ItineraryEditor({
   }
 
   // Called by ImproveControls when the server returns a coherent updated stop list.
-  // MVP caveat: improve actions operate on the server-persisted stop order, so any
-  // unsaved local reorders can momentarily diverge until rows are rebuilt here.
+  // MVP caveat: improve actions compute from the SERVER-persisted stops, and this
+  // full-row rebuild discards ANY unsaved local edits (renames, retimes, reorders,
+  // added/removed stops) made before the improve call. Save first to keep them.
   function handleImproveUpdated(newStops: Stop[]) {
     const k = nextKey;
     setRows(newStops.map((stop, i) => ({ key: `s${k + i}`, stop })));
