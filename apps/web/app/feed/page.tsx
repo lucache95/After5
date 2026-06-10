@@ -5,6 +5,7 @@ import { feedColdStartTier } from '@after5/business';
 import { signBlurredUrls } from '@/lib/after5/photos';
 import { SwipeDeck } from './SwipeDeck';
 import { teaserFeed } from './teaser';
+import { spaceBySound } from './spaceBySound';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,9 +28,13 @@ export default async function FeedPage() {
   // gender_preferences + null age/city NULL out its mutual gates — see teaser.ts),
   // so teaser viewers get the default-audience query. Same blind projection;
   // host-hint signing below runs through the identical blurred-only signer.
-  const nights = canAct
+  const rawNights = canAct
     ? await browseFeed(supabase, { limit: 20 }).catch(() => [])
     : await teaserFeed(user.id).catch(() => []);
+
+  // Re-space the ranked list so no two consecutive nights share the same ambient
+  // sound. Greedy single-swap pass; nulls are always-OK neighbours (see spaceBySound.ts).
+  const nights = spaceBySound(rawNights);
 
   // E15 (REQ-E15 / D-01): sign the host blurred-photo PATHS server-side (the RPC returns
   // relative paths; only the app can mint signed urls). PRIVACY INVARIANT: we sign ONLY
