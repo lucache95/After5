@@ -41,7 +41,15 @@ export interface LockRowWithParties {
   matched: PartyProfile | null;
   // E13: itinerary_id lets [lockId]/page.tsx do the second RLS read of the
   // forked itinerary's stops (itineraries_readable_by_id USING(true)).
-  instance: { id: string; starts_at: string; time_range: string | null; itinerary_id: string | null } | null;
+  // The list page instead embeds the itinerary TITLE inline (same FK, one query,
+  // itineraries select is USING(true)) so the card can sell the night.
+  instance: {
+    id: string;
+    starts_at: string;
+    time_range: string | null;
+    itinerary_id?: string | null;
+    itinerary?: { title: string | null } | null;
+  } | null;
 }
 
 const RATING_GRACE_MIN = 120;
@@ -54,14 +62,26 @@ export function pickCounterpart(
   return lock.creator_id === viewerId ? lock.matched : lock.creator;
 }
 
-export function bucketLocks<T extends { status: LockStatus }>(rows: T[]): { active: T[]; past: T[] } {
-  const active: T[] = [];
+/**
+ * Buckets locks for the dates tab: `upcoming` = a live (active) lock whose
+ * night hasn't started yet (or has no start at all — "date tbd" still counts
+ * as a plan); everything else — past-dated, completed, cancelled, no-show —
+ * is history. Time-based, not status-based, so an active lock whose night
+ * already happened reads as past instead of forever "upcoming".
+ */
+export function bucketLocksByStart<
+  T extends { status: LockStatus; instance: { starts_at: string } | null },
+>(rows: T[], now: Date = new Date()): { upcoming: T[]; past: T[] } {
+  const upcoming: T[] = [];
   const past: T[] = [];
   for (const r of rows) {
-    if (r.status === 'active') active.push(r);
+    const starts = r.instance?.starts_at ? new Date(r.instance.starts_at) : null;
+    const startsKnown = starts != null && !Number.isNaN(starts.getTime());
+    const inFuture = startsKnown && starts.getTime() > now.getTime();
+    if (r.status === 'active' && (inFuture || !startsKnown)) upcoming.push(r);
     else past.push(r);
   }
-  return { active, past };
+  return { upcoming, past };
 }
 
 // Parse the upper bound of a Postgres tstzrange literal: ["lower","upper") or [lower,upper).
@@ -91,12 +111,16 @@ export function isRatingOpen(
   return opens != null && now.getTime() >= opens.getTime();
 }
 
-export function lockStatusLabel(status: LockStatus): string {
+/**
+ * The dates-tab card chip. An upcoming bucket always reads "upcoming"; a past
+ * card reads by how it ended. An active-but-past-dated lock reads "done" —
+ * the night happened, the completion job just hasn't swept it yet.
+ */
+export function matchChipLabel(status: LockStatus, upcoming: boolean): string {
+  if (upcoming) return 'upcoming';
   switch (status) {
-    case 'active': return 'locked in';
-    case 'completed': return 'done';
     case 'cancelled': return 'cancelled';
     case 'no_show': return 'no-show';
-    default: return String(status);
+    default: return 'done';
   }
 }

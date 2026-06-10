@@ -52,16 +52,24 @@ const person: PartyProfile = {
   id: 'p1', first_name: 'jamie', age: 28, city: 'portland', neighborhood: 'alberta',
   clear_photo_url: null, vibe_tags: ['hiking', 'jazz'],
 };
-const card: MatchCard = { id: 'lock-1', status: 'active', counterpart: person, startsAt: '2026-06-01T19:00:00Z' };
+const card: MatchCard = {
+  id: 'lock-1', status: 'active', counterpart: person, startsAt: '2026-06-01T19:00:00Z',
+  nightTitle: 'golden hour walk', ratable: false,
+};
 
 describe('matches surfaces a11y', () => {
   it('MatchesList has no violations', async () => {
-    const { container } = render(<MatchesList active={[card]} past={[{ ...card, id: 'l2', status: 'completed' }]} />);
+    const { container } = render(
+      <MatchesList
+        upcoming={[card]}
+        past={[{ ...card, id: 'l2', status: 'completed', ratable: true }]}
+      />,
+    );
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it('MatchesList empty state has no violations', async () => {
-    const { container } = render(<MatchesList active={[]} past={[]} />);
+    const { container } = render(<MatchesList upcoming={[]} past={[]} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickCounterpart, bucketLocks, ratingOpensAt, isRatingOpen, lockStatusLabel } from '../lock-view';
+import { pickCounterpart, bucketLocksByStart, ratingOpensAt, isRatingOpen, matchChipLabel } from '../lock-view';
 
 const profile = (id: string) => ({ id, first_name: 'x', age: 30, city: 'c', neighborhood: null, clear_photo_url: null, vibe_tags: [] });
 
@@ -14,20 +14,28 @@ describe('pickCounterpart', () => {
   });
 });
 
-describe('bucketLocks', () => {
-  it('splits active from past', () => {
+describe('bucketLocksByStart', () => {
+  const NOW = new Date('2026-06-09T12:00:00Z');
+  const at = (iso: string | null) => (iso ? { starts_at: iso } : null);
+
+  it('puts an active lock with a future night under upcoming, everything else under past', () => {
     const rows = [
-      { id: '1', status: 'active' }, { id: '2', status: 'completed' }, { id: '3', status: 'cancelled' },
+      { id: 'future', status: 'active', instance: at('2026-06-10T19:00:00Z') },
+      { id: 'happened', status: 'active', instance: at('2026-06-08T19:00:00Z') },
+      { id: 'done', status: 'completed', instance: at('2026-06-10T19:00:00Z') },
+      { id: 'dead', status: 'cancelled', instance: at('2026-06-10T19:00:00Z') },
+      { id: 'ghosted', status: 'no_show', instance: at('2026-06-01T19:00:00Z') },
     ] as any[];
-    const { active, past } = bucketLocks(rows);
-    expect(active.map(r => r.id)).toEqual(['1']);
-    expect(past.map(r => r.id)).toEqual(['2', '3']);
+    const { upcoming, past } = bucketLocksByStart(rows, NOW);
+    expect(upcoming.map(r => r.id)).toEqual(['future']);
+    expect(past.map(r => r.id)).toEqual(['happened', 'done', 'dead', 'ghosted']);
   });
-  it('treats no_show as past', () => {
-    const rows = [{ id: '1', status: 'active' }, { id: '2', status: 'no_show' }] as any[];
-    const { active, past } = bucketLocks(rows);
-    expect(active.map(r => r.id)).toEqual(['1']);
-    expect(past.map(r => r.id)).toEqual(['2']);
+
+  it('keeps an active lock with no start (date tbd) under upcoming', () => {
+    const rows = [{ id: 'tbd', status: 'active', instance: null }] as any[];
+    const { upcoming, past } = bucketLocksByStart(rows, NOW);
+    expect(upcoming.map(r => r.id)).toEqual(['tbd']);
+    expect(past).toEqual([]);
   });
 });
 
@@ -48,10 +56,15 @@ describe('rating window (starts_at + duration + 2h)', () => {
   });
 });
 
-describe('lockStatusLabel', () => {
-  it('maps statuses to lowercase copy', () => {
-    expect(lockStatusLabel('active')).toBe('locked in');
-    expect(lockStatusLabel('completed')).toBe('done');
-    expect(lockStatusLabel('cancelled')).toBe('cancelled');
+describe('matchChipLabel', () => {
+  it('always reads upcoming in the upcoming bucket', () => {
+    expect(matchChipLabel('active', true)).toBe('upcoming');
+  });
+  it('maps past statuses to lowercase copy', () => {
+    expect(matchChipLabel('completed', false)).toBe('done');
+    expect(matchChipLabel('cancelled', false)).toBe('cancelled');
+    expect(matchChipLabel('no_show', false)).toBe('no-show');
+    // active-but-past-dated: the night happened, the sweep just hasn't run.
+    expect(matchChipLabel('active', false)).toBe('done');
   });
 });
