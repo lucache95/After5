@@ -36,6 +36,7 @@ type ThreadRecord = {
   id: string;
   state: string;
   revoked_at: string | null;
+  lock_id: string | null;
   offer: {
     creator_id: string;
     candidate_id: string;
@@ -75,10 +76,14 @@ export default async function InboxPage() {
 
   // Zone 2 — the messages tab query, verbatim (chat_threads party-read RLS scopes
   // to the viewer; counterpart Tier-3 read via the reveal-safe offer embed).
+  // lock_id is the reveal gate: profiles RLS opens the counterpart ROW at
+  // offer-stage (match_reveal_allowed_pair) with NO column revoke, so projecting
+  // clear_photo_url is THIS layer's responsibility — clear only post-lock (E16),
+  // same contract as the thread page's E18 lock_id-gated nav edges.
   const { data: rows } = await supabase
     .from('chat_threads')
     .select(`
-      id, state, revoked_at,
+      id, state, revoked_at, lock_id,
       offer:offers!chat_threads_offer_id_fkey (
         creator_id, candidate_id,
         creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
@@ -114,7 +119,9 @@ export default async function InboxPage() {
     return {
       threadId: r.id,
       counterpartName: counterpart?.first_name ?? null,
-      counterpartPhotoUrl: counterpart?.clear_photo_url ?? null,
+      // Blind contract: clear photo ONLY once the night is locked (identity
+      // revealed). Pre-lock threads render the initial avatar.
+      counterpartPhotoUrl: r.lock_id ? counterpart?.clear_photo_url ?? null : null,
       startsAt: instance?.starts_at ?? null,
       lastMessage: preview?.body ?? null,
       lastAt: preview?.at ?? null,

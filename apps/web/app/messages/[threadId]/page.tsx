@@ -18,7 +18,10 @@ import { isMessageable, type MessageRow } from '../thread-view';
 
 export const dynamic = 'force-dynamic';
 
-type ProfileLite = { id: string; first_name: string | null; clear_photo_url: string | null };
+// No clear_photo_url here: this page renders only the first name, and the blind
+// contract says never fetch the clear photo pre-lock (column projection is the
+// UI layer's job — profiles RLS opens the row at offer-stage with no column revoke).
+type ProfileLite = { id: string; first_name: string | null };
 
 function one<T>(v: T | T[] | null | undefined): T | null {
   if (Array.isArray(v)) return v[0] ?? null;
@@ -43,8 +46,8 @@ export default async function ConversationPage({
       id, state, both_ready, revoked_at, lock_id,
       offer:offers!chat_threads_offer_id_fkey (
         creator_id, candidate_id,
-        creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
-        candidate:profiles!offers_candidate_id_fkey ( id, first_name, clear_photo_url )
+        creator:profiles!offers_creator_id_fkey ( id, first_name ),
+        candidate:profiles!offers_candidate_id_fkey ( id, first_name )
       )
     `)
     .eq('id', threadId)
