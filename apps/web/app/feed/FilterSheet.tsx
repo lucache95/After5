@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { browserAfter5Client, saveFeedFilters, type FeedFilters } from '@/lib/after5/client';
@@ -44,6 +44,9 @@ const CHIP_BASE =
 const CHIP_ON = 'bg-shell-accent text-white shadow-fun';
 const CHIP_OFF = 'bg-white/80 text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40';
 
+/** Sections a quick chip can ask the sheet to open scrolled to. */
+export type FilterSection = 'distance' | 'price' | 'vibe';
+
 function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
@@ -81,6 +84,7 @@ export function FilterSheet({
   userId,
   current,
   onApplied,
+  initialSection,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -90,6 +94,8 @@ export function FilterSheet({
   current?: FeedFilters;
   /** Fired exactly once on a successful apply; the parent closes + re-queries. */
   onApplied?: (filters: FeedFilters) => void;
+  /** Quick-chip anchor: scroll this section into view when the sheet opens. */
+  initialSection?: FilterSection;
 }) {
   const [hostGenders, setHostGenders] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
@@ -100,6 +106,27 @@ export function FilterSheet({
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Quick-chip anchors: each chip's section gets a ref; on open we scroll the
+  // asked-for section into view (one shared sheet, no per-chip sheets).
+  const distanceRef = useRef<HTMLDivElement>(null);
+  const priceRef = useRef<HTMLDivElement>(null);
+  const vibeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || !initialSection) return;
+    const refs = { distance: distanceRef, price: priceRef, vibe: vibeRef } as const;
+    // Defer past vaul's mount/enter so the scroll container has its final layout.
+    const t = window.setTimeout(() => {
+      const reduce =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      refs[initialSection].current?.scrollIntoView?.({
+        block: 'start',
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [open, initialSection]);
 
   // Seed the draft from the persisted filters each time the sheet opens, so a
   // cancel-without-apply leaves the on-screen state matching reality next open.
@@ -194,7 +221,7 @@ export function FilterSheet({
                 </div>
               </div>
 
-              <div>
+              <div ref={priceRef} className="scroll-mt-4">
                 <p className="mb-2 font-body text-[13px] lowercase text-shell-ink/65">max price</p>
                 <div role="radiogroup" aria-label="max price" className="flex flex-wrap gap-2">
                   {PRICE_OPTIONS.map((p) => {
@@ -215,7 +242,7 @@ export function FilterSheet({
                 </div>
               </div>
 
-              <div>
+              <div ref={distanceRef} className="scroll-mt-4">
                 <p className="mb-2 font-body text-[13px] lowercase text-shell-ink/65">how far</p>
                 <div role="radiogroup" aria-label="how far" className="flex flex-wrap gap-2">
                   {DISTANCE_OPTIONS.map((km) => {
@@ -241,7 +268,7 @@ export function FilterSheet({
             <section className="flex flex-col gap-4">
               <h3 className="font-heading text-xl lowercase text-shell-ink">nice to have</h3>
 
-              <div>
+              <div ref={vibeRef} className="scroll-mt-4">
                 <p className="mb-2 font-body text-[13px] lowercase text-shell-ink/65">vibe</p>
                 <div role="group" aria-label="vibe" className="flex flex-wrap gap-2">
                   {VIBE_OPTIONS.map((v) => {

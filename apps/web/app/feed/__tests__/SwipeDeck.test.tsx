@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const recordSwipe = vi.fn().mockResolvedValue(undefined);
@@ -100,26 +100,59 @@ describe('SwipeDeck', () => {
 });
 
 describe('SwipeDeck — E10 quick chips + recovery empty state', () => {
-  it('renders the 3 quick chips inactive for a brand-new (unfiltered) searcher', () => {
+  it('renders the 3 quick chips with "any" sub-text for a brand-new (unfiltered) searcher', () => {
     render(<SwipeDeck initial={[night('a')]} userId="u1" filters={{}} />);
     const chips = screen.getByRole('group', { name: /quick filters/i });
     expect(chips).toBeInTheDocument();
-    // inactive chips show the bare label, no " · value"
-    expect(screen.getByRole('button', { name: /^distance\. tap to open filters$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^price\. tap to open filters$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^vibe\. tap to open filters$/i })).toBeInTheDocument();
+    // unset chips show the label with an "any" current value
+    expect(screen.getByRole('button', { name: /^distance, any\. tap to open filters$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^price, any\. tap to open filters$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^vibe, any\. tap to open filters$/i })).toBeInTheDocument();
   });
 
-  it('an active chip shows its value (e.g. ≤ 25km)', () => {
-    render(<SwipeDeck initial={[night('a')]} userId="u1" filters={{ max_distance_km: 25 }} />);
-    expect(screen.getByText(/distance · ≤ 25km/i)).toBeInTheDocument();
+  it('each chip shows its CURRENT value as sub-text (distance, price, vibe +n)', () => {
+    render(
+      <SwipeDeck
+        initial={[night('a')]}
+        userId="u1"
+        filters={{ max_distance_km: 25, max_price: 80, vibes: ['creative', 'cozy', 'chill'] }}
+      />,
+    );
+    expect(screen.getByText('25 km')).toBeInTheDocument();
+    expect(screen.getByText('$80 and under')).toBeInTheDocument();
+    expect(screen.getByText('creative +2')).toBeInTheDocument();
+  });
+
+  it('chip sub-text reflects the live filter state after an apply re-renders', () => {
+    const { rerender } = render(
+      <SwipeDeck initial={[night('a')]} userId="u1" filters={{ max_distance_km: 25 }} />,
+    );
+    expect(screen.getByText('25 km')).toBeInTheDocument();
+    rerender(<SwipeDeck initial={[night('a')]} userId="u1" filters={{ max_distance_km: 50 }} />);
+    expect(screen.getByText('50 km')).toBeInTheDocument();
+    expect(screen.queryByText('25 km')).not.toBeInTheDocument();
   });
 
   it('tapping a quick chip opens the FilterSheet', async () => {
     render(<SwipeDeck initial={[night('a')]} userId="u1" filters={{}} />);
-    await userEvent.click(screen.getByRole('button', { name: /^distance\. tap to open filters$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^distance, any\. tap to open filters$/i }));
     // the sheet title becomes visible (vaul stub renders content when open)
     expect(await screen.findByText('dealbreakers')).toBeInTheDocument();
+  });
+
+  it('tapping the price chip opens the sheet scrolled to the max-price section', async () => {
+    let scrolled: HTMLElement | null = null;
+    // jsdom has no scrollIntoView; install one that records its receiver.
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      scrolled = this;
+    };
+    render(<SwipeDeck initial={[night('a')]} userId="u1" filters={{}} />);
+    await userEvent.click(screen.getByRole('button', { name: /^price, any\. tap to open filters$/i }));
+    expect(await screen.findByText('dealbreakers')).toBeInTheDocument();
+    // the scroll fires on a short timer after open (vaul mount)
+    await waitFor(() => expect(scrolled).not.toBeNull());
+    expect(scrolled!.textContent).toMatch(/max price/i);
+    expect(scrolled!.textContent).not.toMatch(/how far/i);
   });
 
   it('empty + hard filter → filtered-recovery (names the filter, offers a widen)', () => {
@@ -145,6 +178,107 @@ describe('SwipeDeck — E10 quick chips + recovery empty state', () => {
     expect(screen.getByText(/that.s everyone for now/i)).toBeInTheDocument();
     expect(screen.getByText(/touch grass/i)).toBeInTheDocument();
     expect(screen.queryByText(/nothing fits those filters/i)).not.toBeInTheDocument();
+  });
+});
+
+// "pick a day" (real day picker): cycling the heading to the third scope reveals
+// a 14-day chip row; picking a day filters the deck CLIENT-SIDE on the local
+// calendar day of time_window_start, and the heading shows the picked day.
+describe('SwipeDeck — pick a day', () => {
+  const at = (daysAhead: number, hours = 19) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    d.setHours(hours, 0, 0, 0);
+    return d.toISOString();
+  };
+  const chipFor = (daysAhead: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    return `${d.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase()} ${d.getDate()}`;
+  };
+  const headingFor = (daysAhead: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+    const mo = d.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    return `${wd} ${mo} ${d.getDate()}`;
+  };
+  // tonight → this weekend → pick a day
+  async function cycleToPickADay() {
+    await userEvent.click(screen.getByRole('button', { name: /showing tonight/i }));
+    await userEvent.click(screen.getByRole('button', { name: /showing this weekend/i }));
+  }
+
+  it('selecting "pick a day" reveals 14 tappable day chips', async () => {
+    render(<SwipeDeck initial={[night('a')]} userId="u1" />);
+    expect(screen.queryByRole('group', { name: /pick a day/i })).not.toBeInTheDocument();
+    await cycleToPickADay();
+    const row = screen.getByRole('group', { name: /pick a day/i });
+    expect(within(row).getAllByRole('button')).toHaveLength(14);
+    expect(within(row).getByRole('button', { name: chipFor(0) })).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: chipFor(13) })).toBeInTheDocument();
+  });
+
+  it('choosing a day filters the deck to nights on that day and updates the heading', async () => {
+    render(
+      <SwipeDeck
+        initial={[
+          night('a', { title: 'Tomorrow Night', time_window_start: at(1) }),
+          night('b', { title: 'Later Night', time_window_start: at(3) }),
+        ]}
+        userId="u1"
+      />,
+    );
+    expect(screen.getByText(/2 left/i)).toBeInTheDocument();
+    await cycleToPickADay();
+    const row = screen.getByRole('group', { name: /pick a day/i });
+    await userEvent.click(within(row).getByRole('button', { name: chipFor(1) }));
+    // only tomorrow's night remains; the heading names the picked day
+    expect(screen.getByText(/1 left/i)).toBeInTheDocument();
+    expect(screen.getByText(/tomorrow night/i)).toBeInTheDocument();
+    expect(screen.queryByText(/later night/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: new RegExp(`showing ${headingFor(1)}`, 'i') }),
+    ).toBeInTheDocument();
+  });
+
+  it('a day with no nights keeps the chips on screen with an inline empty message', async () => {
+    render(
+      <SwipeDeck
+        initial={[night('a', { time_window_start: at(1) })]}
+        userId="u1"
+      />,
+    );
+    await cycleToPickADay();
+    const row = screen.getByRole('group', { name: /pick a day/i });
+    await userEvent.click(within(row).getByRole('button', { name: chipFor(2) }));
+    // NOT the full-screen empty state — the day chips stay for recovery
+    expect(screen.getByText(/nothing on .* yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/that.s everyone for now/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /pick a day/i })).toBeInTheDocument();
+    // picking the day that HAS a night recovers the deck
+    await userEvent.click(within(row).getByRole('button', { name: chipFor(1) }));
+    expect(screen.getByText(/1 left/i)).toBeInTheDocument();
+  });
+
+  it('cycling back to tonight clears the day filter (heading-only scopes unfiltered)', async () => {
+    render(
+      <SwipeDeck
+        initial={[
+          night('a', { time_window_start: at(1) }),
+          night('b', { time_window_start: at(3) }),
+        ]}
+        userId="u1"
+      />,
+    );
+    await cycleToPickADay();
+    const row = screen.getByRole('group', { name: /pick a day/i });
+    await userEvent.click(within(row).getByRole('button', { name: chipFor(1) }));
+    expect(screen.getByText(/1 left/i)).toBeInTheDocument();
+    // pick a day → tonight: filter clears, full deck returns
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(`showing ${headingFor(1)}`, 'i') }));
+    expect(screen.getByText(/2 left/i)).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /pick a day/i })).not.toBeInTheDocument();
   });
 });
 

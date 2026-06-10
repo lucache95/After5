@@ -24,7 +24,7 @@ import type { FeedTier } from '@after5/business';
 import { NightCard } from './NightCard';
 import { NightDetailSheet } from './NightDetailSheet';
 import { stickerRotation } from '@/lib/sticker';
-import { FilterSheet } from './FilterSheet';
+import { FilterSheet, type FilterSection } from './FilterSheet';
 import { useAmbientDeck } from './useAmbientDeck';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { cn } from '@/lib/cn';
@@ -39,30 +39,55 @@ type Direction = 'left' | 'right';
 const SWIPE_THRESHOLD = 110; // px of horizontal travel to commit
 const VELOCITY_THRESHOLD = 600; // px/s flick to commit even on a short drag
 
-// Day-scope stub (spec 2026-06-03 §3 "coarse time buckets"). Tapping the feed
-// title cycles the scope label; the actual feed query isn't filtered by scope
-// yet (that's the later filter phase), so this sets the heading + intent only.
+// Day-scope (spec 2026-06-03 §3 "coarse time buckets"). tonight / this weekend
+// stay HEADING-ONLY intent labels for now (hard-filtering the default deck by
+// them would empty thin-liquidity feeds — deferred). "pick a day" is REAL: it
+// reveals a 14-day chip row and filters the deck CLIENT-SIDE on the local
+// calendar day of time_window_start (the SSR query has no time param to pass).
+// A day RANGE is deliberately out of scope — "this weekend" covers that case.
 const DAY_SCOPES = [
   { key: 'tonight', label: 'tonight' },
   { key: 'weekend', label: 'this weekend' },
   { key: 'any', label: 'pick a day' },
 ] as const;
 
+// Local YYYY-MM-DD key for a date — the unit "pick a day" filters on.
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// The next 14 tappable days: chip label ("wed 11") + heading label ("wed jun 11").
+function nextDays(count = 14): { key: string; chip: string; heading: string }[] {
+  const today = new Date();
+  return Array.from({ length: count }, (_, k) => {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + k);
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+    const month = d.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    return {
+      key: dayKey(d),
+      chip: `${weekday} ${d.getDate()}`,
+      heading: `${weekday} ${month} ${d.getDate()}`,
+    };
+  });
+}
+
 // The 3 quick chips (D-04): shortcuts INTO the FilterSheet (not inline editors).
-// Each reads the matching feed_filters key to show its active value; tapping any
-// chip just opens the sheet. distance/price are the hard caps; vibe is the soft pref.
+// Each shows its CURRENT value as sub-text (live from feed_filters; "any" when
+// unset); tapping one opens the sheet scrolled to that section. distance/price
+// are the hard caps; vibe is the soft pref.
 const QUICK_CHIPS = [
   { key: 'distance', label: 'distance' },
   { key: 'price', label: 'price' },
   { key: 'vibe', label: 'vibe' },
 ] as const;
 
-// The active-value label a quick chip shows when its filter is set (e.g. "≤ 25km").
-function chipValue(key: (typeof QUICK_CHIPS)[number]['key'], filters: FeedFilters): string | null {
-  if (key === 'distance') return filters.max_distance_km != null ? `≤ ${filters.max_distance_km}km` : null;
-  if (key === 'price') return filters.max_price != null ? `≤ $${filters.max_price}` : null;
-  if (key === 'vibe') return filters.vibes?.length ? filters.vibes[0] : null;
-  return null;
+// The current-value sub-text a quick chip shows (always a string; "any" = unset).
+function chipValue(key: (typeof QUICK_CHIPS)[number]['key'], filters: FeedFilters): string {
+  if (key === 'distance') return filters.max_distance_km != null ? `${filters.max_distance_km} km` : 'any';
+  if (key === 'price') return filters.max_price != null ? `$${filters.max_price} and under` : 'any';
+  const vibes = filters.vibes ?? [];
+  if (vibes.length === 0) return 'any';
+  return vibes.length === 1 ? vibes[0]! : `${vibes[0]} +${vibes.length - 1}`;
 }
 
 // Any HARD filter (the three that HIDE) set → the empty deck is filtered, not genuine.
@@ -96,27 +121,50 @@ export function SwipeDeck({
   canAct?: boolean;
 }) {
   const router = useRouter();
-  const [deck, setDeck] = useState(initial);
+  const [scopeIdx, setScopeIdx] = useState(0);
+  // "pick a day" selection: local YYYY-MM-DD, null until a chip is tapped.
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  // Cards swiped THIS SESSION — excluded when the day filter recomputes the deck,
+  // so changing scope never resurfaces a night the viewer already acted on.
+  const swipedRef = useRef<Set<string>>(new Set());
+  const days = useMemo(() => nextDays(), []);
+  const isDayScope = DAY_SCOPES[scopeIdx].key === 'any';
+  // Day filter is CLIENT-SIDE over the SSR page of nights (see DAY_SCOPES note).
+  const scoped = useMemo(() => {
+    if (!isDayScope || !pickedDay) return initial;
+    return initial.filter(
+      (n) =>
+        dayKey(new Date(n.time_window_start)) === pickedDay &&
+        !swipedRef.current.has(n.date_instance_id),
+    );
+  }, [initial, isDayScope, pickedDay]);
+  const [deck, setDeck] = useState(scoped);
   const [i, setI] = useState(0);
   // router.refresh() (filter apply / loosen) re-runs the SSR feed and passes a new
-  // `initial`, but useState won't re-init on a prop change — reset the deck + index
-  // when the night set changes (React "adjust state during render" pattern: no effect,
-  // no flash). Without this a filter that emptied the feed leaves the stale card on screen.
-  const deckSig = initial.map((n) => n.date_instance_id).join(',');
+  // `initial` (and a scope change re-filters it), but useState won't re-init on a
+  // prop change — reset the deck + index when the night set changes (React "adjust
+  // state during render" pattern: no effect, no flash). Without this a filter that
+  // emptied the feed leaves the stale card on screen.
+  const deckSig = scoped.map((n) => n.date_instance_id).join(',');
   const [prevSig, setPrevSig] = useState(deckSig);
   if (deckSig !== prevSig) {
     setPrevSig(deckSig);
-    setDeck(initial);
+    setDeck(scoped);
     setI(0);
   }
   const [busy, setBusy] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [scopeIdx, setScopeIdx] = useState(0);
+  // Which FilterSheet section a quick chip asked to scroll to (null = plain open).
+  const [sheetSection, setSheetSection] = useState<FilterSection | null>(null);
   const reduceMotion = useReducedMotion();
-  const scopeLabel = DAY_SCOPES[scopeIdx].label;
+  const pickedDayMeta = pickedDay ? days.find((d) => d.key === pickedDay) ?? null : null;
+  const scopeLabel =
+    isDayScope && pickedDayMeta ? pickedDayMeta.heading : DAY_SCOPES[scopeIdx].label;
   function cycleScope() {
-    setScopeIdx((n) => (n + 1) % DAY_SCOPES.length);
+    const next = (scopeIdx + 1) % DAY_SCOPES.length;
+    setScopeIdx(next);
+    if (DAY_SCOPES[next].key !== 'any') setPickedDay(null);
   }
 
   // After a successful apply (or empty-state loosen) the persisted filters changed;
@@ -150,6 +198,7 @@ export function SwipeDeck({
         return false; // card snaps back; the night stays on top
       }
       // pass: keep browsing — advance locally, nothing persists pre-verification.
+      swipedRef.current.add(current.date_instance_id);
       setDetailOpen(false);
       setI((n) => n + 1);
       return true;
@@ -157,6 +206,7 @@ export function SwipeDeck({
     setBusy(true);
     try {
       await recordSwipe(browserAfter5Client(), current.date_instance_id, direction);
+      swipedRef.current.add(current.date_instance_id);
       setDetailOpen(false); // close the detail sheet if the swipe came from inside it
       setI((n) => n + 1);
       return true;
@@ -169,7 +219,11 @@ export function SwipeDeck({
     }
   }
 
-  if (deck.length === 0 || i >= deck.length) {
+  const exhausted = deck.length === 0 || i >= deck.length;
+  // A picked-day empty deck is NOT the full-screen empty state: the viewer needs
+  // the heading + day chips to stay on screen so they can pick another day.
+  // Everything else keeps the existing full-screen EmptyDeck branches.
+  if (exhausted && !(isDayScope && pickedDay)) {
     return (
       <EmptyDeck
         tier={tier}
@@ -203,7 +257,10 @@ export function SwipeDeck({
             {canAct && (
               <button
                 type="button"
-                onClick={() => setFilterOpen(true)}
+                onClick={() => {
+                  setSheetSection(null); // plain open — no section scroll
+                  setFilterOpen(true);
+                }}
                 aria-label="filters"
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-shell-ink shadow-subtle transition',
@@ -236,22 +293,59 @@ export function SwipeDeck({
           </div>
         </header>
 
-        {/* Quick-filter chips (D-04): shortcuts into the sheet. An active chip flips to
-            accent and shows its value; a brand-new searcher sees all three inactive.
+        {/* "pick a day" chip row: the next 14 days, horizontally scrollable. Visible
+            for every viewer (it's browsing, not a preference filter — teaser mode
+            keeps it; F1 only hides the preference chips below). */}
+        {isDayScope && (
+          <div
+            role="group"
+            aria-label="pick a day"
+            className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1"
+          >
+            {days.map((d) => {
+              const on = pickedDay === d.key;
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setPickedDay(d.key)}
+                  className={cn(
+                    'min-h-[44px] shrink-0 whitespace-nowrap rounded-full px-4 font-body text-[13px] font-semibold lowercase transition',
+                    'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
+                    'motion-reduce:transition-none',
+                    on
+                      ? 'bg-shell-accent text-white shadow-fun'
+                      : 'bg-white/80 text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40',
+                  )}
+                >
+                  {d.chip}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Quick-filter chips (D-04): shortcuts into the sheet. Each shows its CURRENT
+            value as sub-text ("any" when unset); a set value flips the chip to accent.
+            Tapping opens the FilterSheet scrolled to that chip's section.
             Hidden pre-verification along with the sheet (F1). */}
         {canAct && (
         <div role="group" aria-label="quick filters" className="mb-5 flex flex-wrap gap-2">
           {QUICK_CHIPS.map(({ key, label }) => {
             const value = chipValue(key, filters);
-            const active = value != null;
+            const active = value !== 'any';
             return (
               <button
                 key={key}
                 type="button"
-                onClick={() => setFilterOpen(true)}
-                aria-label={`${label}${value ? `, ${value}` : ''}. tap to open filters`}
+                onClick={() => {
+                  setSheetSection(key);
+                  setFilterOpen(true);
+                }}
+                aria-label={`${label}, ${value}. tap to open filters`}
                 className={cn(
-                  'min-h-[44px] rounded-full px-4 font-body text-[13px] font-semibold lowercase shadow-md transition',
+                  'flex min-h-[48px] flex-col items-start justify-center rounded-full px-4 py-1 text-left font-body lowercase shadow-md transition',
                   'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
                   'motion-reduce:transition-none motion-reduce:hover:scale-100',
                   active
@@ -259,35 +353,65 @@ export function SwipeDeck({
                     : 'bg-white/80 text-shell-ink ring-1 ring-shell-ink/10 hover:ring-shell-accent/40',
                 )}
               >
-                {active ? `${label} · ${value}` : label}
+                <span className="text-[13px] font-semibold leading-tight">{label}</span>
+                <span
+                  className={cn(
+                    'text-[11px] leading-tight',
+                    active ? 'text-white/85' : 'text-shell-ink/60',
+                  )}
+                >
+                  {value}
+                </span>
               </button>
             );
           })}
         </div>
         )}
 
-        <div className="relative flex-1">
-          {/* peeking cards behind the active one — depth, not interactive */}
-          {after && <PeekCard key={`peek-${after.date_instance_id}`} night={after} depth={2} />}
-          {next && <PeekCard key={`peek-${next.date_instance_id}`} night={next} depth={1} />}
+        {current ? (
+          <div className="relative flex-1">
+            {/* peeking cards behind the active one — depth, not interactive */}
+            {after && <PeekCard key={`peek-${after.date_instance_id}`} night={after} depth={2} />}
+            {next && <PeekCard key={`peek-${next.date_instance_id}`} night={next} depth={1} />}
 
-          <ActiveCard
-            key={current.date_instance_id}
+            <ActiveCard
+              key={current.date_instance_id}
+              night={current}
+              busy={busy}
+              reduceMotion={!!reduceMotion}
+              onCommit={commit}
+              onOpenDetail={() => setDetailOpen(true)}
+            />
+          </div>
+        ) : (
+          /* picked-day empty: keep the header + day chips on screen so the viewer
+             can pick another day (the full-screen EmptyDeck would strand them). */
+          <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
+            <p className="font-heading text-3xl lowercase text-shell-ink">
+              nothing on {scopeLabel} yet.
+            </p>
+            <p className="mt-3 font-body text-[15px] text-shell-ink/65">
+              try another day — or{' '}
+              <Link
+                href="/nights/new"
+                className="font-semibold text-shell-accent underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40"
+              >
+                post your own night
+              </Link>
+              .
+            </p>
+          </div>
+        )}
+
+        {current && (
+          <NightDetailSheet
             night={current}
+            open={detailOpen}
             busy={busy}
-            reduceMotion={!!reduceMotion}
-            onCommit={commit}
-            onOpenDetail={() => setDetailOpen(true)}
+            onOpenChange={setDetailOpen}
+            onCommit={(direction) => void commit(direction)}
           />
-        </div>
-
-        <NightDetailSheet
-          night={current}
-          open={detailOpen}
-          busy={busy}
-          onOpenChange={setDetailOpen}
-          onCommit={(direction) => void commit(direction)}
-        />
+        )}
 
         {canAct && (
           <FilterSheet
@@ -296,9 +420,11 @@ export function SwipeDeck({
             userId={userId}
             current={filters}
             onApplied={refetchFeed}
+            initialSection={sheetSection ?? undefined}
           />
         )}
 
+        {current && (
         <div className="mt-6 flex items-center justify-center gap-6">
           <button
             type="button"
@@ -329,6 +455,7 @@ export function SwipeDeck({
             <Heart className="h-7 w-7" strokeWidth={2.5} fill="currentColor" aria-hidden />
           </button>
         </div>
+        )}
       </div>
       <BottomTabShell />
     </main>
