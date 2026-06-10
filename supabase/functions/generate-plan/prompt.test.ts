@@ -13,12 +13,34 @@ Deno.test('buildSystemPrompt injects city + region, not hardcoded Kelowna', () =
   assertStringIncludes(buildSystemPrompt({ name: 'Kelowna', region: 'BC' }), 'Kelowna');
 });
 
-Deno.test('buildUserMessage states the city for couples', () => {
+Deno.test('buildSystemPrompt enforces the host invitation voice', () => {
+  const sys = buildSystemPrompt({ name: 'Kelowna', region: 'BC' });
+  // The speaker is the host inviting a match — not a guidebook.
+  assertStringIncludes(sys, 'SPEAKER IS THE HOST');
+  assertStringIncludes(sys, 'first-person invitation');
+  // The in-prompt GOOD/BAD contrast pair is present.
+  assertStringIncludes(sys, 'i\'ll paddle if you keep up on the wall');
+  assertStringIncludes(sys, 'Walk straight to the bouldering area');
+  assertStringIncludes(sys, 'we start on the V0s');
+  // Titles stay descriptive — first person is NOT forced into them.
+  assertStringIncludes(sys, 'Do NOT force "i" into titles');
+});
+
+Deno.test('ITINERARY_TOOL: hook + what_to_do descriptions carry the host voice', () => {
+  const props = ITINERARY_TOOL.input_schema.properties as Record<string, any>;
+  const itemProps = props.itineraries.items.properties as Record<string, any>;
+  assertStringIncludes(itemProps.hook.description, 'First-person invitation');
+  const stopProps = itemProps.stops.items.properties as Record<string, any>;
+  assertStringIncludes(stopProps.what_to_do.description, '"we" voice');
+});
+
+Deno.test('buildUserMessage frames the city as the host posting for a match', () => {
   const msg = buildUserMessage({
     inputs: { occasion: 'date', vibe: ['chill'], budget_per_person: 50, duration_min: 180, effort: 'low', must_includes: [] } as any,
     itineraries: [], placesById: new Map(), city: { name: 'Vernon', region: 'BC' },
   } as any);
   assertStringIncludes(msg, 'Vernon');
+  assertStringIncludes(msg, "host is posting this night in Vernon");
 });
 
 // ─── Tool-use migration (PLAN-01, Area 1) ───────────────────────────────
@@ -45,9 +67,9 @@ Deno.test('extractToolUseItineraries: pulls itineraries from a forced tool_use b
             {
               template_id: 't1',
               title: 'A Lake-Light Morning',
-              hook: 'Start slow, end with a view.',
-              why_it_works: 'Coffee, then a walk, then the bluffs.',
-              stops: [{ place_id: 'place-a', what_to_do: 'Order the canelé and a flat white.' }],
+              hook: 'i want to take you somewhere slow before the view.',
+              why_it_works: 'coffee, then a walk, then the bluffs.',
+              stops: [{ place_id: 'place-a', what_to_do: 'we split the canelé and a flat white.' }],
             },
           ],
         },

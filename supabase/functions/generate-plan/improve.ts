@@ -407,7 +407,7 @@ async function rewriteStopCopy(
       max_tokens: 256,
       temperature: 0.7,
       system:
-        'You are After5\'s resident local. Write a 2-3 sentence "what to do here" for one date-plan stop. Lowercase, dry, specific — name the place, suggest what to order/look at, no "enjoy"/"savor", no emoji. Output only the prose.',
+        'You are the HOST of a date night on After5, a blind-dating app, writing the plan for one stop to a match you haven\'t met. Write 2-3 sentences in "we" voice: our plan at this stop. GOOD: "we start on the V0s. the point is laughing, not sending." BAD (imperative command at the reader): "Walk straight to the bouldering area and start on the V0s." Lowercase, dry, specific, warm. Name the place; venue facts are fine framed as our plan. No "enjoy"/"savor", no em-dashes, no emoji. Output only the prose.',
       messages: [
         {
           role: 'user',
@@ -451,14 +451,14 @@ export async function regenerateTitle(
     const client = new Anthropic({ apiKey: env.anthropicKey });
     const stopNames = opts.stops.map((s) => s.place_name).join(' → ');
     const toneInstruction = opts.tone
-      ? `Make it feel more ${opts.tone}.`
+      ? `Make it feel more ${opts.tone}, still in the host's inviting voice.`
       : 'Give it a fresh, different angle.';
     const response = await createMessageImpl(client, {
       model: env.haikuModel,
       max_tokens: 256,
       temperature: 0.8,
       system:
-        `You write short, evocative date-night titles for After5. Rules: lowercase-friendly, no clichés, no em-dashes, no "magical"/"perfect"/"enchanting". ${toneInstruction} Return ONLY valid JSON with keys "title" (max 6 words) and "hook" (one line, max 12 words). No prose, no markdown.`,
+        `You write the title + hook for a date night on After5, a blind-dating app where a HOST invites a match they haven't met. Title: short, evocative, descriptive, NOT first person. Hook: a first-person invitation from the host carrying the i/you/we register. GOOD: "i'll paddle if you keep up on the wall". BAD (detached tagline): "Two ways to use your body, zero planning required." Rules: lowercase-friendly, no clichés, no em-dashes, no "magical"/"perfect"/"enchanting". ${toneInstruction} Return ONLY valid JSON with keys "title" (max 6 words) and "hook" (one line, max 12 words). No prose, no markdown.`,
       messages: [
         {
           role: 'user',

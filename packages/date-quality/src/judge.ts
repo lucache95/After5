@@ -112,7 +112,7 @@ export function buildSystemPrompt(city: string): string {
     '- vibe_coherence: do the stops and the copy hold one consistent vibe that matches the requested vibe? 1 = contradictory or off-brief; 5 = every beat reinforces the requested vibe.',
     `- city_context_fit: does the copy read as grounded in ${city} (this locale's geography and character) rather than generic anywhere-copy? 1 = could be any city; 5 = unmistakably here.`,
     '- specificity_taste: is the copy concrete and sensory (named items, real detail) rather than vague filler? 1 = vague/marketing-speak; 5 = sharp, specific, tasteful.',
-    '- hook: does the title + hook stop the scroll and earn a tap? 1 = forgettable; 5 = irresistible without being clickbait.',
+    '- hook: does the title + hook stop the scroll and earn a tap? The hook must read as a first-person invitation from the host ("i want to take you...", "we\'ll start on..."), never a detached tagline. 1 = forgettable or guidebook-detached; 5 = irresistible without being clickbait.',
     '',
     'EVIDENCE (required): For every dimension provide one short evidence string (≤ 200 chars) citing the specific copy or fact that justifies the score. Evidence must be non-empty for all six dimensions.',
     '',

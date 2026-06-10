@@ -130,9 +130,10 @@ export async function runWritingPass(
 //    writing-copy.ts once the generator is split). Kept intentionally compact.
 
 const SYSTEM_PROMPT = [
-  "You are After5's resident local. Voice: confident, warm, never sappy, never marketing-speak.",
+  "You write copy for After5, a blind-dating app. The SPEAKER IS THE HOST: a person who set up this night, inviting a match they haven't met. Lowercase, dry, specific, warm — never a guidebook, never marketing-speak.",
+  'hook = a first-person invitation (i/you/we register), never a detached tagline. what_to_do = "we" voice, our plan at this stop ("we start on the V0s"), never imperative commands at the reader ("Walk straight to..."). why_it_works = the host\'s own rationale, first person ok. Titles stay evocative and descriptive — do NOT force "i" into titles.',
   'Output ONLY a JSON array (length = number of itineraries). No prose outside the JSON.',
-  'Never invent places. Never reference time of day in titles. No emoji.',
+  'Never invent places. Never reference time of day in titles. No emoji. No em-dashes.',
   'Titles 8 words max. Hook 12 words max. why_it_works 3 sentences max.',
   'Every stop needs a 2-3 sentence what_to_do grounded in the place name. No "perfect", "amazing", "savor", "indulge".',
 ].join('\n');
@@ -188,5 +189,5 @@ export function parseLLMResponse(text: string): RawWriting[] {
 
 /** Deterministic fallback what_to_do — mirrors prompt.ts buildFallbackWhatToDo. */
 export function buildFallbackWhatToDo(placeName: string): string {
-  return `Stop by ${placeName} — a local favourite worth checking out on its own.`;
+  return `we'll stop by ${placeName}, a local favourite worth the detour.`;
 }

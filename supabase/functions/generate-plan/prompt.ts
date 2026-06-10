@@ -18,20 +18,26 @@ export function buildSystemPrompt(city: PromptCity): string {
     ? 'Lean into Okanagan specificity: lake light, vineyards, the bridge, the bluffs, sunset over the West side.'
     : `Lean into ${city.name} specificity — name real neighborhoods, local landmarks, the feel of the place.`;
   const regionSuffix = city.region ? `, ${city.region}` : '';
-  return `You are After5's resident local. Your voice: confident, warm, never sappy, never marketing-speak. You write date plans the way a friend with great taste would describe them — specific, sensory, never generic.
+  return `You write copy for After5, a blind-dating app. The SPEAKER IS THE HOST: a real person who set up this night and is inviting a potential match they haven't met yet. Every line reads like the host talking to that one person. Lowercase, dry, specific, warm. Never a guidebook, never marketing-speak, never a tour brochure.
+
+Voice rules (the register, field by field):
+- hook: a first-person invitation from the host, 12 words max. It must carry the i/you/we register. GOOD: "i'll paddle if you keep up on the wall" or "i want to take you somewhere golden at 7pm". BAD (detached tagline): "Two ways to use your body, zero planning required."
+- what_to_do (per stop): "we" voice, our plan at this stop. GOOD: "we start on the V0s. the point is laughing, not sending." BAD (imperative command at the reader): "Walk straight to the bouldering area and start on the V0s." Practical venue facts are welcome but framed as our plan: "ron does same-day delivery, so boards will be waiting" not "Call Ron today."
+- why_it_works: the host's own rationale. First person is fine: "good talk needs something to do with your hands."
+- title: stays evocative and descriptive. Do NOT force "i" into titles; titles are not first person.
 
 Hard rules:
 - Emit your copy by calling the emit_itineraries tool. Do not write prose outside the tool call.
 - Never invent places. The places are given to you with fixed IDs.
-- Never reference time of day in titles ("evening", "night") — the schedule already says when.
+- Never reference time of day in titles ("evening", "night"). The schedule already says when.
 - Never use the word "perfect", "amazing", "unforgettable", "magical", or other generic praise.
-- No emoji in any field.
+- No emoji in any field. No em-dashes in any field.
 - Titles: 8 words max, no colons unless meaningful, no clickbait.
 - "Why it works": 3 sentences max. Reference the specific sequence (what a → b → c does emotionally), not generic benefits.
-- Per-stop "what_to_do": MANDATORY for every stop — never empty. 2 to 3 short sentences that tell the reader what to actually do here: what to order or try, where to sit or look, a specific sensory detail, and how this stop connects to the next. Ground it in the place name — "At Sandrine, share the canelé and a flat white — the counter seats by the window catch the morning light. Finish quick so you can walk the lake path before the tourists arrive." No "enjoy", no "savor", no "experience".
+- Per-stop "what_to_do": MANDATORY for every stop, never empty. 2 to 3 short sentences of our plan here: what we order or try, where we sit or look, one specific sensory detail, and how this stop hands off to the next. Ground it in the place name: "we split the canelé and a flat white at sandrine. the counter seats by the window catch the morning light, and we leave before the tourists take the lake path." No "enjoy", no "savor", no "experience".
 
 Brand tone calibration:
-- This is for couples in ${city.name}${regionSuffix}. Most are mid-20s to late-30s. They want to feel like someone with taste planned this — not like an algorithm did.
+- The host is posting this night in ${city.name}${regionSuffix} for a match they haven't met. Most users are mid-20s to late-30s. The copy should feel like a person with taste set this up, not an algorithm.
 - ${localSpecificity}
 - Avoid generic AI tells: no "embark on a journey", no "indulge in", no "this experience".
 
@@ -77,16 +83,16 @@ export const ITINERARY_TOOL = {
           type: 'object',
           properties: {
             template_id: { type: 'string', description: 'Unchanged from input.' },
-            title: { type: 'string', description: '8 words max; no time-of-day; no generic praise.' },
-            hook: { type: 'string', description: 'One short line, 12 words max.' },
-            why_it_works: { type: 'string', description: '3 sentences max; reference the specific a→b→c sequence.' },
+            title: { type: 'string', description: '8 words max; evocative + descriptive, NOT first person; no time-of-day; no generic praise.' },
+            hook: { type: 'string', description: 'First-person invitation from the host, 12 words max; must carry the i/you/we register, never a detached tagline.' },
+            why_it_works: { type: 'string', description: '3 sentences max; the host\'s own rationale (first person ok); reference the specific a→b→c sequence.' },
             stops: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
                   place_id: { type: 'string', description: 'Unchanged UUID from input.' },
-                  what_to_do: { type: 'string', description: '2-3 sentence prose, mandatory, never empty.' },
+                  what_to_do: { type: 'string', description: '2-3 sentences in "we" voice (our plan at this stop), mandatory, never empty; no imperative commands at the reader.' },
                 },
                 required: ['place_id', 'what_to_do'],
               },
@@ -224,7 +230,7 @@ function mergeWriting(input: WritingPassInput, written: LLMItineraryWriting[]): 
         ...it,
         title: it.template_name,
         hook: `${it.total_duration_min} min · $${it.total_cost_pp.toFixed(0)}/pp`,
-        why_it_works: 'A balanced sequence based on your inputs.',
+        why_it_works: 'a sequence i put together around your time and budget.',
         stops: it.stops.map((s) => ({ ...s, what_to_do: s.what_to_do ?? '' })),
       };
     }
@@ -284,9 +290,9 @@ function patchEmptyStops(merged: Itinerary[], retryWritten: LLMItineraryWriting[
  */
 function buildFallbackWhatToDo(placeName: string, localInsight: string | null): string {
   if (localInsight && localInsight.length > 10) {
-    return `Head to ${placeName} and take it in. ${localInsight}`;
+    return `we'll take our time at ${placeName}. ${localInsight}`;
   }
-  return `Stop by ${placeName} — a local favourite worth checking out on its own.`;
+  return `we'll stop by ${placeName}, a local favourite worth the detour.`;
 }
 
 export function buildUserMessage(input: WritingPassInput): string {
@@ -294,7 +300,7 @@ export function buildUserMessage(input: WritingPassInput): string {
 
   const lines: string[] = [];
   lines.push(`User context:`);
-  lines.push(`- City: ${city.name}${city.region ? `, ${city.region}` : ''} (write for couples in ${city.name})`);
+  lines.push(`- City: ${city.name}${city.region ? `, ${city.region}` : ''} (the host is posting this night in ${city.name} for a match they haven't met — write in the host's inviting voice)`);
   lines.push(`- Occasion: ${inputs.occasion}`);
   lines.push(`- Vibe: ${inputs.vibe.join(', ')}`);
   lines.push(`- Budget: ~$${inputs.budget_per_person}/person`);

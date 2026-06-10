@@ -308,6 +308,37 @@ Deno.test('regenerateTitle: returns title + hook from a stubbed LLM response', a
   }
 });
 
+Deno.test('regenerateTitle: system prompt enforces host invitation voice + tone stays in it', async () => {
+  const fakeStops = [makeStop({ place_id: 'p1', place_name: 'A' })];
+
+  // Capture the params regenerateTitle sends so we can assert on the system prompt.
+  // deno-lint-ignore no-explicit-any
+  let captured: any = null;
+  // deno-lint-ignore no-explicit-any
+  const captureCreate = async (_client: any, params: any) => {
+    captured = params;
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ title: 't', hook: 'h' }) }],
+    };
+  };
+
+  const res = await regenerateTitle(
+    fakeEnv,
+    { stops: fakeStops, currentTitle: 'Old Title', tone: 'playful' },
+    // deno-lint-ignore no-explicit-any
+    captureCreate as any,
+  );
+  assert(res.ok);
+  const system = String(captured?.system ?? '');
+  // The hook must be framed as a first-person invitation from the host…
+  assert(system.includes('first-person invitation'), 'system prompt must demand a first-person invitation hook');
+  assert(system.includes('HOST'), 'system prompt must cast the speaker as the host');
+  // …titles stay descriptive, never forced first person…
+  assert(system.includes('NOT first person'), 'titles must stay descriptive, not first person');
+  // …and tone variants keep the same inviting voice.
+  assert(system.includes("more playful, still in the host's inviting voice"), 'tone variant must stay in the host voice');
+});
+
 Deno.test('regenerateTitle: returns ok:false on LLM error — does not swallow failure', async () => {
   const fakeStops = [makeStop({ place_id: 'p1', place_name: 'A' })];
 
