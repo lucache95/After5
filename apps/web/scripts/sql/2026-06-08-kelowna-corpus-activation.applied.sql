@@ -47,6 +47,39 @@ update places set is_delighter=true,
 where source='curated' and approval_status='live'
   and name in ('Tugboat Beach','Rotary Beach','Hot Sands Beach','Boyce-Gyro Beach Park','Kelowna City Park','Kalamoir Regional Park');
 
+-- ══ 2026-06-09 POST-AUDIT PASS (applied via Supabase MCP) ════════════════════
+-- Audit verified all 2026-06-08 numbers against prod, then closed the gaps.
+
+-- Reject 4 duds among the 12 held drafts that completeness couldn't catch:
+-- Viewpoint Drive (a residential street, not a venue), Rutland Arena (hockey
+-- rink — events tier), Revelry (nightclub — deprioritized), Little Kitchen
+-- Academy (kids' cooking school — not a date venue).
+update places set approval_status='rejected', updated_at=now()
+where source='curated' and approval_status='draft'
+  and name in ('Viewpoint Drive','Rutland Arena','Revelry','Little Kitchen Academy Kelowna');
+
+-- P0: ESTIMATED typical hours for the 8 real booking/seasonal venues Google has
+-- no posted hours for (each bookable one carries reservation_url where users
+-- confirm), then promote. Balkanagan 11-19, Black Box 19-22:30, Inspire 9-17,
+-- Pottery 108 10-21, Lavender 10-17, S&J Paddle 10-19, Wine Country 11-17,
+-- Island Stage 17-22 + seasonality={summer}.
+-- (per-row updates omitted here for brevity — names + windows above are exact)
+update places set approval_status='live', updated_at=now()
+where source='curated' and approval_status='draft'
+  and photo_url is not null and photo_url<>'' and lat is not null and lng is not null
+  and opens is not null and closes is not null and array_length(vibe_tags,1)>=1;
+-- → promoted 8. live 169 → 177.
+
+-- Audit fixes: Buffalo Rouge is a brewery; Mission Creek Greenway is a walk route.
+update places set type='brewery', updated_at=now()
+where source='curated' and name='Buffalo Rouge Brewing Co.' and type='cocktail_bar';
+update places set type='walk', updated_at=now()
+where source='curated' and name='Mission Creek Greenway Regional Park' and type='park';
+
+-- P1 walks gap (4 → 7, target 6+): seed-walks-fix-photos.mjs added Gellatly Bay
+-- Recreational Trail, Rotary Marsh Park Loop, Abbott Street Heritage Walk (live
+-- 177 → 180) and set Knox Mountain Park's photo on the 2 photo-less Knox rows.
+
 -- ── REVERSAL (if needed) ──────────────────────────────────────────────────────
 -- Promotion/rejection: set approval_status back to 'draft' for the affected rows.
 -- Tags: array_remove(vibe_tags,'food_focused' / 'creative'); is_delighter=false.

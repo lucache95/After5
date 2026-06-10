@@ -10,34 +10,26 @@ Status legend: 🔴 below target · 🟡 at floor / thin · 🟢 future upside.
 
 ---
 
-## P0 — Quick wins (already curated, just blocked)
+## ✅ P0 — DONE (2026-06-09 post-audit pass)
 
-**12 curated drafts are held back only because Google had no structured hours.**
-Add hours (manually or a second source) → they promote straight into live:
-
-- S & J Daily Paddleboard Rentals · Kelowna Pottery at Studio 108 · Little Kitchen
-  Academy Kelowna (cooking class) · Okanagan Lavender & Herb Farm · Indigo Ridge
-  (if not live) · Black Box Theatre · Island Stage · Mary Irwin-adjacent venues ·
-  Revelry · Rutland Arena · Wine Country Studios · Balkanagan Kitchen (food truck)
-  · Inspire Trail Riding Ranch · "Viewpoint Drive"
-
-These directly feed thin categories (paddle, creative/pottery, live-performance).
+Of the 12 held drafts: **8 promoted** with estimated typical hours (S&J
+Paddleboard, Pottery at Studio 108, Okanagan Lavender, Black Box Theatre, Island
+Stage [summer], Wine Country Studios, Balkanagan food truck, Inspire Trail
+Riding); **4 rejected** on date-fit (Viewpoint Drive — a residential street;
+Rutland Arena — hockey rink, events tier; Revelry — nightclub; Little Kitchen
+Academy — kids' cooking school). Draft queue is now empty.
 
 ---
 
 ## P1 — Below-target categories (audit GAPs)
 
-### 🔴 Walks / waterfront routes — 3 / target 6+ (HIGHEST LEVERAGE)
-Walks are in nearly every date; thin walk inventory = repetitive "→ walk →"
-middle. Add as dedicated `walk` rows (several already exist as `park`):
-- Downtown Waterfront Boardwalk (Tugboat → Sails → Stuart Park loop)
-- Mission Creek Greenway — full route as a *walk* (currently a `park`)
-- Knox Mountain lower / Apex Road easy loop (conversation-friendly)
-- Pandosy / Abbott Street Heritage walk (character homes)
-- Rotary Marsh + Waterfront Park boardwalk
-- Gellatly Bay waterfront walk (West Kelowna)
+### ✅ Walks / waterfront routes — DONE (2026-06-09): 3 → 7, target 6+ met
+Mission Creek Greenway retyped `park`→`walk`; seeded Gellatly Bay Recreational
+Trail, Rotary Marsh Park Loop, Abbott Street Heritage Walk. Remaining candidates
+if more depth is wanted: Downtown Boardwalk loop as its own row, Knox Apex Road
+easy loop.
 
-### 🔴 Markets / shopping / bookstores — 1 / target 3+
+### 🔴 Markets / shopping / bookstores — 1 / target 3+ (NOW THE TOP GAP)
 - Mosaic Books (downtown indie bookstore — strong rainy-day date)
 - Kelowna Night Market (seasonal) / Lakeshore or Westbank markets
 - A browsable record/vintage shop (e.g. Milkcrate Records)

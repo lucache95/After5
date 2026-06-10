@@ -18,6 +18,16 @@ snapshot. "after" = current live pool (**169**), computed live from prod.
 
 ---
 
+> **2026-06-09 post-audit update:** all numbers below re-verified against prod,
+> then the gaps were closed. Final state: **live pool 180** (was 169), **walks
+> 4 → 7 ✅ target met** (Greenway retyped + Gellatly Bay / Rotary Marsh / Abbott
+> Street seeded), **drafts 0** (8 promoted with estimated hours, 4 more duds
+> rejected: Viewpoint Drive is a street, Rutland Arena, Revelry nightclub,
+> Little Kitchen Academy is a kids' school), 0 rows missing photos/hours/coords,
+> Buffalo Rouge retyped → brewery. Remaining below-target: **markets/shopping
+> (1 / 3+)** only. At-home rows' backfilled coords are functionally inert (the
+> generator hard-partitions on `at_home`).
+
 ## Headline
 
 - **Live pool: 59 → 169** (2.86×), every live row now has hours + coords.

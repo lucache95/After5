@@ -5,6 +5,13 @@ area: venue-corpus / places / date-generator
 status: DONE (executed autonomously 2026-06-08) — see Outcome below + docs/kelowna-diversity-audit-2026-06-08.md
 ---
 
+## Post-audit (2026-06-09): all numbers re-verified against prod; gaps closed.
+Final: **live 180**, drafts 0, rejected 8. Walks 4 → 7 (target met; Greenway
+retyped + 3 routes seeded). 8 booking/seasonal venues promoted with estimated
+hours; 4 more duds rejected (Viewpoint Drive = a street, Rutland Arena, Revelry,
+Little Kitchen Academy = kids' school). Buffalo Rouge → brewery. 0 live rows
+missing photo/hours/coords. Remaining supply gap: markets/shopping (1/3+) only.
+
 ## Outcome (2026-06-08, applied to PROD ufufmcpnysvwtutpbian — all reversible)
 - **Live pool 59 → 169** (2.86×). Every live row now has hours + coords.
 - Backfilled 41 hours + 10 coords via Google (`scripts/backfill-hours-coords.mjs`);
