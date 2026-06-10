@@ -35,11 +35,11 @@ describe('BottomTabShell — tab href map (REQ-E2)', () => {
     expect(hrefOf('profile')).toBe('/account');
   });
 
-  it('keeps discover -> /feed, inbox -> /inbox, create -> /create', () => {
+  it('keeps discover -> /feed, inbox -> /inbox, create -> /create/generate', () => {
     render(<BottomTabShell userId="u1" />);
     expect(hrefOf('discover')).toBe('/feed');
     expect(hrefOf('inbox')).toBe('/inbox');
-    expect(hrefOf('create')).toBe('/create');
+    expect(hrefOf('create')).toBe('/create/generate');
   });
 
   it('renders no link pointing at the marketing teaser /home', () => {

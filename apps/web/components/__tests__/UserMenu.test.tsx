@@ -66,9 +66,9 @@ describe('UserMenu — signed in (dating IA)', () => {
     expect(homeLinks).toHaveLength(0);
   });
 
-  it('keeps a discreet planner wedge "plan a date" → /create', async () => {
+  it('keeps a discreet planner wedge "plan a date" → /create/generate', async () => {
     await openMenu();
-    expect(screen.getByRole('menuitem', { name: 'plan a date' })).toHaveAttribute('href', '/create');
+    expect(screen.getByRole('menuitem', { name: 'plan a date' })).toHaveAttribute('href', '/create/generate');
   });
 
   it('does NOT use the legacy planner IA ("My dates")', async () => {
