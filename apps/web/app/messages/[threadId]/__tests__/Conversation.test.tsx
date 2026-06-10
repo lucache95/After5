@@ -21,6 +21,11 @@ vi.mock('@/lib/after5/chat', () => ({
 const toastPlain = vi.fn();
 const toastError = vi.fn();
 vi.mock('sonner', () => ({ toast: Object.assign((...a: unknown[]) => toastPlain(...a), { error: (...a: unknown[]) => toastError(...a), success: vi.fn() }) }));
+// next/image renders nothing useful in jsdom (and `fill` warns); stub to a plain img.
+vi.mock('next/image', () => ({
+  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  default: (props: Record<string, unknown>) => <img {...(props as Record<string, never>)} />,
+}));
 
 import { Conversation } from '../Conversation';
 
@@ -96,6 +101,35 @@ describe('Conversation', () => {
   it('respects bothReady=true from the server', () => {
     render(<Conversation {...base} bothReady={true} initialMessages={[]} />);
     expect(screen.getByText(/you’ve both said hi/i)).toBeInTheDocument();
+  });
+
+  // ——— coherence: locked threads never say "before you lock in" (live crawl 2026-06-10) ———
+
+  it('locked + not yet ready → "you\'re locked in. break the ice." (never "before you lock in")', () => {
+    render(<Conversation {...base} locked bothReady={false} initialMessages={[]} />);
+    expect(screen.getByText(/you’re locked in\. break the ice\./i)).toBeInTheDocument();
+    expect(screen.queryByText(/say hi before you lock in/i)).not.toBeInTheDocument();
+  });
+
+  it('locked + both said hi → the both-said-hi nudge wins (untouched)', () => {
+    render(<Conversation {...base} locked bothReady={true} initialMessages={[]} />);
+    expect(screen.getByText(/you’ve both said hi/i)).toBeInTheDocument();
+    expect(screen.queryByText(/break the ice/i)).not.toBeInTheDocument();
+  });
+
+  // ——— coherence: header avatar matches the inbox row's contract ———
+
+  it('header shows the clear photo when the page passes one (post-lock)', () => {
+    render(<Conversation {...base} locked counterpartPhotoUrl="/photos/robin_clear.jpg" initialMessages={[]} />);
+    const header = screen.getByRole('heading', { name: /robin/i }).closest('header') as HTMLElement;
+    expect(header.querySelector('img')).toHaveAttribute('src', '/photos/robin_clear.jpg');
+  });
+
+  it('header falls back to the initial chip when no photo (pre-lock blind contract)', () => {
+    render(<Conversation {...base} initialMessages={[]} />);
+    const header = screen.getByRole('heading', { name: /robin/i }).closest('header') as HTMLElement;
+    expect(header.querySelector('img')).toBeNull();
+    expect(header.querySelector('span[aria-hidden]')?.textContent).toBe('r');
   });
 
   it('hides the composer and shows a closed notice when not messageable', () => {

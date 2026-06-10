@@ -6,6 +6,14 @@
 // hidden). Edge failures arrive as MatchError keyed on the string `code`:
 // offer_expired toasts + bounces to the feed, account_gated swaps in an inline
 // AccountGate, everything else toasts in place. Barbiecore, lowercase copy.
+//
+// COHERENCE (live crawl 2026-06-10): this surface must agree with the DB. The
+// countdown + actions render ONLY while status==='active'. An 'accepted' offer
+// shows the locked-in state + a link to the match (the page loader passes the
+// lock id; /matches is the fallback). 'passed'/'expired' show honest terminal
+// copy + a feed link. The client-side `expired` flag stays an active-only
+// affordance (the DB hasn't flipped yet); server terminal states never mount
+// the countdown at all.
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,6 +49,9 @@ export interface OfferDetailProps {
   // blind/pre-swipe-only — T-03-16). PRE-lock: linkSlugs stays OFF on this
   // surface. null/omit ⇒ static header, never a dead tap.
   night?: NightDetailNight | null;
+  // For status==='accepted': the lock formed off this offer's date_instance, looked
+  // up by the page loader under the viewer's RLS. null ⇒ fall back to /matches.
+  lockId?: string | null;
 }
 
 const DATE_OPTS: Intl.DateTimeFormatOptions = {
@@ -51,7 +62,7 @@ const DATE_OPTS: Intl.DateTimeFormatOptions = {
   minute: '2-digit',
 };
 
-export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops, vibeTags, night = null }: OfferDetailProps) {
+export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date, stops, vibeTags, night = null, lockId = null }: OfferDetailProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -179,48 +190,71 @@ export function OfferDetail({ offerId, instanceId, expiresAt, host, date, stops,
           />
         )}
 
-        <div className="mt-4">
-          <ExpiryCountdown expiresAt={expiresAt} onExpire={() => setExpired(true)} />
-        </div>
+        {status === 'accepted' && (
+          <div className="mt-8 flex flex-col gap-3">
+            <p className="font-body text-base font-semibold lowercase text-shell-ink">you&rsquo;re locked in.</p>
+            <Link
+              href={lockId ? `/matches/${lockId}` : '/matches'}
+              className={cn(actionBtn, 'bg-shell-accent text-white focus-visible:ring-4 focus-visible:ring-shell-accent/40')}
+            >
+              see your match
+            </Link>
+          </div>
+        )}
 
-        {expired && (
-          <p className="mt-4 font-body text-sm text-shell-ink/70">
-            this one slipped away. <Link href="/feed" className="text-shell-accent underline">back to the feed</Link>
+        {(status === 'passed' || status === 'expired') && (
+          <p className="mt-8 font-body text-sm text-shell-ink/70">
+            {status === 'passed' ? 'you passed on this one.' : 'this one expired.'}{' '}
+            <Link href="/feed" className="text-shell-accent underline">back to the feed</Link>
           </p>
         )}
 
-        <div className="mt-8 flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={busy || expired}
-            onClick={() => void run(async () => {
-              const lockId = await acceptOffer(offerId);
-              router.push(`/matches/${lockId}`);
-            }, () => {})}
-            className={cn(actionBtn, 'bg-shell-accent text-white focus-visible:ring-4 focus-visible:ring-shell-accent/40')}
-          >
-            accept
-          </button>
-          <button
-            type="button"
-            disabled={busy || expired}
-            onClick={() => void run(() => passOffer(offerId), () => router.push('/feed'))}
-            className={cn(actionBtn, 'text-shell-ink/70 focus-visible:ring-4 focus-visible:ring-shell-ink/30')}
-          >
-            pass
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void run(
-              () => (instanceId ? withdraw(instanceId) : passOffer(offerId)),
-              () => router.push('/feed'),
+        {status === 'active' && (
+          <>
+            <div className="mt-4">
+              <ExpiryCountdown expiresAt={expiresAt} onExpire={() => setExpired(true)} />
+            </div>
+
+            {expired && (
+              <p className="mt-4 font-body text-sm text-shell-ink/70">
+                this one slipped away. <Link href="/feed" className="text-shell-accent underline">back to the feed</Link>
+              </p>
             )}
-            className="mt-1 min-h-[44px] font-body text-sm lowercase text-shell-ink/50 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/20 disabled:opacity-50"
-          >
-            not interested
-          </button>
-        </div>
+
+            <div className="mt-8 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={busy || expired}
+                onClick={() => void run(async () => {
+                  const newLockId = await acceptOffer(offerId);
+                  router.push(`/matches/${newLockId}`);
+                }, () => {})}
+                className={cn(actionBtn, 'bg-shell-accent text-white focus-visible:ring-4 focus-visible:ring-shell-accent/40')}
+              >
+                accept
+              </button>
+              <button
+                type="button"
+                disabled={busy || expired}
+                onClick={() => void run(() => passOffer(offerId), () => router.push('/feed'))}
+                className={cn(actionBtn, 'text-shell-ink/70 focus-visible:ring-4 focus-visible:ring-shell-ink/30')}
+              >
+                pass
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(
+                  () => (instanceId ? withdraw(instanceId) : passOffer(offerId)),
+                  () => router.push('/feed'),
+                )}
+                className="mt-1 min-h-[44px] font-body text-sm lowercase text-shell-ink/50 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/20 disabled:opacity-50"
+              >
+                not interested
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

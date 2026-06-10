@@ -8,12 +8,20 @@
 // failure.
 //
 // Soft rapport nudge (plan decision #2): purely informational. While both_ready is
-// false we show "say hi before you lock in"; once true a subtle "you've both said
-// hi 👋". It NEVER gates sending, accepting, or locking — no lock/accept code is
-// touched here.
+// false we show "say hi before you lock in" — unless the pair is ALREADY locked
+// (coherence fix, live crawl 2026-06-10), where the honest line is "you're locked
+// in. break the ice."; once both have sent, a subtle "you've both said hi 👋"
+// either way. It NEVER gates sending, accepting, or locking — no lock/accept code
+// is touched here.
+//
+// Header avatar (coherence fix): every other counterpart surface shows one. The
+// page passes counterpartPhotoUrl ONLY post-lock (clear photo, same source the
+// inbox ThreadRow renders); pre-lock it is null and the initial chip keeps the
+// blind contract — never a blurred photo pretending to be clear.
 //
 // Report (plan decision #5): a small "report" affordance on RECEIVED bubbles only.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { subscribeThreadMessages } from '@/lib/after5/realtime';
 import { reportMessage } from '@/lib/after5/chat';
@@ -28,6 +36,11 @@ export interface ConversationProps {
   threadId: string;
   viewerId: string;
   counterpartName: string;
+  // lock_id present on the thread — flips the rapport nudge to the locked variant.
+  locked?: boolean;
+  // Clear photo for the header avatar; the page passes this ONLY when locked
+  // (blind contract). null ⇒ initial chip.
+  counterpartPhotoUrl?: string | null;
   messageable: boolean;
   bothReady: boolean;
   initialMessages: MessageRow[];
@@ -78,6 +91,8 @@ export function Conversation({
   threadId,
   viewerId,
   counterpartName,
+  locked = false,
+  counterpartPhotoUrl = null,
   messageable,
   bothReady,
   initialMessages,
@@ -150,11 +165,27 @@ export function Conversation({
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[420px] flex-col px-4 py-4">
-      <header className="pb-3">
-        <h1 className="font-heading text-2xl lowercase text-shell-ink">{counterpartName}</h1>
-        <p className="font-body text-xs text-shell-ink/55">
-          {ready ? 'you’ve both said hi 👋' : 'say hi before you lock in'}
-        </p>
+      <header className="flex items-center gap-3 pb-3">
+        {/* Counterpart avatar (~40px per the design system). Clear photo only when
+            the page passed one (post-lock, the inbox ThreadRow's source); otherwise
+            the initial chip — the blind contract pre-lock. */}
+        <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-full bg-shell-pink ring-2 ring-white">
+          <span
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center font-heading text-lg lowercase text-shell-accent"
+          >
+            {(counterpartName.trim()[0] ?? '?').toLowerCase()}
+          </span>
+          {counterpartPhotoUrl && (
+            <Image src={counterpartPhotoUrl} alt="" fill sizes="40px" className="object-cover" />
+          )}
+        </span>
+        <div className="min-w-0">
+          <h1 className="truncate font-heading text-2xl lowercase text-shell-ink">{counterpartName}</h1>
+          <p className="font-body text-xs text-shell-ink/55">
+            {ready ? 'you’ve both said hi 👋' : locked ? 'you’re locked in. break the ice.' : 'say hi before you lock in'}
+          </p>
+        </div>
       </header>
 
       <ul

@@ -18,10 +18,11 @@ import { isMessageable, type MessageRow } from '../thread-view';
 
 export const dynamic = 'force-dynamic';
 
-// No clear_photo_url here: this page renders only the first name, and the blind
-// contract says never fetch the clear photo pre-lock (column projection is the
-// UI layer's job — profiles RLS opens the row at offer-stage with no column revoke).
-type ProfileLite = { id: string; first_name: string | null };
+// clear_photo_url is fetched but PROJECTED only post-lock (the lock_id gate below),
+// the same contract as the unified inbox: profiles RLS opens the row at offer-stage
+// with no column revoke, so the blind contract is this layer's job. Pre-lock the
+// header avatar stays an initial chip.
+type ProfileLite = { id: string; first_name: string | null; clear_photo_url: string | null };
 
 function one<T>(v: T | T[] | null | undefined): T | null {
   if (Array.isArray(v)) return v[0] ?? null;
@@ -46,8 +47,8 @@ export default async function ConversationPage({
       id, state, both_ready, revoked_at, lock_id,
       offer:offers!chat_threads_offer_id_fkey (
         creator_id, candidate_id,
-        creator:profiles!offers_creator_id_fkey ( id, first_name ),
-        candidate:profiles!offers_candidate_id_fkey ( id, first_name )
+        creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
+        candidate:profiles!offers_candidate_id_fkey ( id, first_name, clear_photo_url )
       )
     `)
     .eq('id', threadId)
@@ -116,6 +117,10 @@ export default async function ConversationPage({
         threadId={thread.id}
         viewerId={user.id}
         counterpartName={counterpart?.first_name ?? 'someone'}
+        locked={!!thread.lock_id}
+        // Blind contract (same gate as the inbox ThreadRow): clear photo ONLY once
+        // the night is locked; pre-lock the header renders the initial chip.
+        counterpartPhotoUrl={thread.lock_id ? counterpart?.clear_photo_url ?? null : null}
         messageable={isMessageable(thread.state, thread.revoked_at)}
         bothReady={thread.both_ready}
         initialMessages={(msgs ?? []) as MessageRow[]}

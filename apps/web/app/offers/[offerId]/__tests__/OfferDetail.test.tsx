@@ -202,4 +202,44 @@ describe('OfferDetail', () => {
     expect(screen.queryByRole('button', { name: /see the full plan/i })).not.toBeInTheDocument();
     expect(screen.getByText('the night')).toBeInTheDocument();
   });
+
+  // ——— coherence: the surface must agree with the DB status (live crawl 2026-06-10) ———
+
+  it('active status renders the live countdown', () => {
+    render(<OfferDetail {...props({ status: 'active' })} />);
+    expect(screen.getByRole('timer')).toBeInTheDocument();
+  });
+
+  it('accepted status renders the locked-in state linking to the match, no countdown, no actions', () => {
+    render(<OfferDetail {...props({ status: 'accepted', lockId: 'lock-9' })} />);
+    expect(screen.getByText(/you’re locked in\./i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /see your match/i })).toHaveAttribute('href', '/matches/lock-9');
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^pass$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /not interested/i })).not.toBeInTheDocument();
+  });
+
+  it('accepted status without a lock id falls back to /matches', () => {
+    render(<OfferDetail {...props({ status: 'accepted', lockId: null })} />);
+    expect(screen.getByRole('link', { name: /see your match/i })).toHaveAttribute('href', '/matches');
+  });
+
+  it('passed status renders honest terminal copy + a feed link, no countdown, no actions', () => {
+    render(<OfferDetail {...props({ status: 'passed' })} />);
+    expect(screen.getByText(/you passed on this one\./i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to the feed/i })).toHaveAttribute('href', '/feed');
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /not interested/i })).not.toBeInTheDocument();
+  });
+
+  it('expired status renders honest terminal copy + a feed link, no countdown, no actions', () => {
+    render(<OfferDetail {...props({ status: 'expired' })} />);
+    expect(screen.getByText(/this one expired\./i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to the feed/i })).toHaveAttribute('href', '/feed');
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /not interested/i })).not.toBeInTheDocument();
+  });
 });

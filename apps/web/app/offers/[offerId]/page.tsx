@@ -86,10 +86,34 @@ export default async function OfferPage({
   // OfferDetail applies the softer rung-2 CSS blur on top of this signed blurred url.
   // Degrade to null on a missing path or a signing hiccup so OfferDetail falls back to
   // the placeholder; never crash the offer page.
+  // COHERENCE (same class as da08d7d on the lock hero): a rooted path ('/...') is a
+  // public-asset blurred mirror (seed/legacy) — render directly; anything else is a
+  // private storage path — sign it. Either way the value IS the blurred variant
+  // (profiles.blurred_photo_url), so the blind contract holds.
   let hostPhotoUrl: string | null = null;
   if (host.blurred_photo_url) {
-    const [signed] = await signBlurredUrls(supabase, [host.blurred_photo_url]).catch(() => []);
-    hostPhotoUrl = signed ?? null;
+    if (host.blurred_photo_url.startsWith('/')) {
+      hostPhotoUrl = host.blurred_photo_url;
+    } else {
+      const [signed] = await signBlurredUrls(supabase, [host.blurred_photo_url]).catch(() => []);
+      hostPhotoUrl = signed ?? null;
+    }
+  }
+
+  // COHERENCE (live crawl 2026-06-10): an accepted offer renders the locked-in state,
+  // which links to the match. The lock row is the one on this offer's date_instance
+  // where the viewer is a party (locks_party_read RLS enforces the same; the explicit
+  // party filter keeps the intent readable). unique(date_instance_id) ⇒ at most one.
+  // A miss degrades to null and OfferDetail links to /matches instead.
+  let lockId: string | null = null;
+  if (offer.status === 'accepted' && offer.date_instance_id) {
+    const { data: lock } = await supabase
+      .from('locks')
+      .select('id')
+      .eq('date_instance_id', offer.date_instance_id)
+      .or(`creator_id.eq.${user.id},matched_user_id.eq.${user.id}`)
+      .maybeSingle();
+    lockId = lock?.id ?? null;
   }
 
   // E13: render the matched night's full plan. Second RLS read — the forked
@@ -157,6 +181,7 @@ export default async function OfferPage({
         stops={stops}
         vibeTags={vibeTags}
         night={night}
+        lockId={lockId}
       />
     </>
   );
