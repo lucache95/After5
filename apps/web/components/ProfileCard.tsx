@@ -69,6 +69,11 @@ export function ProfileCard({
         </div>
       ) : (
         <div
+          // data-vaul-no-drag: inside a vaul sheet (SelfViewSheet, RevealModal) the
+          // drawer's drag handler only recognizes VERTICALLY scrollable ancestors, so
+          // horizontal swipes on this strip would start a drawer drag instead of
+          // panning the carousel. The attribute is inert outside vaul.
+          data-vaul-no-drag
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pt-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label={`${name}'s photos`}

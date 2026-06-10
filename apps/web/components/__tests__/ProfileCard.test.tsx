@@ -30,6 +30,28 @@ describe('ProfileCard', () => {
     expect(screen.getByText('live music')).toBeInTheDocument();
   });
 
+  it('renders a scroll-snap photo carousel that opts out of vaul drag', () => {
+    render(
+      <ProfileCard
+        name="Maya"
+        age={29}
+        place="glenmore"
+        photos={['https://x/1', 'https://x/2']}
+        vibe_tags={[]}
+        prompts={[]}
+      />,
+    );
+    // jsdom can't exercise scroll-snap, but the container's structure must hold:
+    // horizontal scroll + snap classes, and data-vaul-no-drag so swipes inside a
+    // vaul sheet pan the strip instead of dragging the drawer.
+    const strip = screen.getByRole('group', { name: /maya's photos/i });
+    expect(strip).toHaveAttribute('data-vaul-no-drag');
+    expect(strip.className).toContain('overflow-x-auto');
+    expect(strip.className).toContain('snap-x');
+    expect(strip.className).toContain('snap-mandatory');
+    expect(strip.querySelectorAll('.snap-center')).toHaveLength(2);
+  });
+
   it('renders a gradient fallback (no img) when there are no photos', () => {
     render(<ProfileCard name="Sam" age={null} place={null} photos={[]} vibe_tags={[]} prompts={[]} />);
     expect(screen.queryAllByRole('img')).toHaveLength(0);

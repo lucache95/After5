@@ -42,26 +42,32 @@ export function SelfViewSheet({
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
+        {/* vaul sets touch-action:none on Drawer.Content and treats a scrollable
+            role="dialog" as a drag target, so Content must NOT be the scroll
+            container itself (content past the first screen gets clipped). Same
+            pattern as feed/FilterSheet: flex column Content + inner overflow-y-auto. */}
         <Drawer.Content
           aria-label="as others see it"
-          className="fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-3xl bg-shell-base p-4 pb-10 outline-none"
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] w-full max-w-[420px] flex-col overflow-hidden rounded-t-3xl bg-shell-base outline-none"
         >
           <Drawer.Title className="sr-only">as others see it</Drawer.Title>
           <Drawer.Description className="sr-only">
             this is you when you come up in someone&apos;s feed.
           </Drawer.Description>
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-shell-ink/15" aria-hidden />
-          <ProfileCard
-            name={name}
-            age={age}
-            place={place}
-            pronouns={pronouns}
-            occupation={occupation}
-            height_cm={height_cm}
-            photos={photos}
-            vibe_tags={vibe_tags}
-            prompts={prompts}
-          />
+          <div className="mx-auto mb-3 mt-4 h-1.5 w-12 shrink-0 rounded-full bg-shell-ink/15" aria-hidden />
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
+            <ProfileCard
+              name={name}
+              age={age}
+              place={place}
+              pronouns={pronouns}
+              occupation={occupation}
+              height_cm={height_cm}
+              photos={photos}
+              vibe_tags={vibe_tags}
+              prompts={prompts}
+            />
+          </div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
