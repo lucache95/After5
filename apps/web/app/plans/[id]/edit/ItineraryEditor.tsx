@@ -18,6 +18,7 @@ import { EditableStopCard } from './EditableStopCard';
 import { CoverPicker } from './CoverPicker';
 import { CoverUploader } from './CoverUploader';
 import { CustomVenueSearch } from './CustomVenueSearch';
+import { ImproveControls } from '@/app/create/ImproveControls';
 
 // Stable drag keys decoupled from stop content (place_id can be blank on a new
 // stop), so Reorder identity survives renames + reorders.
@@ -28,11 +29,15 @@ export function ItineraryEditor({
   initialStops,
   initialTitle,
   initialCover,
+  cityId = null,
 }: {
   itineraryId: string;
   initialStops: Stop[];
   initialTitle: string | null;
   initialCover: string | null;
+  /** Present on generated nights (AI-created itineraries with a city seed).
+   * Null on blank custom canvases. Used to gate ImproveControls visibility. */
+  cityId?: string | null;
 }) {
   const reduce = useReducedMotion();
   const router = useRouter();
@@ -43,6 +48,7 @@ export function ItineraryEditor({
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCover);
   const [saving, setSaving] = useState(false);
   const [nextKey, setNextKey] = useState(initialStops.length);
+  const [titleBusy, setTitleBusy] = useState(false);
 
   const stops = rows.map((r) => r.stop);
   const photos = stops
@@ -79,6 +85,46 @@ export function ItineraryEditor({
 
   function handleReorder(next: Row[]) {
     setRows(next);
+  }
+
+  // True when at least one stop has a non-empty place_name — gates the title chips.
+  const hasNamedStop = stops.some((s) => s.place_name?.trim());
+
+  // Tone values mapped to chip labels. 'another take' sends no tone (undefined).
+  const titleChips: Array<{ label: string; tone?: 'romantic' | 'playful' | 'casual' }> = [
+    { label: 'another take' },
+    { label: 'more romantic', tone: 'romantic' },
+    { label: 'more playful', tone: 'playful' },
+    { label: 'more casual', tone: 'casual' },
+  ];
+
+  async function handleTitleTake(tone?: 'romantic' | 'playful' | 'casual') {
+    if (titleBusy) return;
+    setTitleBusy(true);
+    try {
+      const client = browserAfter5Client();
+      const body: Record<string, unknown> = { action: 'regenerate_title', itinerary_id: itineraryId };
+      if (tone) body.tone = tone;
+      const { data, error } = await client.functions.invoke<{ ok: boolean; title?: string; hook?: string; error?: string; code?: string }>('generate-plan', { body });
+      if (error || !data?.ok || !data.title) {
+        const msg = (data as { error?: string } | null)?.error ?? 'that one slipped away. try again?';
+        toast.error(msg);
+        return;
+      }
+      setTitle(data.title);
+      toast.success('new title.');
+    } finally {
+      setTitleBusy(false);
+    }
+  }
+
+  // Called by ImproveControls when the server returns a coherent updated stop list.
+  // MVP caveat: improve actions operate on the server-persisted stop order, so any
+  // unsaved local reorders can momentarily diverge until rows are rebuilt here.
+  function handleImproveUpdated(newStops: Stop[]) {
+    const k = nextKey;
+    setRows(newStops.map((stop, i) => ({ key: `s${k + i}`, stop })));
+    setNextKey(k + newStops.length);
   }
 
   // Append a custom venue (from the Google Places proxy) as an inline stop, then
@@ -164,6 +210,23 @@ export function ItineraryEditor({
         />
       </label>
 
+      {/* AI title takes — only shown when at least one stop has a name */}
+      {hasNamedStop && (
+        <div className="mt-3 flex flex-wrap gap-2" aria-label="title takes">
+          {titleChips.map(({ label, tone }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => handleTitleTake(tone)}
+              disabled={titleBusy}
+              className="inline-flex min-h-[44px] items-center rounded-full border border-shell-ink/15 bg-white/70 px-4 font-body text-sm lowercase text-shell-ink transition hover:border-shell-accent/50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <section className="mt-6">
         <h2 className="mb-2 font-heading text-lg lowercase text-shell-ink">stops</h2>
         <Reorder.Group axis="y" values={rows} onReorder={handleReorder} className="space-y-3">
@@ -215,6 +278,18 @@ export function ItineraryEditor({
           </div>
         )}
       </section>
+
+      {/* ImproveControls — only for generated nights (cityId present). Must sit
+          BEFORE the publish CTA to satisfy FLOW-01. Operates on server-persisted
+          stop order; unsaved local reorders diverge momentarily until onUpdated
+          rebuilds rows from the canonical returned stops. */}
+      {cityId !== null && (
+        <ImproveControls
+          itineraryId={itineraryId}
+          stops={stops}
+          onUpdated={handleImproveUpdated}
+        />
+      )}
 
       <button
         type="button"

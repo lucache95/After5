@@ -21,7 +21,37 @@ vi.mock('@after5/api-client', () => ({
 // the client mock is complete even though render alone never calls it.
 const storageUpload = vi.fn().mockResolvedValue({ error: null });
 const storage = { from: () => ({ upload: storageUpload, getPublicUrl: () => ({ data: { publicUrl: 'https://x/cover.jpg' } }) }) };
-vi.mock('@/lib/after5/client', () => ({ browserAfter5Client: () => ({ from, storage, auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } }) }));
+// invoke is used by title-takes chips and (via ImproveControls) the improve loop.
+const invoke = vi.fn();
+vi.mock('@/lib/after5/client', () => ({
+  browserAfter5Client: () => ({ from, storage, auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) }, functions: { invoke: (...a: unknown[]) => invoke(...a) } }),
+}));
+
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+vi.mock('sonner', () => ({
+  toast: {
+    loading: () => 't',
+    success: (...a: unknown[]) => toastSuccess(...a),
+    error: (...a: unknown[]) => toastError(...a),
+    dismiss: vi.fn(),
+  },
+}));
+
+// ImproveControls is a real component but pulls in the same mocked client above.
+// We vi.mock it to a light marker so heavy internal deps (if any) don't bleed in.
+// Test 4 uses the marker copy to assert presence/order; test 5 invokes onUpdated.
+vi.mock('@/app/create/ImproveControls', () => ({
+  ImproveControls: ({ onUpdated, stops }: { itineraryId: string; stops: { place_name?: string }[]; onUpdated: (s: unknown[]) => void }) => (
+    <div data-testid="improve-controls">
+      <p>not quite right?</p>
+      <button type="button" onClick={() => onUpdated([{ place_id: 'new1', place_name: 'new venue', start_time: '20:00', duration_min: 60, estimated_cost_pp: 0 }])}>
+        trigger-update
+      </button>
+      <span data-testid="improve-stop-count">{stops.length}</span>
+    </div>
+  ),
+}));
 vi.mock('framer-motion', () => ({
   Reorder: {
     Group: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -141,5 +171,122 @@ describe('ItineraryEditor', () => {
     // best-effort queue record fired
     await waitFor(() => expect(from).toHaveBeenCalledWith('custom_venue_submissions'));
     expect(insert).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AI title takes (CHANGE 2)
+// ---------------------------------------------------------------------------
+
+const namedStop = { place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 60, estimated_cost_pp: 20 };
+
+describe('AI title takes', () => {
+  beforeEach(() => {
+    invoke.mockReset();
+    toastSuccess.mockReset();
+    toastError.mockReset();
+  });
+
+  it('test 1 — chips render when a stop has a name; "another take" success → title input becomes returned title', async () => {
+    invoke.mockResolvedValue({ data: { ok: true, title: 'velvet dusk', hook: 'wine then water' }, error: null });
+
+    render(<ItineraryEditor itineraryId="itin-t1" initialTitle="old title" initialCover={null} initialStops={[namedStop]} />);
+
+    // getByRole throws if not found — sufficient proof of presence
+    const chip = screen.getByRole('button', { name: /another take/i });
+    expect(chip).toBeTruthy();
+
+    await userEvent.click(chip);
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('generate-plan', {
+      body: { action: 'regenerate_title', itinerary_id: 'itin-t1' },
+    }));
+
+    // title input updated to returned title
+    await waitFor(() => expect((screen.getByRole('textbox', { name: /title/i }) as HTMLInputElement).value).toBe('velvet dusk'));
+    expect(toastSuccess).toHaveBeenCalledWith('new title.');
+  });
+
+  it('test 2 — title chip failure → toast.error called, title left unchanged', async () => {
+    invoke.mockResolvedValue({ data: { ok: false, error: 'the server is grumpy.' }, error: null });
+
+    render(<ItineraryEditor itineraryId="itin-t2" initialTitle="original title" initialCover={null} initialStops={[namedStop]} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /another take/i }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('the server is grumpy.'));
+    expect((screen.getByRole('textbox', { name: /title/i }) as HTMLInputElement).value).toBe('original title');
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('test 3 — no named stops → no "another take" chip', () => {
+    const blankStop = { place_id: '', place_name: '', start_time: '19:00', duration_min: 60, estimated_cost_pp: 0 };
+    render(<ItineraryEditor itineraryId="itin-t3" initialTitle={null} initialCover={null} initialStops={[blankStop]} />);
+
+    // queryByRole returns null when absent — check directly
+    expect(screen.queryByRole('button', { name: /another take/i })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ImproveControls mounting (CHANGE 3)
+// ---------------------------------------------------------------------------
+
+describe('ImproveControls mounting', () => {
+  it('test 4a — cityId present → ImproveControls marker visible AND before publish CTA', () => {
+    render(
+      <ItineraryEditor
+        itineraryId="itin-ic1"
+        initialTitle="t"
+        initialCover={null}
+        initialStops={[namedStop]}
+        cityId="city-123"
+      />,
+    );
+
+    // getByText/getByTestId throws if absent — proof of presence
+    expect(screen.getByText(/not quite right\?/i)).toBeTruthy();
+
+    // ImproveControls marker precedes the publish button in DOM order
+    const improveSection = screen.getByTestId('improve-controls');
+    const publishBtn = screen.getByRole('button', { name: /publish this night/i });
+    expect(improveSection.compareDocumentPosition(publishBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('test 4b — cityId null → ImproveControls absent', () => {
+    render(
+      <ItineraryEditor
+        itineraryId="itin-ic2"
+        initialTitle="t"
+        initialCover={null}
+        initialStops={[namedStop]}
+        cityId={null}
+      />,
+    );
+
+    // queryBy returns null when absent
+    expect(screen.queryByTestId('improve-controls')).toBeNull();
+    expect(screen.queryByText(/not quite right\?/i)).toBeNull();
+  });
+
+  it('test 5 — onUpdated from ImproveControls rebuilds the visible stop list', async () => {
+    render(
+      <ItineraryEditor
+        itineraryId="itin-ic3"
+        initialTitle="t"
+        initialCover={null}
+        initialStops={[namedStop]}
+        cityId="city-456"
+      />,
+    );
+
+    // initially one stop input with value 'clay'
+    expect((screen.getAllByLabelText(/^name$/i)[0] as HTMLInputElement).value).toBe('clay');
+
+    // trigger the mock's onUpdated with a new stop list
+    await userEvent.click(screen.getByRole('button', { name: /trigger-update/i }));
+
+    // editor now shows the new stop name
+    await waitFor(() => expect((screen.getAllByLabelText(/^name$/i)[0] as HTMLInputElement).value).toBe('new venue'));
   });
 });

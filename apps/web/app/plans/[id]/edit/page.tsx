@@ -16,7 +16,7 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
 
   const { data: it } = await supabase
     .from('itineraries')
-    .select('id,user_id,title,cover_image_url,stops')
+    .select('id,user_id,title,cover_image_url,stops,city_id')
     .eq('id', id)
     .maybeSingle();
   if (!it || it.user_id !== user.id) notFound();
@@ -27,6 +27,7 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
       initialStops={(Array.isArray(it.stops) ? it.stops : []) as unknown as Stop[]}
       initialTitle={it.title}
       initialCover={it.cover_image_url}
+      cityId={it.city_id ?? null}
     />
   );
 }
