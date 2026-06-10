@@ -15,8 +15,15 @@
 //   * Real (non-seed) nights are untouched — cleanup only removes @after5.seed
 //     hosts and their rows.
 //
+// 2026-06-09 portraits: the 3 hosts now carry REAL portrait photos (storage
+// paths under profile-photos/<uid>/, written by scripts/seed-host-portraits.mjs).
+// Reseeds REUSE the host accounts (stable uids) instead of delete/recreate, and
+// never touch the photo columns — a non-storage path like '/places/...' makes
+// the feed's signBlurredUrls throw, which drops EVERY card's avatar.
+//
 // Reads SUPABASE_SECRET_KEY (prod service role) + the anon key + the prod URL from
-// apps/web/.env.local. Idempotent: deletes prior seed hosts + their seed nights first.
+// apps/web/.env.local. Idempotent: clears prior seed nights (and any seed users
+// that are NOT the 3 hosts) first.
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 
@@ -31,7 +38,6 @@ const ANON = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? env.NEXT_PUBLIC_SUPABAS
 if (!URL_ || !SERVICE || !ANON) throw new Error('missing prod url / service / anon key in apps/web/.env.local');
 const sb = createClient(URL_, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 
-const SEED_PHOTO = '/places/place-walk.jpg';
 const BROAD_PREFS = ['man', 'woman', 'nonbinary'];
 
 // 3 broadly-visible Kelowna seed hosts: mixed gender, wide prefs/age, so the
@@ -68,30 +74,43 @@ async function cityIds() {
 }
 
 async function cleanup() {
-  // delete prior seed hosts (and cascade their date_instances/itineraries via FKs).
+  // Clear prior seed nights for ALL seed users, but only DELETE accounts that
+  // aren't the 3 hosts: the hosts keep stable uids so their portrait storage
+  // paths (profiles.clear/blurred_photo_url + profile_photos rows, written by
+  // scripts/seed-host-portraits.mjs) stay valid across reseeds.
+  const hostEmails = new Set(HOSTS.map((h) => h.email));
   const { data: list } = await sb.auth.admin.listUsers({ perPage: 1000 });
   const seedUsers = (list?.users ?? []).filter((u) => (u.email ?? '').endsWith('@after5.seed'));
+  let removed = 0;
   for (const u of seedUsers) {
     // remove their seed itineraries first (date_instances cascade on itinerary delete)
     await sb.from('itineraries').delete().eq('user_id', u.id);
     await sb.from('date_instances').delete().eq('creator_id', u.id);
-    await sb.auth.admin.deleteUser(u.id);
+    if (!hostEmails.has(u.email)) { await sb.auth.admin.deleteUser(u.id); removed++; }
   }
-  return seedUsers.length;
+  return removed;
 }
 
 async function makeHost(h, cityId) {
-  const { data, error } = await sb.auth.admin.createUser({ email: h.email, email_confirm: true });
-  if (error || !data.user) throw new Error(`createUser ${h.email}: ${error?.message}`);
-  const id = data.user.id;
+  // Reuse the existing host account when present (preserves uid + portraits).
+  const { data: list } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  let id = (list?.users ?? []).find((u) => u.email === h.email)?.id;
+  if (!id) {
+    const { data, error } = await sb.auth.admin.createUser({ email: h.email, email_confirm: true });
+    if (error || !data.user) throw new Error(`createUser ${h.email}: ${error?.message}`);
+    id = data.user.id;
+  }
   // birthdate FIRST (age-gate trigger gates dating_enabled).
   let r = await sb.from('profiles_private').upsert({ user_id: id, birthdate: h.birthdate }, { onConflict: 'user_id' });
   if (r.error) throw new Error(`profiles_private ${h.email}: ${r.error.message}`);
+  // NOTE: photo columns are intentionally NOT set here. Portraits are owned by
+  // scripts/seed-host-portraits.mjs (real storage paths). Writing a public-asset
+  // path like '/places/...' breaks signBlurredUrls for the WHOLE feed. A brand
+  // new host simply shows the letter monogram until the portrait script runs.
   r = await sb.from('profiles').update({
     first_name: h.name, gender: h.gender, gender_preferences: BROAD_PREFS,
     age_pref: '[18,100)', primary_city_id: cityId, distance_pref_km: 60,
     vibe_tags: ['cozy', 'creative', 'nightlife'],
-    clear_photo_url: SEED_PHOTO, blurred_photo_url: SEED_PHOTO,
     verification: 'verified', dating_enabled: true,
     onboarding_step: 'done', onboarding_completed_at: new Date().toISOString(),
   }).eq('id', id);
@@ -125,12 +144,12 @@ async function generate(g, attempt = 1) {
 
 async function main() {
   const removed = await cleanup();
-  console.log(`cleanup: removed ${removed} prior seed host(s)`);
+  console.log(`cleanup: cleared prior seed nights, removed ${removed} non-host seed user(s)`);
   const cities = await cityIds();
 
   const hostIds = {};
   for (const h of HOSTS) hostIds[h.key] = await makeHost(h, cities[h.city]);
-  console.log(`created ${HOSTS.length} seed hosts`);
+  console.log(`ensured ${HOSTS.length} seed hosts (reused if existing — portraits preserved)`);
 
   // generate SEQUENTIALLY with spacing (rate-limit hazard, 2026-06-08).
   const itins = [];
