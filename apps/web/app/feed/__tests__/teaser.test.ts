@@ -4,7 +4,12 @@ import { describe, it, expect, vi } from 'vitest';
 // tested without env vars (teaserFeed itself is exercised by the e2e/local stack).
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: vi.fn() }));
 
-import { toTeaserNight, type TeaserRow } from '../teaser';
+import {
+  toTeaserNight, dealbreakerBlocks, teaserVisible,
+  type TeaserRow, type TeaserViewer,
+} from '../teaser';
+
+const NO_FACTS = { dealbreakers: null, smokes: null, drinks: null, has_pets: null, wants_kids: null };
 
 const row = (over: Partial<TeaserRow> = {}): TeaserRow => ({
   id: 'di-1',
@@ -20,7 +25,7 @@ const row = (over: Partial<TeaserRow> = {}): TeaserRow => ({
   },
   cities: { name: 'Kelowna' },
   places: { neighborhood: 'Pandosy' },
-  creator: { blurred_photo_url: 'u1/p1_blurred.jpg', first_name: 'Jordan', age: 30 },
+  creator: { blurred_photo_url: 'u1/p1_blurred.jpg', first_name: 'Jordan', age: 30, ...NO_FACTS },
   ...over,
 });
 
@@ -63,5 +68,69 @@ describe('toTeaserNight (launch F1 — pre-verification teaser feed)', () => {
     expect(n.venue_neighborhood).toBeNull();
     expect(n.host_first_name).toBeNull();
     expect(n.host_blurred_photo_url).toBeNull();
+  });
+
+  it('DLB: never projects the server-only dealbreaker/fact filter inputs', () => {
+    const n = toTeaserNight(row());
+    expect(Object.keys(n)).not.toEqual(
+      expect.arrayContaining(['dealbreakers', 'smokes', 'drinks', 'has_pets', 'wants_kids']),
+    );
+  });
+});
+
+// ── DLB: app-side mirror of SQL dealbreaker_blocks (dlb02 migration) ──────────
+describe('dealbreakerBlocks (mirror of the SQL helper)', () => {
+  const facts = (over: Partial<TeaserViewer> = {}) =>
+    ({ smokes: null, drinks: null, has_pets: null, wants_kids: null, ...over });
+
+  it.each([
+    ['smoking', { smokes: true }],
+    ['drinks_alcohol', { drinks: true }],
+    ['no_alcohol', { drinks: false }],
+    ['has_pets', { has_pets: true }],
+    ['no_pets', { has_pets: false }],
+    ['wants_kids', { wants_kids: true }],
+    ['no_kids', { wants_kids: false }],
+  ] as const)('%s blocks its offending fact value', (tag, offending) => {
+    expect(dealbreakerBlocks([tag], facts(offending))).toBe(true);
+  });
+
+  it('null (unanswered) facts NEVER block, even with every tag set', () => {
+    const all = ['smoking', 'drinks_alcohol', 'no_alcohol', 'has_pets', 'no_pets', 'wants_kids', 'no_kids'];
+    expect(dealbreakerBlocks(all, facts())).toBe(false);
+  });
+
+  it('wrong-polarity facts pass', () => {
+    expect(dealbreakerBlocks(['smoking'], facts({ smokes: false }))).toBe(false);
+    expect(dealbreakerBlocks(['no_alcohol'], facts({ drinks: true }))).toBe(false);
+  });
+
+  it('empty / null dealbreakers block nothing, even with offending facts', () => {
+    const offending = facts({ smokes: true, drinks: true, has_pets: true, wants_kids: true });
+    expect(dealbreakerBlocks([], offending)).toBe(false);
+    expect(dealbreakerBlocks(null, offending)).toBe(false);
+    expect(dealbreakerBlocks(undefined, offending)).toBe(false);
+  });
+});
+
+describe('teaserVisible (mutual gate, both directions)', () => {
+  const viewer = (over: Partial<TeaserViewer> = {}): TeaserViewer =>
+    ({ dealbreakers: null, smokes: null, drinks: null, has_pets: null, wants_kids: null, ...over });
+
+  it('viewer hard no hides an offending host', () => {
+    const r = row({ creator: { blurred_photo_url: null, first_name: 'J', age: 30, ...NO_FACTS, smokes: true } });
+    expect(teaserVisible(r, viewer({ dealbreakers: ['smoking'] }))).toBe(false);
+  });
+
+  it("host hard no mirrors back on the viewer's facts", () => {
+    const r = row({ creator: { blurred_photo_url: null, first_name: 'J', age: 30, ...NO_FACTS, dealbreakers: ['no_alcohol'] } });
+    expect(teaserVisible(r, viewer({ drinks: false }))).toBe(false);
+    expect(teaserVisible(r, viewer({ drinks: true }))).toBe(true);
+    expect(teaserVisible(r, viewer())).toBe(true); // unanswered never trips
+  });
+
+  it('no viewer row / no dealbreakers = everything visible', () => {
+    expect(teaserVisible(row(), null)).toBe(true);
+    expect(teaserVisible(row(), viewer())).toBe(true);
   });
 });

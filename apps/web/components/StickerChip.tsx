@@ -6,18 +6,21 @@ import { cn } from '@/lib/cn';
 import { stickerRotation } from '@/lib/sticker';
 
 export function StickerChip({
-  label, selected, onToggle, role,
+  label, selected, onToggle, role, ariaLabel,
 }: {
   label: string;
   selected: boolean;
   onToggle: () => void;
   role?: 'radio' | 'checkbox';
+  /** Disambiguates short repeated labels (the yes/no fact pairs) for AT. */
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       role={role}
       aria-checked={selected}
+      aria-label={ariaLabel}
       onClick={onToggle}
       style={{ transform: `rotate(${stickerRotation(label)}deg)` }}
       className={cn(

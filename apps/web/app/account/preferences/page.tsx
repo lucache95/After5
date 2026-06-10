@@ -22,7 +22,7 @@ export default async function AccountPreferencesPage() {
 
   const { data: p } = await supabase
     .from('profiles')
-    .select('gender, gender_preferences, age_pref, distance_pref_km, dealbreakers, dating_enabled')
+    .select('gender, gender_preferences, age_pref, distance_pref_km, dealbreakers, smokes, drinks, has_pets, wants_kids, dating_enabled')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -34,6 +34,10 @@ export default async function AccountPreferencesPage() {
     age_max: age.max,
     distance_pref_km: p?.distance_pref_km ?? 40,
     dealbreakers: (p?.dealbreakers as string[] | null) ?? [],
+    smokes: p?.smokes ?? null,
+    drinks: p?.drinks ?? null,
+    has_pets: p?.has_pets ?? null,
+    wants_kids: p?.wants_kids ?? null,
   };
 
   return (

@@ -22,6 +22,23 @@ describe('savePreferences', () => {
     expect(patch.gender).toBe('woman');
     expect(patch.distance_pref_km).toBe(35);
     expect(patch.age_pref).toBe('[25,40]');
+    // DLB facts omitted → columns left untouched (not nulled out)
+    expect('smokes' in patch).toBe(false);
+    expect('wants_kids' in patch).toBe(false);
+  });
+
+  it('DLB: writes supplied lifestyle facts, including explicit null (clear answer)', async () => {
+    const { client, update } = fakeClient({});
+    await savePreferences(client, 'user-1', {
+      gender: 'woman', gender_preferences: ['man'],
+      age_min: 25, age_max: 40, distance_pref_km: 35, dealbreakers: [],
+      smokes: true, drinks: null, has_pets: false,
+    });
+    const patch = update.mock.calls[0]![0];
+    expect(patch.smokes).toBe(true);
+    expect(patch.drinks).toBeNull();
+    expect(patch.has_pets).toBe(false);
+    expect('wants_kids' in patch).toBe(false); // undefined = untouched
   });
 });
 describe('getMyBadge', () => {

@@ -18,6 +18,10 @@ export const DealbreakerSchema = z.enum([
   'smoking', 'wants_kids', 'no_kids', 'drinks_alcohol', 'no_alcohol', 'has_pets', 'no_pets',
 ]);
 
+// DLB: an optional self-reported lifestyle fact. null = unanswered — a null fact
+// never trips anyone's dealbreaker (IS TRUE/IS FALSE semantics in the feed gate).
+export const LifestyleFactSchema = z.boolean().nullable().default(null);
+
 export const PreferencesInputSchema = z
   .object({
     gender: GenderSchema,
@@ -26,6 +30,11 @@ export const PreferencesInputSchema = z
     age_max: z.number().int().min(MIN_AGE).max(MAX_AGE),
     distance_pref_km: z.number().int().min(1).max(150),
     dealbreakers: z.array(DealbreakerSchema).max(8).default([]),
+    // DLB "about you" facts — what OTHER people's dealbreakers check against.
+    smokes: LifestyleFactSchema,
+    drinks: LifestyleFactSchema,
+    has_pets: LifestyleFactSchema,
+    wants_kids: LifestyleFactSchema,
   })
   .refine((p) => p.age_max >= p.age_min, {
     message: 'age_max must be >= age_min',

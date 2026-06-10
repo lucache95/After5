@@ -40,6 +40,14 @@ export interface TeaserRow {
     blurred_photo_url: string | null;
     first_name: string | null;
     age: number | null;
+    // DLB: host dealbreakers + lifestyle facts, SERVER-ONLY filter inputs.
+    // toTeaserNight never projects them — the FeedNight sent to the client
+    // stays the same strict subset of the RPC's disclosure.
+    dealbreakers: string[] | null;
+    smokes: boolean | null;
+    drinks: boolean | null;
+    has_pets: boolean | null;
+    wants_kids: boolean | null;
   } | null;
 }
 
@@ -48,7 +56,56 @@ const TEASER_SELECT =
   ' itineraries!inner(pay_setting, vibe_tags, why_note, cover_image_url, title),' +
   ' cities!inner(name),' +
   ' places(neighborhood),' +
-  ' creator:profiles!date_instances_creator_id_fkey!inner(blurred_photo_url, first_name, age)';
+  ' creator:profiles!date_instances_creator_id_fkey!inner(blurred_photo_url, first_name, age,' +
+  ' dealbreakers, smokes, drinks, has_pets, wants_kids)';
+
+// ── DLB: app-side mirror of the SQL dealbreaker_blocks helper ────────────────
+// (20260609120100_dlb02_browse_feed_dealbreakers.sql). The teaser bypasses the
+// RPC, so its gate is mirrored here. Same semantics: a tag only blocks on the
+// exact offending fact value; null (unanswered) facts NEVER block; an empty or
+// missing dealbreakers list blocks nothing.
+export interface LifestyleFacts {
+  smokes: boolean | null;
+  drinks: boolean | null;
+  has_pets: boolean | null;
+  wants_kids: boolean | null;
+}
+
+const DEALBREAKER_RULES: ReadonlyArray<[tag: string, fact: keyof LifestyleFacts, offending: boolean]> = [
+  ['smoking', 'smokes', true],
+  ['drinks_alcohol', 'drinks', true],
+  ['no_alcohol', 'drinks', false],
+  ['has_pets', 'has_pets', true],
+  ['no_pets', 'has_pets', false],
+  ['wants_kids', 'wants_kids', true],
+  ['no_kids', 'wants_kids', false],
+];
+
+export function dealbreakerBlocks(
+  dealbreakers: string[] | null | undefined,
+  facts: Partial<LifestyleFacts> | null | undefined,
+): boolean {
+  if (!dealbreakers?.length || !facts) return false;
+  return DEALBREAKER_RULES.some(
+    ([tag, fact, offending]) => dealbreakers.includes(tag) && facts[fact] === offending,
+  );
+}
+
+// MUTUAL visibility for one teaser row: the viewer's hard nos against the host's
+// facts AND the host's hard nos against the viewer's facts (same mirror the RPC
+// applies). Teaser users can't act anyway (the gate is at the action), but
+// hiding both directions keeps the teaser an honest preview of the real feed.
+export interface TeaserViewer extends LifestyleFacts {
+  dealbreakers: string[] | null;
+}
+
+export function teaserVisible(row: TeaserRow, viewer: TeaserViewer | null): boolean {
+  if (!viewer) return true;
+  return (
+    !dealbreakerBlocks(viewer.dealbreakers, row.creator) &&
+    !dealbreakerBlocks(row.creator?.dealbreakers, viewer)
+  );
+}
 
 // Map a teaser row into the exact FeedNight shape the SwipeDeck renders.
 // distance/ambient/fit stay null/false — the card degrades those slots already.
@@ -84,6 +141,14 @@ export function toTeaserNight(row: TeaserRow): FeedNight {
 
 export async function teaserFeed(viewerId: string, limit = 20): Promise<FeedNight[]> {
   const admin = createAdminClient();
+  // DLB: a teaser viewer may already have dealbreakers/facts saved (the
+  // preferences step precedes verification), so the mutual gate applies here
+  // too. A missing/unreadable row degrades to no filtering (viewer = null).
+  const { data: viewer } = await admin
+    .from('profiles')
+    .select('dealbreakers, smokes, drinks, has_pets, wants_kids')
+    .eq('id', viewerId)
+    .maybeSingle();
   const { data, error } = await admin
     .from('date_instances')
     .select(TEASER_SELECT)
@@ -98,5 +163,10 @@ export async function teaserFeed(viewerId: string, limit = 20): Promise<FeedNigh
     .order('starts_at', { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return ((data ?? []) as unknown as TeaserRow[]).map(toTeaserNight);
+  // Filter AFTER the limit (no SQL-side join expression here): the teaser may
+  // under-fill by however many rows the gate hides — acceptable for the
+  // read-only preview surface.
+  return ((data ?? []) as unknown as TeaserRow[])
+    .filter((row) => teaserVisible(row, (viewer as TeaserViewer | null) ?? null))
+    .map(toTeaserNight);
 }

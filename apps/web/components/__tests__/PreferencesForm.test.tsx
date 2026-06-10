@@ -161,6 +161,56 @@ describe('PreferencesForm — pill labels (audit pass-2: lowercase + natural har
   });
 });
 
+describe('PreferencesForm — DLB "about you" lifestyle facts (optional tri-state)', () => {
+  it('defaults every unanswered fact to null in the save payload', async () => {
+    render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled />);
+    fireEvent.click(screen.getByRole('button', { name: 'save' }));
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      expect.anything(), 'u1',
+      expect.objectContaining({ smokes: null, drinks: null, has_pets: null, wants_kids: null }),
+    ));
+  });
+
+  it('selecting yes persists true; selecting no persists false', async () => {
+    render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'do you smoke: yes' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'do you drink: no' }));
+    fireEvent.click(screen.getByRole('button', { name: 'save' }));
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      expect.anything(), 'u1',
+      expect.objectContaining({ smokes: true, drinks: false, has_pets: null, wants_kids: null }),
+    ));
+  });
+
+  it('tapping the selected chip again clears back to null (unanswered)', async () => {
+    render(<PreferencesForm mode="account" userId="u1" initial={{ ...INITIAL, wants_kids: true }} datingEnabled />);
+    const yes = screen.getByRole('checkbox', { name: 'want kids: yes' });
+    expect(yes).toHaveAttribute('aria-checked', 'true'); // hydrated from initial
+    await userEvent.click(yes); // clear
+    fireEvent.click(screen.getByRole('button', { name: 'save' }));
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      expect.anything(), 'u1', expect.objectContaining({ wants_kids: null }),
+    ));
+  });
+
+  it('yes and no are mutually exclusive within a row', async () => {
+    render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'have pets: yes' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'have pets: no' }));
+    expect(screen.getByRole('checkbox', { name: 'have pets: yes' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'save' }));
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      expect.anything(), 'u1', expect.objectContaining({ has_pets: false }),
+    ));
+  });
+
+  it('renders the optional helper line (truthful enforcement copy)', () => {
+    render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled />);
+    expect(screen.getByText(/optional — this is what other people's hard nos check against\./i)).toBeInTheDocument();
+    expect(screen.getByText(/won't show up for you\./i)).toBeInTheDocument();
+  });
+});
+
 describe('PreferencesForm — dating toggle (A3: ON→OFF stop new exposure only)', () => {
   it('renders the pause control when dating is ON and writes dating_enabled=false on confirm', async () => {
     render(<PreferencesForm mode="account" userId="u1" initial={INITIAL} datingEnabled />);

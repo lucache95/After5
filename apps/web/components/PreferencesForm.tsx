@@ -23,7 +23,22 @@ export interface PreferencesInitial {
   age_max: number;
   distance_pref_km: number;
   dealbreakers: string[];
+  // DLB "about you" lifestyle facts. Optional so older call sites/tests that
+  // don't hydrate them still typecheck; absent = null = unanswered.
+  smokes?: boolean | null;
+  drinks?: boolean | null;
+  has_pets?: boolean | null;
+  wants_kids?: boolean | null;
 }
+
+// DLB fact rows: stored column key → the question the chips answer.
+type FactKey = 'smokes' | 'drinks' | 'has_pets' | 'wants_kids';
+const FACT_ROWS: ReadonlyArray<{ key: FactKey; label: string }> = [
+  { key: 'smokes', label: 'do you smoke' },
+  { key: 'drinks', label: 'do you drink' },
+  { key: 'has_pets', label: 'have pets' },
+  { key: 'wants_kids', label: 'want kids' },
+];
 
 const GENDERS = GenderSchema.options;
 const DEALBREAKERS = DealbreakerSchema.options;
@@ -60,6 +75,14 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
   const [ageMax, setAgeMax] = useState(String(initial.age_max || 40));
   const [distance, setDistance] = useState(initial.distance_pref_km || 40);
   const [dealbreakers, setDealbreakers] = useState<string[]>(initial.dealbreakers);
+  // DLB facts: tri-state per row (true / false / null = unanswered). Tapping the
+  // selected chip again clears back to null — nothing here is ever mandatory.
+  const [facts, setFacts] = useState<Record<FactKey, boolean | null>>({
+    smokes: initial.smokes ?? null,
+    drinks: initial.drinks ?? null,
+    has_pets: initial.has_pets ?? null,
+    wants_kids: initial.wants_kids ?? null,
+  });
   const [phase, setPhase] = useState<'idle' | 'saving' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -77,7 +100,7 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
       setPhase('error');
       return;
     }
-    const candidate = { gender, gender_preferences: wants, age_min: Number(ageMin), age_max: Number(ageMax), distance_pref_km: distance, dealbreakers };
+    const candidate = { gender, gender_preferences: wants, age_min: Number(ageMin), age_max: Number(ageMax), distance_pref_km: distance, dealbreakers, ...facts };
     const parsed = PreferencesInputSchema.safeParse(candidate);
     if (!parsed.success) {
       setErrorMsg(parsed.error.issues[0]?.message ?? 'Please check your preferences.');
@@ -168,11 +191,28 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
       </label>
 
       <fieldset className="mt-6">
+        <legend className="mb-1 font-body text-sm font-semibold lowercase text-shell-ink">about you</legend>
+        <p className="mb-3 font-body text-[13px] text-shell-ink/60">optional — this is what other people&apos;s hard nos check against.</p>
+        <div className="space-y-3">
+          {FACT_ROWS.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between gap-3">
+              <span className="font-body text-sm lowercase text-shell-ink">{label}</span>
+              <div className="flex gap-2">
+                <StickerChip label="yes" ariaLabel={`${label}: yes`} role="checkbox" selected={facts[key] === true}
+                  onToggle={() => setFacts((f) => ({ ...f, [key]: f[key] === true ? null : true }))} />
+                <StickerChip label="no" ariaLabel={`${label}: no`} role="checkbox" selected={facts[key] === false}
+                  onToggle={() => setFacts((f) => ({ ...f, [key]: f[key] === false ? null : false }))} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-6">
         <legend className="mb-1 font-body text-sm font-semibold lowercase text-shell-ink">hard nos</legend>
-        {/* Clarifier (real-user fix). Deliberately promise-free: dealbreakers are
-            stored but matching does not enforce them yet, so no "we'll never show
-            you" claims here until the feed/match SQL actually filters on them. */}
-        <p className="mb-3 font-body text-[13px] text-shell-ink/60">anyone who matches one of these is an instant no for you.</p>
+        {/* Truthful both ways since DLB-02: browse_feed_for_viewer (and the teaser
+            mirror) hard-filter on dealbreakers vs the lifestyle facts above. */}
+        <p className="mb-3 font-body text-[13px] text-shell-ink/60">anyone who matches one of these won&apos;t show up for you.</p>
         <div className="flex flex-wrap gap-2.5">
           {DEALBREAKERS.map((d) => (
             <StickerChip key={d} label={DEALBREAKER_LABEL[d] ?? d.replace(/_/g, ' ')} role="checkbox"

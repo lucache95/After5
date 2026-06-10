@@ -276,6 +276,7 @@ export type Database = {
           is_active: boolean
           name: string
           region: string | null
+          seeded_at: string | null
           slug: string
           timezone: string
           updated_at: string
@@ -291,6 +292,7 @@ export type Database = {
           is_active?: boolean
           name: string
           region?: string | null
+          seeded_at?: string | null
           slug: string
           timezone: string
           updated_at?: string
@@ -306,6 +308,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           region?: string | null
+          seeded_at?: string | null
           slug?: string
           timezone?: string
           updated_at?: string
@@ -1761,6 +1764,7 @@ export type Database = {
           evening_photo_url: string | null
           feedback_score: number
           friction_score: string | null
+          fsq_place_id: string | null
           generated_photo_url: string | null
           google_place_id: string | null
           hours_week: Json | null
@@ -1839,6 +1843,7 @@ export type Database = {
           evening_photo_url?: string | null
           feedback_score?: number
           friction_score?: string | null
+          fsq_place_id?: string | null
           generated_photo_url?: string | null
           google_place_id?: string | null
           hours_week?: Json | null
@@ -1917,6 +1922,7 @@ export type Database = {
           evening_photo_url?: string | null
           feedback_score?: number
           friction_score?: string | null
+          fsq_place_id?: string | null
           generated_photo_url?: string | null
           google_place_id?: string | null
           hours_week?: Json | null
@@ -2152,11 +2158,13 @@ export type Database = {
           dating_enabled: boolean
           dealbreakers: string[]
           distance_pref_km: number
+          drinks: boolean | null
           email: string | null
           feed_filters: Json
           first_name: string | null
           gender: string | null
           gender_preferences: string[]
+          has_pets: boolean | null
           height_cm: number | null
           id: string
           insider_approved_at: string | null
@@ -2171,11 +2179,13 @@ export type Database = {
           pronouns: string | null
           reliability_score: number | null
           rollover_frozen: boolean
+          smokes: boolean | null
           socials: Json
           standing: Database["public"]["Enums"]["standing_state"]
           updated_at: string
           verification: Database["public"]["Enums"]["verification_state"]
           vibe_tags: string[]
+          wants_kids: boolean | null
         }
         Insert: {
           account_state?: Database["public"]["Enums"]["account_lifecycle"]
@@ -2188,11 +2198,13 @@ export type Database = {
           dating_enabled?: boolean
           dealbreakers?: string[]
           distance_pref_km?: number
+          drinks?: boolean | null
           email?: string | null
           feed_filters?: Json
           first_name?: string | null
           gender?: string | null
           gender_preferences?: string[]
+          has_pets?: boolean | null
           height_cm?: number | null
           id: string
           insider_approved_at?: string | null
@@ -2207,11 +2219,13 @@ export type Database = {
           pronouns?: string | null
           reliability_score?: number | null
           rollover_frozen?: boolean
+          smokes?: boolean | null
           socials?: Json
           standing?: Database["public"]["Enums"]["standing_state"]
           updated_at?: string
           verification?: Database["public"]["Enums"]["verification_state"]
           vibe_tags?: string[]
+          wants_kids?: boolean | null
         }
         Update: {
           account_state?: Database["public"]["Enums"]["account_lifecycle"]
@@ -2224,11 +2238,13 @@ export type Database = {
           dating_enabled?: boolean
           dealbreakers?: string[]
           distance_pref_km?: number
+          drinks?: boolean | null
           email?: string | null
           feed_filters?: Json
           first_name?: string | null
           gender?: string | null
           gender_preferences?: string[]
+          has_pets?: boolean | null
           height_cm?: number | null
           id?: string
           insider_approved_at?: string | null
@@ -2243,11 +2259,13 @@ export type Database = {
           pronouns?: string | null
           reliability_score?: number | null
           rollover_frozen?: boolean
+          smokes?: boolean | null
           socials?: Json
           standing?: Database["public"]["Enums"]["standing_state"]
           updated_at?: string
           verification?: Database["public"]["Enums"]["verification_state"]
           vibe_tags?: string[]
+          wants_kids?: boolean | null
         }
         Relationships: [
           {
@@ -3196,6 +3214,16 @@ export type Database = {
       close_rating_window: { Args: { p_lock: string }; Returns: undefined }
       complete_job: { Args: { p_id: string }; Returns: undefined }
       create_blank_itinerary: { Args: never; Returns: string }
+      dealbreaker_blocks: {
+        Args: {
+          p_dealbreakers: string[]
+          p_drinks: boolean
+          p_has_pets: boolean
+          p_smokes: boolean
+          p_wants_kids: boolean
+        }
+        Returns: boolean
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dispatch_date_reconfirm: { Args: { p_lock: string }; Returns: undefined }
       dispatch_notification: {
@@ -3486,6 +3514,12 @@ export type Database = {
         Args: { p_actor: string; p_instance: string }
         Returns: undefined
       }
+      mk_instance: {
+        Args: { p_creator: string; p_itin: string; p_starts: string }
+        Returns: string
+      }
+      mk_itinerary: { Args: { p_user: string }; Returns: string }
+      mk_user: { Args: { p_label: string }; Returns: string }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -4266,6 +4300,7 @@ export type Database = {
         | "deletion_process"
         | "analytics_relay"
         | "notify"
+        | "seed_city"
       lock_status: "active" | "completed" | "cancelled" | "no_show"
       moderation_status: "pending" | "approved" | "rejected"
       modifier_difficulty: "tame" | "spicy" | "chaos"
@@ -4536,6 +4571,7 @@ export const Constants = {
         "deletion_process",
         "analytics_relay",
         "notify",
+        "seed_city",
       ],
       lock_status: ["active", "completed", "cancelled", "no_show"],
       moderation_status: ["pending", "approved", "rejected"],

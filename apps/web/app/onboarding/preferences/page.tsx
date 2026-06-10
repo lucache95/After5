@@ -13,7 +13,7 @@ export default async function PreferencesPage() {
 
   const { data: p } = await supabase
     .from('profiles')
-    .select('gender, gender_preferences, age_pref, distance_pref_km, dealbreakers')
+    .select('gender, gender_preferences, age_pref, distance_pref_km, dealbreakers, smokes, drinks, has_pets, wants_kids')
     .eq('id', user.id).maybeSingle();
 
   const age = parseAgePref(p?.age_pref);
@@ -23,6 +23,10 @@ export default async function PreferencesPage() {
     age_min: age.min, age_max: age.max,
     distance_pref_km: p?.distance_pref_km ?? 40,
     dealbreakers: (p?.dealbreakers as string[] | null) ?? [],
+    smokes: p?.smokes ?? null,
+    drinks: p?.drinks ?? null,
+    has_pets: p?.has_pets ?? null,
+    wants_kids: p?.wants_kids ?? null,
   };
 
   return <OnboardingShell step={4}><PreferencesStep userId={user.id} initial={initial} /></OnboardingShell>;

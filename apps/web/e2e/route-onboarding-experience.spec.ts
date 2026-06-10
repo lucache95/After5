@@ -305,7 +305,7 @@ test.describe('onboarding experience audit @420px (forced-local)', () => {
 
     // -- 6. STEP 4: preferences --------------------------------------------------
     await page.waitForLoadState('networkidle').catch(() => {});
-    const hardNosHelper = await page.getByText(/instant no for you/i).count(); // today's fix
+    const hardNosHelper = await page.getByText(/won't show up for you/i).count(); // DLB enforcement copy
     await shot(page, 'preferences', 'STEP 4 preferences, pristine — pre-selected defaults + hard-nos helper', {
       hardNosHelperPresent: hardNosHelper, ...(await chrome(page)),
       defaults: {

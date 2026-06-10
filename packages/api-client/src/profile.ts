@@ -41,6 +41,12 @@ export interface PreferencesInput {
   age_max: number;
   distance_pref_km: number;
   dealbreakers: string[];
+  // DLB lifestyle facts (optional "about you"): null = unanswered, never excludes.
+  // Optional so callers that don't collect them leave the columns untouched.
+  smokes?: boolean | null;
+  drinks?: boolean | null;
+  has_pets?: boolean | null;
+  wants_kids?: boolean | null;
 }
 
 export async function savePreferences(
@@ -48,7 +54,7 @@ export async function savePreferences(
   userId: string,
   prefs: PreferencesInput,
 ) {
-  const patch = {
+  const patch: Record<string, unknown> = {
     gender: prefs.gender,
     gender_preferences: prefs.gender_preferences,
     // age_pref is an int4range column; supabase-js accepts the Postgres range
@@ -57,7 +63,12 @@ export async function savePreferences(
     distance_pref_km: prefs.distance_pref_km,
     dealbreakers: prefs.dealbreakers,
   };
-  const { error } = await client.from('profiles').update(patch).eq('id', userId);
+  // DLB facts: write only when supplied (undefined = leave column unchanged;
+  // an explicit null clears the answer back to "unanswered").
+  for (const k of ['smokes', 'drinks', 'has_pets', 'wants_kids'] as const) {
+    if (prefs[k] !== undefined) patch[k] = prefs[k];
+  }
+  const { error } = await client.from('profiles').update(patch as never).eq('id', userId);
   if (error) throw error;
 }
 

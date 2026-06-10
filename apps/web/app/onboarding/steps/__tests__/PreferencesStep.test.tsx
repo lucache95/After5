@@ -65,7 +65,8 @@ describe('PreferencesStep', () => {
 
   it('hard nos: clarifying helper line renders under the heading', () => {
     render(<PreferencesStep userId="u1" initial={initial} />);
-    expect(screen.getByText(/anyone who matches one of these is an instant no/i)).toBeInTheDocument();
+    // DLB: copy upgraded to the truthful enforcement promise once the feed gate shipped.
+    expect(screen.getByText(/anyone who matches one of these won't show up for you/i)).toBeInTheDocument();
   });
 
   it('error: age_max below age_min is rejected before any save', async () => {
