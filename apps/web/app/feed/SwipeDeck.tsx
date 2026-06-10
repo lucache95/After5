@@ -289,7 +289,7 @@ export function SwipeDeck({
             disabled={busy}
             aria-label="interested — slide this onto my list"
             className={cn(
-              'flex h-16 w-16 items-center justify-center rounded-full bg-shell-accent text-white shadow-fun transition',
+              'flex h-16 w-16 items-center justify-center rounded-full bg-white text-shell-accent ring-1 ring-shell-ink/10 shadow-fun transition',
               'hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40',
               'motion-reduce:transition-none motion-reduce:hover:scale-100',
               busy && 'opacity-50',
