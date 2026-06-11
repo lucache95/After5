@@ -7,10 +7,10 @@ import {
   TrendingUp,
   Bookmark,
   ThumbsUp,
-  Loader2,
   AlertTriangle,
   ExternalLink,
 } from 'lucide-react';
+import { HeartLoader } from '@/components/HeartLoader';
 import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ export function EvalDashboard() {
       {/* Loading / error states */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted" />
+          <HeartLoader size={24} className="text-muted" accessibilityLabel="loading metrics" />
           <span className="ml-2 text-sm text-muted">Loading metrics...</span>
         </div>
       )}

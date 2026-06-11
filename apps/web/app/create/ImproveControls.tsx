@@ -19,6 +19,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client } from '@/lib/after5/client';
 import type { Stop } from '@/lib/itinerary-types';
 
@@ -131,7 +132,9 @@ export function ImproveControls({
                   'disabled:cursor-not-allowed disabled:opacity-40',
                 )}
               >
-                {busy ? 'swapping…' : 'tweak'}
+                <PendingButtonContent pending={busy} pendingLabel="swapping…" accessibilityLabel={`swapping ${s.place_name || 'this stop'}`} size={14}>
+                  tweak
+                </PendingButtonContent>
               </button>
             </li>
           );
@@ -167,7 +170,9 @@ export function ImproveControls({
               'hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40',
             )}
           >
-            {tweaking ? 'reworking…' : 'apply'}
+            <PendingButtonContent pending={tweaking} pendingLabel="reworking…" accessibilityLabel="reworking night">
+              apply
+            </PendingButtonContent>
           </button>
         </div>
       </div>

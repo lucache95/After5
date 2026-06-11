@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { CalendarX, Pencil } from 'lucide-react';
 import { browserAfter5Client, cancelNight, updateNight } from '@/lib/after5/client';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 export interface HostNight {
   id: string;
@@ -181,7 +182,9 @@ export function NightCardActions({
               onClick={() => void doCancel()}
               className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent font-body font-semibold lowercase text-white transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
             >
-              {busy ? 'taking it down…' : 'take it down'}
+              <PendingButtonContent pending={busy} pendingLabel="taking it down…" accessibilityLabel="taking night down">
+                take it down
+              </PendingButtonContent>
             </button>
             <button
               type="button"
@@ -280,7 +283,9 @@ export function NightCardActions({
                 disabled={busy}
                 className="mt-1 flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent font-body font-semibold lowercase text-white shadow-fun transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
               >
-                {busy ? 'saving…' : 'save changes'}
+                <PendingButtonContent pending={busy} pendingLabel="saving…" accessibilityLabel="saving night changes">
+                  save changes
+                </PendingButtonContent>
               </button>
               <button
                 type="button"

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { browserAfter5Client } from '@/lib/after5/client';
 import { datingGateMessage } from '@/lib/onboarding/dating-gate';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 export function EnableDatingButton({ gate = { ok: true } }: { gate?: { ok: boolean; reason?: string } }) {
   const router = useRouter();
@@ -35,7 +36,9 @@ export function EnableDatingButton({ gate = { ok: true } }: { gate?: { ok: boole
           phase === 'enabling'
             ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/50'
             : 'bg-shell-accent text-white hover:scale-[1.03] active:scale-95 motion-reduce:hover:scale-100')}>
-        {phase === 'enabling' ? 'turning on…' : 'turn dating on'}
+        <PendingButtonContent pending={phase === 'enabling'} pendingLabel="turning on…" accessibilityLabel="turning dating on" size={14}>
+          turn dating on
+        </PendingButtonContent>
       </button>
       {phase === 'error' && <span role="alert" className="mt-1 font-body text-[11px] text-red-600">{msg}</span>}
     </span>

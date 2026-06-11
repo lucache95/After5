@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 export function ProfileForm({
   initial,
@@ -91,7 +92,9 @@ export function ProfileForm({
               : 'bg-primary text-background hover:opacity-85',
           )}
         >
-          {phase === 'saving' ? 'Saving…' : 'Save'}
+          <PendingButtonContent pending={phase === 'saving'} pendingLabel="Saving…" accessibilityLabel="saving profile" size={14}>
+            Save
+          </PendingButtonContent>
         </button>
         {phase === 'saved' && (
           <span className="text-sm text-emerald-600">Saved.</span>

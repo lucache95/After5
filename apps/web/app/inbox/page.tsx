@@ -15,6 +15,7 @@ import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { groupActivity, type RawNotification } from '@/lib/after5/inbox-activity';
+import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
 import { ActivityList } from './ActivityList';
 import { StandbyList } from './StandbyList';
 import { ThreadRow } from '../messages/ThreadList';
@@ -109,7 +110,7 @@ export default async function InboxPage() {
     }, new Map<string, MessageRow[]>());
   }
 
-  const summaries: ThreadSummary[] = threadRows.map((r) => {
+  const summaries: ThreadSummary[] = await Promise.all(threadRows.map(async (r) => {
     const offer = r.offer;
     const counterpartIsCreator = offer ? offer.candidate_id === user.id : false;
     const counterpart = offer ? one(counterpartIsCreator ? offer.creator : offer.candidate) : null;
@@ -120,15 +121,20 @@ export default async function InboxPage() {
       threadId: r.id,
       counterpartName: counterpart?.first_name ?? null,
       // Blind contract: clear photo ONLY once the night is locked (identity
-      // revealed). Pre-lock threads render the initial avatar.
-      counterpartPhotoUrl: r.lock_id ? counterpart?.clear_photo_url ?? null : null,
+      // revealed). Pre-lock threads render the initial avatar. The mirror can
+      // be a relative storage path for real users — resolveMirrorPhotoSrc
+      // signs it (rooted/absolute pass through) so the Avatar never gets a
+      // path next/image can't load.
+      counterpartPhotoUrl: r.lock_id
+        ? await resolveMirrorPhotoSrc(supabase, counterpart?.clear_photo_url, { width: 96 })
+        : null,
       startsAt: instance?.starts_at ?? null,
       lastMessage: preview?.body ?? null,
       lastAt: preview?.at ?? null,
       unread: unreadCount(msgs, user.id),
       messageable: isMessageable(r.state, r.revoked_at),
     };
-  });
+  }));
   const threads = sortThreadsByRecency(summaries);
 
   // E24 (REQ-E24): does the candidate have any pending-interest standby rows? A

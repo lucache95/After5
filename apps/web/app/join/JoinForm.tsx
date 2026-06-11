@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
+import { HeartLoader } from '@/components/HeartLoader';
 
 interface FormState {
   first_name: string;
@@ -187,7 +188,7 @@ export function JoinForm() {
       >
         {submitting ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <HeartLoader size={16} color="currentColor" accessibilityLabel="sending application" />
             sending...
           </>
         ) : (

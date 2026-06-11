@@ -7,6 +7,8 @@
 import { useState } from 'react';
 import { Download, Calendar, MapPin } from 'lucide-react';
 import { downloadIcs } from '@/lib/calendar';
+import { placeMapUrl } from '@/lib/maps';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { ShareSheet } from './ShareSheet';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
 
@@ -70,8 +72,10 @@ export function ItineraryActions({ itinerary }: { itinerary: Itinerary }) {
         disabled={pdfLoading}
         className="flex w-full items-center justify-center gap-2 rounded-pill border border-border bg-background px-5 py-3 text-sm font-medium text-text transition-colors hover:border-text/40 disabled:opacity-60"
       >
-        <Download className="h-4 w-4" strokeWidth={2} />
-        {pdfLoading ? 'Building PDF…' : 'Download PDF'}
+        <PendingButtonContent pending={pdfLoading} pendingLabel="Building PDF…" accessibilityLabel="building PDF">
+          <Download className="h-4 w-4" strokeWidth={2} />
+          Download PDF
+        </PendingButtonContent>
       </button>
 
       <button
@@ -102,7 +106,11 @@ function mapsRouteUrl(stops: Stop[]): string {
   );
   if (encoded.length === 0) return 'https://maps.google.com';
   if (encoded.length === 1)
-    return `https://www.google.com/maps/search/?api=1&query=${encoded[0]}`;
+    // A single stop isn't a route — open the real place page when we know the
+    // google_place_id, else the legacy name search.
+    return stops[0].google_place_id
+      ? placeMapUrl({ name: stops[0].place_name, googlePlaceId: stops[0].google_place_id })
+      : `https://www.google.com/maps/search/?api=1&query=${encoded[0]}`;
   const origin = encoded[0];
   const destination = encoded[encoded.length - 1];
   const waypoints = encoded.slice(1, -1).join('|');

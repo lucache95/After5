@@ -4,6 +4,7 @@ import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { browserAfter5Client, saveFeedFilters, type FeedFilters } from '@/lib/after5/client';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 // Real searcher FilterSheet (DESIGN-SYSTEM §4, spec 2026-06-03 §3, 04-UI-SPEC §2).
 // Two labeled groups: `dealbreakers` (hard — HIDE non-matching nights server-side)
@@ -372,7 +373,9 @@ export function FilterSheet({
                 disabled={saving}
                 className="flex h-14 items-center justify-center rounded-full bg-shell-accent px-7 font-heading text-lg lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none motion-reduce:hover:scale-100 disabled:opacity-60"
               >
-                {saving ? 'saving…' : 'apply filters'}
+                <PendingButtonContent pending={saving} pendingLabel="saving…" accessibilityLabel="applying filters">
+                  apply filters
+                </PendingButtonContent>
               </button>
               <button
                 type="button"

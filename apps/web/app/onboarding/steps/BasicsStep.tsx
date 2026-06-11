@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 import { ProfileInputSchema, MAX_BIO } from '@after5/validators';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client, upsertProfile, advanceOnboarding } from '@/lib/after5/client';
 
 const MAX_TAGS = 8;
@@ -209,7 +210,9 @@ export function BasicsStep({ userId, initial }: { userId: string; initial: Basic
           'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
           !canContinue ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}
       >
-        {phase === 'saving' ? 'saving…' : phase === 'error' ? 'try again' : 'next'}
+        <PendingButtonContent pending={phase === 'saving'} pendingLabel="saving…" accessibilityLabel="saving profile basics">
+          {phase === 'error' ? 'try again' : 'next'}
+        </PendingButtonContent>
       </button>
     </div>
   );

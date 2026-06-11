@@ -11,6 +11,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { BadgeCheck, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Polaroid } from '@/components/Polaroid';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client } from '@/lib/after5/client';
 import { datingGateMessage } from '@/lib/onboarding/dating-gate';
 
@@ -103,7 +104,9 @@ export function DoneStep({
               'flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
               'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
               phase === 'enabling' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
-            {phase === 'enabling' ? 'turning on…' : phase === 'error' ? 'try again' : 'turn dating on'}
+            <PendingButtonContent pending={phase === 'enabling'} pendingLabel="turning on…" accessibilityLabel="turning dating on">
+              {phase === 'error' ? 'try again' : 'turn dating on'}
+            </PendingButtonContent>
           </button>
         ) : null}
         {/* Payoff CTA — always targets /feed. Pink when it IS the primary (gate

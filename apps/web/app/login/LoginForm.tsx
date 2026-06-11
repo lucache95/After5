@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar } from '@/components/Avatar';
 import { Polaroid } from '@/components/Polaroid';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { cn } from '@/lib/cn';
 
 export function LoginForm() {
@@ -240,7 +241,9 @@ function LoginFormInner() {
                         : 'bg-shell-accent text-white shadow-fun hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:hover:scale-100',
                     )}
                   >
-                    {phase === 'sending' ? 'sending…' : 'email me a link'}
+                    <PendingButtonContent pending={phase === 'sending'} pendingLabel="sending…" accessibilityLabel="sending login link">
+                      email me a link
+                    </PendingButtonContent>
                   </button>
                 </form>
 

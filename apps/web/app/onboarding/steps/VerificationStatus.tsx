@@ -5,7 +5,8 @@
 // failed → try again / appeal.
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
+import { HeartLoader } from '@/components/HeartLoader';
 import { browserAfter5Client, advanceOnboarding } from '@/lib/after5/client';
 import { readVerification } from './verification-poll';
 import type { VerificationState } from '@after5/validators';
@@ -42,7 +43,7 @@ export function VerificationStatus() {
   if (state === 'loading') {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <Loader2 className="h-6 w-6 animate-spin text-shell-accent motion-reduce:animate-none" aria-hidden />
+        <HeartLoader size={24} className="text-shell-accent" accessibilityLabel="checking verification" />
         <p className="font-body text-sm text-shell-ink/70" aria-live="polite">checking your verification…</p>
       </div>
     );
@@ -73,7 +74,7 @@ export function VerificationStatus() {
   // pending (and unverified-after-submit) — show the limbo banner
   return (
     <div className="text-center">
-      <Loader2 className="mx-auto h-6 w-6 animate-spin text-shell-accent motion-reduce:animate-none" aria-hidden />
+      <HeartLoader size={24} className="mx-auto text-shell-accent" accessibilityLabel="checking id" />
       <h1 className="mt-4 font-heading text-3xl lowercase text-shell-ink">checking your id…</h1>
       <p className="mt-3 font-body text-[15px] leading-relaxed text-shell-ink/70" aria-live="polite">
         usually about a minute. keep this open and it&apos;ll update the second you&apos;re cleared.

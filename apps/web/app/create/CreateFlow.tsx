@@ -18,6 +18,7 @@ import { BlurGateOverlay } from './BlurGateOverlay';
 import { PublishToFeedButton } from './PublishToFeedButton';
 import { ImproveControls } from './ImproveControls';
 import { PolaroidLoader } from '@/components/create/PolaroidLoader';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import type { GatedItinerary } from '@/lib/create/blur-gate';
 import type { KnownCity } from '@/lib/create/cities';
 import type { Itinerary, Stop } from '@/lib/itinerary-types';
@@ -364,7 +365,9 @@ function InputScreen(props: {
             : 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35',
         )}
       >
-        {loading ? 'building your night…' : 'make my date'}
+        <PendingButtonContent pending={loading} pendingLabel="building your night…" accessibilityLabel="building your night">
+          make my date
+        </PendingButtonContent>
       </button>
       {!canGenerate && !loading && (
         <p className="mt-3 text-center font-body text-xs lowercase text-shell-ink/55">
@@ -602,7 +605,9 @@ function AnonTeaser({
                 disabled={!emailValid || sending}
                 className="w-full rounded-pill bg-shell-accent px-6 py-4 font-body text-base font-semibold lowercase text-white shadow-fun transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {sending ? 'sending…' : 'send it →'}
+                <PendingButtonContent pending={sending} pendingLabel="sending…" accessibilityLabel="sending plan">
+                  send it →
+                </PendingButtonContent>
               </button>
             </div>
           </>

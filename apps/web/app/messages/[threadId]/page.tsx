@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
 import { Conversation } from './Conversation';
 import { isMessageable, type MessageRow } from '../thread-view';
 
@@ -120,7 +121,11 @@ export default async function ConversationPage({
         locked={!!thread.lock_id}
         // Blind contract (same gate as the inbox ThreadRow): clear photo ONLY once
         // the night is locked; pre-lock the header renders the initial chip.
-        counterpartPhotoUrl={thread.lock_id ? counterpart?.clear_photo_url ?? null : null}
+        // resolveMirrorPhotoSrc signs a relative storage-path mirror (real
+        // users) and passes rooted/absolute srcs through (seed fixtures).
+        counterpartPhotoUrl={
+          thread.lock_id ? await resolveMirrorPhotoSrc(supabase, counterpart?.clear_photo_url, { width: 96 }) : null
+        }
         messageable={isMessageable(thread.state, thread.revoked_at)}
         bothReady={thread.both_ready}
         initialMessages={(msgs ?? []) as MessageRow[]}

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { imageForStop, coverImageFor } from '@/lib/place-image';
+import { placeMapUrl } from '@/lib/maps';
 import { PhotoLightbox } from '@/components/PhotoLightbox';
 import { PlaceBackButton } from '@/components/PlaceBackButton';
 
@@ -201,9 +202,13 @@ export default async function PlacePage(props: {
 
   const dates = await loadDatesFeaturing(p.id);
   const cover = imageForStop({ photo_url: p.photo_url, generated_photo_url: p.generated_photo_url, place_type: p.type });
-  const directionsUrl = p.lat && p.lng
-    ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', Kelowna BC')}`;
+  // Prefer the exact Google place page (query_place_id) so "open in maps"
+  // lands on hours/reviews/photos; else the coord pin; else name search.
+  const directionsUrl = p.google_place_id
+    ? placeMapUrl({ name: p.name, googlePlaceId: p.google_place_id })
+    : p.lat && p.lng
+      ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', Kelowna BC')}`;
   const openNow = p.at_home ? null : isOpenNow(p.opens, p.closes);
   const summary = p.llm_summary ?? p.notes ?? null;
 

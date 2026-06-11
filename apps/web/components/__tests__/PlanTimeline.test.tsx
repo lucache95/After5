@@ -14,7 +14,7 @@ function stop(over: Partial<NightDetailStop>): NightDetailStop {
   return {
     name: 'a spot', type: null, start_time: null, duration_min: null,
     cost_pp: null, what_to_do: null, neighborhood: null, local_insight: null,
-    photo_url: null, lat: null, lng: null, place_slug: null, drive_to_next_min: null,
+    photo_url: null, lat: null, lng: null, place_slug: null, google_place_id: null, drive_to_next_min: null,
     ...over,
   };
 }
@@ -52,8 +52,20 @@ describe('PlanTimeline', () => {
     expect(screen.getByText(/alberta/)).toBeInTheDocument();
   });
 
-  // E20 — per-stop coord deep-links --------------------------------------------
-  it('uses a coord deep-link for the map link when lat/lng are present', () => {
+  // fix03 — Google place links first, coords only as fallback -------------------
+  it('uses the real Google place page when google_place_id is present', () => {
+    const stops = [stop({ name: 'rooftop bar', google_place_id: 'ChIJ123abc' })];
+    render(<PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} />);
+    const link = screen.getByRole('link', { name: /map/i });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/search/?api=1&query=rooftop%20bar&query_place_id=ChIJ123abc',
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('uses a coord deep-link for the map link when place id is absent but coords exist', () => {
     const stops = [stop({ name: 'rooftop bar', lat: 49.888, lng: -119.496 })];
     render(<PlanTimeline stops={stops} accent="#ff00aa" vibeTags={null} />);
     const link = screen.getByRole('link', { name: /map/i });
@@ -61,8 +73,6 @@ describe('PlanTimeline', () => {
       'href',
       'https://www.google.com/maps/search/?api=1&query=49.888,-119.496',
     );
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('falls back to a name search for the map link when coords are absent', () => {

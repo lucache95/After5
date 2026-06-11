@@ -20,7 +20,9 @@ import { cn } from '@/lib/cn';
 import { shortlist as shortlistRpc, rejectCandidate, withdraw } from '@/lib/after5/match';
 import { subscribeQueueInserts } from '@/lib/after5/realtime';
 import { browserAfter5Client } from '@/lib/after5/client';
+import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
 import { MakeOfferModal } from './MakeOfferModal';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 const PAGE = 20;
 
@@ -36,6 +38,26 @@ export interface HostCandidate {
   city: string | null;
   photo_url: string | null;
   can_enter_lock_flow: boolean;
+}
+
+// Candidate avatar: the clear photo in the sm dating polaroid when present;
+// otherwise the brand initial-letter chip (same treatment as the matches list
+// + inbox rows) in the SAME polaroid footprint. Never a stock landscape — a
+// '/places/*' mood shot for a PERSON read as a wrong photo, not a placeholder.
+function CandidateAvatar({ photo, name }: { photo: string | null; name: string }) {
+  if (photo) return <Polaroid src={photo} alt={name} size="sm" tone="dating" />;
+  const initial = (name.trim()[0] ?? '?').toLowerCase();
+  return (
+    <span
+      aria-hidden
+      className="relative inline-block w-[110px] shrink-0 bg-white px-2 pb-7 pt-1.5 shadow-md ring-1 ring-black/5"
+      style={{ transform: `rotate(${stickerRotation(name)}deg)` }}
+    >
+      <span className="flex h-[96px] w-[100px] items-center justify-center bg-shell-pink">
+        <span className="font-heading text-3xl lowercase text-shell-accent">{initial}</span>
+      </span>
+    </span>
+  );
 }
 
 // Lowercase outcome pill for an offered candidate's terminal state (E12/D-05).
@@ -114,27 +136,32 @@ export function InterestedList({
       );
       // Fire-and-forget profile fetch; patches the row in place when it resolves.
       // Idempotent, so a duplicate insert event just re-applies the same values.
-      void browserAfter5Client()
-        .from('profiles')
-        .select('first_name, age, city, clear_photo_url')
-        .eq('id', row.candidate_id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (!data) return;
-          setRows((cur) =>
-            cur.map((r) =>
-              r.candidate_id === row.candidate_id
-                ? {
-                    ...r,
-                    first_name: data.first_name ?? r.first_name,
-                    age: data.age ?? r.age,
-                    city: data.city ?? r.city,
-                    photo_url: data.clear_photo_url ?? r.photo_url,
-                  }
-                : r,
-            ),
-          );
-        });
+      // The clear_photo_url mirror can be a relative storage path (real users)
+      // — resolve it to a signed URL (browser-side direct sign) like the SSR
+      // loader does, so next/image never sees a raw path.
+      void (async () => {
+        const client = browserAfter5Client();
+        const { data } = await client
+          .from('profiles')
+          .select('first_name, age, city, clear_photo_url')
+          .eq('id', row.candidate_id)
+          .maybeSingle();
+        if (!data) return;
+        const photo = await resolveMirrorPhotoSrc(client, data.clear_photo_url, { width: 128 });
+        setRows((cur) =>
+          cur.map((r) =>
+            r.candidate_id === row.candidate_id
+              ? {
+                  ...r,
+                  first_name: data.first_name ?? r.first_name,
+                  age: data.age ?? r.age,
+                  city: data.city ?? r.city,
+                  photo_url: photo ?? r.photo_url,
+                }
+              : r,
+          ),
+        );
+      })();
     });
   }, [userId, instanceId]);
 
@@ -278,7 +305,7 @@ export function InterestedList({
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-shell-accent font-body text-sm font-semibold text-white">
                         {c.rank}
                       </span>
-                      <Polaroid src={c.photo_url ?? '/places/place-walk.jpg'} alt={c.first_name} size="sm" tone="dating" />
+                      <CandidateAvatar photo={c.photo_url} name={c.first_name} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-body font-semibold lowercase text-shell-ink">
                           {c.first_name.toLowerCase()}{c.age ? `, ${c.age}` : ''}
@@ -347,7 +374,7 @@ export function InterestedList({
                         booked ? 'cursor-not-allowed' : 'hover:opacity-90',
                       )}
                     >
-                      <Polaroid src={c.photo_url ?? '/places/place-walk.jpg'} alt={c.first_name} size="sm" tone="dating" />
+                      <CandidateAvatar photo={c.photo_url} name={c.first_name} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-body font-semibold lowercase text-shell-ink">
                           {c.first_name.toLowerCase()}{c.age ? `, ${c.age}` : ''}
@@ -399,7 +426,9 @@ export function InterestedList({
               onClick={() => { if (declineFor) void confirmDecline(declineFor); }}
               className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent font-body font-semibold lowercase text-white transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
             >
-              {busy ? 'passing…' : 'pass'}
+              <PendingButtonContent pending={busy} pendingLabel="passing…" accessibilityLabel="passing candidate">
+                pass
+              </PendingButtonContent>
             </button>
             <button
               type="button"
@@ -430,7 +459,9 @@ export function InterestedList({
               onClick={() => void confirmWithdraw()}
               className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full bg-shell-accent font-body font-semibold lowercase text-white transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
             >
-              {busy ? 'pulling…' : 'pull it'}
+              <PendingButtonContent pending={busy} pendingLabel="pulling…" accessibilityLabel="withdrawing offer">
+                pull it
+              </PendingButtonContent>
             </button>
             <button
               type="button"

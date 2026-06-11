@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Bug, Coffee, Lightbulb, MessageCircle, Send } from 'lucide-react';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 type Kind = 'bug' | 'place_suggestion' | 'feature' | 'other';
 
@@ -306,8 +307,10 @@ function Compose({
             disabled={!canSubmit}
             className="inline-flex items-center gap-2 rounded-full bg-shell-accent px-7 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? 'sending...' : 'send it'}
-            <Send className="h-4 w-4" strokeWidth={2.25} />
+            <PendingButtonContent pending={submitting} pendingLabel="sending..." accessibilityLabel="sending message">
+              send it
+              <Send className="h-4 w-4" strokeWidth={2.25} />
+            </PendingButtonContent>
           </button>
         </div>
       </form>

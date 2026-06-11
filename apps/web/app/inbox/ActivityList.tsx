@@ -17,6 +17,7 @@ import { relativeTime } from '@/lib/relative-time';
 import { metaFor } from '@/lib/after5/notif-map';
 import { subscribeNotifications, type NotificationRow } from '@/lib/after5/realtime';
 import { groupActivity, type ActivityItem, type RawNotification } from '@/lib/after5/inbox-activity';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 const INLINE_LIMIT = 5;
 
@@ -211,7 +212,9 @@ export function ActivityList({
           onClick={() => (hasMoreInline && !cursor ? setExpanded(true) : void loadMore())}
           className="flex min-h-[44px] w-full items-center justify-center font-body text-sm lowercase text-shell-ink/65 transition hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-ink/30 disabled:opacity-50"
         >
-          {loading ? 'loading…' : 'see all activity →'}
+          <PendingButtonContent pending={loading} pendingLabel="loading…" accessibilityLabel="loading activity" size={14}>
+            see all activity →
+          </PendingButtonContent>
         </button>
       )}
     </section>
@@ -241,4 +244,3 @@ function markItemRead(item: ActivityItem): ActivityItem {
   if (item.kind === 'group') return { ...item, anyUnread: false };
   return { ...item, read_at: item.read_at ?? new Date().toISOString() };
 }
-

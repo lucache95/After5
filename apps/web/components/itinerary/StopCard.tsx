@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Lightbulb, ExternalLink, Info } from 'lucide-react';
 import { imageForStop } from '@/lib/place-image';
+import { placeMapUrl } from '@/lib/maps';
 import { to12h } from '@/lib/format';
 import type { Stop } from '@/lib/itinerary-types';
 
@@ -25,12 +26,12 @@ export function StopCard({
   const placeHref = stop.place_slug
     ? `/places/${stop.place_slug}${fromHref ? `?from=${encodeURIComponent(fromHref)}` : ''}`
     : '';
-  // Always query by name (with city qualifier) so the map opens with the
-  // venue card — hours, reviews, photos. Bare coords just drop a pin and
-  // skip all of that. Lat/lng goes into the URL as a tiebreaker for
-  // ambiguous names (mostly redundant since "X, Kelowna BC" is specific).
-  const nameQuery = encodeURIComponent(`${stop.place_name}, Kelowna BC`);
-  const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameQuery}`;
+  // Prefer the exact Google place page via query_place_id (hours, reviews,
+  // photos, no ambiguity). Fallback: query by name with the city qualifier so
+  // the map still opens a venue card rather than a bare pin.
+  const directionsUrl = stop.google_place_id
+    ? placeMapUrl({ name: stop.place_name, googlePlaceId: stop.google_place_id })
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${stop.place_name}, Kelowna BC`)}`;
   // Google search gives users hours, reviews, website, menus — everything
   // they'd want to check before committing to a stop. Until we curate per-place
   // website columns this is the fastest path to "see all the info."

@@ -15,6 +15,7 @@ import {
   Heart,
   Check,
 } from 'lucide-react';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 interface StopInfo {
   place_id: string;
@@ -265,8 +266,10 @@ export function FeedbackForm({
             disabled={!hasAnyVote || submitting}
             className="inline-flex items-center gap-2 rounded-pill bg-text px-7 py-3 text-sm font-medium text-background transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {submitting ? 'Sending...' : 'Submit review'}
-            <Check className="h-4 w-4" strokeWidth={2.25} />
+            <PendingButtonContent pending={submitting} pendingLabel="Sending..." accessibilityLabel="submitting review" size={14}>
+              Submit review
+              <Check className="h-4 w-4" strokeWidth={2.25} />
+            </PendingButtonContent>
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client, startVerification } from '@/lib/after5/client';
 import { PersonaEmbed } from './PersonaEmbed';
 import { VerificationStatus } from './VerificationStatus';
@@ -74,7 +75,9 @@ export function IdentityVerifyStep() {
               'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
               'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
               stage === 'starting' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
-            {stage === 'starting' ? 'starting…' : stage === 'error' ? 'try again' : "let's do it"}
+            <PendingButtonContent pending={stage === 'starting'} pendingLabel="starting…" accessibilityLabel="starting verification">
+              {stage === 'error' ? 'try again' : "let's do it"}
+            </PendingButtonContent>
           </button>
           {/* Teaser door (P1, 2026-06-09 audit): the cliff point is the one place a
               quiet peek at the goods earns the scan. /feed browses read-only

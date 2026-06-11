@@ -5,6 +5,8 @@
 // (/nights/new?itinerary=<id>) where the host sets the time + full creator
 // controls (who-pays / targeting / why / cover). One publish path, not two.
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 export function PublishToFeedButton({
   itineraryId,
@@ -17,6 +19,7 @@ export function PublishToFeedButton({
   startsAt?: string;
 }) {
   const router = useRouter();
+  const [opening, setOpening] = useState(false);
 
   if (!canPublish) {
     return (
@@ -32,10 +35,16 @@ export function PublishToFeedButton({
   return (
     <button
       type="button"
-      onClick={() => router.push(`/nights/new?itinerary=${itineraryId}`)}
+      disabled={opening}
+      onClick={() => {
+        setOpening(true);
+        router.push(`/nights/new?itinerary=${itineraryId}`);
+      }}
       className="rounded-pill bg-shell-accent px-6 py-3 font-body text-sm font-semibold lowercase text-white shadow-fun transition-opacity hover:opacity-90"
     >
-      publish to the feed
+      <PendingButtonContent pending={opening} pendingLabel="opening…" accessibilityLabel="opening publish form" size={14}>
+        publish to the feed
+      </PendingButtonContent>
     </button>
   );
 }

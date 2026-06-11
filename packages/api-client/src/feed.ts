@@ -260,6 +260,11 @@ export interface NightDetailStop {
   // rich itineraries.stops element (LockDetail loader) and merged by the E20 get_night_detail
   // RPC (feed sheet) — both flow through normalizeNightDetailStops below.
   place_slug: string | null;
+  // Google place id for the stop's venue (merged into every stop by the
+  // get_night_detail / get_lock_night_detail RPCs, fix03). Lets map links open
+  // the REAL place page (hours/reviews/photos) instead of a bare coord pin.
+  // null for legacy/non-catalog stops — callers keep the coords/name fallback.
+  google_place_id?: string | null;
   drive_to_next_min: number | null;
 }
 
@@ -307,6 +312,7 @@ export function normalizeNightDetailStops(raw: unknown): NightDetailStop[] {
       lat: num(o.lat),
       lng: num(o.lng),
       place_slug: str(o.place_slug),
+      google_place_id: str(o.google_place_id),
       drive_to_next_min: num(o.drive_to_next_min),
     };
   });

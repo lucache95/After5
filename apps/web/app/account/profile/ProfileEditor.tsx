@@ -17,6 +17,7 @@ import { ProfileInputSchema, ExpandedProfileSchema, MAX_BIO, type DynamicPromptA
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, upsertProfile } from '@/lib/after5/client';
 import { PhotoCropper } from '@/app/onboarding/steps/PhotoCropper';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import {
   addPhoto, listMyPhotos, removePhoto as removePhotoRow, reorderPhotos, setPrimary,
   toReorderPayload, signClearUrls,
@@ -344,7 +345,9 @@ export function ProfileEditor({ userId, initial }: { userId: string; initial: Pr
           !canSave ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95',
         )}
       >
-        {phase === 'saving' ? 'saving…' : 'save'}
+        <PendingButtonContent pending={phase === 'saving'} pendingLabel="saving…" accessibilityLabel="saving profile">
+          save
+        </PendingButtonContent>
       </button>
     </div>
   );

@@ -19,6 +19,7 @@ import { CoverPicker } from './CoverPicker';
 import { CoverUploader } from './CoverUploader';
 import { CustomVenueSearch } from './CustomVenueSearch';
 import { ImproveControls } from '@/app/create/ImproveControls';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 // Stable drag keys decoupled from stop content (place_id can be blank on a new
 // stop), so Reorder identity survives renames + reorders.
@@ -333,7 +334,9 @@ export function ItineraryEditor({
         disabled={saving}
         className="mt-8 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-white/80 px-6 font-body text-base font-semibold lowercase text-shell-ink ring-1 ring-shell-ink/15 transition hover:bg-white hover:ring-shell-ink/25 disabled:opacity-50"
       >
-        {saving ? 'saving...' : 'save changes'}
+        <PendingButtonContent pending={saving} pendingLabel="saving..." accessibilityLabel="saving itinerary">
+          save changes
+        </PendingButtonContent>
       </button>
 
       {/* E11 Door-2 publish CTA — carries the forked itinerary id to the real

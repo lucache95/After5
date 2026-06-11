@@ -12,6 +12,7 @@ import { updateItineraryStops } from '@after5/api-client';
 import { browserAfter5Client } from '@/lib/after5/client';
 import type { Stop } from '@/lib/itinerary-types';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 const BUCKET = 'profile-photos';
 
@@ -107,7 +108,9 @@ export function CoverUploader({
         >
           <ImagePlus className="h-6 w-6 text-shell-accent" aria-hidden />
           <span className="font-body text-sm lowercase text-shell-ink/65">
-            {phase === 'uploading' ? 'uploading…' : 'no cover yet. add a photo that sells the night.'}
+            <PendingButtonContent pending={phase === 'uploading'} pendingLabel="uploading…" accessibilityLabel="uploading cover">
+              no cover yet. add a photo that sells the night.
+            </PendingButtonContent>
           </span>
         </button>
       )}

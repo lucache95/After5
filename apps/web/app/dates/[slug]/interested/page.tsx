@@ -11,6 +11,7 @@ import { BottomTabShell } from '@/components/BottomTabShell';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
 import { InterestedList, type HostCandidate } from './InterestedList';
 
 export const dynamic = 'force-dynamic';
@@ -76,7 +77,7 @@ export default async function InterestedPage({
     .eq('status', 'active')
     .maybeSingle();
 
-  const candidates: HostCandidate[] = (queue ?? []).map((q) => {
+  const candidates: HostCandidate[] = await Promise.all((queue ?? []).map(async (q) => {
     const c = (q.candidate ?? {}) as { first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null };
     return {
       candidate_id: q.candidate_id,
@@ -85,12 +86,16 @@ export default async function InterestedPage({
       first_name: c.first_name ?? 'someone',
       age: c.age ?? null,
       city: c.city ?? null,
-      photo_url: c.clear_photo_url ?? null,
+      // Real users' mirror is a relative storage path — sign it server-side
+      // (rooted/absolute pass through, falsy → null → initial-letter chip).
+      // This list is reveal-stage (profiles_select_revealed), so clear is the
+      // correct tier here.
+      photo_url: await resolveMirrorPhotoSrc(supabase, c.clear_photo_url, { width: 128 }),
       // Eligibility flag is not cheaply available here; default true and let
       // P5002 at offer time handle the already-booked case (spec §4.2 fallback).
       can_enter_lock_flow: true,
     };
-  });
+  }));
 
   return (
     <>

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/cn';
 import { Polaroid } from '@/components/Polaroid';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client, advanceOnboarding } from '@/lib/after5/client';
 
 export function WelcomeAgeGate() {
@@ -101,7 +102,9 @@ export function WelcomeAgeGate() {
               : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95',
           )}
         >
-          {phase === 'submitting' ? 'one sec…' : phase === 'error' ? 'try again' : "let's go"}
+          <PendingButtonContent pending={phase === 'submitting'} pendingLabel="one sec…" accessibilityLabel="saving age confirmation">
+            {phase === 'error' ? 'try again' : "let's go"}
+          </PendingButtonContent>
         </button>
         <a
           href="/"

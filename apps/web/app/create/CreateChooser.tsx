@@ -12,10 +12,13 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBlankItinerary } from '@after5/api-client';
 import { browserAfter5Client } from '@/lib/after5/client';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
+import { HeartLoader } from '@/components/HeartLoader';
 
 export function CreateChooser() {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [openingGenerate, setOpeningGenerate] = useState(false);
 
   async function startFromScratch() {
     if (starting) return;
@@ -54,15 +57,23 @@ export function CreateChooser() {
           {/* Primary — generate. The one dominant pink action. */}
           <button
             type="button"
-            onClick={() => router.push('/create/generate')}
+            onClick={() => {
+              setOpeningGenerate(true);
+              router.push('/create/generate');
+            }}
+            disabled={openingGenerate}
             className="group flex w-full items-start gap-4 rounded-3xl bg-shell-accent px-5 py-5 text-left shadow-fun transition hover:opacity-95 active:scale-[0.99]"
           >
             <span className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20">
-              <Sparkles className="h-5 w-5 text-white" aria-hidden />
+              {openingGenerate ? (
+                <HeartLoader size={20} color="white" accessibilityLabel="opening generator" />
+              ) : (
+                <Sparkles className="h-5 w-5 text-white" aria-hidden />
+              )}
             </span>
             <span className="min-w-0">
               <span className="block font-heading text-xl lowercase text-white">
-                build it for me
+                {openingGenerate ? 'opening…' : 'build it for me'}
               </span>
               <span className="mt-1 block font-body text-sm lowercase text-white/85">
                 a full night, planned for you in a tap.
@@ -79,7 +90,9 @@ export function CreateChooser() {
             aria-busy={starting}
             className="inline-flex min-h-[44px] items-center px-1 py-3 font-body text-sm lowercase text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 transition hover:text-shell-ink hover:decoration-shell-accent disabled:opacity-60"
           >
-            {starting ? 'opening a blank canvas…' : 'or build from scratch'}
+            <PendingButtonContent pending={starting} pendingLabel="opening a blank canvas…" accessibilityLabel="opening blank canvas" size={14}>
+              or build from scratch
+            </PendingButtonContent>
           </button>
         </div>
       </div>

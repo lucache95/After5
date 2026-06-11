@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BottomTabShell } from '@/components/BottomTabShell';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Sparkles, Pause, Play, ChevronDown } from 'lucide-react';
@@ -764,11 +765,9 @@ export function PostNightForm({
             )}
             aria-busy={phase === 'saving'}
           >
-            {phase === 'saving'
-              ? 'posting…'
-              : phase === 'error'
-              ? 'try again'
-              : 'post it'}
+            <PendingButtonContent pending={phase === 'saving'} pendingLabel="posting…" accessibilityLabel="posting night">
+              {phase === 'error' ? 'try again' : 'post it'}
+            </PendingButtonContent>
           </button>
         </form>
       </div>

@@ -50,7 +50,7 @@ function stop(over: Partial<NightDetailStop>): NightDetailStop {
   return {
     name: 'a spot', type: null, start_time: null, duration_min: null,
     cost_pp: null, what_to_do: null, neighborhood: null, local_insight: null,
-    photo_url: null, lat: null, lng: null, drive_to_next_min: null,
+    photo_url: null, lat: null, lng: null, google_place_id: null, drive_to_next_min: null,
     ...over,
   };
 }

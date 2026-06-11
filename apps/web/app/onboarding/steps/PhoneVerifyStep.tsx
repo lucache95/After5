@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client, confirmPhone, advanceOnboarding } from '@/lib/after5/client';
 
 const RESEND_THROTTLE_S = 30;
@@ -157,14 +158,18 @@ export function PhoneVerifyStep() {
           <button type="button" onClick={sendCode} disabled={!phone || phase === 'sending'} aria-busy={phase === 'sending'}
             className={cn(ctaBase,
               !phone || phase === 'sending' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
-            {phase === 'sending' ? 'sending…' : 'text me a code'}
+            <PendingButtonContent pending={phase === 'sending'} pendingLabel="sending…" accessibilityLabel="sending code">
+              text me a code
+            </PendingButtonContent>
           </button>
         ) : (
           <>
             <button type="button" onClick={verify} disabled={code.length < 6 || phase === 'verifying'} aria-busy={phase === 'verifying'}
               className={cn(ctaBase,
                 code.length < 6 || phase === 'verifying' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
-              {phase === 'verifying' ? 'checking…' : "i'm in"}
+              <PendingButtonContent pending={phase === 'verifying'} pendingLabel="checking…" accessibilityLabel="checking code">
+                i&apos;m in
+              </PendingButtonContent>
             </button>
             <button type="button" onClick={resetToPhoneEntry}
               className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full min-h-[44px] px-1">
@@ -188,7 +193,9 @@ export function PhoneVerifyStep() {
               aria-busy={phase === 'sending'}
               className="font-body text-sm font-medium text-shell-ink/60 underline decoration-shell-ink/20 underline-offset-4 hover:text-shell-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shell-accent/40 rounded-full min-h-[44px] px-1"
             >
-              {phase === 'sending' ? 'sending…' : 'resend code'}
+              <PendingButtonContent pending={phase === 'sending'} pendingLabel="sending…" accessibilityLabel="resending code" size={14}>
+                resend code
+              </PendingButtonContent>
             </button>
           )}
         </div>

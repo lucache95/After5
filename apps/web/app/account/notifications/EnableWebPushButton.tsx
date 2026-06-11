@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { enablePushNotifications } from '@/lib/push/subscribe';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -82,7 +83,13 @@ export function EnableWebPushButton() {
           granted ? 'bg-shell-ink/10 text-shell-ink/60' : 'bg-shell-accent text-white',
         )}
       >
-        {granted ? 'push is on' : denied ? 'push blocked' : busy ? 'turning on…' : 'turn on push'}
+        {granted || denied ? (
+          granted ? 'push is on' : 'push blocked'
+        ) : (
+          <PendingButtonContent pending={busy} pendingLabel="turning on…" accessibilityLabel="turning push on">
+            turn on push
+          </PendingButtonContent>
+        )}
       </button>
     </section>
   );

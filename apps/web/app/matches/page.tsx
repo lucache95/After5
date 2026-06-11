@@ -16,6 +16,7 @@ import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
+import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
 import { MatchesList, type MatchCard } from './MatchesList';
 import { bucketLocksByStart, isRatingOpen, pickCounterpart, type LockRowWithParties } from './lock-view';
 
@@ -40,17 +41,30 @@ export default async function MatchesPage() {
 
   const locks = (rows ?? []) as unknown as LockRowWithParties[];
   const { upcoming, past } = bucketLocksByStart(locks);
-  const toCard = (l: LockRowWithParties, isUpcoming: boolean): MatchCard => ({
-    id: l.id,
-    status: l.status,
-    counterpart: pickCounterpart(l, user.id),
-    startsAt: l.instance?.starts_at ?? null,
-    nightTitle: l.instance?.itinerary?.title ?? null,
-    // Mirrors LockDetail's rate gate (window open + not cancelled) — derived
-    // from the already-fetched time_range, no extra query. The rate page itself
-    // hard-gates the window + already-rated, so a stale chip can't over-rate.
-    ratable: !isUpcoming && l.status !== 'cancelled' && isRatingOpen(l.instance),
-  });
+  const toCard = async (l: LockRowWithParties, isUpcoming: boolean): Promise<MatchCard> => {
+    const counterpart = pickCounterpart(l, user.id);
+    // COHERENCE FIX: real users' clear_photo_url mirror is a relative storage
+    // path — sign it (or pass through rooted/absolute) before next/image sees
+    // it. This list is post-lock, so the clear photo is the correct tier.
+    if (counterpart) {
+      counterpart.clear_photo_url = await resolveMirrorPhotoSrc(supabase, counterpart.clear_photo_url, { width: 128 });
+    }
+    return {
+      id: l.id,
+      status: l.status,
+      counterpart,
+      startsAt: l.instance?.starts_at ?? null,
+      nightTitle: l.instance?.itinerary?.title ?? null,
+      // Mirrors LockDetail's rate gate (window open + not cancelled) — derived
+      // from the already-fetched time_range, no extra query. The rate page itself
+      // hard-gates the window + already-rated, so a stale chip can't over-rate.
+      ratable: !isUpcoming && l.status !== 'cancelled' && isRatingOpen(l.instance),
+    };
+  };
+  const [upcomingCards, pastCards] = await Promise.all([
+    Promise.all(upcoming.map((l) => toCard(l, true))),
+    Promise.all(past.map((l) => toCard(l, false))),
+  ]);
 
   return (
     <main className="min-h-dvh bg-shell-base">
@@ -61,10 +75,7 @@ export default async function MatchesPage() {
       </header>
 
       <div className="mx-auto w-full max-w-[420px] px-5 pb-28 pt-8">
-        <MatchesList
-          upcoming={upcoming.map((l) => toCard(l, true))}
-          past={past.map((l) => toCard(l, false))}
-        />
+        <MatchesList upcoming={upcomingCards} past={pastCards} />
       </div>
 
       <NotificationToast userId={user.id} />

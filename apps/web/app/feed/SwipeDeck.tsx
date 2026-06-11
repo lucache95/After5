@@ -28,6 +28,7 @@ import { FilterSheet, type FilterSection } from './FilterSheet';
 import { useAmbientDeck } from './useAmbientDeck';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 
@@ -614,11 +615,17 @@ function ActiveCard({
 type Loosen = { line: string; cta: string; next: FeedFilters };
 function mostRestrictive(filters: FeedFilters): Loosen {
   if (filters.max_distance_km != null) {
-    const widened = filters.max_distance_km < 50 ? 50 : 100;
+    const widened =
+      filters.max_distance_km < 50 ? 50
+      : filters.max_distance_km < 100 ? 100
+      : null;
     return {
       line: `your distance is set to ${filters.max_distance_km}km.`,
-      cta: `widen to ${widened}km?`,
-      next: { ...filters, max_distance_km: widened },
+      cta: widened != null ? `widen to ${widened}km?` : 'remove the distance cap?',
+      next:
+        widened != null
+          ? { ...filters, max_distance_km: widened }
+          : (({ max_distance_km: _drop, ...rest }) => rest)(filters),
     };
   }
   if (filters.max_price != null) {
@@ -677,7 +684,9 @@ function FilteredEmptyBody({
           disabled={busy}
           className="mt-5 min-h-[44px] rounded-full px-2 font-body text-[15px] font-semibold lowercase text-shell-accent underline decoration-2 underline-offset-4 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-60 motion-reduce:transition-none"
         >
-          {busy ? 'widening…' : loosen.cta}
+          <PendingButtonContent pending={busy} pendingLabel="widening…" accessibilityLabel="widening filters" size={14}>
+            {loosen.cta}
+          </PendingButtonContent>
         </button>
         <p className="mt-6 font-body text-[15px] text-shell-ink/60">
           or be the main character.{' '}

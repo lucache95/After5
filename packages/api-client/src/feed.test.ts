@@ -30,6 +30,12 @@ describe('normalizeNightDetailStops', () => {
     expect(out[0]!.name).toBe('E2E Stop 1');
     expect(out[0]!.type).toBe('cocktail_bar');
     expect(out[0]!.cost_pp).toBeNull();
+    expect(out[0]!.google_place_id).toBeNull();
+  });
+
+  it('threads google_place_id through (fix03: detail RPCs merge it onto every stop)', () => {
+    const out = normalizeNightDetailStops([{ place_name: 'The Pub', google_place_id: 'ChIJ123abc' }]);
+    expect(out[0]!.google_place_id).toBe('ChIJ123abc');
   });
 
   it('returns [] for null/garbage', () => {

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import { imageForStop } from '@/lib/place-image';
+import { placeMapUrl } from '@/lib/maps';
 import { type NightDetailStop } from '@/lib/after5/client';
 import { LocalTime } from '@/components/LocalTime';
 
@@ -11,13 +12,15 @@ import { LocalTime } from '@/components/LocalTime';
 // the feed sheet, OfferDetail, and LockDetail all render an IDENTICAL plan (no fork,
 // no drift — D-12). It renders ONLY blind-safe fields: numbered photo thumb + dashed
 // connector + name + "neighborhood · type · time" + one-line desc w/ "more" + "$ pp" +
-// a coord (else name-query) map link. Do NOT swap in components/itinerary/StopCard.tsx
+// a Google-place-first map link (coords/name only as fallback). Do NOT swap in
+// components/itinerary/StopCard.tsx
 // — it links /places/[slug] (identity-bearing) and is wrong for offer/match. The StopRow
 // shape is already blind-safe and renders fine whether identity is hidden (pre-swipe) or
 // revealed (post-lock) — no reveal-ordering change (D-07).
 //
-// E20 (REQ-E20): the per-stop "map" link deep-links coordinates when the stop carries
-// lat/lng (else the legacy name search). E21 (REQ-E21 / D-01): the stop NAME may link
+// fix03: the per-stop "map" link opens the actual Google place page when the stop
+// has a google_place_id; otherwise it falls back to coordinates, then legacy name
+// search. E21 (REQ-E21 / D-01): the stop NAME may link
 // to /places/[slug], but ONLY when the caller opts in via `linkSlugs` (default OFF) AND
 // the stop has a catalog slug. The blind feed sheet + offer surfaces MUST leave
 // `linkSlugs` off so venue identity never leaks (T-07-12); only the post-lock LockDetail
@@ -59,12 +62,15 @@ function StopRow({
   vibeTags: string[] | null; linkSlugs: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  // E20: deep-link the stop's coordinates when present, else fall back to the legacy
-  // name text-search. Label/icon/target are unchanged.
-  const directions =
-    stop.lat != null && stop.lng != null
-      ? `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.name)}`;
+  // fix03: prefer the real Google place page (query_place_id) when the RPC merged
+  // a google_place_id onto the stop; else E20 coord deep-link; else name search.
+  // Label/icon/target are unchanged.
+  const directions = placeMapUrl({
+    name: stop.name,
+    googlePlaceId: stop.google_place_id,
+    lat: stop.lat,
+    lng: stop.lng,
+  });
   // E21 / D-01: opt-in /places link. Only when the caller passes linkSlugs AND the stop
   // has a catalog slug; otherwise the name is plain text (blind contract + graceful degrade).
   const slugHref = linkSlugs && stop.place_slug ? `/places/${stop.place_slug}` : null;

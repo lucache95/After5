@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { browserAfter5Client, withdrawInterest, type FeedNight } from '@/lib/after5/client';
 import { NightDetailSheet } from '@/app/feed/NightDetailSheet';
 import { LocalTime } from '@/components/LocalTime';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { nightCountdown } from '@/lib/countdown';
 import { coverImageForNight } from '@/lib/place-image';
 
@@ -202,7 +203,9 @@ export function StandbyCard({ entry }: { entry: StandbyEntry }) {
               onClick={() => void doWithdraw()}
               className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full border-2 border-shell-ink/20 font-body font-semibold lowercase text-shell-ink/70 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 disabled:opacity-50"
             >
-              {busy ? 'pulling…' : 'yep, pull it'}
+              <PendingButtonContent pending={busy} pendingLabel="pulling…" accessibilityLabel="pulling interest">
+                yep, pull it
+              </PendingButtonContent>
             </button>
             <button
               type="button"

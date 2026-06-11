@@ -15,6 +15,7 @@ import { PreferencesInputSchema, GenderSchema, DealbreakerSchema } from '@after5
 import { cn } from '@/lib/cn';
 import { browserAfter5Client, savePreferences, advanceOnboarding } from '@/lib/after5/client';
 import { StickerChip } from '@/components/StickerChip';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 
 export interface PreferencesInitial {
   gender: string;
@@ -230,7 +231,9 @@ export function PreferencesForm({ mode, userId, initial, datingEnabled = false }
           'mt-7 flex min-h-[48px] items-center justify-center rounded-full px-8 font-body text-[16px] font-semibold lowercase transition',
           'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
           phase === 'saving' ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/35' : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95')}>
-        {phase === 'saving' ? 'saving…' : mode === 'onboarding' ? (phase === 'error' ? 'try again' : 'next') : 'save'}
+        <PendingButtonContent pending={phase === 'saving'} pendingLabel="saving…" accessibilityLabel="saving preferences">
+          {mode === 'onboarding' ? (phase === 'error' ? 'try again' : 'next') : 'save'}
+        </PendingButtonContent>
       </button>
     </div>
   );
@@ -283,7 +286,9 @@ function DatingToggle({ userId, datingEnabled }: { userId: string; datingEnabled
             className={cn('min-h-[44px] shrink-0 rounded-full px-4 py-2 font-body text-[13px] font-semibold lowercase transition',
               'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 motion-reduce:transition-none',
               busy ? 'cursor-not-allowed bg-shell-ink/10 text-shell-ink/50' : 'bg-shell-accent text-white hover:scale-[1.03] active:scale-95 motion-reduce:hover:scale-100')}>
-            {busy ? 'turning on…' : 'turn dating on'}
+            <PendingButtonContent pending={busy} pendingLabel="turning on…" accessibilityLabel="turning dating on" size={14}>
+              turn dating on
+            </PendingButtonContent>
           </button>
         )}
       </div>
@@ -295,7 +300,9 @@ function DatingToggle({ userId, datingEnabled }: { userId: string; datingEnabled
             <button type="button" onClick={() => write(false)} disabled={busy}
               className={cn('min-h-[40px] rounded-full border border-shell-ink/20 px-4 font-body text-[13px] font-semibold lowercase text-shell-ink transition',
                 busy ? 'cursor-not-allowed opacity-50' : 'hover:border-shell-ink/40 active:scale-95')}>
-              {busy ? 'pausing…' : 'pause'}
+              <PendingButtonContent pending={busy} pendingLabel="pausing…" accessibilityLabel="pausing dating" size={14}>
+                pause
+              </PendingButtonContent>
             </button>
             <button type="button" onClick={() => setConfirming(false)} disabled={busy}
               className="min-h-[40px] rounded-full px-4 font-body text-[13px] lowercase text-shell-ink/70 transition hover:text-shell-ink active:scale-95">

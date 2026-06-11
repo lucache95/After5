@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImageUp } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client, advanceOnboarding } from '@/lib/after5/client';
 import { PhotoCropper } from './PhotoCropper';
 
@@ -157,7 +158,9 @@ export function PhotoStep({ userId }: { userId: string }) {
               : 'bg-shell-accent text-white shadow-fun hover:opacity-90 active:scale-95',
           )}
         >
-          {phase === 'uploading' ? 'uploading…' : phase === 'error' ? 'try again' : 'next'}
+          <PendingButtonContent pending={phase === 'uploading'} pendingLabel="uploading…" accessibilityLabel="uploading photo">
+            {phase === 'error' ? 'try again' : 'next'}
+          </PendingButtonContent>
         </button>
       )}
     </div>

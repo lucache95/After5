@@ -10,10 +10,10 @@ import {
   Pencil,
   Megaphone,
   Trophy,
-  Loader2,
   ChevronDown,
 } from 'lucide-react';
 import type { InsiderTask, LeaderboardEntry } from './page';
+import { HeartLoader } from '@/components/HeartLoader';
 import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
@@ -332,7 +332,7 @@ function TaskCard({ task }: { task: InsiderTask }) {
                   className="inline-flex items-center gap-1.5 rounded-full bg-shell-accent px-4 py-1.5 font-body text-sm font-semibold lowercase text-white transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
                 >
                   {submitting ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <HeartLoader size={14} color="currentColor" accessibilityLabel="submitting" />
                   ) : (
                     <CheckCircle2 className="h-3.5 w-3.5" />
                   )}

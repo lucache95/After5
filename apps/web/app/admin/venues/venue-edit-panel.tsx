@@ -4,13 +4,13 @@ import { useState } from 'react';
 import {
   ExternalLink,
   Save,
-  Loader2,
   Heart,
   SkipForward,
   Link2,
   MessageCircle,
 } from 'lucide-react';
 import type { VenueRow, FeedbackRow, PairingRow } from './page';
+import { HeartLoader } from '@/components/HeartLoader';
 import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ export function VenueEditPanel({
               className="inline-flex items-center gap-2 rounded-pill bg-text px-5 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <HeartLoader size={16} color="currentColor" accessibilityLabel="saving venue" />
               ) : (
                 <Save className="h-4 w-4" />
               )}

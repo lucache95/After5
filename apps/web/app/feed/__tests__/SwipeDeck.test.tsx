@@ -173,6 +173,16 @@ describe('SwipeDeck — E10 quick chips + recovery empty state', () => {
     expect(routerRefresh).toHaveBeenCalled();
   });
 
+  it('at the max distance cap, the recovery CTA clears the cap instead of pretending to widen', async () => {
+    render(<SwipeDeck initial={[]} userId="u1" filters={{ max_distance_km: 100 }} />);
+    expect(screen.getByRole('button', { name: /remove the distance cap/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /remove the distance cap/i }));
+    await waitFor(() =>
+      expect(saveFeedFilters).toHaveBeenCalledWith(expect.anything(), 'u1', {}),
+    );
+    expect(routerRefresh).toHaveBeenCalled();
+  });
+
   it('empty + NO hard filter → the genuinely-empty copy is unchanged', () => {
     render(<SwipeDeck initial={[]} userId="u1" filters={{ vibes: ['chill'] }} />);
     expect(screen.getByText(/that.s everyone for now/i)).toBeInTheDocument();

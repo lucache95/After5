@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, X, Loader2, ExternalLink } from 'lucide-react';
+import { CheckCircle2, X, ExternalLink } from 'lucide-react';
 import type { ApplicationRow, ActiveInsiderRow } from './page';
+import { HeartLoader } from '@/components/HeartLoader';
 import { LocalTime } from '@/components/LocalTime';
 
 // ---------------------------------------------------------------------------
@@ -195,7 +196,7 @@ export function InsidersAdmin({ applications: initial, insiders }: Props) {
                   className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
                 >
                   {busy === app.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <HeartLoader size={14} color="currentColor" accessibilityLabel="approving" />
                   ) : (
                     <CheckCircle2 className="h-3.5 w-3.5" />
                   )}

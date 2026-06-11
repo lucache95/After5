@@ -5,6 +5,9 @@
 export interface Stop {
   place_id: string;
   place_name: string;
+  /** Google place id for the venue (when the stop came from the catalog) —
+   *  map links prefer it so they open the real place page. */
+  google_place_id?: string | null;
   place_slug?: string;
   place_type?: string;
   start_time: string;
