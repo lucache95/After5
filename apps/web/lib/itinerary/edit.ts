@@ -70,6 +70,30 @@ export function sortStopsByTime(stops: Stop[]): Stop[] {
     .map(({ s }) => s);
 }
 
+/** Format total minutes from midnight as a friendly local time, e.g. "6:34pm". */
+export function formatFriendlyTime(totalMin: number): string {
+  const clamped = ((totalMin % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const suffix = h < 12 ? 'am' : 'pm';
+  return `${h12}:${String(m).padStart(2, '0')}${suffix}`;
+}
+
+/**
+ * One-line stop summary: "{start}→{end} · ${cost} pp" with friendly times and
+ * end = start + duration. Free stops render "free". Null when start_time is
+ * unparseable (the card skips the line).
+ */
+export function stopSummary(stop: Stop): string | null {
+  const start = parseHHMM(stop.start_time);
+  if (start === null) return null;
+  const end = start + (stop.duration_min ?? 0);
+  const cost = stop.estimated_cost_pp ?? 0;
+  const costPart = cost > 0 ? `$${cost} pp` : 'free';
+  return `${formatFriendlyTime(start)}→${formatFriendlyTime(end)} · ${costPart}`;
+}
+
 export function validateStopsForSave(stops: Stop[]): { ok: boolean; reason?: string } {
   if (stops.length === 0) return { ok: false, reason: 'add at least one stop' };
   if (stops.length > 12) return { ok: false, reason: 'max 12 stops' };

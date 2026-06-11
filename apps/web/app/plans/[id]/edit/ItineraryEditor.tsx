@@ -292,6 +292,7 @@ export function ItineraryEditor({
               <EditableStopCard
                 stop={row.stop}
                 index={i}
+                itineraryId={itineraryId}
                 onPatch={handlePatch}
                 onRemove={handleRemove}
               />
@@ -322,7 +323,7 @@ export function ItineraryEditor({
       <section className="mt-8">
         <h2 className="mb-2 font-heading text-lg lowercase text-shell-ink">cover photo</h2>
         {/* E11: upload a real cover that sells the night (storage-backed). */}
-        <CoverUploader itineraryId={itineraryId} current={coverUrl} stops={stops} />
+        <CoverUploader itineraryId={itineraryId} current={coverUrl} stops={stops} onChange={setCoverUrl} />
         {photos.length > 0 && (
           <div className="mt-3">
             <p className="mb-2 font-body text-[12px] lowercase tracking-[0.04em] text-shell-ink/55">

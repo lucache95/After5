@@ -58,17 +58,65 @@ vi.mock('framer-motion', () => ({
     Item: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   },
   useReducedMotion: () => true,
+  // HeartLoader (PendingButtonContent's spinner) renders motion.span/svg.
+  motion: new Proxy({}, { get: () => ({ children }: { children?: ReactNode }) => <span>{children}</span> }),
 }));
 
 describe('EditableStopCard', () => {
   it('edits the name + fires onPatch, and remove fires onRemove', async () => {
     const onPatch = vi.fn(); const onRemove = vi.fn();
-    render(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 60, estimated_cost_pp: 20 }} index={0} onPatch={onPatch} onRemove={onRemove} />);
-    const name = screen.getByLabelText(/name/i);
+    render(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 60, estimated_cost_pp: 20 }} index={0} itineraryId="itin-1" onPatch={onPatch} onRemove={onRemove} />);
+    const name = screen.getByLabelText(/^name$/i);
     fireEvent.change(name, { target: { value: 'pottery' } });
     expect(onPatch).toHaveBeenCalledWith(0, expect.objectContaining({ place_name: 'pottery' }));
     await userEvent.click(screen.getByRole('button', { name: /remove/i }));
     expect(onRemove).toHaveBeenCalledWith(0);
+  });
+
+  it('renders relabeled fields: starts at / how long / $ per person', () => {
+    render(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 60, estimated_cost_pp: 20 }} index={0} itineraryId="itin-1" onPatch={vi.fn()} onRemove={vi.fn()} />);
+    expect((screen.getByLabelText('starts at') as HTMLInputElement).value).toBe('18:00');
+    expect((screen.getByLabelText('how long') as HTMLInputElement).value).toBe('60');
+    expect((screen.getByLabelText('$ per person') as HTMLInputElement).value).toBe('20');
+  });
+
+  it('renders the computed summary line (6:34pm + 60 → 7:34pm)', () => {
+    render(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', start_time: '18:34', duration_min: 60, estimated_cost_pp: 20 }} index={0} itineraryId="itin-1" onPatch={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByText('6:34pm→7:34pm · $20 pp')).toBeInTheDocument();
+  });
+
+  it('renders "free" for $0 stops and skips the summary on unparsable times', () => {
+    const { rerender } = render(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', start_time: '18:00', duration_min: 90, estimated_cost_pp: 0 }} index={0} itineraryId="itin-1" onPatch={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByText('6:00pm→7:30pm · free')).toBeInTheDocument();
+    rerender(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', start_time: 'whenever', duration_min: 90, estimated_cost_pp: 0 }} index={0} itineraryId="itin-1" onPatch={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.queryByText(/→/)).toBeNull();
+  });
+
+  it('shows "no location yet" and patches location fields after search-pick', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ results: [{ ...customStop, lat: 49.9, lng: -119.5 }] }), { status: 200 }),
+    );
+    const onPatch = vi.fn();
+    render(<EditableStopCard stop={{ place_id: '', place_name: 'mystery bar', start_time: '18:00', duration_min: 60, estimated_cost_pp: 0 }} index={2} itineraryId="itin-1" onPatch={onPatch} onRemove={vi.fn()} />);
+    expect(screen.getByText('no location yet')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /set location/i }));
+    await userEvent.type(screen.getByLabelText(/search for a place/i), 'coffee');
+    await userEvent.click(screen.getByRole('button', { name: /^search$/i }));
+    await waitFor(() => expect(screen.getByText(/quiet coffee/i)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /use this place/i }));
+    expect(onPatch).toHaveBeenCalledWith(2, expect.objectContaining({
+      address: '1 main st',
+      lat: 49.9,
+      lng: -119.5,
+      place_id: 'custom:g1',
+    }));
+    vi.restoreAllMocks();
+  });
+
+  it('shows the stop address with a change affordance when located', () => {
+    render(<EditableStopCard stop={{ place_id: 'p1', place_name: 'clay', address: '12 water st', start_time: '18:00', duration_min: 60, estimated_cost_pp: 0 }} index={0} itineraryId="itin-1" onPatch={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByText('12 water st')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^change$/i })).toBeInTheDocument();
   });
 });
 
@@ -203,7 +251,7 @@ describe('chronological stop ordering', () => {
     await userEvent.click(screen.getByRole('button', { name: /add a stop/i }));
     // Two stop rows now rendered; grab all "start time" inputs.
     const timeInputs = await waitFor(() => {
-      const inputs = screen.getAllByLabelText(/start time/i);
+      const inputs = screen.getAllByLabelText(/starts at/i);
       if (inputs.length < 2) throw new Error('second stop not yet rendered');
       return inputs;
     });

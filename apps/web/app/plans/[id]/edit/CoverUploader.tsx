@@ -13,6 +13,7 @@ import { browserAfter5Client } from '@/lib/after5/client';
 import type { Stop } from '@/lib/itinerary-types';
 import { cn } from '@/lib/cn';
 import { PendingButtonContent } from '@/components/PendingButtonContent';
+import { GenerateCoverButton } from './GenerateCoverButton';
 
 const BUCKET = 'profile-photos';
 
@@ -22,14 +23,25 @@ export function CoverUploader({
   itineraryId,
   current,
   stops,
+  onChange,
 }: {
   itineraryId: string;
   current: string | null;
   stops: Stop[];
+  /** Notify the editor so its save payload carries the fresh cover URL. */
+  onChange?: (url: string) => void;
 }) {
   const [cover, setCover] = useState<string | null>(current);
   const [phase, setPhase] = useState<Phase>('idle');
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  function handleGenerated(url: string) {
+    // The edge fn already persisted cover_image_url; mirror it locally and in
+    // the editor so the next save doesn't revert to a stale URL.
+    setCover(url);
+    onChange?.(url);
+    setPhase('idle');
+  }
 
   function pick() {
     inputRef.current?.click();
@@ -58,6 +70,7 @@ export function CoverUploader({
         cover_image_url: url,
       });
       setCover(url);
+      onChange?.(url);
       setPhase('idle');
       toast.success('cover set.');
     } catch (err) {
@@ -79,6 +92,7 @@ export function CoverUploader({
       />
 
       {cover ? (
+        <>
         <button
           type="button"
           onClick={pick}
@@ -94,7 +108,12 @@ export function CoverUploader({
             {phase === 'uploading' ? 'uploading…' : 'tap to change'}
           </span>
         </button>
+        <div className="mt-2 flex justify-end">
+          <GenerateCoverButton itineraryId={itineraryId} variant="regenerate" onGenerated={handleGenerated} />
+        </div>
+        </>
       ) : (
+        <>
         <button
           type="button"
           onClick={pick}
@@ -113,6 +132,10 @@ export function CoverUploader({
             </PendingButtonContent>
           </span>
         </button>
+        <div className="mt-2">
+          <GenerateCoverButton itineraryId={itineraryId} variant="empty" onGenerated={handleGenerated} />
+        </div>
+        </>
       )}
 
       {phase === 'error' && (

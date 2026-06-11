@@ -7,7 +7,15 @@ import { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import type { Stop } from '@/lib/itinerary-types';
 
-export function CustomVenueSearch({ onAdd }: { onAdd: (stop: Stop) => void }) {
+export function CustomVenueSearch({
+  onAdd,
+  actionLabel = 'add to plan',
+}: {
+  onAdd: (stop: Stop) => void;
+  /** Label on each result's action button — the stop-location picker reuses
+   * this surface with "use this place". */
+  actionLabel?: string;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Stop[]>([]);
   const [searching, setSearching] = useState(false);
@@ -100,7 +108,7 @@ export function CustomVenueSearch({ onAdd }: { onAdd: (stop: Stop) => void }) {
                 className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border border-shell-accent/40 px-4 font-body text-xs lowercase text-shell-accent transition hover:bg-shell-accent/10"
               >
                 <Plus className="h-3.5 w-3.5" aria-hidden />
-                add to plan
+                {actionLabel}
               </button>
             </li>
           ))}

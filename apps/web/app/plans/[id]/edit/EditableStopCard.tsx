@@ -3,9 +3,12 @@
 // inputs for name + start time, a textarea for what-to-do, number inputs for
 // minutes + cost, a remove button and a visual drag handle (the Reorder wiring
 // lives in ItineraryEditor). Tier-1 shell chrome, lowercase, a11y-labelled.
-import { useCallback } from 'react';
-import { GripVertical, X } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { GripVertical, MapPin, X } from 'lucide-react';
 import type { Stop } from '@/lib/itinerary-types';
+import { stopSummary } from '@/lib/itinerary/edit';
+import { StopPhotoPicker } from './StopPhotoPicker';
+import { CustomVenueSearch } from './CustomVenueSearch';
 
 // Auto-grow a textarea to fit its content (no inner scroll/clipping).
 function autoGrow(el: HTMLTextAreaElement) {
@@ -23,9 +26,11 @@ export function EditableStopCard({
   index,
   onPatch,
   onRemove,
+  itineraryId,
 }: {
   stop: Stop;
   index: number;
+  itineraryId: string;
   onPatch: (i: number, patch: Partial<Stop>) => void;
   onRemove: (i: number) => void;
 }) {
@@ -34,6 +39,27 @@ export function EditableStopCard({
   const whatToDoRef = useCallback((el: HTMLTextAreaElement | null) => {
     if (el) autoGrow(el);
   }, []);
+
+  // Inline location search (reuses the /api/places/search proxy via
+  // CustomVenueSearch). Picking a result patches location fields onto the stop.
+  const [locating, setLocating] = useState(false);
+  const locationLabel = stop.address || stop.neighborhood || null;
+
+  function handlePickLocation(result: Stop) {
+    const patch: Partial<Stop> = {
+      address: result.address ?? null,
+      lat: result.lat ?? null,
+      lng: result.lng ?? null,
+    };
+    if (result.neighborhood) patch.neighborhood = result.neighborhood;
+    if (result.place_id) patch.place_id = result.place_id;
+    if (result.place_slug) patch.place_slug = result.place_slug;
+    if (result.google_place_id) patch.google_place_id = result.google_place_id;
+    onPatch(index, patch);
+    setLocating(false);
+  }
+
+  const summary = stopSummary(stop);
 
   return (
     <div className="rounded-3xl border border-shell-ink/10 bg-shell-base p-4 shadow-fun">
@@ -58,45 +84,90 @@ export function EditableStopCard({
             />
           </div>
 
+          {/* location row — shows the stop's place (address > neighborhood),
+              with an inline place search to set or change it. Picking writes
+              address/coords/ids onto the stop so map links + RouteMap work for
+              custom stops. Re-searching overwrites; no clear needed. */}
+          <div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-shell-ink/40" aria-hidden />
+              <p className="min-w-0 truncate font-body text-[12px] text-shell-ink/55">
+                {locationLabel ?? 'no location yet'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setLocating((v) => !v)}
+                className="shrink-0 font-body text-[12px] lowercase text-shell-accent underline underline-offset-2 transition hover:opacity-80"
+              >
+                {locating ? 'close' : locationLabel ? 'change' : 'set location'}
+              </button>
+            </div>
+            {locating && (
+              <div className="mt-2">
+                <CustomVenueSearch onAdd={handlePickLocation} actionLabel="use this place" />
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className={labelClass} htmlFor={`stop-time-${index}`}>start time</label>
+              <label className={labelClass} htmlFor={`stop-time-${index}`}>starts at</label>
               <input
                 id={`stop-time-${index}`}
-                aria-label="start time"
+                aria-label="starts at"
                 value={stop.start_time}
                 onChange={(e) => onPatch(index, { start_time: e.target.value })}
                 placeholder="18:00"
                 className={fieldClass}
               />
             </div>
-            <div className="w-20">
-              <label className={labelClass} htmlFor={`stop-mins-${index}`}>minutes</label>
-              <input
-                id={`stop-mins-${index}`}
-                aria-label="minutes"
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={stop.duration_min}
-                onChange={(e) => onPatch(index, { duration_min: Number(e.target.value) })}
-                className={fieldClass}
-              />
+            <div className="w-24">
+              <label className={labelClass} htmlFor={`stop-mins-${index}`}>how long</label>
+              <div className="relative">
+                <input
+                  id={`stop-mins-${index}`}
+                  aria-label="how long"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={stop.duration_min}
+                  onChange={(e) => onPatch(index, { duration_min: Number(e.target.value) })}
+                  className={`${fieldClass} pr-10`}
+                />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-body text-[12px] text-shell-ink/45"
+                >
+                  min
+                </span>
+              </div>
             </div>
-            <div className="w-20">
-              <label className={labelClass} htmlFor={`stop-cost-${index}`}>cost</label>
-              <input
-                id={`stop-cost-${index}`}
-                aria-label="cost"
-                type="number"
-                min={0}
-                inputMode="decimal"
-                value={stop.estimated_cost_pp}
-                onChange={(e) => onPatch(index, { estimated_cost_pp: Number(e.target.value) })}
-                className={fieldClass}
-              />
+            <div className="w-24">
+              <label className={labelClass} htmlFor={`stop-cost-${index}`}>$ per person</label>
+              <div className="relative">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-body text-[12px] text-shell-ink/45"
+                >
+                  $
+                </span>
+                <input
+                  id={`stop-cost-${index}`}
+                  aria-label="$ per person"
+                  type="number"
+                  min={0}
+                  inputMode="decimal"
+                  value={stop.estimated_cost_pp}
+                  onChange={(e) => onPatch(index, { estimated_cost_pp: Number(e.target.value) })}
+                  className={`${fieldClass} pl-7`}
+                />
+              </div>
             </div>
           </div>
+
+          {summary && (
+            <p className="font-body text-[12px] text-shell-ink/55">{summary}</p>
+          )}
 
           <div>
             <label className={labelClass} htmlFor={`stop-do-${index}`}>what to do</label>
@@ -112,6 +183,13 @@ export function EditableStopCard({
               className={`${fieldClass} resize-none overflow-hidden`}
             />
           </div>
+
+          <StopPhotoPicker
+            itineraryId={itineraryId}
+            index={index}
+            photoUrl={stop.photo_url}
+            onChange={(url) => onPatch(index, { photo_url: url })}
+          />
         </div>
 
         <button
