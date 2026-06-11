@@ -27,6 +27,7 @@ import {
   type ThreadSummary,
   type MessageRow,
 } from '../messages/thread-view';
+import { offerRevealsHostClear } from '@/lib/after5/offer-reveal';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,8 @@ type ThreadRecord = {
   offer: {
     creator_id: string;
     candidate_id: string;
+    status: string;
+    expires_at: string | null;
     creator: ProfileLite | ProfileLite[] | null;
     candidate: ProfileLite | ProfileLite[] | null;
     instance: { starts_at: string | null } | { starts_at: string | null }[] | null;
@@ -86,7 +89,7 @@ export default async function InboxPage() {
     .select(`
       id, state, revoked_at, lock_id,
       offer:offers!chat_threads_offer_id_fkey (
-        creator_id, candidate_id,
+        creator_id, candidate_id, status, expires_at,
         creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
         candidate:profiles!offers_candidate_id_fkey ( id, first_name, clear_photo_url ),
         instance:date_instances!offers_date_instance_id_fkey ( starts_at )
@@ -120,12 +123,13 @@ export default async function InboxPage() {
     return {
       threadId: r.id,
       counterpartName: counterpart?.first_name ?? null,
-      // Blind contract: clear photo ONLY once the night is locked (identity
-      // revealed). Pre-lock threads render the initial avatar. The mirror can
-      // be a relative storage path for real users — resolveMirrorPhotoSrc
-      // signs it (rooted/absolute pass through) so the Avatar never gets a
-      // path next/image can't load.
-      counterpartPhotoUrl: r.lock_id
+      // Blind contract (reveal-at-pick, 2026-06-10): clear photo once locked, OR
+      // — candidate side only — while the thread's offer is live (active unexpired
+      // / accepted), matching match_reveal_allowed_pair's offer branch exactly.
+      // The HOST keeps the initial avatar pre-lock (their reveal stays the lock).
+      // The mirror can be a relative storage path — resolveMirrorPhotoSrc signs it
+      // (rooted/absolute pass through) so the Avatar never gets a bad path.
+      counterpartPhotoUrl: r.lock_id || offerRevealsHostClear(user.id, offer)
         ? await resolveMirrorPhotoSrc(supabase, counterpart?.clear_photo_url, { width: 96 })
         : null,
       startsAt: instance?.starts_at ?? null,

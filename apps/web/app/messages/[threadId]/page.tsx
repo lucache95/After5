@@ -16,10 +16,12 @@ import { isMatchEnabledForViewer } from '@/lib/match/flag';
 import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
 import { Conversation } from './Conversation';
 import { isMessageable, type MessageRow } from '../thread-view';
+import { offerRevealsHostClear } from '@/lib/after5/offer-reveal';
 
 export const dynamic = 'force-dynamic';
 
-// clear_photo_url is fetched but PROJECTED only post-lock (the lock_id gate below),
+// clear_photo_url is fetched but PROJECTED only post-lock or — candidate side —
+// while the offer is live (reveal-at-pick 2026-06-10; gate below),
 // the same contract as the unified inbox: profiles RLS opens the row at offer-stage
 // with no column revoke, so the blind contract is this layer's job. Pre-lock the
 // header avatar stays an initial chip.
@@ -47,7 +49,7 @@ export default async function ConversationPage({
     .select(`
       id, state, both_ready, revoked_at, lock_id,
       offer:offers!chat_threads_offer_id_fkey (
-        creator_id, candidate_id,
+        creator_id, candidate_id, status, expires_at,
         creator:profiles!offers_creator_id_fkey ( id, first_name, clear_photo_url ),
         candidate:profiles!offers_candidate_id_fkey ( id, first_name, clear_photo_url )
       )
@@ -60,6 +62,7 @@ export default async function ConversationPage({
     lock_id: string | null;
     offer: {
       creator_id: string; candidate_id: string;
+      status: string; expires_at: string | null;
       creator: ProfileLite | ProfileLite[] | null;
       candidate: ProfileLite | ProfileLite[] | null;
     } | null;
@@ -119,12 +122,16 @@ export default async function ConversationPage({
         viewerId={user.id}
         counterpartName={counterpart?.first_name ?? 'someone'}
         locked={!!thread.lock_id}
-        // Blind contract (same gate as the inbox ThreadRow): clear photo ONLY once
-        // the night is locked; pre-lock the header renders the initial chip.
-        // resolveMirrorPhotoSrc signs a relative storage-path mirror (real
-        // users) and passes rooted/absolute srcs through (seed fixtures).
+        // Blind contract (same gate as the inbox ThreadRow; reveal-at-pick
+        // 2026-06-10): clear photo once locked, OR — candidate side only — while
+        // the thread's offer is live (active unexpired / accepted), matching
+        // match_reveal_allowed_pair's offer branch. The HOST keeps the initial
+        // chip pre-lock. resolveMirrorPhotoSrc signs a relative storage-path
+        // mirror and passes rooted/absolute srcs through (seed fixtures).
         counterpartPhotoUrl={
-          thread.lock_id ? await resolveMirrorPhotoSrc(supabase, counterpart?.clear_photo_url, { width: 96 }) : null
+          thread.lock_id || offerRevealsHostClear(user.id, offer)
+            ? await resolveMirrorPhotoSrc(supabase, counterpart?.clear_photo_url, { width: 96 })
+            : null
         }
         messageable={isMessageable(thread.state, thread.revoked_at)}
         bothReady={thread.both_ready}

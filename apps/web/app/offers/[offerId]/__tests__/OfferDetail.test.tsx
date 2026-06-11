@@ -82,6 +82,7 @@ function nightDetail(over: Partial<NightDetailNight> = {}): NightDetailNight {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear();
   acceptOffer.mockReset();
   passOffer.mockReset();
   withdraw.mockReset();
@@ -96,6 +97,42 @@ describe('OfferDetail', () => {
     render(<OfferDetail {...props()} />);
     expect(screen.getByText(/sam, 29/i)).toBeInTheDocument();
     expect(screen.getByText(/portland/i)).toBeInTheDocument();
+  });
+
+  // ——— reveal-at-pick (founder decision 2026-06-10) ———
+
+  it('active offer renders the CLEAR profile card gallery + prompts (reveal-at-pick)', () => {
+    render(<OfferDetail {...props({
+      photos: ['https://signed/clear-1.jpg', 'https://signed/clear-2.jpg'],
+      prompts: [{ label: 'my simple pleasure', answer: 'late night drives' }],
+    })} />);
+    const imgs = screen.getAllByRole('img');
+    expect(imgs.some((i) => i.getAttribute('src') === 'https://signed/clear-1.jpg')).toBe(true);
+    // no rung-2 blurred avatar remains on a live offer
+    expect(document.querySelector('[data-rung2-avatar]')).toBeNull();
+    expect(screen.getByText('late night drives')).toBeInTheDocument();
+  });
+
+  it('plays the ceremony once per offer per session (sessionStorage gate)', () => {
+    expect(window.sessionStorage.getItem('offer-reveal-off-1')).toBeNull();
+    const { unmount } = render(<OfferDetail {...props({ photos: ['https://signed/clear-1.jpg'] })} />);
+    expect(window.sessionStorage.getItem('offer-reveal-off-1')).toBe('1');
+    unmount();
+    // second mount: marker present, the card renders static (still clear)
+    render(<OfferDetail {...props({ photos: ['https://signed/clear-1.jpg'] })} />);
+    expect(screen.getAllByRole('img').some((i) => i.getAttribute('src') === 'https://signed/clear-1.jpg')).toBe(true);
+  });
+
+  it('passed/expired offers keep the blurred rung-2 hint, never the clear card', () => {
+    render(<OfferDetail {...props({ status: 'passed', host: { first_name: 'Sam', age: 29, city: 'Portland', photo_url: 'https://signed/blurred.jpg' }, photos: [] })} />);
+    expect(document.querySelector('[data-rung2-avatar]')).not.toBeNull();
+    expect(document.querySelector('[data-offer-reveal]')).toBeNull();
+  });
+
+  it('accepted offer keeps the clear card alongside the locked-in state', () => {
+    render(<OfferDetail {...props({ status: 'accepted', lockId: 'lock-9', photos: ['https://signed/clear-1.jpg'] })} />);
+    expect(screen.getAllByRole('img').some((i) => i.getAttribute('src') === 'https://signed/clear-1.jpg')).toBe(true);
+    expect(screen.getByText(/you’re locked in\./i)).toBeInTheDocument();
   });
 
   it('renders the matched plan stops via PlanTimeline in "the night"', () => {
@@ -117,7 +154,7 @@ describe('OfferDetail', () => {
   it('accept resolves a lock id and routes to /matches/<lock>', async () => {
     acceptOffer.mockResolvedValue('lock-7');
     render(<OfferDetail {...props()} />);
-    await userEvent.click(screen.getByRole('button', { name: /accept/i }));
+    await userEvent.click(screen.getByRole('button', { name: /lock it in/i }));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/matches/lock-7'));
     expect(acceptOffer).toHaveBeenCalledWith('off-1');
   });
@@ -151,7 +188,7 @@ describe('OfferDetail', () => {
   it('offer_expired error toasts and routes to /feed', async () => {
     acceptOffer.mockRejectedValue(new MatchError('offer_expired'));
     render(<OfferDetail {...props()} />);
-    await userEvent.click(screen.getByRole('button', { name: /accept/i }));
+    await userEvent.click(screen.getByRole('button', { name: /lock it in/i }));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('offer_expired'));
     expect(push).toHaveBeenCalledWith('/feed');
   });
@@ -159,14 +196,14 @@ describe('OfferDetail', () => {
   it('account_gated error renders inline AccountGate and does not navigate', async () => {
     acceptOffer.mockRejectedValue(new MatchError('account_gated'));
     render(<OfferDetail {...props()} />);
-    await userEvent.click(screen.getByRole('button', { name: /accept/i }));
+    await userEvent.click(screen.getByRole('button', { name: /lock it in/i }));
     await waitFor(() => expect(screen.getByRole('heading')).toHaveTextContent(/can't take this offer/i));
     expect(push).not.toHaveBeenCalled();
   });
 
   it('expired prop disables accept + pass but leaves withdraw enabled', () => {
     render(<OfferDetail {...props({ expiresAt: past })} />);
-    expect(screen.getByRole('button', { name: /accept/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /lock it in/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^pass$/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /not interested/i })).toBeEnabled();
   });
@@ -215,7 +252,7 @@ describe('OfferDetail', () => {
     expect(screen.getByText(/you’re locked in\./i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /see your match/i })).toHaveAttribute('href', '/matches/lock-9');
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /lock it in/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^pass$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /not interested/i })).not.toBeInTheDocument();
   });
@@ -230,7 +267,7 @@ describe('OfferDetail', () => {
     expect(screen.getByText(/you passed on this one\./i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to the feed/i })).toHaveAttribute('href', '/feed');
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /lock it in/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /not interested/i })).not.toBeInTheDocument();
   });
 
@@ -239,7 +276,7 @@ describe('OfferDetail', () => {
     expect(screen.getByText(/this one expired\./i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to the feed/i })).toHaveAttribute('href', '/feed');
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /lock it in/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /not interested/i })).not.toBeInTheDocument();
   });
 });

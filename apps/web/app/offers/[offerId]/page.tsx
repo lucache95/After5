@@ -18,7 +18,9 @@ import { createClient } from '@/lib/supabase/server';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
-import { signBlurredUrls } from '@/lib/after5/photos';
+import { signBlurredUrls, listMyPhotos, signClearUrls } from '@/lib/after5/photos';
+import { offerRevealsHostClear } from '@/lib/after5/offer-reveal';
+import type { ProfileCardPrompt } from '@/components/ProfileCard';
 import { normalizeNightDetailStops, type NightDetailNight } from '@after5/api-client';
 import { OfferDetail } from './OfferDetail';
 import { AccountGate } from './AccountGate';
@@ -41,7 +43,7 @@ export default async function OfferPage({
   const { data: offer } = await supabase
     .from('offers')
     .select(`id, status, expires_at, candidate_id, creator_id, date_instance_id,
-      host:profiles!offers_creator_id_fkey ( first_name, age, city, blurred_photo_url ),
+      host:profiles!offers_creator_id_fkey ( id, first_name, age, city, neighborhood, pronouns, blurred_photo_url, clear_photo_url, vibe_tags, prompt_answers, verification, reliability_score ),
       instance:date_instances!offers_date_instance_id_fkey ( starts_at, itinerary_id )`)
     .eq('id', offerId)
     .maybeSingle();
@@ -76,7 +78,12 @@ export default async function OfferPage({
   }
 
   const host = (offer.host ?? {}) as {
-    first_name?: string | null; age?: number | null; city?: string | null; blurred_photo_url?: string | null;
+    id?: string | null; first_name?: string | null; age?: number | null; city?: string | null;
+    neighborhood?: string | null; pronouns?: string | null;
+    blurred_photo_url?: string | null; clear_photo_url?: string | null;
+    vibe_tags?: string[] | null;
+    prompt_answers?: { prompt_id: string; answer: string }[] | null;
+    verification?: string | null; reliability_score?: number | null;
   };
   const instance = (offer.instance ?? null) as { starts_at?: string | null; itinerary_id?: string | null } | null;
 
@@ -97,6 +104,49 @@ export default async function OfferPage({
     } else {
       const [signed] = await signBlurredUrls(supabase, [host.blurred_photo_url]).catch(() => []);
       hostPhotoUrl = signed ?? null;
+    }
+  }
+
+  // Reveal-at-pick (founder decision 2026-06-10): being chosen IS the reveal. For an
+  // active (unexpired) or accepted offer, load the HOST's clear gallery exactly like
+  // the lock page does — listMyPhotos + signClearUrls under the viewer's RLS client.
+  // match_reveal_allowed_pair's offer branch (126600/127700) + the m6 photo policies
+  // already pass for this pair; a passed/expired offer fails the predicate, so signing
+  // degrades to [] and OfferDetail keeps its terminal states. The blurred rung-2 url
+  // above stays as the fallback hint when no clear photo makes it down.
+  let clearPhotos: string[] = [];
+  let prompts: ProfileCardPrompt[] = [];
+  const revealsClear = offerRevealsHostClear(user.id, offer);
+  if (revealsClear && offer.creator_id) {
+    try {
+      const rows = await listMyPhotos(supabase, offer.creator_id);
+      clearPhotos = await signClearUrls(supabase, rows.map((r) => r.clear_path));
+      // Fallback: pre-M6 profiles carry only the legacy mirror. Same shape contract
+      // as the lock page hero: rooted path = public asset, else sign it.
+      if (clearPhotos.length === 0 && host.clear_photo_url) {
+        if (host.clear_photo_url.startsWith('/')) {
+          clearPhotos = [host.clear_photo_url];
+        } else {
+          const { data: signed } = await supabase.storage
+            .from('profile-photos')
+            .createSignedUrl(host.clear_photo_url, 60 * 10);
+          if (signed?.signedUrl) clearPhotos = [signed.signedUrl];
+        }
+      }
+    } catch {
+      clearPhotos = [];
+    }
+    // Prompt answers joined to active prompt labels — same join as the lock page.
+    const answers = host.prompt_answers ?? [];
+    if (answers.length > 0) {
+      const { data: defs } = await supabase
+        .from('profile_prompts')
+        .select('id, label')
+        .in('id', answers.map((a) => a.prompt_id));
+      const labelById = new Map((defs ?? []).map((d) => [d.id, d.label]));
+      prompts = answers
+        .filter((a) => a.answer?.trim())
+        .map((a) => ({ label: labelById.get(a.prompt_id) ?? a.prompt_id, answer: a.answer }));
     }
   }
 
@@ -175,8 +225,14 @@ export default async function OfferPage({
           first_name: host.first_name ?? 'someone',
           age: host.age ?? null,
           city: host.city ?? null,
+          neighborhood: host.neighborhood ?? null,
+          pronouns: host.pronouns ?? null,
           photo_url: hostPhotoUrl,
+          verification: host.verification ?? null,
+          reliability_score: host.reliability_score ?? null,
         }}
+        photos={clearPhotos}
+        prompts={prompts}
         date={instance?.starts_at ? { startsAt: instance.starts_at } : null}
         stops={stops}
         vibeTags={vibeTags}
