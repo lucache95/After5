@@ -37,7 +37,8 @@ export function CustomVenueSearch({ onAdd }: { onAdd: (stop: Stop) => void }) {
       }
       const body = (await res.json()) as { results?: Stop[] };
       setResults(body.results ?? []);
-    } catch {
+    } catch (err) {
+      console.error('[editor] place search failed', err);
       setResults([]);
     } finally {
       setSearching(false);

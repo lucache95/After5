@@ -3,8 +3,15 @@
 // inputs for name + start time, a textarea for what-to-do, number inputs for
 // minutes + cost, a remove button and a visual drag handle (the Reorder wiring
 // lives in ItineraryEditor). Tier-1 shell chrome, lowercase, a11y-labelled.
+import { useCallback } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import type { Stop } from '@/lib/itinerary-types';
+
+// Auto-grow a textarea to fit its content (no inner scroll/clipping).
+function autoGrow(el: HTMLTextAreaElement) {
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
 
 const fieldClass =
   'w-full rounded-2xl border border-shell-ink/15 bg-white/70 px-3 py-2 font-body text-sm text-shell-ink placeholder:text-shell-ink/35 focus:border-shell-accent/60 focus:outline-none focus:ring-2 focus:ring-shell-accent/20';
@@ -22,6 +29,12 @@ export function EditableStopCard({
   onPatch: (i: number, patch: Partial<Stop>) => void;
   onRemove: (i: number) => void;
 }) {
+  // Ref callback sizes the "what to do" textarea on first render so existing
+  // long content isn't clipped; onInput keeps it growing while typing.
+  const whatToDoRef = useCallback((el: HTMLTextAreaElement | null) => {
+    if (el) autoGrow(el);
+  }, []);
+
   return (
     <div className="rounded-3xl border border-shell-ink/10 bg-shell-base p-4 shadow-fun">
       <div className="flex items-start gap-3">
@@ -91,10 +104,12 @@ export function EditableStopCard({
               id={`stop-do-${index}`}
               aria-label="what to do"
               value={stop.what_to_do ?? ''}
+              ref={whatToDoRef}
               onChange={(e) => onPatch(index, { what_to_do: e.target.value })}
+              onInput={(e) => autoGrow(e.currentTarget)}
               placeholder="the move here"
               rows={2}
-              className={`${fieldClass} resize-none`}
+              className={`${fieldClass} resize-none overflow-hidden`}
             />
           </div>
         </div>

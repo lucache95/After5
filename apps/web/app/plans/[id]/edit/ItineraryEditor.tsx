@@ -25,6 +25,19 @@ import { PendingButtonContent } from '@/components/PendingButtonContent';
 // stop), so Reorder identity survives renames + reorders.
 interface Row { key: string; stop: Stop; }
 
+// Turn a thrown save error into a toast the founder can act on. Auth failures
+// (expired JWT / failed refresh / 401) get a refresh nudge; anything else with
+// a message gets surfaced verbatim; otherwise fall back to the generic line.
+function saveErrorMessage(err: unknown): string {
+  const e = err as { message?: unknown; status?: unknown; code?: unknown } | null;
+  const message = typeof e?.message === 'string' ? e.message : '';
+  const status = typeof e?.status === 'number' ? e.status : undefined;
+  const authish = status === 401 || /jwt|expired|refresh/i.test(message);
+  if (authish) return 'your session expired. refresh the page and try again.';
+  if (message) return `that didn’t save: ${message}`;
+  return 'that didn’t save. try again?';
+}
+
 export function ItineraryEditor({
   itineraryId,
   initialStops,
@@ -166,8 +179,9 @@ export function ItineraryEditor({
         raw: row.raw as unknown as Json,
         submitted_by: user.id,
       });
-    } catch {
-      // non-fatal: the stop is already on the plan.
+    } catch (err) {
+      // non-fatal: the stop is already on the plan. Log so it's diagnosable.
+      console.error('[editor] custom venue queue record failed', err);
     }
   }
 
@@ -197,8 +211,9 @@ export function ItineraryEditor({
       } else {
         toast.success('saved. looking good.', { id: t });
       }
-    } catch {
-      toast.error('that didn’t save. try again?', { id: t });
+    } catch (err) {
+      console.error('[editor] save failed', err);
+      toast.error(saveErrorMessage(err), { id: t });
     } finally {
       setSaving(false);
     }
@@ -294,9 +309,12 @@ export function ItineraryEditor({
         </button>
 
         <div className="mt-5 rounded-2xl border border-shell-ink/10 bg-shell-ink/[0.02] p-4">
-          <h3 className="mb-2 font-heading text-sm lowercase text-shell-ink">
-            add a place we don’t have yet
+          <h3 className="font-heading text-sm lowercase text-shell-ink">
+            missing a spot? add it
           </h3>
+          <p className="mb-2 mt-1 font-body text-[12px] text-shell-ink/55">
+            search any real place in town. we&rsquo;ll add it to your night with the details filled in.
+          </p>
           <CustomVenueSearch onAdd={handleAddCustom} />
         </div>
       </section>
