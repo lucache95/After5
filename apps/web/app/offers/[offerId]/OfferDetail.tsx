@@ -15,11 +15,11 @@
 // affordance (the DB hasn't flipped yet); server terminal states never mount
 // the countdown at all.
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ProfileCard, type ProfileCardPrompt } from '@/components/ProfileCard';
 import type { VerificationState } from '@after5/business';
 import { toast } from 'sonner';
@@ -77,6 +77,97 @@ const DATE_OPTS: Intl.DateTimeFormatOptions = {
 
 const REVEAL_EASE = [0.22, 1, 0.36, 1] as const;
 
+// ─── the picked ceremony ─────────────────────────────────────────────────────
+// Three-phase full-screen reveal (founder direction 2026-06-12, "a summoner
+// approaches" arc translated to brand): mystery → anticipation → reveal.
+//   tease    — plum veil, a pink glow breathing, "someone picked you" settles in
+//              while the host is only a silhouette (heavy blur, dimmed).
+//   approach — slow push-in; the blur thins but the face stays out of reach.
+//   reveal   — one light sweep crosses the portrait, the blur drops, and the
+//              name lands: "jordan picked you."
+// Tap anywhere skips straight to the page. Reduced-motion users never see this
+// overlay (the caller falls back to a plain fade). Plays once per offer via the
+// sessionStorage gate in OfferDetail.
+const CEREMONY = {
+  approachAt: 1600, revealAt: 3000, outAt: 4800, doneAt: 5400, // ms
+} as const;
+
+function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: string; onDone: () => void }) {
+  const [phase, setPhase] = useState<'tease' | 'approach' | 'reveal' | 'out'>('tease');
+  useEffect(() => {
+    const ts = [
+      setTimeout(() => setPhase('approach'), CEREMONY.approachAt),
+      setTimeout(() => setPhase('reveal'), CEREMONY.revealAt),
+      setTimeout(() => setPhase('out'), CEREMONY.outAt),
+      setTimeout(onDone, CEREMONY.doneAt),
+    ];
+    return () => ts.forEach(clearTimeout);
+  }, [onDone]);
+
+  const portrait =
+    phase === 'tease'
+      ? { scale: 1.18, filter: 'blur(26px) brightness(0.5)' }
+      : phase === 'approach'
+        ? { scale: 1.08, filter: 'blur(11px) brightness(0.72)' }
+        : { scale: 1, filter: 'blur(0px) brightness(1)' };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden bg-shell-ink px-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: phase === 'out' ? 0 : 1 }}
+      transition={{ duration: phase === 'out' ? 0.6 : 0.45, ease: REVEAL_EASE }}
+      onClick={onDone}
+      role="button"
+      aria-label="someone picked you — tap to skip the reveal"
+      tabIndex={0}
+    >
+      {/* breathing pink glow behind the portrait */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute h-[26rem] w-[26rem] rounded-full bg-shell-accent/30 blur-3xl"
+        animate={{ scale: [1, 1.12, 1], opacity: phase === 'reveal' || phase === 'out' ? 0.55 : 0.3 }}
+        transition={{ scale: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.8 } }}
+      />
+
+      {/* the portrait: silhouette → push-in → clear */}
+      <div className="relative h-[22rem] w-[17rem] overflow-hidden rounded-[2rem] ring-1 ring-white/15">
+        <motion.div className="absolute inset-0" animate={portrait} transition={{ duration: 1.3, ease: REVEAL_EASE }}>
+          <Image src={photoSrc} alt="" fill sizes="272px" className="object-cover" priority draggable={false} />
+        </motion.div>
+        {/* the light sweep — fires once, on reveal */}
+        {(phase === 'reveal' || phase === 'out') && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-[-15%] w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+            style={{ skewX: '-18deg' }}
+            initial={{ x: '-160%' }}
+            animate={{ x: '260%' }}
+            transition={{ duration: 0.9, ease: 'easeInOut' }}
+          />
+        )}
+      </div>
+
+      {/* the line: settles in, then the name lands on reveal */}
+      <div className="mt-8 h-12 text-center">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={phase === 'reveal' || phase === 'out' ? 'named' : 'tease'}
+            className="font-heading text-3xl lowercase text-white"
+            initial={{ opacity: 0, letterSpacing: '0.3em' }}
+            animate={{ opacity: 1, letterSpacing: '0.06em' }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.1, ease: REVEAL_EASE }}
+          >
+            {phase === 'reveal' || phase === 'out' ? `${name} picked you` : 'someone picked you'}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+      <p className="mt-2 font-body text-xs lowercase tracking-[0.12em] text-white/40">tap to skip</p>
+    </motion.div>
+  );
+}
+
 export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date, stops, vibeTags, night = null, lockId = null, photos = [], prompts = [] }: OfferDetailProps) {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -100,6 +191,10 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
       return false;
     }
   });
+  // Full-motion users get the three-phase overlay; the inline card stays hidden
+  // until it dissolves. Reduced motion never mounts the overlay (plain fade below).
+  const [overlay, setOverlay] = useState(ceremony);
+  const overlayActive = overlay && !reduce && photos.length > 0;
 
   if (gate) return <AccountGate reason={gate} />;
 
@@ -149,37 +244,17 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
              motion gets a short opacity cross-fade. Empty photos fall back to
              ProfileCard's initial-letter avatar — never a blur on this surface. */
           <div className="relative mt-6">
-            {ceremony && photos.length > 0 && (
-              <motion.div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 -top-2 mx-auto h-40 w-40 rounded-full bg-shell-accent/25 blur-3xl"
-                initial={!reduce ? { opacity: 0, scale: 0.85 } : false}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={!reduce ? { duration: 0.6, delay: 0.2, ease: REVEAL_EASE } : undefined}
-              />
-            )}
+            <AnimatePresence>
+              {overlayActive && (
+                <PickedCeremony name={name} photoSrc={photos[0]} onDone={() => setOverlay(false)} />
+              )}
+            </AnimatePresence>
             <motion.div
               className="relative"
               data-offer-reveal
-              initial={
-                ceremony && !reduce && photos.length > 0
-                  ? { filter: 'blur(12px)', scale: 1.02, opacity: 0.85 }
-                  : ceremony && reduce
-                    ? { opacity: 0 }
-                    : false
-              }
-              animate={
-                ceremony && !reduce && photos.length > 0
-                  ? { filter: 'blur(0px)', scale: 1, opacity: 1 }
-                  : { opacity: 1 }
-              }
-              transition={
-                ceremony && !reduce && photos.length > 0
-                  ? { duration: 0.9, ease: REVEAL_EASE }
-                  : ceremony && reduce
-                    ? { duration: 0.2, ease: 'easeOut' }
-                    : undefined
-              }
+              initial={ceremony ? { opacity: 0, y: reduce ? 0 : 10 } : false}
+              animate={overlayActive ? undefined : { opacity: 1, y: 0 }}
+              transition={{ duration: reduce ? 0.2 : 0.7, ease: REVEAL_EASE }}
             >
               <ProfileCard
                 name={name}
