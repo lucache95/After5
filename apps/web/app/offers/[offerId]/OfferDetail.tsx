@@ -21,7 +21,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ProfileCard, type ProfileCardPrompt } from '@/components/ProfileCard';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
 import type { VerificationState } from '@after5/business';
 import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
@@ -43,6 +42,7 @@ export interface OfferDetailProps {
   host: {
     first_name: string; age: number | null; city: string | null;
     neighborhood?: string | null; pronouns?: string | null;
+    occupation?: string | null; height_cm?: number | null;
     photo_url: string | null;
     verification?: string | null; reliability_score?: number | null;
   };
@@ -409,26 +409,37 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
             </motion.div>
 
             {galleryOpen && (
+              /* Founder rule (2026-06-12): tapping the photo opens HER PROFILE —
+                 the full card (gallery, prompts, vibe tags), not a photo zoom. */
               <div
                 role="dialog"
                 aria-modal="true"
-                aria-label={`${name}'s photos`}
-                className="fixed inset-0 z-[60] flex flex-col justify-center bg-shell-ink/95 px-3"
+                aria-label={`${name}'s profile`}
+                className="fixed inset-0 z-[60] overflow-y-auto bg-shell-ink/60 px-4 py-8"
                 onClick={() => setGalleryOpen(false)}
               >
-                <div onClick={(e) => e.stopPropagation()}>
-                  <PhotoCarousel name={name} photos={photos} />
-                  <p className="mt-3 text-center font-heading text-2xl lowercase text-white">
-                    {host.age != null ? `${name}, ${host.age}` : name}
-                  </p>
+                <div className="mx-auto max-w-[420px]" onClick={(e) => e.stopPropagation()}>
+                  <ProfileCard
+                    name={name}
+                    age={host.age}
+                    place={(host.neighborhood ?? host.city)?.toLowerCase() ?? null}
+                    pronouns={host.pronouns ?? null}
+                    occupation={host.occupation ?? null}
+                    height_cm={host.height_cm ?? null}
+                    photos={photos}
+                    vibe_tags={vibeTags ?? []}
+                    prompts={prompts}
+                    verification={(host.verification ?? undefined) as VerificationState | undefined}
+                    reliability_score={host.reliability_score ?? null}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGalleryOpen(false)}
+                    className="mx-auto mt-3 flex min-h-[44px] w-full items-center justify-center rounded-full font-body text-sm lowercase text-white/80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
+                  >
+                    close
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setGalleryOpen(false)}
-                  className="mx-auto mt-4 min-h-[44px] rounded-full px-6 font-body text-sm lowercase text-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
-                >
-                  close
-                </button>
               </div>
             )}
           </div>

@@ -44,7 +44,7 @@ export default async function OfferPage({
   const { data: offer } = await supabase
     .from('offers')
     .select(`id, status, expires_at, candidate_id, creator_id, date_instance_id,
-      host:profiles!offers_creator_id_fkey ( id, first_name, age, city, neighborhood, pronouns, blurred_photo_url, clear_photo_url, vibe_tags, prompt_answers, verification, reliability_score ),
+      host:profiles!offers_creator_id_fkey ( id, first_name, age, city, neighborhood, pronouns, occupation, height_cm, blurred_photo_url, clear_photo_url, vibe_tags, prompt_answers, verification, reliability_score ),
       instance:date_instances!offers_date_instance_id_fkey ( starts_at, itinerary_id )`)
     .eq('id', offerId)
     .maybeSingle();
@@ -245,6 +245,8 @@ export default async function OfferPage({
           city: host.city ?? null,
           neighborhood: host.neighborhood ?? null,
           pronouns: host.pronouns ?? null,
+          occupation: host.occupation ?? null,
+          height_cm: host.height_cm ?? null,
           photo_url: hostPhotoUrl,
           verification: host.verification ?? null,
           reliability_score: host.reliability_score ?? null,
