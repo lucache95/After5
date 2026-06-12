@@ -31,6 +31,9 @@ export interface ProfileCardProps {
   reliability_score?: number | null;
   // Post-reveal contact, only when the caller decides to surface it.
   instagram_handle?: string | null;
+  /** Tap handler for the photo region (client callers only) — e.g. open a
+      full-screen gallery. Omitted = plain static photos. */
+  onPhotoTap?: () => void;
 }
 
 export function ProfileCard({
@@ -46,6 +49,7 @@ export function ProfileCard({
   verification,
   reliability_score = null,
   instagram_handle,
+  onPhotoTap,
 }: ProfileCardProps) {
   const heading = age != null ? `${name}, ${age}` : name;
   const meta = [place, pronouns, occupation, height_cm ? `${height_cm} cm` : null].filter(Boolean) as string[];
@@ -59,19 +63,32 @@ export function ProfileCard({
   return (
     <article className="mx-auto w-full max-w-[420px] overflow-hidden rounded-3xl bg-profile-base text-profile-ink shadow-fun">
       {/* PHOTOS */}
-      {photos.length === 0 ? (
-        <div className="flex justify-center bg-profile-base px-5 pt-6">
-          <Polaroid src={null} alt={name} label={name.toLowerCase()} size="xl" tone="dating" />
-        </div>
-      ) : photos.length === 1 ? (
-        <div className="flex justify-center bg-profile-base px-5 pt-6">
-          <Polaroid src={photos[0]} alt={name} size="xl" tone="dating" />
-        </div>
-      ) : (
-        // Swipeable strip + chevrons/dots (desktop mice can't drag a CSS scroll
-        // container) — see PhotoCarousel for the vaul no-drag note.
-        <PhotoCarousel name={name} photos={photos} />
-      )}
+      {(() => {
+        const photoBlock = photos.length === 0 ? (
+          <div className="flex justify-center bg-profile-base px-5 pt-6">
+            <Polaroid src={null} alt={name} label={name.toLowerCase()} size="xl" tone="dating" />
+          </div>
+        ) : photos.length === 1 ? (
+          <div className="flex justify-center bg-profile-base px-5 pt-6">
+            <Polaroid src={photos[0]} alt={name} size="xl" tone="dating" />
+          </div>
+        ) : (
+          // Swipeable strip + chevrons/dots (desktop mice can't drag a CSS scroll
+          // container) — see PhotoCarousel for the vaul no-drag note.
+          <PhotoCarousel name={name} photos={photos} />
+        );
+        if (!onPhotoTap || photos.length === 0) return photoBlock;
+        return (
+          <button
+            type="button"
+            onClick={onPhotoTap}
+            aria-label={`see ${name}'s photos full screen`}
+            className="block w-full cursor-zoom-in text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+          >
+            {photoBlock}
+          </button>
+        );
+      })()}
 
       <div className="space-y-5 p-5">
         {/* IDENTITY */}

@@ -21,6 +21,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ProfileCard, type ProfileCardPrompt } from '@/components/ProfileCard';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 import type { VerificationState } from '@after5/business';
 import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
@@ -304,6 +305,11 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
   // hydration is a server/client mismatch React resolves by dropping the
   // client-only branch. That bug shipped the v1 ceremony dead on prod.
   const [overlay, setOverlay] = useState(false);
+  // Queue-guard (founder 2026-06-12): passing while people are lined up behind
+  // you gets one honest "are you sure?" — the spot rolls to the next person.
+  const [confirming, setConfirming] = useState<null | 'pass' | 'withdraw'>(null);
+  // Founder rule: tapping the profile photo pops the gallery full screen.
+  const [galleryOpen, setGalleryOpen] = useState(false);
   useEffect(() => {
     if (ceremony && !reduce && photos.length > 0) setOverlay(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,6 +395,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
               transition={{ duration: reduce ? 0.2 : 0.7, ease: REVEAL_EASE }}
             >
               <ProfileCard
+                onPhotoTap={photos.length > 0 ? () => setGalleryOpen(true) : undefined}
                 name={name}
                 age={host.age}
                 place={(host.neighborhood ?? host.city)?.toLowerCase() ?? null}
@@ -400,6 +407,30 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
                 reliability_score={host.reliability_score ?? null}
               />
             </motion.div>
+
+            {galleryOpen && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${name}'s photos`}
+                className="fixed inset-0 z-[60] flex flex-col justify-center bg-shell-ink/95 px-3"
+                onClick={() => setGalleryOpen(false)}
+              >
+                <div onClick={(e) => e.stopPropagation()}>
+                  <PhotoCarousel name={name} photos={photos} />
+                  <p className="mt-3 text-center font-heading text-2xl lowercase text-white">
+                    {host.age != null ? `${name}, ${host.age}` : name}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGalleryOpen(false)}
+                  className="mx-auto mt-4 min-h-[44px] rounded-full px-6 font-body text-sm lowercase text-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
+                >
+                  close
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           /* Terminal states (passed/expired): the reveal grant has self-revoked, so
@@ -524,7 +555,10 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
               <button
                 type="button"
                 disabled={busy || expired}
-                onClick={() => void run(() => passOffer(offerId), () => router.push('/feed'))}
+                onClick={() => {
+                  if (interestedCount > 1) { setConfirming('pass'); return; }
+                  void run(() => passOffer(offerId), () => router.push('/feed'));
+                }}
                 className={cn(actionBtn, 'text-shell-ink/70 focus-visible:ring-4 focus-visible:ring-shell-ink/30')}
               >
                 pass
@@ -532,14 +566,62 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void run(
-                  () => (instanceId ? withdraw(instanceId) : passOffer(offerId)),
-                  () => router.push('/feed'),
-                )}
+                onClick={() => {
+                  if (interestedCount > 1) { setConfirming('withdraw'); return; }
+                  void run(
+                    () => (instanceId ? withdraw(instanceId) : passOffer(offerId)),
+                    () => router.push('/feed'),
+                  );
+                }}
                 className="mt-1 min-h-[44px] font-body text-sm lowercase text-shell-ink/50 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/20 disabled:opacity-50"
               >
                 not interested
               </button>
+
+              {confirming && (
+                <div
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-label="are you sure you want to give up your spot?"
+                  className="fixed inset-0 z-[60] flex items-end justify-center bg-shell-ink/50 px-5 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+                  onClick={() => setConfirming(null)}
+                >
+                  <div
+                    className="w-full max-w-[420px] rounded-3xl bg-shell-base p-6 text-center shadow-fun"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="font-heading text-2xl lowercase text-shell-ink">wait — you're first in line</p>
+                    <p className="mt-2 font-body text-sm lowercase leading-snug text-shell-ink/75">
+                      {interestedCount - 1 === 1 ? '1 person is' : `${interestedCount - 1} people are`} lined up behind you for this date.
+                      {' '}pass, and the next person takes your spot — there's no getting back in line.
+                    </p>
+                    <div className="mt-5 flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(null)}
+                        className={cn(actionBtn, 'bg-shell-accent text-white focus-visible:ring-4 focus-visible:ring-shell-accent/40')}
+                      >
+                        keep my spot
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          const which = confirming;
+                          setConfirming(null);
+                          void run(
+                            () => (which === 'withdraw' && instanceId ? withdraw(instanceId) : passOffer(offerId)),
+                            () => router.push('/feed'),
+                          );
+                        }}
+                        className={cn(actionBtn, 'text-shell-ink/60 focus-visible:ring-4 focus-visible:ring-shell-ink/30')}
+                      >
+                        {confirming === 'withdraw' ? "i'm not interested" : 'pass anyway'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
