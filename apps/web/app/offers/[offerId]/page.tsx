@@ -81,6 +81,7 @@ export default async function OfferPage({
   const host = (offer.host ?? {}) as {
     id?: string | null; first_name?: string | null; age?: number | null; city?: string | null;
     neighborhood?: string | null; pronouns?: string | null;
+    occupation?: string | null; height_cm?: number | null;
     blurred_photo_url?: string | null; clear_photo_url?: string | null;
     vibe_tags?: string[] | null;
     prompt_answers?: { prompt_id: string; answer: string }[] | null;
