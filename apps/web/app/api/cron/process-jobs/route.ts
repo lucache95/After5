@@ -32,5 +32,19 @@ export async function GET(request: Request) {
     body: '{}',
   });
   const summary = await res.json().catch(() => ({}));
-  return NextResponse.json({ invoked: true, status: res.status, summary }, { status: res.ok ? 200 : 502 });
+
+  // Pushy host nudges (founder 2026-06-12): seeking nights starting within 72h
+  // with people waiting and no active offer ping their host. Dedup is in the
+  // RPC (once per night per day), so the every-minute cadence is harmless.
+  // Best-effort — never fail the jobs run over it.
+  let nudges: number | null = null;
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const { data } = await createAdminClient().rpc('dispatch_host_pick_nudges');
+    nudges = typeof data === 'number' ? data : null;
+  } catch (e) {
+    console.error('[process-jobs] host_pick_nudge dispatch failed', e);
+  }
+
+  return NextResponse.json({ invoked: true, status: res.status, summary, nudges }, { status: res.ok ? 200 : 502 });
 }

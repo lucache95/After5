@@ -65,6 +65,9 @@ export const NOTIF_META: Record<NotificationType, NotifMeta> = {
   identity_revealed:     { label: 'you can see them now',         Icon: Eye,            category: 'matches',  hrefFor: lockHref },
   night_cancelled:       { label: 'a night you liked was cancelled', Icon: CalendarX,   category: 'reminders',hrefFor: instanceHref },
   night_changed:         { label: 'a night you liked changed',    Icon: RefreshCw,      category: 'reminders',hrefFor: instanceHref },
+  // Pushy host-side timer (founder 2026-06-12): people are queued on your
+  // night and you haven't picked — deep-links straight to the interested list.
+  host_pick_nudge:       { label: 'people are waiting on your night', Icon: Clock,       category: 'reminders',hrefFor: interestedHref },
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIF_META) as NotificationType[];

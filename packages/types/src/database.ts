@@ -3226,6 +3226,10 @@ export type Database = {
       }
       disablelongtransactions: { Args: never; Returns: string }
       dispatch_date_reconfirm: { Args: { p_lock: string }; Returns: undefined }
+      dispatch_host_pick_nudges: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       dispatch_notification: {
         Args: {
           p_payload?: Json
@@ -4355,6 +4359,7 @@ export type Database = {
         | "identity_revealed"
         | "night_cancelled"
         | "night_changed"
+        | "host_pick_nudge"
       occasion: "date" | "solo" | "friends"
       offer_status: "active" | "accepted" | "passed" | "expired"
       payment_preference: "i_pay" | "they_pay" | "split"
@@ -4628,6 +4633,7 @@ export const Constants = {
         "identity_revealed",
         "night_cancelled",
         "night_changed",
+        "host_pick_nudge",
       ],
       occasion: ["date", "solo", "friends"],
       offer_status: ["active", "accepted", "passed", "expired"],

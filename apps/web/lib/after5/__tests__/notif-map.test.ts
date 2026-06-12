@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { NOTIF_META, hrefForNotification, NOTIFICATION_TYPES } from '../notif-map';
 
 describe('NOTIF_META', () => {
-  it('covers all 24 notification types', () => {
-    expect(NOTIFICATION_TYPES).toHaveLength(24);
+  it('covers all 25 notification types', () => {
+    expect(NOTIFICATION_TYPES).toHaveLength(25);
     for (const t of NOTIFICATION_TYPES) {
       const meta = NOTIF_META[t];
       expect(meta).toBeTruthy();
