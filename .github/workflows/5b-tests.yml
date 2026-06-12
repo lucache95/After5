@@ -97,7 +97,11 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: CLI v2.106.0 (2026-06-11) ships a postgres image that drops the
+          # automatic anon/authenticated table grants on fresh stacks, which breaks
+          # every RLS test ("permission denied for table profiles"). 2.101.0 matches
+          # the locally-proven stack. Bump deliberately, with the SQL suite green.
+          version: 2.101.0
 
       - name: Start Supabase stack
         run: supabase start

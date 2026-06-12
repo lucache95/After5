@@ -16,9 +16,9 @@ BEGIN
   IF NOT ('analytics_relay' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing analytics_relay'; END IF;
   IF NOT ('chat_purge' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing chat_purge'; END IF;
   IF NOT ('deletion_process' = ANY (enum_range(null::job_type)::text[])) THEN RAISE EXCEPTION 'job_type missing deletion_process'; END IF;
-  -- full job_type enum has exactly 13 values (C1)
-  IF (SELECT count(*) FROM unnest(enum_range(null::job_type))) <> 13
-    THEN RAISE EXCEPTION 'job_type must have exactly 13 values'; END IF;
+  -- full job_type enum has exactly 14 values (C1 + data02 seed_city)
+  IF (SELECT count(*) FROM unnest(enum_range(null::job_type))) <> 14
+    THEN RAISE EXCEPTION 'job_type must have exactly 14 values'; END IF;
   -- C1 active-dedup unique index
   PERFORM 1 FROM pg_indexes WHERE tablename='jobs' AND indexname='jobs_dedup_active';
   IF NOT FOUND THEN RAISE EXCEPTION 'jobs_dedup_active index missing'; END IF;

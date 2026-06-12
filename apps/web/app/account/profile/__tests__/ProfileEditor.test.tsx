@@ -25,6 +25,16 @@ vi.mock('framer-motion', () => ({
     Item: ({ children }: { children: React.ReactNode }) => <li>{children}</li>,
   },
   useReducedMotion: () => false,
+  // HeartLoader (pending-save button) renders motion.span/motion.svg.
+  motion: new Proxy(
+    {},
+    {
+      get:
+        () =>
+        ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+    },
+  ),
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 const upsertProfile = vi.fn();
