@@ -9,6 +9,7 @@
 // This is the HOST's own surface (Tier-1 shell), not the blind feed — so it
 // shows the real title, real local date/time, and how many people slid in.
 import Link from 'next/link';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { BottomTabShell } from '@/components/BottomTabShell';
@@ -18,6 +19,44 @@ import { NightsSegments, type NightRow } from './NightsSegments';
 import { listAmbientSounds } from '@after5/api-client';
 
 export const dynamic = 'force-dynamic';
+
+// Quiet drafts row shape: an itinerary the viewer owns that was never posted
+// as a date_instance. Editor saves (update_itinerary_stops) never publish, so
+// "draft" simply means "no instance yet".
+interface DraftRow {
+  id: string;
+  title: string | null;
+  cover_image_url: string | null;
+  stops: unknown;
+  total_cost_pp: number | null;
+  total_duration_min: number | null;
+}
+
+// Same meta idiom as the plan picker: `3 stops · ~2.5 hr · $45 pp`, segments
+// drop when missing, null when nothing is derivable.
+function draftMetaLine(d: DraftRow): string | null {
+  const parts: string[] = [];
+  const stopCount = Array.isArray(d.stops) ? d.stops.length : 0;
+  if (stopCount > 0) parts.push(`${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}`);
+  if (d.total_duration_min != null && d.total_duration_min > 0) {
+    parts.push(`~${Math.round((d.total_duration_min / 60) * 10) / 10} hr`);
+  }
+  if (d.total_cost_pp != null) parts.push(`$${Math.round(d.total_cost_pp)} pp`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+// First usable thumb url: cover image, else the first stop photo if the stops
+// json carries one. Returns null rather than ever risking a broken <img>.
+function draftThumb(d: DraftRow): string | null {
+  if (d.cover_image_url) return d.cover_image_url;
+  if (Array.isArray(d.stops)) {
+    for (const s of d.stops as Array<Record<string, unknown>>) {
+      const url = (s?.photo_url ?? s?.image_url) as string | undefined;
+      if (typeof url === 'string' && url.length > 0) return url;
+    }
+  }
+  return null;
+}
 
 export default async function MyNightsPage() {
   const supabase = await createClient();
@@ -33,7 +72,7 @@ export default async function MyNightsPage() {
   // Join itinerary for title + cover. Columns confirmed from migration 120300.
   const { data: rows } = await supabase
     .from('date_instances')
-    .select('id, starts_at, status, duration_min, venue_id, ambient_sound_id, itinerary:itineraries(title, cover_image_url, inputs)')
+    .select('id, starts_at, status, duration_min, venue_id, ambient_sound_id, itinerary_id, itinerary:itineraries(title, cover_image_url, inputs)')
     .eq('creator_id', user.id)
     .order('starts_at', { ascending: false })
     .limit(50);
@@ -53,6 +92,31 @@ export default async function MyNightsPage() {
       .eq('creator_id', user.id);
     for (const row of (queueRows ?? []) as Array<{ date_instance_id: string }>) {
       counts.set(row.date_instance_id, (counts.get(row.date_instance_id) ?? 0) + 1);
+    }
+  }
+
+  // Quiet drafts: itineraries the viewer owns with no date_instance anywhere.
+  // Two cheap scoped queries (own itineraries, then which of those ids appear
+  // in date_instances) instead of a server-side anti-join; both are small and
+  // index-friendly. Empty result → the section renders nothing at all.
+  let drafts: DraftRow[] = [];
+  {
+    const { data: ownPlans } = await supabase
+      .from('itineraries')
+      .select('id, title, cover_image_url, stops, total_cost_pp, total_duration_min')
+      .eq('user_id', user.id)
+      .order('generated_at', { ascending: false })
+      .limit(40);
+    const candidates = (ownPlans ?? []) as unknown as DraftRow[];
+    if (candidates.length > 0) {
+      const { data: posted } = await supabase
+        .from('date_instances')
+        .select('itinerary_id')
+        .in('itinerary_id', candidates.map((c) => c.id));
+      const postedIds = new Set(
+        ((posted ?? []) as Array<{ itinerary_id: string | null }>).map((r) => r.itinerary_id),
+      );
+      drafts = candidates.filter((c) => !postedIds.has(c.id)).slice(0, 20);
     }
   }
 
@@ -95,6 +159,45 @@ export default async function MyNightsPage() {
           venues={venues}
           ambientSounds={ambientOpts}
         />
+
+        {/* Quiet drafts: plans saved in the editor but never posted. Low-key by
+            design — renders nothing when there are no drafts. */}
+        {drafts.length > 0 && (
+          <section aria-label="drafts" className="mt-10">
+            <h2 className="font-heading text-lg lowercase text-shell-ink/70">drafts</h2>
+            <p className="mt-1 font-body text-xs text-shell-ink/50">plans you started but haven&apos;t posted yet.</p>
+            <ul className="mt-3 space-y-2">
+              {drafts.map((d) => {
+                const thumb = draftThumb(d);
+                const meta = draftMetaLine(d);
+                return (
+                  <li key={d.id}>
+                    <Link
+                      href={`/plans/${d.id}/edit`}
+                      className="flex items-center gap-3 rounded-xl border border-shell-ink/10 bg-shell-base px-3 py-2.5 transition-colors hover:border-shell-ink/25"
+                    >
+                      {thumb ? (
+                        <Image
+                          src={thumb}
+                          alt=""
+                          width={44}
+                          height={44}
+                          className="h-11 w-11 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div aria-hidden className="h-11 w-11 shrink-0 rounded-lg bg-shell-ink/10" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-body text-sm text-shell-ink">{d.title ?? 'untitled night'}</p>
+                        {meta && <p className="mt-0.5 truncate font-body text-xs text-shell-ink/50">{meta}</p>}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </div>
 
       <NotificationToast userId={user.id} />

@@ -47,9 +47,15 @@ function buildClient(opts: {
   nights?: NightFixture[];
   /** queue_entries rows the creator can read; tallied per date_instance_id. */
   queue?: Array<{ date_instance_id: string }>;
+  /** viewer-owned itineraries (draft candidates). */
+  drafts?: Array<Record<string, unknown>>;
+  /** date_instances rows linking itinerary ids that HAVE been posted. */
+  posted?: Array<{ itinerary_id: string }>;
 }) {
   const nights = opts.nights ?? [];
   const queue = opts.queue ?? [];
+  const drafts = opts.drafts ?? [];
+  const posted = opts.posted ?? [];
 
   return {
     auth: {
@@ -63,13 +69,18 @@ function buildClient(opts: {
         // .order().limit() and resolves to {data:[]} — no venues needed in tests.
         eq: (col: string, val: unknown) => {
           eqSpy(col, val);
-          const data = table === 'queue_entries' ? queue : nights;
+          // route by table: queue_entries is awaited directly; itineraries is
+          // the drafts-candidates query (.order().limit()); date_instances is
+          // the nights query (.order().limit()).
+          const data = table === 'queue_entries' ? queue : table === 'itineraries' ? drafts : nights;
           return {
             eq: () => ({ order: () => ({ limit: async () => ({ data: [] }) }) }),
-            order: () => ({ limit: async () => ({ data: nights }) }),
+            order: () => ({ limit: async () => ({ data }) }),
             then: (resolve: (v: { data: unknown }) => unknown) => resolve({ data }),
           };
         },
+        // drafts exclusion lookup: date_instances .select('itinerary_id').in(...)
+        in: async () => ({ data: posted }),
       }),
     }),
   };
@@ -193,5 +204,54 @@ describe('MyNightsPage', () => {
     const ui = await Page();
     render(ui);
     expect(screen.getByText('matched')).toBeInTheDocument();
+  });
+
+  it('renders the quiet drafts section with title, meta, and edit link', async () => {
+    mockClient.current = buildClient({
+      userId: 'host-1',
+      nights: [],
+      drafts: [
+        { id: 'plan-1', title: 'patio crawl', cover_image_url: null, stops: [{}, {}, {}], total_cost_pp: 45, total_duration_min: 150 },
+        { id: 'plan-2', title: null, cover_image_url: null, stops: null, total_cost_pp: null, total_duration_min: null },
+      ],
+    }) as Record<string, unknown>;
+    const ui = await Page();
+    render(ui);
+
+    expect(screen.getByText('drafts')).toBeInTheDocument();
+    expect(screen.getByText('patio crawl')).toBeInTheDocument();
+    expect(screen.getByText('3 stops · ~2.5 hr · $45 pp')).toBeInTheDocument();
+    // a title-less draft falls back to the quiet placeholder name
+    expect(screen.getByText('untitled night')).toBeInTheDocument();
+
+    const links = screen.getAllByRole('link');
+    expect(links.some((l) => l.getAttribute('href') === '/plans/plan-1/edit')).toBe(true);
+    expect(links.some((l) => l.getAttribute('href') === '/plans/plan-2/edit')).toBe(true);
+  });
+
+  it('excludes itineraries that already have a posted date_instance', async () => {
+    mockClient.current = buildClient({
+      userId: 'host-1',
+      nights: [],
+      drafts: [
+        { id: 'plan-1', title: 'already posted', cover_image_url: null, stops: [], total_cost_pp: null, total_duration_min: null },
+        { id: 'plan-2', title: 'still a draft', cover_image_url: null, stops: [], total_cost_pp: null, total_duration_min: null },
+      ],
+      posted: [{ itinerary_id: 'plan-1' }],
+    }) as Record<string, unknown>;
+    const ui = await Page();
+    render(ui);
+
+    expect(screen.getByText('still a draft')).toBeInTheDocument();
+    expect(screen.queryByText('already posted')).not.toBeInTheDocument();
+  });
+
+  it('renders no drafts section when there are no drafts', async () => {
+    mockClient.current = buildClient({ userId: 'host-1', nights: [] }) as Record<string, unknown>;
+    const ui = await Page();
+    render(ui);
+    expect(screen.queryByText('drafts')).not.toBeInTheDocument();
+    // posted-nights empty state still intact alongside the absent drafts section
+    expect(screen.getByText('nothing posted yet')).toBeInTheDocument();
   });
 });
