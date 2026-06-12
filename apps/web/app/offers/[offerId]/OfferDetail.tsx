@@ -350,6 +350,24 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
             "you've got an offer" read like a job posting (founder, 2026-06-10). */}
         <h1 className="font-heading text-4xl lowercase leading-[1.05] text-shell-ink">{name} picked you</h1>
 
+        {status === 'active' && !expired && (
+          /* The clock IS the page's second headline (founder 2026-06-12): a big
+             ticking H:MM:SS plus WHY it exists — the spot rolls to the next
+             person in line. Queue pressure shows only when someone's actually
+             behind them (interestedCount counts every right-swipe incl. them). */
+          <div className="mt-5 rounded-3xl bg-shell-pink/70 px-5 py-4 text-center">
+            <ExpiryCountdown expiresAt={expiresAt} hero onExpire={() => setExpired(true)} />
+            <p className="mt-1.5 font-body text-[13px] lowercase leading-snug text-shell-ink/75">
+              to lock it in. pass or run out of time, and the spot goes to the next person in line.
+            </p>
+            {interestedCount > 1 && (
+              <p className="mt-1 font-body text-xs font-semibold lowercase text-shell-accent">
+                {interestedCount - 1 === 1 ? '1 person is' : `${interestedCount - 1} people are`} in line behind you
+              </p>
+            )}
+          </div>
+        )}
+
         {status === 'active' || status === 'accepted' ? (
           /* Reveal-at-pick (founder decision 2026-06-10): being chosen IS the reveal.
              The full clear ProfileCard renders inline — same component the lock reveal
@@ -483,10 +501,6 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
 
         {status === 'active' && (
           <>
-            <div className="mt-4">
-              <ExpiryCountdown expiresAt={expiresAt} onExpire={() => setExpired(true)} />
-            </div>
-
             {expired && (
               <p className="mt-4 font-body text-sm text-shell-ink/70">
                 this one slipped away. <Link href="/feed" className="text-shell-accent underline">back to the feed</Link>

@@ -19,12 +19,25 @@ function format(ms: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+// Hero clock digits: always H:MM:SS so the seconds visibly tick (urgency is
+// the point — founder 2026-06-12).
+function formatHero(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function ExpiryCountdown({
   expiresAt,
   onExpire,
+  hero = false,
 }: {
   expiresAt: string;
   onExpire?: () => void;
+  /** Big ticking H:MM:SS clock (offer hero) instead of the quiet text line. */
+  hero?: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());
   const fired = useRef(false);
@@ -58,6 +71,20 @@ export function ExpiryCountdown({
         className="font-body text-sm text-shell-ink/60"
       >
         this offer expired.
+      </p>
+    );
+  }
+
+  if (hero) {
+    return (
+      <p
+        suppressHydrationWarning
+        role="timer"
+        aria-live="off"
+        aria-label={`${format(remaining)} left to decide`}
+        className="font-body text-5xl font-bold tabular-nums tracking-tight text-shell-accent"
+      >
+        {formatHero(remaining)}
       </p>
     );
   }
