@@ -106,7 +106,12 @@ const HEARTS = [
   { left: '6%',  delay: 2.4, size: 16 }, { left: '54%', delay: 2.8, size: 14 },
 ] as const;
 
-function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: string; onDone: () => void }) {
+function PickedCeremony({ name, pronouns, photoSrc, onDone }: { name: string; pronouns: string | null; photoSrc: string; onDone: () => void }) {
+  // Subject/object pronouns for the beat copy. The feed already showed the
+  // host's first name — the FACE is the reveal, so the lines build toward
+  // seeing them, not learning the name.
+  const p = (pronouns ?? '').toLowerCase();
+  const [subj, obj] = p.includes('she') ? ['she', 'her'] : p.includes('he') ? ['he', 'him'] : ['they', 'them'];
   const [phase, setPhase] = useState<CeremonyPhase>('mystery');
   useEffect(() => {
     const ts = [
@@ -130,10 +135,10 @@ function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: st
           : { scale: 1, filter: 'blur(0px) brightness(1) saturate(1)' };
 
   const line =
-    phase === 'mystery' ? 'someone picked you'
-    : phase === 'anticipation' ? 'you wanted their night. they want you on it.'
-    : phase === 'prestige' ? 'ready?'
-    : `${name} picked you`;
+    phase === 'mystery' ? `${name} picked you`
+    : phase === 'anticipation' ? `${subj} had options. ${subj} chose you.`
+    : phase === 'prestige' ? `ready to see ${obj}?`
+    : `say hi to ${name}`;
 
   const heartsOn = phase === 'prestige' || phase === 'reveal' || phase === 'out';
 
@@ -145,7 +150,7 @@ function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: st
       transition={{ duration: phase === 'out' ? 0.7 : 0.5, ease: REVEAL_EASE }}
       onClick={onDone}
       role="button"
-      aria-label="someone picked you — tap to skip the reveal"
+      aria-label={`${name} picked you — tap to skip the reveal`}
       tabIndex={0}
     >
       {/* breathing pink glow — the heartbeat of the whole sequence. It beats
@@ -341,7 +346,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
           <div className="relative mt-6">
             <AnimatePresence>
               {overlayActive && (
-                <PickedCeremony name={name} photoSrc={photos[0]} onDone={() => setOverlay(false)} />
+                <PickedCeremony name={name} pronouns={host.pronouns ?? null} photoSrc={photos[0]} onDone={() => setOverlay(false)} />
               )}
             </AnimatePresence>
             <motion.div
