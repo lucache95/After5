@@ -131,7 +131,7 @@ function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: st
 
   const line =
     phase === 'mystery' ? 'someone picked you'
-    : phase === 'anticipation' ? 'they read your night. they want you on it.'
+    : phase === 'anticipation' ? 'you wanted their night. they want you on it.'
     : phase === 'prestige' ? 'ready?'
     : `${name} picked you`;
 
