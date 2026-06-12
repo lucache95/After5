@@ -63,7 +63,7 @@ function lifecycleLabel(status: string): string {
   }
 }
 
-function NightCard({ night, interested, venues, ambientSounds }: { night: NightRow; interested: number; venues: VenueOption[]; ambientSounds: AmbientOption[] }) {
+function NightCard({ night, interested, offerSent = false, venues, ambientSounds }: { night: NightRow; interested: number; offerSent?: boolean; venues: VenueOption[]; ambientSounds: AmbientOption[] }) {
   const title = night.itinerary?.title?.toLowerCase() ?? 'your night out';
   // Guarantee a tasteful, on-theme banner — never a flat pink placeholder.
   const cover = coverImageForNight({
@@ -81,6 +81,11 @@ function NightCard({ night, interested, venues, ambientSounds }: { night: NightR
   if (night.status === 'matched') {
     chipText = 'matched';
     chipClass = 'bg-white text-shell-accent';
+  } else if (seeking && offerSent) {
+    // An active offer is the night's most decision-relevant state for the host:
+    // their pick is out and the clock is running on the candidate.
+    chipText = 'offer sent';
+    chipClass = 'bg-shell-ink text-white';
   } else if (seeking && interested > 0) {
     chipText = `${interested} interested`;
     chipClass = 'bg-shell-accent text-white';
@@ -164,12 +169,15 @@ function NightCard({ night, interested, venues, ambientSounds }: { night: NightR
 export function NightsSegments({
   nights,
   counts,
+  offerSent,
   venues,
   ambientSounds,
 }: {
   nights: NightRow[];
   /** date_instance_id → interested tally, computed server-side. */
   counts: Record<string, number>;
+  /** date_instance_id → has an active offer ("offer sent" chip). */
+  offerSent?: Record<string, boolean>;
   venues: VenueOption[];
   ambientSounds: AmbientOption[];
 }) {
@@ -237,6 +245,7 @@ export function NightsSegments({
               key={night.id}
               night={night}
               interested={counts[night.id] ?? 0}
+              offerSent={offerSent?.[night.id] ?? false}
               venues={venues}
               ambientSounds={ambientSounds}
             />

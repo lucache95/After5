@@ -15,6 +15,8 @@ import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { Check, GripVertical, Lock, UserMinus } from 'lucide-react';
 import { Polaroid } from '@/components/Polaroid';
+import { ProfileCard } from '@/components/ProfileCard';
+import type { VerificationState } from '@after5/business';
 import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
 import { shortlist as shortlistRpc, rejectCandidate, withdraw } from '@/lib/after5/match';
@@ -38,6 +40,15 @@ export interface HostCandidate {
   city: string | null;
   photo_url: string | null;
   can_enter_lock_flow: boolean;
+  // Tap-to-open profile sheet (founder 2026-06-12): everything the pick
+  // decision reads. Optional so older callers/tests stay assignable.
+  pronouns?: string | null;
+  occupation?: string | null;
+  height_cm?: number | null;
+  vibe_tags?: string[];
+  prompts?: { prompt_id: string; answer: string }[];
+  verification?: string | null;
+  reliability_score?: number | null;
 }
 
 // Candidate avatar: the clear photo in the sm dating polaroid when present;
@@ -100,6 +111,8 @@ export function InterestedList({
   // E12 triage: candidate pending a silent decline (confirm sheet open) and the
   // active-offer row pending a withdraw confirm. Both null = sheets closed.
   const [declineFor, setDeclineFor] = useState<HostCandidate | null>(null);
+  // Founder rule: tapping a candidate opens their profile sheet.
+  const [profileFor, setProfileFor] = useState<HostCandidate | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   // One active offer per instance (match_make_offer step 8 raises P5003
@@ -305,7 +318,14 @@ export function InterestedList({
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-shell-accent font-body text-sm font-semibold text-white">
                         {c.rank}
                       </span>
-                      <CandidateAvatar photo={c.photo_url} name={c.first_name} />
+                      <button
+                        type="button"
+                        onClick={() => setProfileFor(c)}
+                        aria-label={`see ${c.first_name}'s profile`}
+                        className="shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+                      >
+                        <CandidateAvatar photo={c.photo_url} name={c.first_name} />
+                      </button>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-body font-semibold lowercase text-shell-ink">
                           {c.first_name.toLowerCase()}{c.age ? `, ${c.age}` : ''}
@@ -364,6 +384,16 @@ export function InterestedList({
                       booked ? 'border-shell-ink/10 bg-shell-ink/5 opacity-60' : 'border-shell-ink/10 bg-white',
                     )}
                   >
+                    {/* Avatar = profile sheet; the rest of the row = shortlist.
+                        Siblings, never nested (axe nested-interactive). */}
+                    <button
+                      type="button"
+                      onClick={() => setProfileFor(c)}
+                      aria-label={`see ${c.first_name}'s profile`}
+                      className="ml-3 shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+                    >
+                      <CandidateAvatar photo={c.photo_url} name={c.first_name} />
+                    </button>
                     <button
                       type="button"
                       aria-label={booked ? `${c.first_name} is already booked` : `add ${c.first_name} to shortlist`}
@@ -374,7 +404,6 @@ export function InterestedList({
                         booked ? 'cursor-not-allowed' : 'hover:opacity-90',
                       )}
                     >
-                      <CandidateAvatar photo={c.photo_url} name={c.first_name} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-body font-semibold lowercase text-shell-ink">
                           {c.first_name.toLowerCase()}{c.age ? `, ${c.age}` : ''}
@@ -489,6 +518,41 @@ export function InterestedList({
           onOffered={(id) => setRows((r) => r.map((x) => (x.candidate_id === id ? { ...x, status: 'offer_active' } : x)))}
           onClose={() => setOfferFor(null)}
         />
+      )}
+      {profileFor && (
+        /* Founder rule (2026-06-12): tapping a candidate opens their full
+           profile — the pick decision needs prompts/vibes/occupation, not just
+           a name. Same overlay treatment as the offer page's profile sheet. */
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${profileFor.first_name}'s profile`}
+          className="fixed inset-0 z-[60] overflow-y-auto bg-shell-ink/60 px-4 py-8"
+          onClick={() => setProfileFor(null)}
+        >
+          <div className="mx-auto max-w-[420px]" onClick={(e) => e.stopPropagation()}>
+            <ProfileCard
+              name={profileFor.first_name.toLowerCase()}
+              age={profileFor.age}
+              place={profileFor.city?.toLowerCase() ?? null}
+              pronouns={profileFor.pronouns ?? null}
+              occupation={profileFor.occupation ?? null}
+              height_cm={profileFor.height_cm ?? null}
+              photos={profileFor.photo_url ? [profileFor.photo_url] : []}
+              vibe_tags={profileFor.vibe_tags ?? []}
+              prompts={(profileFor.prompts ?? []).map((a) => ({ label: a.prompt_id.replace(/_/g, ' '), answer: a.answer }))}
+              verification={(profileFor.verification ?? undefined) as VerificationState | undefined}
+              reliability_score={profileFor.reliability_score ?? null}
+            />
+            <button
+              type="button"
+              onClick={() => setProfileFor(null)}
+              className="mx-auto mt-3 flex min-h-[44px] w-full items-center justify-center rounded-full font-body text-sm lowercase text-white/80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
+            >
+              close
+            </button>
+          </div>
+        </div>
       )}
       <span className="sr-only" aria-hidden>{reduceMotion ? 'reduced-motion' : ''}</span>
     </main>

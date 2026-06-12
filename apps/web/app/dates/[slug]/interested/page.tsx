@@ -65,7 +65,7 @@ export default async function InterestedPage({
     .from('queue_entries')
     // Disambiguate the embed: queue_entries has TWO FKs to profiles (candidate_id + creator_id),
     // so an unhinted profiles embed errors with PGRST201. Pin the candidate FK explicitly.
-    .select('candidate_id, status, rank, candidate:profiles!queue_entries_candidate_id_fkey(first_name, age, city, clear_photo_url)')
+    .select('candidate_id, status, rank, candidate:profiles!queue_entries_candidate_id_fkey(first_name, age, city, clear_photo_url, pronouns, occupation, height_cm, vibe_tags, prompt_answers, verification, reliability_score)')
     .eq('date_instance_id', instanceId)
     .order('rank', { ascending: true, nullsFirst: false })
     .limit(60);
@@ -78,7 +78,12 @@ export default async function InterestedPage({
     .maybeSingle();
 
   const candidates: HostCandidate[] = await Promise.all((queue ?? []).map(async (q) => {
-    const c = (q.candidate ?? {}) as { first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null };
+    const c = (q.candidate ?? {}) as {
+      first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null;
+      pronouns?: string | null; occupation?: string | null; height_cm?: number | null;
+      vibe_tags?: string[] | null; prompt_answers?: { prompt_id: string; answer: string }[] | null;
+      verification?: string | null; reliability_score?: number | null;
+    };
     return {
       candidate_id: q.candidate_id,
       status: q.status,
@@ -94,6 +99,15 @@ export default async function InterestedPage({
       // Eligibility flag is not cheaply available here; default true and let
       // P5002 at offer time handle the already-booked case (spec §4.2 fallback).
       can_enter_lock_flow: true,
+      // Tap-to-open profile sheet (founder 2026-06-12): the pick decision needs
+      // the full read — pronouns/occupation/height/vibes/prompts.
+      pronouns: c.pronouns ?? null,
+      occupation: c.occupation ?? null,
+      height_cm: c.height_cm ?? null,
+      vibe_tags: c.vibe_tags ?? [],
+      prompts: (c.prompt_answers ?? []).map((a) => ({ prompt_id: a.prompt_id, answer: a.answer })),
+      verification: c.verification ?? null,
+      reliability_score: c.reliability_score ?? null,
     };
   }));
 

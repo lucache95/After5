@@ -95,6 +95,20 @@ export default async function MyNightsPage() {
     }
   }
 
+  // Active-offer flag per night ("offer sent" chip — founder 2026-06-12).
+  // offers is creator-readable; one scoped query.
+  const offerSent: Record<string, boolean> = {};
+  if (nights.length > 0) {
+    const { data: offerRows } = await supabase
+      .from('offers')
+      .select('date_instance_id')
+      .eq('creator_id', user.id)
+      .eq('status', 'active');
+    for (const row of (offerRows ?? []) as Array<{ date_instance_id: string }>) {
+      offerSent[row.date_instance_id] = true;
+    }
+  }
+
   // Quiet drafts: itineraries the viewer owns with no date_instance anywhere.
   // Two cheap scoped queries (own itineraries, then which of those ids appear
   // in date_instances) instead of a server-side anti-join; both are small and
@@ -154,6 +168,7 @@ export default async function MyNightsPage() {
             archive = completed/expired/cancelled. The empty states (no nights at all
             vs nothing archived) both live in the client leaf. */}
         <NightsSegments
+        offerSent={offerSent}
           nights={nights}
           counts={Object.fromEntries(counts)}
           venues={venues}
