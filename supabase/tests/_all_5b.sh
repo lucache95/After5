@@ -41,7 +41,10 @@ echo "==> 4. Deno edge tests (stubbed — no functions-serve needed)"
 # Scope to the 5b dirs (match-* + _shared). A bare `supabase/functions/` glob
 # type-checks the WHOLE tree, and unrelated non-5b functions (process-jobs,
 # start-verification) carry pre-existing TS errors that would fail the run.
-deno test --allow-env --allow-net \
+# --node-modules-dir=none: newer Deno 2.x auto-resolves npm: specifiers against
+# the repo's pnpm node_modules and fails ('Could not find a matching package for
+# npm:zod'). =none fetches from the registry; NEVER =auto (corrupts the pnpm tree).
+deno test --allow-env --allow-net --node-modules-dir=none \
   --import-map=supabase/functions/_shared/_test_import_map.json \
   supabase/functions/match-*/ supabase/functions/generate-plan/ supabase/functions/_shared/
 

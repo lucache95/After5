@@ -71,6 +71,7 @@ class QueryBuilderStub implements PromiseLike<QueryResult> {
   upsert(..._a: unknown[]): this { return this; }
   delete(..._a: unknown[]): this { return this; }
   eq(..._a: unknown[]): this { return this; }
+  neq(..._a: unknown[]): this { return this; }
   in(..._a: unknown[]): this { return this; }
   or(..._a: unknown[]): this { return this; }
   gte(..._a: unknown[]): this { return this; }

@@ -594,24 +594,25 @@ Deno.test('handleImprove regenerate_title: returns a new title without touching 
     }),
   };
 
-  // Intercept createMessageImpl via module-level monkey-patch is not possible
-  // without the seam on ImproveEnv. Instead we exercise handleImprove end-to-end
-  // by verifying that when regenerateTitle's injectable defaults are used (real
-  // Anthropic client) it surfaces a 502 on failure — confirming the no-persist
-  // contract. A separate unit test above covers the success path on regenerateTitle.
-
-  // Simulate LLM failure path: supabase returns the row but the API key is
-  // invalid so the real Anthropic SDK will throw — expect 502, no persist.
+  // Under `deno test` the import map swaps the Anthropic SDK for
+  // _test_anthropic_stub.ts, whose messages.create resolves with '[]' — so the
+  // handler takes the SUCCESS path: parsed JSON has no title/hook keys, the
+  // title falls back to the current title, the hook to '', and the persist runs.
   const res = await handleImprove(
     { action: 'regenerate_title', itinerary_id: iid, tone: 'romantic' },
     // deno-lint-ignore no-explicit-any
     fakeSupabase as any,
     fakeEnv,
   );
-  // With a fake API key the real SDK call will throw → llm_failed, no persist.
-  assertEquals(res.ok, false);
-  assertEquals(res.code, 'llm_failed');
-  assertEquals(res.httpStatus, 502);
+  assertEquals(res.ok, true);
+  if (res.ok) {
+    assertEquals(res.title, 'Old Title'); // graceful fallback, never undefined
+    // Stops are FROZEN: same array, untouched, in the response.
+    const resStops = res.stops ?? [];
+    assertEquals(resStops.length, 2);
+    assertEquals(resStops[0].place_id, 'p1');
+    assertEquals(resStops[1].place_id, 'p2');
+  }
 });
 
 Deno.test('handleImprove regenerate_title: stops are frozen on success (via supabase update stub)', async () => {
@@ -652,21 +653,19 @@ Deno.test('handleImprove regenerate_title: stops are frozen on success (via supa
   const stubTitle = 'Golden Hour & Good Talk';
   const stubHook = 'two hours, one sunset';
 
-  // We can't inject createMessageImpl into handleImprove without re-exporting a
-  // testable overload — the handler calls regenerateTitle internally with default
-  // impl. Instead we rely on the two unit tests above and this structural assertion:
-  // if updatedWith is set, it must not include a 'stops' key.
-  // (The test will hit llm_failed with a fake key — that's fine: update won't be called.)
+  // Under the test import map the Anthropic stub succeeds, so the persist DOES
+  // run — which is exactly what we want here: assert the update payload only
+  // touches title/hook and NEVER includes a 'stops' key (frozen-stops guarantee).
   await handleImprove(
     { action: 'regenerate_title', itinerary_id: iid },
     // deno-lint-ignore no-explicit-any
     fakeSupabase as any,
     fakeEnv,
   );
-  // updatedWith is null because llm_failed bails before persist — correct behavior.
-  assertEquals(updatedWith, null);
-  // The fact that no update was called on LLM failure IS the data-loss guard.
-  assert(true, 'no persist on LLM failure — data-loss guard holds');
+  assert(updatedWith !== null, 'persist ran on the stubbed success path');
+  const keys = Object.keys(updatedWith ?? {}).sort();
+  assertEquals(keys, ['hook', 'title']);
+  assert(!('stops' in (updatedWith ?? {})), 'stops are frozen — update must not touch them');
 });
 
 // ─── handleImprove: regenerate_title non-owner guard ─────────────────────────
