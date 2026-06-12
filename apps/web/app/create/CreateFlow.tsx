@@ -143,7 +143,22 @@ export function CreateFlow({
           duration_min: timeOfDay === 'all_day' ? 360 : 180,
         }),
       });
-      if (!res.ok) throw new Error('generation_failed');
+      if (!res.ok) {
+        // Surface the server's honest reason when it has one — a warming city
+        // ("we're still gathering great spots...") is not a generic failure.
+        const err = await res.json().catch(() => null) as { error?: string; message?: string } | null;
+        if (err?.error === 'city_warming' && err.message) {
+          setErrorMsg(err.message.toLowerCase());
+          setPhase('input');
+          return;
+        }
+        if (err?.error === 'generation_unavailable') {
+          setErrorMsg("we can't build nights in new cities right now. try kelowna?");
+          setPhase('input');
+          return;
+        }
+        throw new Error('generation_failed');
+      }
       const data: {
         itineraries: GatedItinerary[];
         authed: boolean;

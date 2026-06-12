@@ -268,10 +268,18 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Service-role bearer required.
+  // Admin-only (REPLICATE costs money). Two accepted credentials:
+  //   * x-jobs-secret matching JOBS_RUNNER_SECRET (the process-jobs pattern —
+  //     what the /api/generate-cover proxy sends), or
+  //   * legacy: Authorization bearer string-equal to the runtime's
+  //     SUPABASE_SERVICE_ROLE_KEY. NOTE this broke once already: the project
+  //     migrated to the new API-key system, so the injected value no longer
+  //     matches the legacy JWT a caller holds. Prefer the shared secret.
   const auth = req.headers.get('Authorization');
+  const jobsSecret = Deno.env.get('JOBS_RUNNER_SECRET');
+  const secretOk = !!jobsSecret && req.headers.get('x-jobs-secret') === jobsSecret;
   const expected = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
-  if (auth !== expected) {
+  if (!secretOk && auth !== expected) {
     return new Response(JSON.stringify({ error: 'unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'content-type': 'application/json' },

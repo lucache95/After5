@@ -32,17 +32,18 @@ export async function POST(req: Request) {
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // Must match the SUPABASE_SERVICE_ROLE_KEY the edge runtime injects into the
-  // fn (legacy service-role JWT) — the fn does a strict string compare.
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
+  // Shared-secret auth (the process-jobs pattern). The old service-role bearer
+  // string-compare broke when the project moved to the new API-key system —
+  // the edge runtime's injected value stopped matching any key a caller holds.
+  const jobsSecret = process.env.JOBS_RUNNER_SECRET;
+  if (!url || !jobsSecret) {
     return NextResponse.json({ error: 'cover generation is not configured on this server' }, { status: 500 });
   }
 
   const resp = await fetch(`${url}/functions/v1/generate-cover`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${serviceKey}`,
+      'x-jobs-secret': jobsSecret,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ itinerary_id: itineraryId, force: true }),

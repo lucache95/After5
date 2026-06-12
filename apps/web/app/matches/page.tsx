@@ -76,6 +76,16 @@ export default async function MatchesPage() {
 
       <div className="mx-auto w-full max-w-[420px] px-5 pb-28 pt-8">
         <MatchesList upcoming={upcomingCards} past={pastCards} />
+
+        {/* Host-side front door (founder 2026-06-12): the dates tab is where
+            people look for everything date-shaped, including nights they host. */}
+        <Link
+          href="/my-nights"
+          className="mt-8 flex min-h-[48px] items-center justify-between rounded-2xl bg-shell-pink/60 px-5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:bg-shell-pink"
+        >
+          <span>nights you're hosting</span>
+          <span aria-hidden className="text-shell-accent">→</span>
+        </Link>
       </div>
 
       <NotificationToast userId={user.id} />

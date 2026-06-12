@@ -9,6 +9,11 @@ project_id = "After5"
 [functions.generate-plan]
 verify_jwt = false
 
+# generate-cover: gateway JWT off — auth is the x-jobs-secret shared secret
+# (the service-role bearer string-compare broke under the new API-key system).
+[functions.generate-cover]
+verify_jwt = false
+
 [functions.process-jobs]
 verify_jwt = false
 
