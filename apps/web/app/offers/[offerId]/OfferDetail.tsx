@@ -65,6 +65,8 @@ export interface OfferDetailProps {
   // For status==='accepted': the lock formed off this offer's date_instance, looked
   // up by the page loader under the viewer's RLS. null ⇒ fall back to /matches.
   lockId?: string | null;
+  /** blind COUNT of right-swipes on this night — powers the ceremony's status line */
+  interestedCount?: number;
 }
 
 const DATE_OPTS: Intl.DateTimeFormatOptions = {
@@ -106,7 +108,7 @@ const HEARTS = [
   { left: '6%',  delay: 2.4, size: 16 }, { left: '54%', delay: 2.8, size: 14 },
 ] as const;
 
-function PickedCeremony({ name, pronouns, photoSrc, onDone }: { name: string; pronouns: string | null; photoSrc: string; onDone: () => void }) {
+function PickedCeremony({ name, pronouns, photoSrc, nightTitle, hadOptions, onDone }: { name: string; pronouns: string | null; photoSrc: string; nightTitle: string | null; hadOptions: boolean; onDone: () => void }) {
   // Subject/object pronouns for the beat copy. The feed already showed the
   // host's first name — the FACE is the reveal, so the lines build toward
   // seeing them, not learning the name.
@@ -134,9 +136,11 @@ function PickedCeremony({ name, pronouns, photoSrc, onDone }: { name: string; pr
           ? { scale: 1.06, filter: 'blur(7px) brightness(0.82) saturate(1)' }
           : { scale: 1, filter: 'blur(0px) brightness(1) saturate(1)' };
 
+  // Beat 2 claims options only when the queue actually had them (>1 swiper) —
+  // a single-swiper night gets the plain, still-true line.
   const line =
     phase === 'mystery' ? `${name} picked you`
-    : phase === 'anticipation' ? `${subj} had options. ${subj} chose you.`
+    : phase === 'anticipation' ? (hadOptions ? `${subj} had options. ${subj} chose you.` : `${subj} chose you.`)
     : phase === 'prestige' ? `ready to see ${obj}?`
     : `say hi to ${name}`;
 
@@ -237,7 +241,7 @@ function PickedCeremony({ name, pronouns, photoSrc, onDone }: { name: string; pr
       </motion.div>
 
       {/* the line for each beat — settles in with tracking, swaps per phase */}
-      <div className="mt-9 flex h-16 items-start justify-center px-2 text-center">
+      <div className="mt-9 flex min-h-[5.5rem] flex-col items-center justify-start px-2 text-center">
         <AnimatePresence mode="wait">
           <motion.p
             key={line}
@@ -254,13 +258,23 @@ function PickedCeremony({ name, pronouns, photoSrc, onDone }: { name: string; pr
             {line}
           </motion.p>
         </AnimatePresence>
+        {phase === 'anticipation' && nightTitle && (
+          <motion.p
+            className="mt-2 font-body text-sm lowercase tracking-[0.08em] text-white/55"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.9, delay: 0.5 }}
+          >
+            for: {nightTitle.toLowerCase()}
+          </motion.p>
+        )}
       </div>
       <p className="mt-1 font-body text-xs lowercase tracking-[0.12em] text-white/40">tap to skip</p>
     </motion.div>
   );
 }
 
-export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date, stops, vibeTags, night = null, lockId = null, photos = [], prompts = [] }: OfferDetailProps) {
+export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date, stops, vibeTags, night = null, lockId = null, photos = [], prompts = [], interestedCount = 1 }: OfferDetailProps) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [busy, setBusy] = useState(false);
@@ -346,7 +360,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
           <div className="relative mt-6">
             <AnimatePresence>
               {overlayActive && (
-                <PickedCeremony name={name} pronouns={host.pronouns ?? null} photoSrc={photos[0]} onDone={() => setOverlay(false)} />
+                <PickedCeremony name={name} pronouns={host.pronouns ?? null} photoSrc={photos[0]} nightTitle={night?.title ?? null} hadOptions={interestedCount > 1} onDone={() => setOverlay(false)} />
               )}
             </AnimatePresence>
             <motion.div

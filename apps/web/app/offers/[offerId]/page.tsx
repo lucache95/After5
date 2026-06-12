@@ -15,6 +15,7 @@
 // readable) so withdraw works even when the embedded instance row is RLS-hidden.
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { DeepRouteHeader } from '@/components/DeepRouteHeader';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
@@ -209,6 +210,23 @@ export default async function OfferPage({
     }
   }
 
+  // Blind-safe aggregate for the ceremony's status line: how many people swiped
+  // right on this night. Identity-free COUNT via admin (RLS hides other
+  // candidates' queue rows from the viewer, rightly). >1 → "she had options."
+  let interestedCount = 1;
+  if (offer.date_instance_id) {
+    try {
+      const admin = createAdminClient();
+      const { count } = await admin
+        .from('queue_entries')
+        .select('candidate_id', { count: 'exact', head: true })
+        .eq('date_instance_id', offer.date_instance_id);
+      if (typeof count === 'number' && count > 0) interestedCount = count;
+    } catch {
+      // count stays 1 → the modest line; never block the page on this.
+    }
+  }
+
   return (
     <>
       <DeepRouteHeader
@@ -238,6 +256,7 @@ export default async function OfferPage({
         vibeTags={vibeTags}
         night={night}
         lockId={lockId}
+        interestedCount={interestedCount}
       />
     </>
   );
