@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { EditableStopCard } from '../EditableStopCard';
@@ -156,6 +156,65 @@ describe('CustomVenueSearch', () => {
     await waitFor(() => expect(screen.getByText(/quiet coffee/i)).toBeInTheDocument());
     await userEvent.click(screen.getByRole('button', { name: /add to plan/i }));
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ place_id: 'custom:g1' }));
+  });
+
+  it('live-searches as you type: ≥3 chars, debounced 350ms', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ results: [customStop] }), { status: 200 }),
+      );
+      render(<CustomVenueSearch onAdd={vi.fn()} />);
+      const input = screen.getByLabelText(/search for a place/i);
+      // under 3 chars → never fires
+      fireEvent.change(input, { target: { value: 'ro' } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      // 3+ chars → debounced, nothing before 350ms
+      fireEvent.change(input, { target: { value: 'rocket subs' } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy).toHaveBeenCalledWith('/api/places/search', expect.objectContaining({
+        body: JSON.stringify({ query: 'rocket subs' }),
+      }));
+      expect(screen.getByText(/quiet coffee/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('discards a stale response that resolves after a newer one', async () => {
+    vi.useFakeTimers();
+    try {
+      let resolveFirst!: (r: Response) => void;
+      let resolveSecond!: (r: Response) => void;
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
+        .mockImplementationOnce(() => new Promise<Response>((r) => { resolveFirst = r; }))
+        .mockImplementationOnce(() => new Promise<Response>((r) => { resolveSecond = r; }));
+      render(<CustomVenueSearch onAdd={vi.fn()} />);
+      const input = screen.getByLabelText(/search for a place/i);
+      fireEvent.change(input, { target: { value: 'first query' } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(350); });
+      fireEvent.change(input, { target: { value: 'second query' } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(350); });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      // newer response lands first…
+      await act(async () => {
+        resolveSecond(new Response(JSON.stringify({ results: [{ ...customStop, place_id: 'custom:new', place_name: 'fresh result' }] }), { status: 200 }));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      // …then the stale one resolves and must be discarded
+      await act(async () => {
+        resolveFirst(new Response(JSON.stringify({ results: [{ ...customStop, place_id: 'custom:old', place_name: 'stale result' }] }), { status: 200 }));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByText(/fresh result/i)).toBeInTheDocument();
+      expect(screen.queryByText(/stale result/i)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows the unavailable copy when the route returns 503', async () => {
