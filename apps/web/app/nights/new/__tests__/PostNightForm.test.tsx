@@ -5,6 +5,7 @@ import { axe } from 'jest-axe';
 
 const postNight = vi.fn().mockResolvedValue('inst-1');
 const reachPreview = vi.fn().mockResolvedValue(42);
+const getNightDetail = vi.fn();
 const mockPush = vi.fn();
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }), usePathname: () => '/nights/new' }));
@@ -12,8 +13,18 @@ vi.mock('@/lib/after5/client', () => ({
   browserAfter5Client: () => ({}),
   postNight: (...a: unknown[]) => postNight(...a),
   reachPreview: (...a: unknown[]) => reachPreview(...a),
+  getNightDetail: (...a: unknown[]) => getNightDetail(...a),
   ambientSoundUrl: (p: string | null) => (p ? `https://x/${p}` : null),
 }));
+// vaul reads real CSS transform matrices jsdom doesn't compute; stub the Drawer
+// primitives to plain DOM (mirrors app/feed/__tests__/NightDetailSheet.test.tsx),
+// surfacing the dialog role so "preview opens a popup" is assertable.
+vi.mock('vaul', () => {
+  const Pass = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+  const Root = ({ children, open }: { children?: React.ReactNode; open?: boolean }) =>
+    open ? <div role="dialog" aria-label="date detail">{children}</div> : null;
+  return { Drawer: { Root, Portal: Pass, Overlay: Pass, Content: Pass, Title: Pass, Description: Pass } };
+});
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 // Strip framer-motion-only props so React doesn't warn about unknown DOM attrs
 type MotionExtras = {
@@ -44,6 +55,16 @@ vi.mock('framer-motion', () => ({
       ...props
     }: React.HTMLAttributes<HTMLDivElement> & MotionExtras) => (
       <div {...props}>{children}</div>
+    ),
+    span: ({
+      children,
+      initial: _i,
+      animate: _a,
+      transition: _t,
+      whileTap: _wt,
+      ...props
+    }: React.HTMLAttributes<HTMLSpanElement> & MotionExtras) => (
+      <span {...props}>{children}</span>
     ),
   },
   useReducedMotion: () => false,
@@ -229,23 +250,19 @@ describe('PostNightForm plan picker (meta, preview, remix, show-all)', () => {
     expect(screen.queryByText(/stops ·|~.* hr|\$\d+ pp/)).not.toBeInTheDocument();
   });
 
-  it('preview expands the ordered stop list inline without changing selection', async () => {
+  it('preview opens the full date-detail popup with zero RPCs and no selection change', async () => {
     render(<PostNightForm plans={[richPlan]} />);
-    const toggle = screen.getByRole('button', { name: /preview plan rich/i });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    const items = screen.getAllByRole('listitem')
-      .map((li) => li.textContent)
-      .filter((t) => t?.includes('·') && /\d{2}:\d{2}/.test(t ?? ''));
-    expect(items).toEqual(['bar susu · 19:00', 'noodle house · 20:15', 'lookout walk · 21:30']);
-    // expanding the preview must NOT select the radio
+    await userEvent.click(screen.getByRole('button', { name: /preview plan rich/i }));
+    const dialog = screen.getByRole('dialog');
+    // the sheet renders the real plan: title + a stop name from the row
+    expect(within(dialog).getAllByText(/plan rich/i).length).toBeGreaterThan(0);
+    expect(within(dialog).getByText(/bar susu/i)).toBeInTheDocument();
+    // preloaded mode — the sheet must NOT fetch get_night_detail
+    expect(getNightDetail).not.toHaveBeenCalled();
+    // opening the preview must NOT select the radio
     expect(screen.getByRole('radio', { name: /plan rich/i })).toHaveAttribute('aria-checked', 'false');
-
-    // and it collapses again
-    await userEvent.click(toggle);
-    expect(screen.queryByText('bar susu · 19:00')).not.toBeInTheDocument();
   });
 
   it('remix links to the plan canvas and does not change selection', async () => {

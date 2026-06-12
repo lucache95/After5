@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -11,6 +11,8 @@ import { Sparkles, Pause, Play, ChevronDown } from 'lucide-react';
 import {
   browserAfter5Client, postNight, reachPreview, updateItineraryStops, ambientSoundUrl, type AmbientSound,
 } from '@/lib/after5/client';
+import { normalizeNightDetailStops, type NightDetailNight } from '@after5/api-client';
+import { NightDetailSheet, feedNightFromDetail } from '@/app/feed/NightDetailSheet';
 import { stickerRotation } from '@/lib/sticker';
 import { cn } from '@/lib/cn';
 
@@ -24,37 +26,21 @@ interface Plan {
   title: string | null;
   cover_image_url: string | null;
   vibe_tags: string[] | null;
-  // Picker meta + inline preview, straight off the itineraries row (stops is a
+  // Picker meta + preview sheet, straight off the itineraries row (stops is a
   // JSON column there). Optional so a thinner row degrades to title-only.
   stops?: unknown;
   total_cost_pp?: number | null;
   total_duration_min?: number | null;
+  // Detail-sheet extras (the read-only preview popup). All optional.
+  hook?: string | null;
+  why_it_works?: string | null;
+  why_note?: string | null;
+  pay_setting?: string | null;
 }
 
 // How many plans show before the "show all N plans" expander. Six keeps the
 // picker one comfortable screen at 420px instead of a radio wall.
 const PLANS_FOLD = 6;
-
-interface PlanStopLine {
-  name: string;
-  time: string | null;
-}
-
-// Defensive parse of the stops JSON column. Stops written by the planner carry
-// place_name + start_time; anything malformed falls back quietly.
-function parsePlanStops(raw: unknown): PlanStopLine[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((s, i) => {
-    if (typeof s !== 'object' || s === null) return [];
-    const o = s as Record<string, unknown>;
-    const name =
-      typeof o.place_name === 'string' && o.place_name.trim() !== ''
-        ? o.place_name
-        : `stop ${i + 1}`;
-    const time = typeof o.start_time === 'string' && o.start_time !== '' ? o.start_time : null;
-    return [{ name, time }];
-  });
-}
 
 // The card meta line: `3 stops · ~2.5 hr · $45 pp`. Missing fields drop their
 // segment; an itinerary with nothing derivable renders no line at all.
@@ -801,11 +787,29 @@ function PlanCard({
 }: PlanCardProps) {
   const tags = (plan.vibe_tags ?? []).filter(Boolean).slice(0, 4);
   const title = plan.title?.toLowerCase() ?? 'untitled plan';
-  const stops = parsePlanStops(plan.stops);
-  const meta = planMetaLine(plan, stops.length);
-  // Inline stop preview — expands in place, no navigation.
+  // Canonical preview = the feed's NightDetailSheet, read-only (`preloaded`,
+  // no onCommit). The plan is the host's OWN, so no blind-contract concerns;
+  // we build the detail row straight off the itineraries row the page already
+  // loaded — zero RPCs, no get_night_detail. Stops are normalized HERE so
+  // PlanTimeline never re-normalizes.
+  const detail = useMemo<NightDetailNight>(() => ({
+    date_instance_id: plan.id,
+    time_window_start: '', // not posted yet — the time chip simply hides
+    pay_setting: plan.pay_setting ?? null,
+    vibe_tags: plan.vibe_tags ?? null,
+    why_note: plan.why_note ?? null,
+    hook: plan.hook ?? null,
+    why_it_works: plan.why_it_works ?? null,
+    cover_image_url: plan.cover_image_url,
+    title: plan.title,
+    venue_neighborhood: null,
+    is_seed: false,
+    total_cost_pp: plan.total_cost_pp ?? null,
+    total_duration_min: plan.total_duration_min ?? null,
+    stops: normalizeNightDetailStops(plan.stops),
+  }), [plan]);
+  const meta = planMetaLine(plan, detail.stops.length);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const stopsId = `plan-stops-${plan.id}`;
 
   return (
     <motion.div
@@ -903,12 +907,11 @@ function PlanCard({
       <div className="flex items-center justify-between border-t border-shell-ink/10 px-1.5">
         <button
           type="button"
-          aria-expanded={previewOpen}
-          aria-controls={previewOpen ? stopsId : undefined}
+          aria-haspopup="dialog"
           aria-label={`preview ${title}`}
           onClick={(e) => {
             e.stopPropagation();
-            setPreviewOpen((v) => !v);
+            setPreviewOpen(true);
           }}
           className={cn(
             'flex min-h-[44px] items-center gap-1 rounded-full px-2.5 font-body text-[13px] lowercase text-shell-ink/60 transition',
@@ -918,10 +921,7 @@ function PlanCard({
           )}
         >
           preview
-          <ChevronDown
-            className={cn('h-3.5 w-3.5 transition', previewOpen && 'rotate-180')}
-            aria-hidden
-          />
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden />
         </button>
         <Link
           href={`/plans/${plan.id}/edit`}
@@ -938,25 +938,14 @@ function PlanCard({
         </Link>
       </div>
 
-      {/* Inline stop preview: the ordered run of the night, name · time. */}
-      {previewOpen && (
-        stops.length > 0 ? (
-          <ol id={stopsId} className="space-y-1.5 border-t border-shell-ink/10 px-4 py-3">
-            {stops.map((s, i) => (
-              <li
-                key={`${s.name}-${i}`}
-                className="font-body text-[13px] lowercase text-shell-ink/70 [font-variant-numeric:tabular-nums]"
-              >
-                {s.time ? `${s.name.toLowerCase()} · ${s.time}` : s.name.toLowerCase()}
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p id={stopsId} className="border-t border-shell-ink/10 px-4 py-3 font-body text-[13px] lowercase text-shell-ink/55">
-            no stops on this one yet. remix it to add some.
-          </p>
-        )
-      )}
+      {/* The preview popup: the feed's full date-detail sheet, read-only
+          (preloaded row, no commit bar, no RPC). */}
+      <NightDetailSheet
+        night={feedNightFromDetail(detail)}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        preloaded={detail}
+      />
     </motion.div>
   );
 }

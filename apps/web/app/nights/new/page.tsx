@@ -27,11 +27,13 @@ export default async function NewNightPage({
   const city = p.cities as { name?: string | null } | { name?: string | null }[] | null;
   const cityName = (Array.isArray(city) ? city[0]?.name : city?.name) ?? null;
 
-  // Picker meta + inline preview come from the same row (stops is a JSON column
-  // on itineraries) — one query, no N+1. Most-recent-first so fresh drafts lead.
+  // Picker meta + the preview detail sheet come from the same row (stops is a
+  // JSON column on itineraries) — one query, no N+1. Most-recent-first so fresh
+  // drafts lead. hook/why_it_works/why_note/pay_setting feed the sheet's hook
+  // line + pay chip.
   const { data: plans } = await supabase
     .from('itineraries')
-    .select('id, title, cover_image_url, vibe_tags, stops, total_cost_pp, total_duration_min')
+    .select('id, title, cover_image_url, vibe_tags, stops, total_cost_pp, total_duration_min, hook, why_it_works, why_note, pay_setting')
     .or(`user_id.eq.${user.id},is_public.eq.true`)
     .order('generated_at', { ascending: false })
     .limit(30);
