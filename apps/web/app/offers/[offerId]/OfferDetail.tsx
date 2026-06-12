@@ -88,15 +88,30 @@ const REVEAL_EASE = [0.22, 1, 0.36, 1] as const;
 // Tap anywhere skips straight to the page. Reduced-motion users never see this
 // overlay (the caller falls back to a plain fade). Plays once per offer via the
 // sessionStorage gate in OfferDetail.
+// Beat timings for the picked ceremony (~10s, founder direction 2026-06-12):
+// mystery → anticipation → prestige → reveal. Long on purpose — the point is
+// dopamine, not efficiency. Tap anywhere skips.
 const CEREMONY = {
-  approachAt: 1600, revealAt: 3000, outAt: 4800, doneAt: 5400, // ms
+  anticipationAt: 2600, prestigeAt: 5200, revealAt: 7400, outAt: 9600, doneAt: 10300, // ms
 } as const;
 
+type CeremonyPhase = 'mystery' | 'anticipation' | 'prestige' | 'reveal' | 'out';
+
+// Drifting heart particles for the prestige + reveal beats. Deterministic
+// positions (no Math.random — SSR/replay safe), staggered floats.
+const HEARTS = [
+  { left: '12%', delay: 0.0, size: 14 }, { left: '78%', delay: 0.4, size: 18 },
+  { left: '30%', delay: 0.8, size: 12 }, { left: '62%', delay: 1.2, size: 16 },
+  { left: '46%', delay: 1.6, size: 13 }, { left: '88%', delay: 2.0, size: 12 },
+  { left: '6%',  delay: 2.4, size: 16 }, { left: '54%', delay: 2.8, size: 14 },
+] as const;
+
 function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: string; onDone: () => void }) {
-  const [phase, setPhase] = useState<'tease' | 'approach' | 'reveal' | 'out'>('tease');
+  const [phase, setPhase] = useState<CeremonyPhase>('mystery');
   useEffect(() => {
     const ts = [
-      setTimeout(() => setPhase('approach'), CEREMONY.approachAt),
+      setTimeout(() => setPhase('anticipation'), CEREMONY.anticipationAt),
+      setTimeout(() => setPhase('prestige'), CEREMONY.prestigeAt),
       setTimeout(() => setPhase('reveal'), CEREMONY.revealAt),
       setTimeout(() => setPhase('out'), CEREMONY.outAt),
       setTimeout(onDone, CEREMONY.doneAt),
@@ -104,66 +119,138 @@ function PickedCeremony({ name, photoSrc, onDone }: { name: string; photoSrc: st
     return () => ts.forEach(clearTimeout);
   }, [onDone]);
 
+  // The portrait's journey: far + formless → approaching → almost there → clear.
   const portrait =
-    phase === 'tease'
-      ? { scale: 1.18, filter: 'blur(26px) brightness(0.5)' }
-      : phase === 'approach'
-        ? { scale: 1.08, filter: 'blur(11px) brightness(0.72)' }
-        : { scale: 1, filter: 'blur(0px) brightness(1)' };
+    phase === 'mystery'
+      ? { scale: 1.28, filter: 'blur(34px) brightness(0.42) saturate(0.7)' }
+      : phase === 'anticipation'
+        ? { scale: 1.14, filter: 'blur(16px) brightness(0.62) saturate(0.85)' }
+        : phase === 'prestige'
+          ? { scale: 1.06, filter: 'blur(7px) brightness(0.82) saturate(1)' }
+          : { scale: 1, filter: 'blur(0px) brightness(1) saturate(1)' };
+
+  const line =
+    phase === 'mystery' ? 'someone picked you'
+    : phase === 'anticipation' ? 'they read your night. they want you on it.'
+    : phase === 'prestige' ? 'ready?'
+    : `${name} picked you`;
+
+  const heartsOn = phase === 'prestige' || phase === 'reveal' || phase === 'out';
 
   return (
     <motion.div
       className="fixed inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden bg-shell-ink px-8"
       initial={{ opacity: 0 }}
       animate={{ opacity: phase === 'out' ? 0 : 1 }}
-      transition={{ duration: phase === 'out' ? 0.6 : 0.45, ease: REVEAL_EASE }}
+      transition={{ duration: phase === 'out' ? 0.7 : 0.5, ease: REVEAL_EASE }}
       onClick={onDone}
       role="button"
       aria-label="someone picked you — tap to skip the reveal"
       tabIndex={0}
     >
-      {/* breathing pink glow behind the portrait */}
+      {/* breathing pink glow — the heartbeat of the whole sequence. It beats
+          faster and brighter as the beats advance (anticipation builds). */}
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute h-[26rem] w-[26rem] rounded-full bg-shell-accent/30 blur-3xl"
-        animate={{ scale: [1, 1.12, 1], opacity: phase === 'reveal' || phase === 'out' ? 0.55 : 0.3 }}
-        transition={{ scale: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.8 } }}
+        className="pointer-events-none absolute h-[28rem] w-[28rem] rounded-full bg-shell-accent/35 blur-3xl"
+        animate={{
+          scale: [1, 1.14, 1],
+          opacity: phase === 'mystery' ? 0.25 : phase === 'anticipation' ? 0.4 : 0.6,
+        }}
+        transition={{
+          scale: {
+            duration: phase === 'mystery' ? 2.6 : phase === 'anticipation' ? 1.6 : 1.1,
+            repeat: Infinity, ease: 'easeInOut',
+          },
+          opacity: { duration: 0.9 },
+        }}
       />
 
-      {/* the portrait: silhouette → push-in → clear */}
-      <div className="relative h-[22rem] w-[17rem] overflow-hidden rounded-[2rem] ring-1 ring-white/15">
-        <motion.div className="absolute inset-0" animate={portrait} transition={{ duration: 1.3, ease: REVEAL_EASE }}>
+      {/* drifting hearts — prestige onward */}
+      {heartsOn && HEARTS.map((h, i) => (
+        <motion.span
+          key={i}
+          aria-hidden
+          className="pointer-events-none absolute bottom-[-5%] text-shell-accent"
+          style={{ left: h.left, fontSize: h.size }}
+          initial={{ y: 0, opacity: 0 }}
+          animate={{ y: '-92vh', opacity: [0, 0.85, 0.85, 0] }}
+          transition={{ duration: 5.2, delay: h.delay, repeat: Infinity, ease: 'linear' }}
+        >
+          ♥
+        </motion.span>
+      ))}
+
+      {/* the portrait: silhouette → approach → almost → clear */}
+      <motion.div
+        className="relative h-[22rem] w-[17rem] overflow-hidden rounded-[2rem]"
+        animate={{
+          boxShadow:
+            phase === 'mystery'
+              ? '0 0 0px 0px rgba(224,33,138,0)'
+              : phase === 'anticipation'
+                ? '0 0 40px 4px rgba(224,33,138,0.35)'
+                : '0 0 80px 10px rgba(224,33,138,0.6)',
+        }}
+        transition={{ duration: 1.2, ease: REVEAL_EASE }}
+      >
+        <motion.div className="absolute inset-0" animate={portrait} transition={{ duration: 1.9, ease: REVEAL_EASE }}>
           <Image src={photoSrc} alt="" fill sizes="272px" className="object-cover" priority draggable={false} />
         </motion.div>
-        {/* the light sweep — fires once, on reveal */}
+        {/* prestige shimmer: a slow light pass that teases without revealing */}
+        {phase === 'prestige' && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-[-15%] w-2/3 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+            style={{ skewX: '-18deg' }}
+            initial={{ x: '-180%' }}
+            animate={{ x: '280%' }}
+            transition={{ duration: 1.8, ease: 'easeInOut' }}
+          />
+        )}
+        {/* reveal sweep: the bright one. fires once when the face lands */}
         {(phase === 'reveal' || phase === 'out') && (
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute inset-y-[-15%] w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+            className="pointer-events-none absolute inset-y-[-15%] w-1/2 bg-gradient-to-r from-transparent via-white/60 to-transparent"
             style={{ skewX: '-18deg' }}
             initial={{ x: '-160%' }}
             animate={{ x: '260%' }}
-            transition={{ duration: 0.9, ease: 'easeInOut' }}
+            transition={{ duration: 0.9, ease: 'easeInOut', delay: 0.15 }}
           />
         )}
-      </div>
+        {/* reveal flash: one bright pop as the blur drops */}
+        {phase === 'reveal' && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-white"
+            initial={{ opacity: 0.7 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+          />
+        )}
+      </motion.div>
 
-      {/* the line: settles in, then the name lands on reveal */}
-      <div className="mt-8 h-12 text-center">
+      {/* the line for each beat — settles in with tracking, swaps per phase */}
+      <div className="mt-9 flex h-16 items-start justify-center px-2 text-center">
         <AnimatePresence mode="wait">
           <motion.p
-            key={phase === 'reveal' || phase === 'out' ? 'named' : 'tease'}
-            className="font-heading text-3xl lowercase text-white"
-            initial={{ opacity: 0, letterSpacing: '0.3em' }}
-            animate={{ opacity: 1, letterSpacing: '0.06em' }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.1, ease: REVEAL_EASE }}
+            key={line}
+            className={cn(
+              'font-heading lowercase text-white',
+              phase === 'prestige' ? 'text-4xl' : 'text-2xl',
+              (phase === 'reveal' || phase === 'out') && 'text-3xl',
+            )}
+            initial={{ opacity: 0, letterSpacing: '0.28em', y: 6 }}
+            animate={{ opacity: 1, letterSpacing: '0.05em', y: 0 }}
+            exit={{ opacity: 0, y: -6, transition: { duration: 0.35 } }}
+            transition={{ duration: 1.2, ease: REVEAL_EASE }}
           >
-            {phase === 'reveal' || phase === 'out' ? `${name} picked you` : 'someone picked you'}
+            {line}
           </motion.p>
         </AnimatePresence>
       </div>
-      <p className="mt-2 font-body text-xs lowercase tracking-[0.12em] text-white/40">tap to skip</p>
+      <p className="mt-1 font-body text-xs lowercase tracking-[0.12em] text-white/40">tap to skip</p>
     </motion.div>
   );
 }
@@ -191,10 +278,18 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
       return false;
     }
   });
-  // Full-motion users get the three-phase overlay; the inline card stays hidden
-  // until it dissolves. Reduced motion never mounts the overlay (plain fade below).
-  const [overlay, setOverlay] = useState(ceremony);
-  const overlayActive = overlay && !reduce && photos.length > 0;
+  // Full-motion users get the ceremony overlay; the inline card stays hidden
+  // until it dissolves. Reduced motion never mounts it (plain fade below).
+  // IMPORTANT: the overlay arms in an EFFECT, not in initial state — the server
+  // renders without it (window is undefined there), so mounting it during
+  // hydration is a server/client mismatch React resolves by dropping the
+  // client-only branch. That bug shipped the v1 ceremony dead on prod.
+  const [overlay, setOverlay] = useState(false);
+  useEffect(() => {
+    if (ceremony && !reduce && photos.length > 0) setOverlay(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const overlayActive = overlay;
 
   if (gate) return <AccountGate reason={gate} />;
 

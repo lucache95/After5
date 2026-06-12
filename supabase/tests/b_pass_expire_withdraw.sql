@@ -40,9 +40,12 @@ BEGIN
   PERFORM 1 FROM jobs WHERE type='offer_expiry' AND dedup_key=oid::text AND status='cancelled';
   IF NOT FOUND THEN RAISE EXCEPTION 'B: offer_expiry job not cancelled'; END IF;
 
-  -- offer_passed notification dispatched
+  -- offer_passed notification dispatched to the HOST (fix04: the passer must
+  -- not be notified of their own action — "they passed this time" is host copy)
+  PERFORM 1 FROM notifications WHERE user_id=cre AND type='offer_passed';
+  IF NOT FOUND THEN RAISE EXCEPTION 'B: offer_passed notification not dispatched to host'; END IF;
   PERFORM 1 FROM notifications WHERE user_id=cand AND type='offer_passed';
-  IF NOT FOUND THEN RAISE EXCEPTION 'B: offer_passed notification not dispatched'; END IF;
+  IF FOUND THEN RAISE EXCEPTION 'B: offer_passed must not notify the passer'; END IF;
 
   -- replay pass on already-passed → no-op (returns 0)
   IF match_pass_offer(cand, oid) <> 0 THEN
