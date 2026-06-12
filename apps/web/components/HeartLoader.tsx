@@ -28,7 +28,7 @@ const GLOW = {
 export interface HeartLoaderProps {
   /** Icon size in px (default 24). */
   size?: number;
-  /** CSS color value. Defaults to the theme primary token. Use "currentColor" to inherit. */
+  /** CSS color value. Defaults to the shell accent pink. Use "currentColor" to inherit. */
   color?: string;
   /** Extra classes for layout or Tailwind color overrides. */
   className?: string;
@@ -56,7 +56,7 @@ export function HeartLoader({
       role="progressbar"
       className={cn(
         'relative inline-flex shrink-0 items-center justify-center',
-        color ? undefined : 'text-primary',
+        color ? undefined : 'text-shell-accent',
         className,
       )}
       style={style}
