@@ -144,7 +144,13 @@ Plans:
   2. The lock-page "something's wrong" control persists a real report (verifiable row), and a no-show can be flagged from the UI through the existing `flag_no_show` RPC.
   3. A standby candidate sees their standby nights in their queue surfaces and is notified when bumped to standby or when an offer rolls to them.
   4. Accepting an offer that conflicts with the user's or host's other nights actually triggers the autoclose/autowithdraw cascade through the job runner (proven on prod, fixed if the handler keying is wrong).
-**Plans**: TBD
+**Plans**: 5 plans in 2 waves
+Plans:
+- [ ] 13-01-PLAN.md — LIFE-04: kind-branch the standby_roll handler to the conflict-cascade consumer RPCs + Deno regression + read-only prod verify (no migration)
+- [ ] 13-02-PLAN.md — LIFE-03: surface standby rows in queue/inbox (broadened filter, blind-safe) + standby badge + standby_bumped notify on bump + roll
+- [ ] 13-03-PLAN.md — LIFE-02: file_report DEFINER RPC (party-checked, reused taxonomy) + flag_no_show UI producer, both confirm-gated, via new edge fns
+- [ ] 13-04-PLAN.md — LIFE-01: revoke_chat_thread(lock) + call in both match_cancel_lock branches + read-only "this date was cancelled" banner
+- [ ] 13-05-PLAN.md — phase gate: [BLOCKING] local migration apply → full suite green + security advisor + gated prod-apply/edge-deploy/backfill handoff
 
 ### Phase 14: Lifecycle Wiring & UX
 **Goal**: The reverse and terminal edges of every object have a clear next action — no silent dead-ends.
@@ -176,7 +182,7 @@ Plans:
 | 10. Generation as the Primary Night Path | 1/3 | In progress | - |
 | 11. Page-by-Page UX & Nav Audit + Remediation | 0/? | Not started | - |
 | 12. Account Deletion & Data Lifecycle | 0/? | Not started | - |
-| 13. Lifecycle Correctness | 0/? | Not started | - |
+| 13. Lifecycle Correctness | 0/5 | Planned | - |
 | 14. Lifecycle Wiring & UX | 0/? | Not started | - |
 | 15. Moderation & Safety Operations (post-launch) | 0/? | Not started | - |
 
