@@ -14,10 +14,12 @@ import { ComingSoonBanner } from '@/components/ComingSoonBanner';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { isMatchEnabledForViewer } from '@/lib/match/flag';
-import { groupActivity, type RawNotification } from '@/lib/after5/inbox-activity';
+import { groupActivity, type ActivityItem, type RawNotification } from '@/lib/after5/inbox-activity';
 import { resolveMirrorPhotoSrc } from '@/lib/after5/photo-src';
-import { ActivityList } from './ActivityList';
-import { StandbyList } from './StandbyList';
+import { metaFor } from '@/lib/after5/notif-map';
+import { relativeTime } from '@/lib/relative-time';
+import { Layers, Sparkles } from 'lucide-react';
+import { InboxSummaryRow } from './InboxSummaryRow';
 import { ThreadRow } from '../messages/ThreadList';
 import {
   sortThreadsByRecency,
@@ -55,6 +57,16 @@ function one<T>(v: T | T[] | null | undefined): T | null {
   return v ?? null;
 }
 
+// One-line preview for the collapsed activity row: the latest item's label
+// (counted when grouped) + its relative time, e.g. "3 someone's into your
+// night · 4m".
+function previewOf(item: ActivityItem): string {
+  const meta = metaFor(item.type);
+  const count = item.kind === 'group' ? item.count : 1;
+  const label = count > 1 ? `${count} ${meta.label}` : meta.label;
+  return `${label} · ${relativeTime(item.created_at)}`;
+}
+
 export default async function InboxPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -76,7 +88,16 @@ export default async function InboxPage() {
   const hasMoreActivity = rawNotifs.length > ACTIVITY_SEED_LIMIT;
   const activityPage = hasMoreActivity ? rawNotifs.slice(0, ACTIVITY_SEED_LIMIT) : rawNotifs;
   const activityItems = groupActivity(activityPage);
-  const activityCursor = hasMoreActivity ? activityPage[activityPage.length - 1]?.created_at ?? null : null;
+
+  // Collapsed activity row (TikTok pattern): the latest item drives the one-line
+  // preview ("3 someone's into your night · 4m"); an unread head-count badges it.
+  const activityPreview = activityItems.length > 0 ? previewOf(activityItems[0]) : null;
+  const { count: activityUnread } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .neq('type', 'new_message')
+    .is('read_at', null);
 
   // Zone 2 — the messages tab query, verbatim (chat_threads party-read RLS scopes
   // to the viewer; counterpart Tier-3 read via the reveal-safe offer embed).
@@ -172,9 +193,36 @@ export default async function InboxPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-8">
-            <StandbyList supabase={supabase} userId={user.id} />
-            <ActivityList userId={user.id} initialItems={activityItems} initialCursor={activityCursor} />
+          <div className="space-y-6">
+            {/* Collapsed category rows (TikTok pattern): queue + activity each
+                fold to one glanceable, tappable row that opens its own page.
+                Messages stay the primary list below — the high-intent visit. */}
+            {(hasStandby || activityItems.length > 0) && (
+              <div className="space-y-2">
+                {hasStandby && (
+                  <InboxSummaryRow
+                    href="/inbox/queue"
+                    Icon={Layers}
+                    label="your queue"
+                    tone="accent"
+                    preview={
+                      standbyCount === 1
+                        ? "1 night you're in line for"
+                        : `${standbyCount} nights you're in line for`
+                    }
+                  />
+                )}
+                {activityItems.length > 0 && activityPreview && (
+                  <InboxSummaryRow
+                    href="/inbox/activity"
+                    Icon={Sparkles}
+                    label="activity"
+                    preview={activityPreview}
+                    count={activityUnread ?? 0}
+                  />
+                )}
+              </div>
+            )}
             {threads.length > 0 && (
               <section aria-labelledby="inbox-messages-heading" className="space-y-3">
                 <h2 id="inbox-messages-heading" className="px-1 font-heading text-2xl lowercase text-shell-ink">
