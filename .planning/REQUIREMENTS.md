@@ -40,6 +40,35 @@ harness), and its ambient sound fits its cover.
 
 ---
 
+## v2.0 Launch Hardening (added 2026-06-13)
+
+> Source: the 2026-06-13 four-object lifecycle audit (Night / Match / Chat / Profile). The forward
+> "happy path" is built and live; the dead-ends are on reverse, terminal, and moderation edges. These
+> requirements close the launch-gating ones. (Audit blocker #1 — Persona production verification — was
+> resolved 2026-06-13: prod edge secrets set + verified live; not a requirement here.)
+
+### ACCT — account lifecycle
+- [ ] **ACCT-01** — A user can delete their account end-to-end: a self-serve request (settings → confirm) drives a `deletion_process` job that anonymizes/cascades profile + photos + `profiles_private` PII, cancels/cleans their active offers/locks/chats, then removes the auth user. (Today only the `deletion_process` enum value exists — no RPC, no UI, no cascade. GDPR/CCPA launch gate.)
+
+### LIFE — lifecycle correctness
+- [ ] **LIFE-01** — Cancelling a lock closes/revokes its chat thread (`state→closed`, `revoked_at` set), so a cancelled date no longer leaves a live, messageable, "you're locked in" conversation. (`match_cancel_lock` never touches the thread today.)
+- [ ] **LIFE-02** — Safety + report controls persist real records: the lock-page "something's wrong" flag writes a report (today it's a silent toast that calls no RPC), and no-show flagging gets a working UI producer for the existing `flag_no_show` RPC.
+- [ ] **LIFE-03** — A standby candidate is visible and informed: standby queue rows surface in the candidate's queue views (today filtered to `interested` only → standby is invisible), and the candidate is signalled when bumped to standby or when an offer rolls to them.
+- [ ] **LIFE-04** — The lock-acceptance conflict cascade (creator-conflict autoclose + user-conflict autowithdraw) executes through the job runner end-to-end — verified, and fixed if the `standby_roll` handler's `kind`-branching / `instance_id` keying is broken.
+
+### WIRE — lifecycle wiring & UX
+- [ ] **WIRE-01** — Host night management is coherent: a cancelled night offers a real re-post path (or the cancel copy stops promising one), and a `matched` night links to its match/chat from `/my-nights` (today it links to the candidate-picker list).
+- [ ] **WIRE-02** — Closed/revoked chat threads are tombstoned or removed from the inbox list (no live-looking dead conversations), and the interested-list page gates its offer controls by night status (no live controls on a matched/expired/cancelled night).
+- [ ] **WIRE-03** — Notification + terminal routing is correct: the `offer_passed` host nudge deep-links to the host's interested list (not `/feed`), and an expired (unmatched) night notifies its host.
+- [ ] **WIRE-04** — Profile photo primary stays consistent on reorder (feed "main" == gallery first tile), and a draft itinerary can be deleted.
+
+### MOD — moderation & safety operations (post-launch; tracked, not launch-gating)
+- [ ] **MOD-01** — Account standing has real writers + admin actions (suspend / cooldown / ban / reinstate) with a recovery path, and a gated user sees their status + recourse (appeal). (Today the whole `standing` / `account_state` machine is scaffolded-but-inert.)
+- [ ] **MOD-02** — User reports (chat messages + profiles) reach an admin review queue with actionable outcomes, and a suspended/banned user's active offers/locks/chats are cleaned up rather than left dangling.
+- [ ] **MOD-03** — Chat retention works: closed threads + messages purge on a defined retention schedule (the `chat_purge` job is actually implemented + enqueued; today it calls a non-existent RPC and is never scheduled).
+
+---
+
 ## Future Requirements (deferred to v2.1+)
 - Multi-city expansion as a marketed capability (beyond on-demand per-user seeding).
 - Candidate-side AI recommendations ("plan a night like this near me").
@@ -99,5 +128,17 @@ known surface and can't catch dead buttons / broken nav / console+network errors
 | FLOW-01 | generate-into-dating | FLOW | Phase 10 | Complete |
 | UX-01 | ux-nav-brand-audit | UX | Phase 11 | Pending |
 | UX-02 | ux-remediation | UX | Phase 11 | Pending |
+| ACCT-01 | account-deletion | ACCT | Phase 12 | Pending |
+| LIFE-01 | cancel-closes-chat | LIFE | Phase 13 | Pending |
+| LIFE-02 | safety-report-persists | LIFE | Phase 13 | Pending |
+| LIFE-03 | standby-visible | LIFE | Phase 13 | Pending |
+| LIFE-04 | conflict-cascade-fires | LIFE | Phase 13 | Pending |
+| WIRE-01 | night-management-coherent | WIRE | Phase 14 | Pending |
+| WIRE-02 | dead-thread-tombstone | WIRE | Phase 14 | Pending |
+| WIRE-03 | notif-terminal-routing | WIRE | Phase 14 | Pending |
+| WIRE-04 | photo-primary-draft-delete | WIRE | Phase 14 | Pending |
+| MOD-01 | standing-admin-actions | MOD | Phase 15 | Pending |
+| MOD-02 | report-queue-cleanup | MOD | Phase 15 | Pending |
+| MOD-03 | chat-retention-purge | MOD | Phase 15 | Pending |
 
-**Coverage:** 10/10 requirements mapped — DATA→Phase 8, PLAN/EVAL/SOUND→Phase 9, FLOW→Phase 10, UX→Phase 11. No orphans, no duplicates.
+**Coverage:** 22/22 requirements mapped — DATA→Phase 8, PLAN/EVAL/SOUND→Phase 9, FLOW→Phase 10, UX→Phase 11, ACCT→Phase 12, LIFE→Phase 13, WIRE→Phase 14, MOD→Phase 15. No orphans, no duplicates.

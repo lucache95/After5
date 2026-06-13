@@ -45,7 +45,7 @@ simple tweaks, and publish it into the dating feed. The generated date is one a
 real person actually wants to go on (proven by an eval harness), and its ambient
 sound fits its cover.
 
-**Granularity:** standard · **Coverage:** 10/10 v2.0 requirements mapped.
+**Granularity:** standard · **Coverage:** 22/22 v2.0 requirements mapped (10 AI-planner + 12 Launch Hardening, added 2026-06-13).
 
 ### Phases
 
@@ -53,6 +53,13 @@ sound fits its cover.
 - [x] **Phase 9: Trustworthy Generation + Eval Harness** - One-tap any-city generate + swap-a-stop/NL-tweak improve loop, vibe-matched ambient sound, proven by a deterministic + Opus-4.8-judge eval over a golden set that includes a cold city. *(Live on prod via the Phase-8 cutover deploys. SOUND-01 ambient audio still deferred on ELEVENLABS_API_KEY.)*
 - [x] **Phase 10: Generation as the Primary Night Path** - Generating a date becomes THE way to create a night (publishes to the feed); the legacy manual `/create` funnel and orphaned `/plan`/catalog surfaces are retired or replaced.
 - [ ] **Phase 11: Page-by-Page UX & Nav Audit + Remediation** - A browser-driven audit of every route against the design system + a nav/flow rubric, then prioritized remediation so no page is a trap and the whole app reads as one branded product.
+
+#### Launch Hardening (added 2026-06-13, from the four-object lifecycle audit)
+
+- [ ] **Phase 12: Account Deletion & Data Lifecycle** - A user can delete their account end-to-end (request → confirm → cascade/anonymize → cleanup of active commitments). The one true remaining launch gate after Persona (legal/GDPR).
+- [ ] **Phase 13: Lifecycle Correctness** - Fix states that look live but are dead: cancelled-lock leaves a live chat, the safety flag is a silent no-op, standby candidates are invisible, the conflict cascade may not fire.
+- [ ] **Phase 14: Lifecycle Wiring & UX** - Close reverse/terminal-edge dead-ends: cancelled-night re-post, dead-thread tombstones, matched→chat link, notification routing, photo-primary + draft delete.
+- [ ] **Phase 15: Moderation & Safety Operations** *(post-launch — tracked, not launch-gating)* - Make the scaffolded-but-inert moderation half real: standing writers + admin actions + appeals, a report review queue with cleanup, working chat retention/purge.
 
 ### Phase Details
 
@@ -118,6 +125,48 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 12: Account Deletion & Data Lifecycle
+**Goal**: A user can delete their account end-to-end, and no active commitment is left dangling. (The one true launch gate remaining after Persona was verified live 2026-06-13.)
+**Depends on**: Nothing (independent of the AI-planner track)
+**Requirements**: ACCT-01
+**Success Criteria** (what must be TRUE):
+  1. A user can request account deletion from settings, confirm it, and the request is recorded — no raw-SQL-only path.
+  2. The `deletion_process` job runs (an implemented RPC, not a missing one): it anonymizes/removes the profile, photos, and `profiles_private` PII, and cancels/cleans the user's active offers/locks/chats so a counterparty is never left locked to a deleted user.
+  3. After deletion completes, the auth user is removed and the account cannot sign back in.
+**Plans**: TBD
+
+### Phase 13: Lifecycle Correctness
+**Goal**: No object sits in a state that looks live but is actually dead, and the safety/cascade machinery actually fires.
+**Depends on**: Nothing (operates on the existing match/chat machinery)
+**Requirements**: LIFE-01, LIFE-02, LIFE-03, LIFE-04
+**Success Criteria** (what must be TRUE):
+  1. Cancelling a lock closes its chat thread: the cancelled date's conversation becomes read-only ("this chat is closed"), not a messageable "you're locked in" thread.
+  2. The lock-page "something's wrong" control persists a real report (verifiable row), and a no-show can be flagged from the UI through the existing `flag_no_show` RPC.
+  3. A standby candidate sees their standby nights in their queue surfaces and is notified when bumped to standby or when an offer rolls to them.
+  4. Accepting an offer that conflicts with the user's or host's other nights actually triggers the autoclose/autowithdraw cascade through the job runner (proven on prod, fixed if the handler keying is wrong).
+**Plans**: TBD
+
+### Phase 14: Lifecycle Wiring & UX
+**Goal**: The reverse and terminal edges of every object have a clear next action — no silent dead-ends.
+**Depends on**: Phase 13 (shares the match/chat surfaces)
+**Requirements**: WIRE-01, WIRE-02, WIRE-03, WIRE-04
+**Success Criteria** (what must be TRUE):
+  1. A cancelled night has a working re-post path (or the cancel copy no longer promises one), and a matched night links to its match/chat from `/my-nights`.
+  2. A closed/revoked chat thread is tombstoned or removed from the inbox list, and the interested-list page does not show live offer controls on a matched/expired/cancelled night.
+  3. The `offer_passed` host nudge deep-links to the host's interested list, and an expired unmatched night notifies its host.
+  4. Reordering profile photos keeps the feed "main" photo equal to the gallery's first tile, and a draft itinerary can be deleted.
+**Plans**: TBD
+
+### Phase 15: Moderation & Safety Operations
+**Goal**: The moderation half of the app — scaffolded-but-inert today — becomes real. *(Post-launch: tracked here for completeness, not a launch gate.)*
+**Depends on**: Phase 13 (standing transitions touch the match machinery)
+**Requirements**: MOD-01, MOD-02, MOD-03
+**Success Criteria** (what must be TRUE):
+  1. An admin can suspend / cooldown / ban / reinstate an account (real `standing`/`account_state` writers), a gated user sees their status and a recourse (appeal), and there is a path back to good standing.
+  2. User reports (chat messages + profiles) reach an admin review queue with actionable outcomes, and a suspended/banned user's active offers/locks/chats are cleaned up rather than left dangling.
+  3. Closed chat threads + their messages purge on a defined retention schedule (the `chat_purge` job is implemented and enqueued).
+**Plans**: TBD
+
 ### Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -126,6 +175,10 @@ Plans:
 | 9. Trustworthy Generation + Eval Harness | 4/6 | In progress | - |
 | 10. Generation as the Primary Night Path | 1/3 | In progress | - |
 | 11. Page-by-Page UX & Nav Audit + Remediation | 0/? | Not started | - |
+| 12. Account Deletion & Data Lifecycle | 0/? | Not started | - |
+| 13. Lifecycle Correctness | 0/? | Not started | - |
+| 14. Lifecycle Wiring & UX | 0/? | Not started | - |
+| 15. Moderation & Safety Operations (post-launch) | 0/? | Not started | - |
 
 ### Conventions (carried from v1.0)
 

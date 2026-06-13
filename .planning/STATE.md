@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: AI Date-Planner
-status: executing
-stopped_at: Phase 11 audit COMPLETE + all HIGH/most MEDIUM findings REMEDIATED (2026-06-09 evening). Pass 2 covered the remaining 42 routes (59/60 total; collector spec route-11-audit-pass2.spec.ts; /api/stats env artifact fixed). 4 HIGHs fixed: inbox pre-lock clear-photo blind-contract leak (db3ff64, lock_id gate + full clear_photo_url projection sweep), /reciprocal nav trap (chrome + decide-later), onboarding phone one-way door (resend + escape), onboarding done false-verified state. MEDIUMs: terms+privacy recopied for the dating product w/ verified processor list (d8ef4af, NEEDS REAL LAWYER), EarlyAccessBanner hidden for authed/offline, plans-edit exit + save demoted, rating consequence line, preferences casing/dealbreaker labels, funnel back chips, React keys + /dates/[slug] back, pluralization/titles/CTA labels. OPEN: P2-F13 /account/saved rebrand-or-retire (USER DECISION), P2-F12 reciprocal card context (needs query change), P2-F17 Kelowna-hardcoded catalog (defer to any-city), P2-F18 cosmetic backlog. Earlier same day: phases 8+9+10 reconciled — The key-gated Phase-8 cutover EXECUTED 2026-06-08 (FOURSQUARE_API_KEY set + validated; both migrations applied, relabel 92 discovered→google_legacy, 0 curated lost; generate-plan + process-jobs deployed; advisor clean; 3 any-city seam bugs found by smoke + fixed in 5aa3eb3). Phase-9 prod-bound steps shipped with that deploy (SOUND-01 audio still deferred on ELEVENLABS_API_KEY). Off-roadmap but shipped on main (pushed 9c44242, Vercel): the date-customization-canvas convergence (generate-1; regenerate_title + remove_stop improve actions; authed generations land on /plans/[id]/edit which gained AI title chips + ImproveControls; parallel DateCanvas deleted) + Kelowna corpus activation (live pool 59→184, all 21 supply categories at target). Web 614/614 + tsc clean; edge deno 96/96 (--node-modules-dir=none). Phase 11 pass 1 done ad-hoc (17/60 routes, F1+F2 fixed, F3 deferred). Next: finish Phase 11 (remaining ~43 routes + remediation), then audit-milestone.
-last_updated: "2026-06-09T18:30:00.000Z"
-last_activity: 2026-06-09 -- Phase 11 pass-2 audit (42 routes) + remediation: 4 HIGHs (incl. the inbox blind-contract photo leak) + 10 MEDIUM/LOW classes fixed across 14 commits; legal pages recopied; 634/634 web tests + typecheck green.
+milestone_name: — AI Date-Planner
+status: "v2.0 EXTENDED with Launch Hardening (phases 12-15, added 2026-06-13 from the four-object lifecycle audit). Phase 11 (UX audit) still open. Launch gates: Phase 12 account deletion (Persona blocker #1 RESOLVED 2026-06-13 — prod edge secrets set+verified live). Then Phase 13 correctness, 14 wiring, 15 moderation (post-launch). Carried debt outside phases: cold-city quality-floor (DATA-02 gap → city_warming; relates to Foursquare credits), SOUND-01 ambient audio (needs ELEVENLABS_API_KEY), Database types regen, scoring tune."
+stopped_at: milestone roadmap extended (2026-06-13)
+last_updated: "2026-06-13T00:00:00.000Z"
+last_activity: 2026-06-13 -- extended v2.0 roadmap with Launch Hardening phases 12-15 (Option A) from the lifecycle audit; Persona prod verified live.
 progress:
-  total_phases: 4
+  total_phases: 8
   completed_phases: 3
   total_plans: 15
   completed_plans: 15
-  percent: 75
+  percent: 38
 ---
 
 # Project State
@@ -146,6 +146,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-09 (late) — LAUNCH-READINESS BLITZ on top of the Phase-11 work: ~20 commits pushed together. Teaser feed (browse pre-verification, action gated); host-voice generator prompts DEPLOYED; runtime monotonic-schedule + same-experience-adjacency guards DEPLOYED; seed quality (12 nights regenerated: varied vibe-matched sounds, real stop-photo covers, chronological stops, host-voice hooks) + real Replicate portraits for the 3 seed hosts (bad seed paths were nulling ALL feed avatars); /matches list + /matches/[lockId] REDESIGNED (tab shell everywhere); feed: heart vs + differentiation, no-same-sound spacing, real 14-day picker + value-showing filter chips (NOTE: tonight/weekend were never real filters — deferred for liquidity); publish lands on /my-nights; image perf (stable cached signed URLs + transforms, 7x smaller); brother-in-law fixes (age 019 input, hard-nos copy, gate-notice card, done→feed); browser-driven onboarding audit (report in docs/superpowers/reports/) + its P0 FIXED (primary_city_id never set by the dating funnel → structurally empty feed; defaulted to launch city at preferences save) + verify-step sell + teaser door + honest unverified done-state. OPEN DECISIONS: dealbreakers are COSMETIC (no lifestyle facts on profiles to filter against — user approved wiring; needs the 4-facts collection + gated DDL, proposed); Persona still SANDBOX on prod (user must mint production key+template → swap edge secrets) = last funnel launch blocker; photo cropper dead in dev (StrictMode object URL, prod unaffected). Earlier same day — Executed the date-customization-canvas plan via subagent-driven development, pivoting mid-build (user-approved) to CONVERGE on the existing /plans/[id]/edit editor instead of shipping a parallel DateCanvas: backend generate-1 + regenerate_title/remove_stop (owner-safe, caller-JWT routed) deployed to prod; editor gained AI title chips + ImproveControls (before publish — FLOW-01 intact); CreateFlow redirects authed generations to the editor. Visual-verified @420px (one real clipping fix). Repaired a repo-wide vitest breakage (deno --node-modules-dir=auto corrupts pnpm node_modules; use =none — recipe in phase8 pending todo). Merged to main fast-forward + pushed 9c44242 (Vercel deploy). Reconciled ROADMAP/STATE: phases 8+9 marked complete (cutover ran 2026-06-08), Phase 11 in progress.
-Stopped at: GSD state reconciled. Next: finish the Phase 11 audit (remaining ~43 routes) + remediation, then /gsd:audit-milestone → /gsd:complete-milestone v2.0. Carried debt listed under Current Position.
+Last session: 2026-06-12T00:10:26.439Z
+Stopped at: context exhaustion at 75% (2026-06-12)
 Resume file: None
