@@ -302,19 +302,22 @@ export function flagNoShow(lock: string): Promise<null> {
 | A5 | No existing `standby_bumped`/`offer_rolled` notification type — a new enum value (or a reuse) is needed for the LIFE-03 "bumped to standby" event. | LIFE-03 / Pitfall 4 | Confirmed absent in `p2_notifications.sql:11` + extends; but a reuse decision needs founder/planner sign-off. |
 | A6 | `flag_no_show` is reached from the client via an edge-fn route (like other `match-*` calls) rather than a direct `.rpc()`; the exact route name is unverified. | LIFE-02 Code Example | Wrong route name = broken no-show button. Grep `supabase/functions/match-*` for an existing proxy before wiring. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does a one-time prod data migration belong in this phase?**
    - What we know: New cancels/accepts will be correct after the code fix. Pre-existing wrong-state rows are not.
    - What's unclear: How many such rows exist on prod (likely small given pre-launch volume).
    - Recommendation: Run the read-only prod inspection queries first (Validation section). If counts are non-trivial, add a guarded data-migration task; if ~0, document "forward-only, no backfill."
+   - **RESOLVED:** Deferred to the 13-01 Task 3 read-only prod-verify decision. The backfill is NOT an autonomous prod mutation — it is surfaced as a human-gated handoff in plan 13-05 (gated prod apply). If the read-only counts are ~0 the phase is forward-only; if material, the operator runs the guarded backfill under the 13-05 gate. No plan mutates prod unattended.
 
 2. **Report write: new `file_report` RPC vs. direct RLS insert?**
    - What we know: RLS permits the direct insert; convention favors a DEFINER RPC; no `file_report` exists.
    - Recommendation: Add a minimal `file_report` DEFINER RPC for consistency + future admin-alert dispatch, unless the planner opts for the lighter direct insert.
+   - **RESOLVED:** Chose the DEFINER `file_report` RPC (party-checked: actor must be a lock party; reporter_id forced to auth.uid()), NOT a permissive reports RLS insert. Implemented in plan 13-03 Task 1 (`20260613141000_life02_file_report.sql`).
 
 3. **Which notification type for "bumped to standby"?**
    - Recommendation: add `standby_bumped` enum value (cheap, clear) OR confirm a reuse with the founder. `standby_promoted` is taken by the offer-roll event.
+   - **RESOLVED:** Chose a new `standby_bumped` enum value (distinct from `standby_promoted`, which stays the offer-roll event). Added + dispatched in plan 13-02 Task 1 (`20260613140000_life03_standby_notify.sql`).
 
 ## Environment Availability
 
