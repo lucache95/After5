@@ -2,17 +2,20 @@
 -- ACCT-01 account-deletion lifecycle. Mirrors b_job_rpcs.sql conventions (fixtures +
 -- DO blocks + set_config for auth.uid + ROLLBACK per case + RAISE EXCEPTION on fail).
 -- Run against LOCAL: psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f this
--- REQUIRES: app.reputation_salt GUC set (alter database postgres set app.reputation_salt='...').
+-- The reputation salt is sourced from Supabase Vault (secret name 'reputation_salt');
+-- this block seeds a deterministic test secret if one isn't already present, so the
+-- suite is self-sufficient (the fail-loud P5002 path is exercised separately).
 \i supabase/tests/_fixtures.sql
 insert into feature_config(key, value) values ('match_v2_enabled', 'true'::jsonb)
   on conflict (key) do update set value='true'::jsonb;
 
--- Guard: the salt must be configured or every reputation path fails loud (by design).
+-- Precondition: ensure the Vault secret exists, or every reputation path fails loud
+-- (by design). Seed a fixed test salt when absent.
 DO $$
 BEGIN
-  IF current_setting('app.reputation_salt', true) IS NULL
-     OR btrim(current_setting('app.reputation_salt', true)) = '' THEN
-    RAISE EXCEPTION 'acct01 PRECONDITION: app.reputation_salt GUC is unset — set it before running these tests';
+  IF NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'reputation_salt') THEN
+    PERFORM vault.create_secret('test-reputation-salt-acct01', 'reputation_salt',
+      'ACCT-01 test salt (local only)');
   END IF;
 END $$;
 
