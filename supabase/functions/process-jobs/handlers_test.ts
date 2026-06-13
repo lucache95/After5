@@ -7,6 +7,7 @@ import { richVenue, belowFloorVenue } from '../generate-plan/__fixtures__/foursq
 const ALL_TYPES = [
   'offer_expiry','standby_roll','bulk_withdraw',
   'chat_purge','rating_window','analytics_relay','seed_city','notify',
+  'deletion_process',
 ];
 
 Deno.test('every job_type has a handler', () => {
@@ -116,4 +117,95 @@ Deno.test('seed_city throws when city not found (fail-loud → retry)', async ()
     Error,
     'not found',
   );
+});
+
+// ── deletion_process (ACCT-01) ───────────────────────────────────────────────
+// A fake Db: rpc(process_account_deletion) returns SETOF text (storage paths);
+// storage.from(bucket).remove(paths) captures the keys; auth.admin.deleteUser(uid)
+// captures the user. No network, no key, no live DB.
+function fakeDeletionDb(opts: {
+  rpcResult?: { data: unknown; error: { code?: string; message: string } | null };
+  removeError?: { message: string } | null;
+  deleteUserError?: { message: string } | null;
+} = {}) {
+  const captured = {
+    rpcCalls: [] as Array<{ fn: string; args: unknown }>,
+    removeBucket: null as string | null,
+    removePaths: null as string[] | null,
+    deletedUser: null as string | null,
+  };
+  const db = {
+    rpc: (fn: string, args: unknown) => {
+      captured.rpcCalls.push({ fn, args });
+      return Promise.resolve(opts.rpcResult ?? { data: ['u1/a.jpg', 'u1/a_blurred.jpg'], error: null });
+    },
+    storage: {
+      from: (bucket: string) => ({
+        remove: (paths: string[]) => {
+          captured.removeBucket = bucket;
+          captured.removePaths = paths;
+          return Promise.resolve({ data: null, error: opts.removeError ?? null });
+        },
+      }),
+    },
+    auth: {
+      admin: {
+        deleteUser: (uid: string) => {
+          captured.deletedUser = uid;
+          return Promise.resolve({ data: null, error: opts.deleteUserError ?? null });
+        },
+      },
+    },
+    from: () => { throw new Error('deletion_process must not write tables directly'); },
+  };
+  return { db, captured };
+}
+
+Deno.test('deletion_process anonymizes, purges photos in profile-photos, removes auth user', async () => {
+  const { db, captured } = fakeDeletionDb();
+  await HANDLERS['deletion_process'](db as never, {
+    id: 'jd', type: 'deletion_process', payload: { user: 'u1' }, run_after: '', status: 'running',
+  } as never);
+
+  assert(captured.rpcCalls.some((c) => c.fn === 'process_account_deletion'), 'did not call process_account_deletion');
+  assertEquals((captured.rpcCalls[0].args as { p_user: string }).p_user, 'u1');
+  assertEquals(captured.removeBucket, 'profile-photos', 'must purge the profile-photos bucket');
+  assertEquals(captured.removePaths, ['u1/a.jpg', 'u1/a_blurred.jpg']);
+  assertEquals(captured.deletedUser, 'u1', 'must remove the auth user');
+});
+
+Deno.test('deletion_process throws when payload.user missing (fail-loud → retry)', async () => {
+  const { db } = fakeDeletionDb();
+  await assertRejects(
+    () => HANDLERS['deletion_process'](db as never, { id: 'jd', type: 'deletion_process', payload: {}, run_after: '', status: 'running' } as never),
+    Error,
+    'payload.user is required',
+  );
+});
+
+Deno.test('deletion_process tolerates a not-found auth user on retry (idempotent)', async () => {
+  const { db, captured } = fakeDeletionDb({ deleteUserError: { message: 'User not found' } });
+  // must NOT throw — a retry after a prior successful auth delete drains cleanly
+  await HANDLERS['deletion_process'](db as never, {
+    id: 'jd', type: 'deletion_process', payload: { user: 'u1' }, run_after: '', status: 'running',
+  } as never);
+  assertEquals(captured.deletedUser, 'u1');
+});
+
+Deno.test('deletion_process re-throws a genuine auth delete failure (retry)', async () => {
+  const { db } = fakeDeletionDb({ deleteUserError: { message: 'service unavailable' } });
+  await assertRejects(
+    () => HANDLERS['deletion_process'](db as never, { id: 'jd', type: 'deletion_process', payload: { user: 'u1' }, run_after: '', status: 'running' } as never),
+    Error,
+    'auth deleteUser failed',
+  );
+});
+
+Deno.test('deletion_process skips storage purge when no paths returned', async () => {
+  const { db, captured } = fakeDeletionDb({ rpcResult: { data: [], error: null } });
+  await HANDLERS['deletion_process'](db as never, {
+    id: 'jd', type: 'deletion_process', payload: { user: 'u1' }, run_after: '', status: 'running',
+  } as never);
+  assertEquals(captured.removePaths, null, 'must not call storage.remove with no paths');
+  assertEquals(captured.deletedUser, 'u1');
 });

@@ -36,6 +36,55 @@ export async function callRpc(db: Db, fn: string, args: Record<string, unknown>)
 
 const id = (j: Job, k: string) => (j.payload[k] as string | undefined) ?? null;
 
+// Like callRpc but returns the rows. process_account_deletion returns SETOF text
+// (the storage paths the handler must purge). Same fail-closed posture as callRpc:
+// throws on rpc error so the job retries / dead-letters rather than silently skipping.
+export async function callRpcReturning<T>(db: Db, fn: string, args: Record<string, unknown>): Promise<T> {
+  const { data, error } = await db.rpc(fn, args);
+  if (error) {
+    const e = new Error(`rpc ${fn} failed: ${error.message}`) as Error & { rpcCode?: string; rpcFn?: string };
+    e.rpcCode = (error as { code?: string }).code;
+    e.rpcFn = fn;
+    throw e;
+  }
+  return data as T;
+}
+
+// deletion_process (ACCT-01) -> finalize a soft-deleted account at the 7-day mark.
+// Order (fail-loud, idempotent on retry):
+//   1. process_account_deletion(user) anonymizes the row IN THE DB and RETURNS the
+//      profile-photos storage paths to purge (clear + blurred + mirror urls).
+//   2. delete those objects from the `profile-photos` bucket.
+//   3. delete the auth.users row via the service-role admin API so the email/phone
+//      free and they cannot sign back in.
+// Storage + auth deletes tolerate not-found (a retry after a partial success must not
+// hard-fail the whole job); any OTHER error throws so the runner retries/dead-letters.
+// payload key is 'user' (set by request_account_deletion's enqueue).
+const deletionProcess: Handler = async (db, job) => {
+  const user = id(job, "user");
+  if (!user) throw new Error("deletion_process: payload.user is required");
+
+  // 1. Anonymize in the DB; collect the storage paths to purge.
+  const paths = (await callRpcReturning<string[] | null>(db, "process_account_deletion", { p_user: user })) ?? [];
+
+  // 2. Purge the photo objects. removeObjects tolerates already-gone keys (Supabase
+  //    storage remove() does not error on missing objects), so this is retry-safe.
+  if (paths.length > 0) {
+    const { error: storageErr } = await db.storage.from("profile-photos").remove(paths);
+    // A genuine storage failure (not just missing objects) must retry the job.
+    if (storageErr && !/not.?found|no such|does not exist/i.test(storageErr.message)) {
+      throw new Error(`deletion_process: storage remove failed: ${storageErr.message}`);
+    }
+  }
+
+  // 3. Remove the auth user. Tolerate "user not found" (already deleted on a prior
+  //    attempt) so a retry drains cleanly; any other error throws to retry.
+  const { error: authErr } = await db.auth.admin.deleteUser(user);
+  if (authErr && !/not.?found|user.*not.*exist/i.test(authErr.message)) {
+    throw new Error(`deletion_process: auth deleteUser failed: ${authErr.message}`);
+  }
+};
+
 // offer_expiry -> P5's idempotent, lock-guarded match_expire_offer (C2). It marks
 // the offer expired, transitions the queue entry, and auto-rolls inline. P2 only calls.
 const offerExpiry: Handler = async (db, job) => {
@@ -74,4 +123,6 @@ export const HANDLERS: Record<string, Handler> = {
   // dedup_key=city_id on the enqueue side (poison-loop safe). See seed-city.ts.
   seed_city: seedCity,
   notify: genericNotify,
+  // ACCT-01: 7-day finalize — anonymize the DB row, purge photo objects, remove auth user.
+  deletion_process: deletionProcess,
 };

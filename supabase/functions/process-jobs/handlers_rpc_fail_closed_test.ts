@@ -108,6 +108,19 @@ Deno.test('analytics_relay handler rejects when rpc returns error', async () => 
   );
 });
 
+Deno.test('deletion_process handler rejects when process_account_deletion errors (fail closed)', async () => {
+  // RPC errors BEFORE any storage/auth side effect — so it never reaches db.storage.
+  const db = makeDb({
+    data: null,
+    error: { code: 'PGRST202', message: 'Could not find the function process_account_deletion' },
+  });
+  await assertRejects(
+    () => HANDLERS['deletion_process'](db as never, makeJob('deletion_process', { user: 'u1' })),
+    Error,
+    'rpc process_account_deletion failed',
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Handler tests — working handlers resolve when rpc returns no error
 // ---------------------------------------------------------------------------
