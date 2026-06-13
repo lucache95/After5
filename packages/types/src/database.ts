@@ -2511,6 +2511,33 @@ export type Database = {
           },
         ]
       }
+      reputation_ledger: {
+        Row: {
+          created_at: string
+          identity_hash: string
+          last_seen: string
+          prior_account_count: number
+          reliability_score: number | null
+          standing: Database["public"]["Enums"]["standing_state"] | null
+        }
+        Insert: {
+          created_at?: string
+          identity_hash: string
+          last_seen?: string
+          prior_account_count?: number
+          reliability_score?: number | null
+          standing?: Database["public"]["Enums"]["standing_state"] | null
+        }
+        Update: {
+          created_at?: string
+          identity_hash?: string
+          last_seen?: string
+          prior_account_count?: number
+          reliability_score?: number | null
+          standing?: Database["public"]["Enums"]["standing_state"] | null
+        }
+        Relationships: []
+      }
       saved_plans: {
         Row: {
           feedback_completed_at: string | null
@@ -3011,6 +3038,7 @@ export type Database = {
         Args: { ""?: string; att_name: string; tbl: unknown }
         Returns: string
       }
+      _seed_swipes_and_hint: { Args: { p_count: number }; Returns: string }
       _st_3dintersects: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -3082,6 +3110,7 @@ export type Database = {
         Returns: unknown
       }
       _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      acct_identity_hash: { Args: { p_phone_e164: string }; Returns: string }
       addauth: { Args: { "": string }; Returns: boolean }
       addgeometrycolumn:
         | {
@@ -3158,6 +3187,7 @@ export type Database = {
         }[]
       }
       can_enter_lock_flow: { Args: { p_user: string }; Returns: boolean }
+      cancel_account_deletion: { Args: never; Returns: undefined }
       cancel_jobs: {
         Args: {
           p_dedup_key: string
@@ -3226,10 +3256,7 @@ export type Database = {
       }
       disablelongtransactions: { Args: never; Returns: string }
       dispatch_date_reconfirm: { Args: { p_lock: string }; Returns: undefined }
-      dispatch_host_pick_nudges: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      dispatch_host_pick_nudges: { Args: never; Returns: number }
       dispatch_notification: {
         Args: {
           p_payload?: Json
@@ -3542,7 +3569,16 @@ export type Database = {
         Returns: string
       }
       mk_itinerary: { Args: { p_user: string }; Returns: string }
+      mk_itinerary_e20: {
+        Args: { p_catalog_place: string; p_user: string }
+        Returns: string
+      }
+      mk_itinerary_with_stops: { Args: { p_user: string }; Returns: string }
       mk_user: { Args: { p_label: string }; Returns: string }
+      mk_verified_phone: {
+        Args: { p_phone: string; p_user: string }
+        Returns: undefined
+      }
       notification_rate_check: {
         Args: {
           p_type: Database["public"]["Enums"]["notification_type"]
@@ -3550,7 +3586,9 @@ export type Database = {
         }
         Returns: Json
       }
-      offer_expires_at: { Args: { p_from?: string }; Returns: string }
+      offer_expires_at:
+        | { Args: { p_from?: string }; Returns: string }
+        | { Args: { p_from: string; p_starts_at: string }; Returns: string }
       open_chat_thread: { Args: { p_offer: string }; Returns: string }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -3605,6 +3643,7 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      process_account_deletion: { Args: { p_user: string }; Returns: string[] }
       promote_chat_thread_to_lock: {
         Args: { p_lock: string; p_offer: string }
         Returns: undefined
@@ -3658,7 +3697,9 @@ export type Database = {
         Args: { p_actor: string; p_message: string; p_reason: string }
         Returns: Json
       }
+      request_account_deletion: { Args: never; Returns: undefined }
       requeue_stuck_jobs: { Args: { p_grace?: string }; Returns: number }
+      seed_reputation_from_ledger: { Args: never; Returns: boolean }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown

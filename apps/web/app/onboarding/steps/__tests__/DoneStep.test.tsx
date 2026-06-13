@@ -7,12 +7,14 @@ const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 const enableEq = vi.fn().mockResolvedValue({ error: null });
-const fakeClient = { from: vi.fn(() => ({ update: () => ({ eq: enableEq }) })) };
+// ACCT-01: enableDating also calls rpc('seed_reputation_from_ledger') best-effort.
+const seedRpc = vi.fn().mockResolvedValue({ data: false, error: null });
+const fakeClient = { from: vi.fn(() => ({ update: () => ({ eq: enableEq }) })), rpc: seedRpc };
 vi.mock('@/lib/after5/client', () => ({ browserAfter5Client: () => fakeClient }));
 
 import { DoneStep } from '../DoneStep';
 
-beforeEach(() => { push.mockReset(); enableEq.mockClear(); });
+beforeEach(() => { push.mockReset(); enableEq.mockClear(); seedRpc.mockClear(); });
 
 describe('DoneStep', () => {
   it('success: shows the Verified · New badge', () => {
@@ -57,6 +59,12 @@ describe('DoneStep', () => {
     enableEq.mockResolvedValueOnce({ error: null });
     await userEvent.click(screen.getByRole('button', { name: /try again/i }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  it('ACCT-01: turning dating on also seeds reputation from the ledger (best-effort)', async () => {
+    render(<DoneStep userId="u1" badge={{ verified: true, isNew: true }} />);
+    await userEvent.click(screen.getByRole('button', { name: /turn dating on/i }));
+    await waitFor(() => expect(seedRpc).toHaveBeenCalledWith('seed_reputation_from_ledger'));
   });
 
   it('gate blocked: shows friendly message, no enable button, payoff + home CTAs present', () => {

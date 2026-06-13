@@ -13,6 +13,7 @@ import { Polaroid } from '@/components/Polaroid';
 import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { SelfViewTrigger } from '@/components/SelfViewTrigger';
+import { DeleteAccountSection } from './DeleteAccountSection';
 import { listMyPhotos, signClearUrls } from '@/lib/after5/photos';
 import type { DynamicPromptAnswer } from '@after5/validators';
 
@@ -43,7 +44,7 @@ export default async function AccountPage() {
   const [profileRes, privRes] = await Promise.all([
     supabase
       .from('profiles')
-      .select('first_name, age, city, neighborhood, verification, clear_photo_url, vibe_tags, prompt_answers, pronouns, height_cm, occupation')
+      .select('first_name, age, city, neighborhood, verification, clear_photo_url, vibe_tags, prompt_answers, pronouns, height_cm, occupation, account_state')
       .eq('id', user.id)
       .maybeSingle(),
     supabase
@@ -67,6 +68,7 @@ export default async function AccountPage() {
   const occupation = (profile?.occupation as string | null) ?? null;
   const heightCm = (profile?.height_cm as number | null) ?? null;
   const verification = (profile?.verification as string | null) ?? 'unverified';
+  const accountState = (profile?.account_state as string | null) ?? 'active';
   const isVerified = verification === 'verified';
   const vibeTags = ((profile?.vibe_tags as string[] | null) ?? []).filter(Boolean);
 
@@ -288,6 +290,9 @@ export default async function AccountPage() {
               sign out
             </button>
           </form>
+
+          {/* ACCT-01: delete affordance (active) / pending-deletion banner + cancel */}
+          <DeleteAccountSection accountState={accountState} />
         </section>
       </div>
 

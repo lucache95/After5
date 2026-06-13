@@ -23,6 +23,11 @@ vi.mock('@/components/NotificationToast', () => ({ NotificationToast: () => null
 vi.mock('@/components/SelfViewTrigger', () => ({
   SelfViewTrigger: () => <button type="button">preview my profile</button>,
 }));
+// DeleteAccountSection (ACCT-01) is a client boundary (vaul + useRouter + RPC); stub
+// it here. Its behavior is covered by DeleteAccountSection.test.tsx.
+vi.mock('../DeleteAccountSection', () => ({
+  DeleteAccountSection: () => <button type="button">delete my account</button>,
+}));
 vi.mock('next/image', () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));

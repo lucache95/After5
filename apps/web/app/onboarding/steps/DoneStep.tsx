@@ -31,8 +31,13 @@ export function DoneStep({
   async function enableDating() {
     setPhase('enabling');
     setErrorMsg('');
-    const { error } = await browserAfter5Client().from('profiles').update({ dating_enabled: true }).eq('id', userId);
+    const client = browserAfter5Client();
+    const { error } = await client.from('profiles').update({ dating_enabled: true }).eq('id', userId);
     if (error) { setErrorMsg(error.message); setPhase('error'); return; }
+    // ACCT-01: a returning user (same verified phone) resumes their reputation. This
+    // runs AFTER phone/ID verification (gate.ok), so the identity hash is trustworthy.
+    // Best-effort: never block turning dating on if the lookup fails.
+    try { await client.rpc('seed_reputation_from_ledger'); } catch { /* best-effort */ }
     setDatingOn(true);
     setPhase('idle');
   }
