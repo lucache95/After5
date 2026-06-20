@@ -5,7 +5,7 @@ import type { MetadataRoute } from 'next';
 // Barbiecore palette: warm cream background, hot-pink theme.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'after5 — match on the night, not the guy',
+    name: 'after5 — match on the night, not the face',
     short_name: 'after5',
     description:
       "the dating app where you match around a real night out. everyone's verified.",

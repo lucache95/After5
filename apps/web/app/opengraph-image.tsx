@@ -5,7 +5,7 @@ import { ImageResponse } from 'next/og';
 // override it, superseding the old static /og.jpg.
 export const runtime = 'nodejs';
 
-export const alt = 'after5 — match on the night, not the guy';
+export const alt = 'after5 — match on the night, not the face';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -79,7 +79,7 @@ export async function renderShareImage(): Promise<ImageResponse> {
             maxWidth: 980,
           }}
         >
-          match on the night, not the guy
+          match on the night, not the face
         </div>
       </div>
     ),

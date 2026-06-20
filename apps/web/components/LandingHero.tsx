@@ -29,7 +29,7 @@ export function LandingHero() {
         animate={reduce ? false : { opacity: 1, y: 0 }}
         transition={{ ...spring, delay: 0.05 }}
       >
-        match on the night, not the guy.
+        match on the night, not the face.
       </motion.h1>
       <p className="mx-auto mt-5 max-w-[420px] font-body text-[15px] leading-relaxed text-shell-ink/70 md:text-base">
         after5 builds your match around an actual plan for the evening. everyone&apos;s verified. less small talk, more showing up.

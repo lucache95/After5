@@ -19,11 +19,13 @@ interface SendArgs {
 }
 
 export async function sendEmail(args: SendArgs): Promise<{ id: string } | null> {
-  // Seed/fixture accounts use the fake '@after5.seed' suffix (no real mailbox).
-  // Emailing them bounces, which dings the sending domain's reputation and hurts
-  // deliverability to real users — so never send to them. The suffix is also the
-  // seed-cleanup marker, so it stays as-is (founder flagged bounces 2026-06-20).
-  if (args.to.toLowerCase().trim().endsWith('@after5.seed')) {
+  // Never send to undeliverable addresses — they hard-bounce, which dings the
+  // sending domain's reputation and hurts deliverability to real users.
+  // Covers seed/fixture accounts ('@after5.seed', also the seed-cleanup marker)
+  // and the IETF reserved test TLDs (.invalid/.test/.example/.local) we use in
+  // smoke tests. Founder flagged bounces 2026-06-20.
+  const to = args.to.toLowerCase().trim();
+  if (/@after5\.seed$|\.(invalid|test|example|local)$/.test(to)) {
     return null;
   }
 
