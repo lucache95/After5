@@ -71,5 +71,6 @@ export {
   postNight, browseFeed, recordSwipe, getNightDetail, reachPreview,
   ambientSoundUrl, listAmbientSounds, updateItineraryStops, createBlankItinerary,
   cancelNight, updateNight, withdrawInterest, normalizeNightDetailStops,
+  deleteDraftItinerary, cloneItineraryAsDraft,
   type FeedNight, type NightDetailNight, type NightDetailStop, type AmbientSound, type EditableStop,
 } from './feed';

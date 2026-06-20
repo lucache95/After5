@@ -138,6 +138,44 @@ export async function withdrawInterest(
   if (error) throw error;
 }
 
+/** DRFT-01: hard-delete a never-posted DRAFT the caller owns. Calls the DEFINER
+ *  RPC delete_draft_itinerary (migration 20260620120000), which re-checks
+ *  user_id = auth.uid() and refuses any itinerary that already has a
+ *  date_instance. Throws on error (PG errcode preserved for the host-copy map). */
+export async function deleteDraftItinerary(
+  client: After5Client,
+  input: { itinerary_id: string },
+): Promise<void> {
+  // Not in the generated Database types until the gated prod-apply regenerates
+  // them — same forward-reference cast as withdrawInterest.
+  const { error } = await (client.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ error: unknown }>)('delete_draft_itinerary', {
+    p_itinerary_id: input.itinerary_id,
+  });
+  if (error) throw error;
+}
+
+/** DRFT-01: copy an itinerary the caller owns (e.g. the one behind an expired
+ *  night) into a fresh, private, un-posted draft and return its id. Calls the
+ *  DEFINER RPC clone_itinerary_as_draft (migration 20260620120000); the source
+ *  is left untouched. Throws on error. */
+export async function cloneItineraryAsDraft(
+  client: After5Client,
+  input: { source_id: string },
+): Promise<string> {
+  const { data, error } = await (client.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: string | null; error: unknown }>)('clone_itinerary_as_draft', {
+    p_source_id: input.source_id,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('clone_itinerary_as_draft returned no id');
+  return data;
+}
+
 // M3: the host edit wire shape (structurally compatible with the web `Stop` type).
 export interface EditableStop {
   place_id?: string; place_name: string; place_slug?: string; place_type?: string;
