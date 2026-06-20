@@ -3,7 +3,7 @@
 // native scroll-snap photo carousel (no new dependency), name+age heading,
 // pronouns, place, labelled prompt cards, and vibe sticker chips. NO PII
 // (instagram/email) unless explicitly passed by the post-reveal caller.
-import { Check } from 'lucide-react';
+import { Check, Instagram } from 'lucide-react';
 import { badgeFor, type VerificationState } from '@after5/business';
 import { Polaroid } from '@/components/Polaroid';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
@@ -158,9 +158,20 @@ export function ProfileCard({
           </div>
         )}
 
-        {/* OPTIONAL POST-REVEAL CONTACT */}
+        {/* OPTIONAL POST-REVEAL CONTACT — a tappable IG link. Only rendered when
+            the caller passes it (a clear-identity surface: self-view, post-reveal
+            lock, host-viewing-a-candidate) — NEVER on the blind/blurred feed, so
+            it can't bypass the reveal gate. */}
         {instagram_handle && (
-          <p className="font-body text-[14px] lowercase text-profile-ink/70">@{instagram_handle}</p>
+          <a
+            href={`https://instagram.com/${instagram_handle.replace(/^@/, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-body text-[14px] lowercase text-profile-ink/70 underline decoration-profile-ink/20 underline-offset-4 transition hover:text-shell-accent hover:decoration-shell-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
+          >
+            <Instagram className="h-4 w-4 shrink-0" aria-hidden />
+            @{instagram_handle.replace(/^@/, '')}
+          </a>
         )}
       </div>
     </article>
