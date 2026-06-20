@@ -8,6 +8,7 @@ import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client, startVerification } from '@/lib/after5/client';
+import { track } from '@/app/PostHogProvider';
 import { PersonaEmbed } from './PersonaEmbed';
 import { VerificationStatus } from './VerificationStatus';
 
@@ -29,6 +30,7 @@ export function IdentityVerifyStep() {
     try {
       const res = await startVerification(browserAfter5Client()) as { inquiryId: string; sessionToken?: string };
       if (!res?.inquiryId) throw new Error('start-verification returned no inquiryId');
+      track.verificationStarted(res.inquiryId);
       setInquiry(res);
       setStage('capturing');
     } catch (e) {

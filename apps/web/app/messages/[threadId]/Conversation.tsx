@@ -27,6 +27,7 @@ import { subscribeThreadMessages } from '@/lib/after5/realtime';
 import { reportMessage } from '@/lib/after5/chat';
 import { markRead } from '@/lib/after5/chat';
 import { MatchError, messageForCode } from '@/lib/after5/match';
+import { track } from '@/app/PostHogProvider';
 import { cn } from '@/lib/cn';
 import { mergeMessage, type MessageRow } from '../thread-view';
 import { Composer } from './Composer';
@@ -108,6 +109,11 @@ export function Conversation({
     const fromOther = messages.some((m) => m.sender_id !== viewerId);
     if (fromViewer && fromOther) setReady(true);
   }, [messages, viewerId]);
+
+  // Analytics: one chat_opened per thread mount.
+  useEffect(() => {
+    track.chatOpened(threadId);
+  }, [threadId]);
 
   // Live inserts — dedupe by id (the sender receives their own echo).
   useEffect(() => {

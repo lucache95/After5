@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { sendMessage } from '@/lib/after5/chat';
 import { MatchError, messageForCode } from '@/lib/after5/match';
+import { track } from '@/app/PostHogProvider';
 import { cn } from '@/lib/cn';
 
 const MAX = 2000;
@@ -34,6 +35,7 @@ export function Composer({
     setText('');
     try {
       const r = await sendMessage(threadId, body);
+      track.messageSent({ thread_id: threadId, message_id: r.message_id });
       onSettled(tempId, r.message_id);
     } catch (e) {
       const code = e instanceof MatchError ? e.code : 'server_error';

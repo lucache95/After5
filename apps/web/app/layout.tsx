@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Inter, Fraunces, Caprasimo, Fredoka } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { PostHogProvider } from './PostHogProvider';
+import { PostHogIdentify } from './PostHogIdentify';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import './globals.css';
 
@@ -83,7 +84,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Relative wrapper scopes absolute-positioned headers (e.g. the
               homepage hero nav). */}
           <div className="relative">
-            <PostHogProvider>{children}</PostHogProvider>
+            <PostHogProvider>
+              <PostHogIdentify />
+              {children}
+            </PostHogProvider>
           </div>
         </Suspense>
       </body>
