@@ -1,12 +1,16 @@
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
 import { LandingHero } from '@/components/LandingHero';
 import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
 
-// after5 dating front door. Static/presentational — no DB fetches. The
-// planner is kept as the wedge: one low-emphasis "plan a night" door → /plan.
-// Motion lives in the LandingHero client child so this stays a server
-// component. Primary CTA → /onboarding (correct cold-start door).
+// after5 dating front door — the PUBLIC marketing surface (logged-out only).
+// Signed-in users skip the pitch entirely and land on the feed, the value
+// surface (founder 2026-06-20). The planner is kept as the wedge: one
+// low-emphasis "plan a night" door. Primary CTA → /onboarding (cold-start door).
+
+export const dynamic = 'force-dynamic';
 
 const STEPS = [
   { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted for the week.' },
@@ -14,7 +18,12 @@ const STEPS = [
   { n: '03', head: 'show up', body: 'everyone’s verified, so the date is the date.' },
 ] as const;
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Signed-in users never see the marketing page — straight to the feed.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect('/feed');
+
   return (
     <main className="min-h-dvh bg-shell-base">
       <header className="absolute inset-x-0 top-0 z-50">
