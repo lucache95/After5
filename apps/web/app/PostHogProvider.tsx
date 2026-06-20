@@ -95,6 +95,11 @@ export const track = {
                         safeCapture('message_sent', props),
   dateRated:          (props: { lock_id: string; ratee_id: string }) =>
                         safeCapture('date_rated', props),
+
+  // ── Waitlist (launch funnel) ──
+  waitlistViewed:     () => safeCapture('waitlist_viewed'),
+  waitlistJoined:     (props: { referred: boolean }) => safeCapture('waitlist_joined', props),
+  waitlistShared:     (method: 'native' | 'copy') => safeCapture('waitlist_shared', { method }),
 };
 
 function safeCapture(event: string, props?: Record<string, unknown>) {

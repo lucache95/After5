@@ -1,21 +1,29 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { LandingHero } from '@/components/LandingHero';
 import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
+import { CountdownToLaunch } from '@/components/waitlist/CountdownToLaunch';
+import { WaitlistForm } from '@/components/waitlist/WaitlistForm';
+import { PhoneFrame } from '@/components/waitlist/PhoneFrame';
 
-// after5 dating front door — the PUBLIC marketing surface (logged-out only).
-// Signed-in users skip the pitch entirely and land on the feed, the value
-// surface (founder 2026-06-20). The planner is kept as the wedge: one
-// low-emphasis "plan a night" door. Primary CTA → /onboarding (cold-start door).
+// after5 PUBLIC waitlist landing (logged-out only). Signed-in users skip the
+// pitch and land on the feed (founder 2026-06-20). Pre-launch waitlist with a
+// Sept-8 countdown + referral loop funnels all owned/earned channels here. All
+// marketing/explainer content lives ONLY on this page.
 
 export const dynamic = 'force-dynamic';
 
 const STEPS = [
-  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted for the week.' },
-  { n: '02', head: 'match on the plan', body: 'you like a night, they like you back, you’re locked in.' },
-  { n: '03', head: 'show up', body: 'everyone’s verified, so the date is the date.' },
+  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted around kelowna for the week.' },
+  { n: '02', head: 'match on the plan', body: 'you like a night, they like you back — and the date is already set.' },
+  { n: '03', head: 'show up', body: 'everyone’s id-verified, so the person who arrives is the person from the photos.' },
+] as const;
+
+// Real app screens, framed in CSS iPhones. Captured from prod public pages.
+const SHOTS = [
+  { src: '/screens/browse.png', alt: 'the catalog of real kelowna date plans in after5', rotate: -6 },
+  { src: '/screens/night.png', alt: 'a full date-night plan with real venues and timing', rotate: 3 },
 ] as const;
 
 export default async function HomePage() {
@@ -29,14 +37,52 @@ export default async function HomePage() {
       <header className="absolute inset-x-0 top-0 z-50">
         <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-5">
           <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">after5</Link>
-          <div className="flex items-center gap-3">
-            <UserMenu variant="on-light" />
-            <Link href="/onboarding" className="rounded-full bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun">let&apos;s go</Link>
-          </div>
+          <UserMenu variant="on-light" />
         </nav>
       </header>
 
-      <LandingHero />
+      {/* hero */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10 pt-24 text-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-[12px] font-semibold lowercase tracking-wide text-shell-accent">
+          kelowna · invite-only at launch
+        </span>
+        <h1 className="mt-6 font-heading text-5xl lowercase leading-[1.02] text-shell-ink">
+          match on the night,<br />not the face.
+        </h1>
+        <p className="mx-auto mt-4 max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
+          after5 builds your match around an actual plan for the evening. everyone&apos;s verified. less small talk, more showing up.
+        </p>
+
+        <div className="mt-8">
+          <CountdownToLaunch />
+        </div>
+
+        <div className="mt-7">
+          <WaitlistForm />
+        </div>
+      </section>
+
+      {/* real app, in real phones */}
+      <section className="mx-auto w-full max-w-[560px] overflow-hidden px-6 py-8">
+        <div className="flex items-center justify-center">
+          <PhoneFrame
+            src={SHOTS[0].src}
+            alt={SHOTS[0].alt}
+            rotate={SHOTS[0].rotate}
+            className="z-0 mr-[-44px] mt-8 w-[192px] opacity-95"
+          />
+          <PhoneFrame
+            src={SHOTS[1].src}
+            alt={SHOTS[1].alt}
+            rotate={SHOTS[1].rotate}
+            priority
+            className="z-10 w-[236px]"
+          />
+        </div>
+        <p className="mt-5 text-center font-body text-[13px] lowercase text-shell-ink/55">
+          real nights, real places — already planned.
+        </p>
+      </section>
 
       {/* how it works */}
       <section className="mx-auto w-full max-w-[480px] px-6 py-10">
@@ -55,7 +101,7 @@ export default async function HomePage() {
       </section>
 
       {/* scrapbook of real nights */}
-      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
+      <section className="mx-auto w-full max-w-[480px] px-6 py-8">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Polaroid tone="dating" src="/gallery/bouldering-kiss.jpg" alt="two climbers kissing at a bouldering gym" label="active" size="sm" rotation={-5} />
           <Polaroid tone="dating" src="/gallery/ramen-couple.jpg" alt="a couple sharing ramen at a counter" label="foodie" size="sm" rotation={4} />
@@ -64,20 +110,23 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* verified reassurance — only allowed pink wash */}
+      {/* verified reassurance */}
       <section className="mx-auto w-full max-w-[480px] px-6 py-10">
         <div className="rounded-3xl bg-shell-pink/60 p-6 text-center ring-1 ring-shell-accent/10">
           <p className="font-body text-sm leading-relaxed text-shell-ink/75">
-            everyone&apos;s id-verified. the person who shows up is the person from the photos.
+            everyone&apos;s id-verified before they can match. the person who shows up is the person from the photos.
           </p>
         </div>
       </section>
 
-      {/* planner wedge */}
-      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-shell-ink/10 p-6 text-center">
-          <p className="font-body text-sm text-shell-ink/70">just want to plan a date? we still do that.</p>
-          <Link href="/create" className="rounded-full border-2 border-shell-ink/15 px-6 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95">make my date</Link>
+      {/* final waitlist CTA */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-10 text-center">
+        <h2 className="font-heading text-3xl lowercase text-shell-ink">be there day one.</h2>
+        <p className="mx-auto mt-3 max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
+          kelowna goes live september 8. join the waitlist and bring a friend to move up the line.
+        </p>
+        <div className="mt-6">
+          <WaitlistForm trackView={false} />
         </div>
       </section>
 
