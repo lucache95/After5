@@ -49,7 +49,17 @@ export function PhotoCarousel({ name, photos }: { name: string; photos: string[]
       >
         {photos.map((url, i) => (
           <div key={url} className="relative aspect-[4/5] w-[78%] shrink-0 snap-center overflow-hidden rounded-2xl bg-shell-pink/30">
-            <Image src={url} alt={i === 0 ? name : `${name}, photo ${i + 1}`} fill sizes="320px" className="object-cover" />
+            {/* Supabase /render/image photos are already resized; skip the
+                next/image optimizer so they load straight off the CDN and don't
+                go cold each time the signed-url token rotates. See Polaroid. */}
+            <Image
+              src={url}
+              alt={i === 0 ? name : `${name}, photo ${i + 1}`}
+              fill
+              sizes="320px"
+              unoptimized={/\/storage\/v1\/render\/image\//.test(url)}
+              className="object-cover"
+            />
           </div>
         ))}
       </div>
