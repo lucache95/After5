@@ -16,6 +16,7 @@ import { BottomTabShell } from '@/components/BottomTabShell';
 import { NotificationToast } from '@/components/NotificationToast';
 import { type VenueOption, type AmbientOption } from './NightCardActions';
 import { NightsSegments, type NightRow } from './NightsSegments';
+import { DraftDeleteButton } from './DraftDeleteButton';
 import { listAmbientSounds } from '@after5/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -186,10 +187,10 @@ export default async function MyNightsPage() {
                 const thumb = draftThumb(d);
                 const meta = draftMetaLine(d);
                 return (
-                  <li key={d.id}>
+                  <li key={d.id} className="flex items-center gap-2">
                     <Link
                       href={`/plans/${d.id}/edit`}
-                      className="flex items-center gap-3 rounded-xl border border-shell-ink/10 bg-shell-base px-3 py-2.5 transition-colors hover:border-shell-ink/25"
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-shell-ink/10 bg-shell-base px-3 py-2.5 transition-colors hover:border-shell-ink/25"
                     >
                       {thumb ? (
                         <Image
@@ -207,6 +208,7 @@ export default async function MyNightsPage() {
                         {meta && <p className="mt-0.5 truncate font-body text-xs text-shell-ink/50">{meta}</p>}
                       </div>
                     </Link>
+                    <DraftDeleteButton id={d.id} title={d.title ?? 'untitled night'} />
                   </li>
                 );
               })}

@@ -8,12 +8,16 @@
 // Archive rows reuse the SAME NightCard row + lifecycleLabel corner chip — no new
 // card design. An empty archive shows the funny empty state (UI-SPEC §Copywriting).
 import { useState } from 'react';
-import { CalendarHeart, Heart } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { CalendarHeart, Heart, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import { coverImageForNight } from '@/lib/place-image';
+import { browserAfter5Client, cloneItineraryAsDraft } from '@/lib/after5/client';
+import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { NightCardActions, type VenueOption, type AmbientOption } from './NightCardActions';
 
 export interface NightRow {
@@ -23,6 +27,8 @@ export interface NightRow {
   duration_min: number | null;
   venue_id: string | null;
   ambient_sound_id: string | null;
+  /** The itinerary behind this night — the clone source for "use again". */
+  itinerary_id: string | null;
   itinerary: {
     title: string | null;
     cover_image_url: string | null;
@@ -61,6 +67,44 @@ function lifecycleLabel(status: string): string {
     case 'seeking': return 'open';
     default: return status;
   }
+}
+
+// Archive-card affordance (DRFT-01): spin a past night's plan back into a fresh,
+// editable draft. clone_itinerary_as_draft copies the itinerary (non-destructive
+// — the archived night stays put) and returns the new draft id; we land the host
+// straight in the editor to tweak + re-post.
+function ReuseNightButton({ itineraryId }: { itineraryId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function doReuse() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const newId = await cloneItineraryAsDraft(browserAfter5Client(), { source_id: itineraryId });
+      toast.success('copied to a fresh draft — edit it, then post.');
+      router.push(`/plans/${newId}/edit`);
+      // navigating away unmounts this; leave busy=true so it can't double-fire.
+    } catch (err) {
+      console.error('[ReuseNightButton] clone failed', err);
+      toast.error("couldn't reuse that one. try again?");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void doReuse()}
+      className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-full border-2 border-shell-ink/15 bg-white px-4 py-2 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-accent/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40 active:scale-[0.98] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+    >
+      <PendingButtonContent pending={busy} pendingLabel="copying…" accessibilityLabel="copying to a new draft">
+        <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
+        use again
+      </PendingButtonContent>
+    </button>
+  );
 }
 
 function NightCard({ night, interested, offerSent = false, venues, ambientSounds }: { night: NightRow; interested: number; offerSent?: boolean; venues: VenueOption[]; ambientSounds: AmbientOption[] }) {
@@ -156,6 +200,14 @@ function NightCard({ night, interested, offerSent = false, venues, ambientSounds
             venues={venues}
             ambientSounds={ambientSounds}
           />
+        </div>
+      )}
+
+      {/* Archive cards (completed/expired/cancelled): "use again" re-drafts the
+          night's plan so a past night can be run back without rebuilding it. */}
+      {ARCHIVE_STATUSES.has(night.status) && night.itinerary_id && (
+        <div className="mt-2.5">
+          <ReuseNightButton itineraryId={night.itinerary_id} />
         </div>
       )}
     </div>
