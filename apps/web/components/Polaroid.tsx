@@ -86,6 +86,16 @@ export function Polaroid({
   const showGradient = noSrc || (imgError && fallbackError);
   const displaySrc = imgError ? FALLBACK_SRC : (src ?? '');
 
+  // Supabase storage photos already arrive pre-resized via the /render/image
+  // transform (e.g. 400×400, ~60KB — see lib/after5/photos.ts). Routing those
+  // through the next/image optimizer adds a SECOND pipeline (a Vercel hop +
+  // re-encode) that goes cold every ~30min when the signed-url token rotates,
+  // which is what made the avatar slow to paint. Bypass the optimizer for
+  // transformed storage urls so the browser loads them straight from Supabase's
+  // CDN (cached by path+transform, immune to token rotation). Local-stack and
+  // non-transformed object urls (covers, /object/...) keep optimization.
+  const isTransformedStorageUrl = /\/storage\/v1\/render\/image\//.test(displaySrc);
+
   const handleError = useCallback(() => {
     if (!imgError) {
       setImgError(true);
@@ -136,6 +146,7 @@ export function Polaroid({
             fill
             sizes={s.sizes}
             priority={priority}
+            unoptimized={isTransformedStorageUrl}
             className="object-cover"
             onError={handleError}
           />
