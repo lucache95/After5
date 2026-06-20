@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -2059,13 +2064,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "plan_votes_itinerary_id_fkey"
-            columns: ["itinerary_id"]
-            isOneToOne: false
-            referencedRelation: "itineraries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "plan_votes_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -2170,6 +2168,7 @@ export type Database = {
           insider_approved_at: string | null
           insider_points: number
           insider_role: string | null
+          instagram_handle: string | null
           neighborhood: string | null
           occupation: string | null
           onboarding_completed_at: string | null
@@ -2210,6 +2209,7 @@ export type Database = {
           insider_approved_at?: string | null
           insider_points?: number
           insider_role?: string | null
+          instagram_handle?: string | null
           neighborhood?: string | null
           occupation?: string | null
           onboarding_completed_at?: string | null
@@ -2250,6 +2250,7 @@ export type Database = {
           insider_approved_at?: string | null
           insider_points?: number
           insider_role?: string | null
+          instagram_handle?: string | null
           neighborhood?: string | null
           occupation?: string | null
           onboarding_completed_at?: string | null
@@ -3038,7 +3039,6 @@ export type Database = {
         Args: { ""?: string; att_name: string; tbl: unknown }
         Returns: string
       }
-      _seed_swipes_and_hint: { Args: { p_count: number }; Returns: string }
       _st_3dintersects: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -3240,6 +3240,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      clone_itinerary_as_draft: {
+        Args: { p_source_id: string }
+        Returns: string
+      }
       close_chat_thread: { Args: { p_offer: string }; Returns: undefined }
       close_rating_window: { Args: { p_lock: string }; Returns: undefined }
       complete_job: { Args: { p_id: string }; Returns: undefined }
@@ -3253,6 +3257,10 @@ export type Database = {
           p_wants_kids: boolean
         }
         Returns: boolean
+      }
+      delete_draft_itinerary: {
+        Args: { p_itinerary_id: string }
+        Returns: undefined
       }
       disablelongtransactions: { Args: never; Returns: string }
       dispatch_date_reconfirm: { Args: { p_lock: string }; Returns: undefined }
@@ -3562,21 +3570,6 @@ export type Database = {
       }
       match_withdraw: {
         Args: { p_actor: string; p_instance: string }
-        Returns: undefined
-      }
-      mk_instance: {
-        Args: { p_creator: string; p_itin: string; p_starts: string }
-        Returns: string
-      }
-      mk_itinerary: { Args: { p_user: string }; Returns: string }
-      mk_itinerary_e20: {
-        Args: { p_catalog_place: string; p_user: string }
-        Returns: string
-      }
-      mk_itinerary_with_stops: { Args: { p_user: string }; Returns: string }
-      mk_user: { Args: { p_label: string }; Returns: string }
-      mk_verified_phone: {
-        Args: { p_phone: string; p_user: string }
         Returns: undefined
       }
       notification_rate_check: {
@@ -4743,4 +4736,3 @@ export const Constants = {
     },
   },
 } as const
-
