@@ -19,6 +19,14 @@ interface SendArgs {
 }
 
 export async function sendEmail(args: SendArgs): Promise<{ id: string } | null> {
+  // Seed/fixture accounts use the fake '@after5.seed' suffix (no real mailbox).
+  // Emailing them bounces, which dings the sending domain's reputation and hurts
+  // deliverability to real users — so never send to them. The suffix is also the
+  // seed-cleanup marker, so it stays as-is (founder flagged bounces 2026-06-20).
+  if (args.to.toLowerCase().trim().endsWith('@after5.seed')) {
+    return null;
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   const replyTo = process.env.RESEND_REPLY_TO;
