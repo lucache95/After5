@@ -49,6 +49,8 @@ export interface HostCandidate {
   prompts?: { prompt_id: string; answer: string }[];
   verification?: string | null;
   reliability_score?: number | null;
+  /** Public IG handle (PROF-01) — shown on this clear-identity candidate sheet. */
+  instagram_handle?: string | null;
 }
 
 // Candidate avatar: the clear photo in the sm dating polaroid when present;
@@ -543,6 +545,7 @@ export function InterestedList({
               prompts={(profileFor.prompts ?? []).map((a) => ({ label: a.prompt_id.replace(/_/g, ' '), answer: a.answer }))}
               verification={(profileFor.verification ?? undefined) as VerificationState | undefined}
               reliability_score={profileFor.reliability_score ?? null}
+              instagram_handle={profileFor.instagram_handle ?? null}
             />
             <button
               type="button"

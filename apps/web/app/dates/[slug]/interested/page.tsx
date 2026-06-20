@@ -65,7 +65,7 @@ export default async function InterestedPage({
     .from('queue_entries')
     // Disambiguate the embed: queue_entries has TWO FKs to profiles (candidate_id + creator_id),
     // so an unhinted profiles embed errors with PGRST201. Pin the candidate FK explicitly.
-    .select('candidate_id, status, rank, candidate:profiles!queue_entries_candidate_id_fkey(first_name, age, city, clear_photo_url, pronouns, occupation, height_cm, vibe_tags, prompt_answers, verification, reliability_score)')
+    .select('candidate_id, status, rank, candidate:profiles!queue_entries_candidate_id_fkey(first_name, age, city, clear_photo_url, pronouns, occupation, height_cm, vibe_tags, prompt_answers, verification, reliability_score, instagram_handle)')
     .eq('date_instance_id', instanceId)
     .order('rank', { ascending: true, nullsFirst: false })
     .limit(60);
@@ -82,7 +82,7 @@ export default async function InterestedPage({
       first_name?: string | null; age?: number | null; city?: string | null; clear_photo_url?: string | null;
       pronouns?: string | null; occupation?: string | null; height_cm?: number | null;
       vibe_tags?: string[] | null; prompt_answers?: { prompt_id: string; answer: string }[] | null;
-      verification?: string | null; reliability_score?: number | null;
+      verification?: string | null; reliability_score?: number | null; instagram_handle?: string | null;
     };
     return {
       candidate_id: q.candidate_id,
@@ -108,6 +108,7 @@ export default async function InterestedPage({
       prompts: (c.prompt_answers ?? []).map((a) => ({ prompt_id: a.prompt_id, answer: a.answer })),
       verification: c.verification ?? null,
       reliability_score: c.reliability_score ?? null,
+      instagram_handle: c.instagram_handle ?? null,
     };
   }));
 
