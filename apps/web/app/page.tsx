@@ -20,10 +20,10 @@ const STEPS = [
   { n: '03', head: 'show up', body: 'everyone’s id-verified, so the person who arrives is the person from the photos.' },
 ] as const;
 
-// Real app screens, framed in CSS iPhones. Captured from prod public pages.
+// Real app screens — the actual swipe feed, framed in CSS iPhones.
 const SHOTS = [
-  { src: '/screens/browse.png', alt: 'the catalog of real kelowna date plans in after5', rotate: -6 },
-  { src: '/screens/night.png', alt: 'a full date-night plan with real venues and timing', rotate: 3 },
+  { src: '/screens/feed-gardens.png', alt: "browsing tonight's curated date nights in after5", rotate: -6 },
+  { src: '/screens/feed-steakhouse.png', alt: 'a curated date night in the after5 swipe feed', rotate: 3 },
 ] as const;
 
 export default async function HomePage() {
