@@ -26,11 +26,12 @@ export function PhoneFrame({
       className={cn('relative shrink-0', className)}
       style={rotate ? { transform: `rotate(${rotate}deg)` } : undefined}
     >
-      {/* device body */}
-      <div className="relative aspect-[9/19.5] rounded-[2.6rem] bg-shell-ink p-[10px] shadow-[0_28px_60px_-18px_rgba(80,40,20,0.45)] ring-1 ring-black/20">
-        {/* screen */}
-        <div className="relative h-full w-full overflow-hidden rounded-[2.05rem] bg-shell-base">
-          <Image src={src} alt={alt} fill sizes="232px" className="object-cover object-top" priority={priority} />
+      {/* device body — height follows the screen so the screen's aspect ratio
+          can match the screenshot (390x844) exactly → object-cover never crops */}
+      <div className="relative rounded-[2.6rem] bg-shell-ink p-[10px] shadow-[0_28px_60px_-18px_rgba(80,40,20,0.45)] ring-1 ring-black/20">
+        {/* screen — same aspect as the captured screenshot, so nothing is cut off */}
+        <div className="relative w-full aspect-[390/844] overflow-hidden rounded-[2.05rem] bg-shell-base">
+          <Image src={src} alt={alt} fill sizes="250px" className="object-cover" priority={priority} />
         </div>
         {/* notch */}
         <div className="pointer-events-none absolute left-1/2 top-[10px] h-[22px] w-[96px] -translate-x-1/2 rounded-b-2xl bg-shell-ink" aria-hidden />
