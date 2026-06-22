@@ -62,24 +62,12 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* real app, in real phones */}
-      <section className="mx-auto w-full max-w-[560px] overflow-hidden px-6 py-8">
-        <div className="flex items-center justify-center">
-          <PhoneFrame
-            src={SHOTS[0].src}
-            alt={SHOTS[0].alt}
-            rotate={SHOTS[0].rotate}
-            className="z-0 mr-[-44px] mt-8 w-[192px] opacity-95"
-          />
-          <PhoneFrame
-            src={SHOTS[1].src}
-            alt={SHOTS[1].alt}
-            rotate={SHOTS[1].rotate}
-            priority
-            className="z-10 w-[236px]"
-          />
+      {/* real app — the swipe feed, in one clean phone */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-8">
+        <div className="flex justify-center">
+          <PhoneFrame src={SHOTS[1].src} alt={SHOTS[1].alt} priority className="w-[250px]" />
         </div>
-        <p className="mt-5 text-center font-body text-[13px] lowercase text-shell-ink/55">
+        <p className="mt-6 text-center font-body text-[13px] lowercase text-shell-ink/55">
           real nights, real places — already planned.
         </p>
       </section>
