@@ -15,7 +15,7 @@ type Result = { code: string; queue_position: number | null; referral_count: num
 
 export function WaitlistForm({ trackView = true }: { trackView?: boolean }) {
   const [email, setEmail] = useState('');
-  const [firstName, setFirstName] = useState('');
+  const [city, setCity] = useState('');
   const [referredBy, setReferredBy] = useState<string | null>(null);
   const [phase, setPhase] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -42,7 +42,7 @@ export function WaitlistForm({ trackView = true }: { trackView?: boolean }) {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: em, first_name: firstName.trim() || null, referred_by: referredBy }),
+        body: JSON.stringify({ email: em, city: city.trim() || null, referred_by: referredBy }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'failed');
@@ -87,11 +87,12 @@ export function WaitlistForm({ trackView = true }: { trackView?: boolean }) {
         />
         <input
           type="text"
-          autoComplete="given-name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          placeholder="first name (optional)"
-          aria-label="first name, optional"
+          autoComplete="address-level2"
+          required
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="your city"
+          aria-label="your city"
           className="min-h-[48px] rounded-full border-2 border-shell-ink/15 bg-white px-5 font-body text-shell-ink placeholder:text-shell-ink/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-accent/40"
         />
         <button
@@ -110,7 +111,7 @@ export function WaitlistForm({ trackView = true }: { trackView?: boolean }) {
         <p role="alert" className="mt-2 text-center font-body text-[13px] text-shell-accent">{errorMsg}</p>
       )}
       <p className="mt-3 text-center font-body text-[12px] lowercase text-shell-ink/50">
-        kelowna · launching sept 8 · everyone id-verified
+        launching sept 8 · everyone id-verified
       </p>
     </form>
   );

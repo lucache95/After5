@@ -15,7 +15,7 @@ import { WaitlistForm } from '@/components/waitlist/WaitlistForm';
 export const dynamic = 'force-dynamic';
 
 const STEPS = [
-  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted around kelowna for the week.' },
+  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted around your city for the week.' },
   { n: '02', head: 'match on the plan', body: 'you like a night, they like you back — and the date is already set.' },
   { n: '03', head: 'show up', body: 'everyone’s id-verified, so the person who arrives is the person from the photos.' },
 ] as const;
@@ -39,40 +39,60 @@ export default async function HomePage() {
       {/* hero */}
       <section className="mx-auto w-full max-w-[480px] px-6 pb-10 pt-24 text-center">
         <span className="inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-[12px] font-semibold lowercase tracking-wide text-shell-accent">
-          kelowna · invite-only at launch
+          invite-only at launch
         </span>
         <h1 className="mt-6 font-heading text-5xl lowercase leading-[1.02] text-shell-ink">
           match on the night,<br />not the face.
         </h1>
-        <p className="mx-auto mt-4 max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
-          after5 builds your match around an actual plan for the evening. everyone&apos;s verified. less small talk, more showing up.
-        </p>
-
-        <div className="mt-8">
-          <CountdownToLaunch />
-        </div>
-
-        <div className="mt-7">
-          <WaitlistForm />
-        </div>
       </section>
 
-      {/* real app — the swipe feed, in a real device mockup (founder-made, retina) */}
-      <section className="mx-auto w-full max-w-[480px] px-6 py-8">
-        <div className="flex justify-center">
+      {/* product — three real device mockups (founder-made, retina): the hero visual */}
+      <section className="mx-auto w-full max-w-[640px] px-4 pt-8">
+        <div className="flex items-end justify-center">
+          <Image
+            src="/mockups/build.png"
+            alt="building a date in 30 seconds in after5"
+            width={900}
+            height={1773}
+            priority
+            sizes="180px"
+            className="w-[34%] max-w-[180px] -mr-5 translate-y-5 -rotate-[8deg] drop-shadow-[0_24px_50px_-20px_rgba(80,40,20,0.4)] sm:-mr-7"
+          />
           <Image
             src="/mockups/feed.png"
-            alt="a curated date night in the after5 swipe feed"
+            alt="the after5 swipe feed — a curated date night"
             width={1000}
             height={1970}
             priority
-            sizes="280px"
-            className="h-auto w-[280px] drop-shadow-[0_30px_60px_-22px_rgba(80,40,20,0.45)]"
+            sizes="240px"
+            className="relative z-10 w-[40%] max-w-[240px] drop-shadow-[0_34px_64px_-22px_rgba(80,40,20,0.5)]"
+          />
+          <Image
+            src="/mockups/night.png"
+            alt="an after5 night plan: steakhouse, brewery, and a creek walk"
+            width={900}
+            height={1773}
+            priority
+            sizes="180px"
+            className="w-[34%] max-w-[180px] -ml-5 translate-y-5 rotate-[8deg] drop-shadow-[0_24px_50px_-20px_rgba(80,40,20,0.4)] sm:-ml-7"
           />
         </div>
         <p className="mt-6 text-center font-body text-[13px] lowercase text-shell-ink/55">
           real nights, real places — already planned.
         </p>
+      </section>
+
+      {/* cta — value prop + countdown + waitlist */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10 pt-4 text-center">
+        <p className="mx-auto max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
+          after5 builds your match around an actual plan for the evening. everyone&apos;s verified. less small talk, more showing up.
+        </p>
+        <div className="mt-7">
+          <CountdownToLaunch />
+        </div>
+        <div className="mt-7">
+          <WaitlistForm />
+        </div>
       </section>
 
       {/* how it works */}
@@ -114,7 +134,7 @@ export default async function HomePage() {
       <section className="mx-auto w-full max-w-[480px] px-6 py-10 text-center">
         <h2 className="font-heading text-3xl lowercase text-shell-ink">be there day one.</h2>
         <p className="mx-auto mt-3 max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
-          kelowna goes live september 8. join the waitlist and bring a friend to move up the line.
+          we go live september 8. join the waitlist and bring a friend to move up the line.
         </p>
         <div className="mt-6">
           <WaitlistForm trackView={false} />

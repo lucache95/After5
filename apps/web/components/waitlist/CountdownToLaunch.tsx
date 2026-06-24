@@ -41,7 +41,7 @@ export function CountdownToLaunch() {
   if (mounted && !t) {
     return (
       <p className="font-body text-sm font-semibold lowercase text-shell-accent">
-        the wait&apos;s over — we&apos;re live in kelowna.
+        the wait&apos;s over — we&apos;re live.
       </p>
     );
   }
@@ -49,7 +49,7 @@ export function CountdownToLaunch() {
   return (
     <div>
       <p className="mb-2 text-center font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-shell-ink/50">
-        kelowna launch · sept 8
+        launching · sept 8
       </p>
       <div className="flex items-stretch justify-center gap-2" aria-label="time until launch">
         {cells.map(([label, val]) => (

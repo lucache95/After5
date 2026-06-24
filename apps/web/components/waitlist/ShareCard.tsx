@@ -32,7 +32,7 @@ export function ShareCard({
       try {
         await navigator.share({
           title: 'after5',
-          text: "i just joined the after5 waitlist in kelowna — match on the night, not the face. join me:",
+          text: "i just joined the after5 waitlist — match on the night, not the face. join me:",
           url: link,
         });
         track.waitlistShared('native');
