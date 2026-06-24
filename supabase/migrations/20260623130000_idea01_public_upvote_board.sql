@@ -87,3 +87,17 @@ end; $$;
 
 revoke all on function toggle_feature_vote(uuid) from public, anon;
 grant execute on function toggle_feature_vote(uuid) to authenticated;
+
+-- Public board read. A prior security migration removed anon's direct SELECT on
+-- user_feedback (it holds emails/bodies), so expose ONLY the safe board columns
+-- of public items via a definer RPC — no PII leak. Shipped items sort last.
+create or replace function get_public_ideas()
+returns table (id uuid, public_title text, status text, vote_count int, published_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select id, public_title, status, vote_count, published_at
+  from user_feedback
+  where is_public = true
+  order by (status in ('shipped','done')) asc, vote_count desc, published_at desc;
+$$;
+revoke all on function get_public_ideas() from public;
+grant execute on function get_public_ideas() to anon, authenticated;

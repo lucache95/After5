@@ -11,7 +11,6 @@ export const dynamic = 'force-dynamic';
 interface Idea {
   id: string;
   public_title: string | null;
-  subject: string | null;
   status: string;
   vote_count: number;
   published_at: string | null;
@@ -30,16 +29,14 @@ export default async function IdeasPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Public read (RLS allows select). Loose-typed: generated types lack the board columns.
-  const db = supabase as unknown as { from: (t: string) => any };
+  // Read the safe public columns via a definer RPC (anon has no direct SELECT on
+  // user_feedback — it holds PII). Already ordered (shipped last, then votes).
+  const db = supabase as unknown as {
+    rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: Idea[] | null }>;
+    from: (t: string) => any;
+  };
 
-  const { data } = await db
-    .from('user_feedback')
-    .select('id, public_title, subject, status, vote_count, published_at')
-    .eq('is_public', true)
-    .order('vote_count', { ascending: false })
-    .order('published_at', { ascending: false });
-
+  const { data } = await db.rpc('get_public_ideas');
   const ideas: Idea[] = data ?? [];
 
   // The signed-in user's existing votes, to pre-fill the buttons.
@@ -99,7 +96,7 @@ export default async function IdeasPage() {
 
 function IdeaRow({ idea, voted, isAuthed }: { idea: Idea; voted: boolean; isAuthed: boolean }) {
   const badge = STATUS_BADGE[idea.status];
-  const title = idea.public_title || idea.subject || 'untitled idea';
+  const title = idea.public_title || 'untitled idea';
   return (
     <li className="flex items-center gap-3 rounded-3xl border border-shell-ink/10 bg-white/60 p-3">
       <IdeaVoteButton id={idea.id} initialCount={idea.vote_count} initialVoted={voted} isAuthed={isAuthed} />
