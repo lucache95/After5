@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
 import { CountdownToLaunch } from '@/components/waitlist/CountdownToLaunch';
 import { WaitlistForm } from '@/components/waitlist/WaitlistForm';
-import { PhoneFrame } from '@/components/waitlist/PhoneFrame';
 
 // after5 PUBLIC waitlist landing (logged-out only). Signed-in users skip the
 // pitch and land on the feed (founder 2026-06-20). Pre-launch waitlist with a
@@ -20,11 +20,6 @@ const STEPS = [
   { n: '03', head: 'show up', body: 'everyone’s id-verified, so the person who arrives is the person from the photos.' },
 ] as const;
 
-// Real app screens — the actual swipe feed, framed in CSS iPhones.
-const SHOTS = [
-  { src: '/screens/feed-gardens.png', alt: "browsing tonight's curated date nights in after5", rotate: -6 },
-  { src: '/screens/feed-steakhouse.png', alt: 'a curated date night in the after5 swipe feed', rotate: 3 },
-] as const;
 
 export default async function HomePage() {
   // Signed-in users never see the marketing page — straight to the feed.
@@ -62,10 +57,18 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* real app — the swipe feed, in one clean phone */}
+      {/* real app — the swipe feed, in a real device mockup (founder-made, retina) */}
       <section className="mx-auto w-full max-w-[480px] px-6 py-8">
         <div className="flex justify-center">
-          <PhoneFrame src={SHOTS[1].src} alt={SHOTS[1].alt} priority className="w-[250px]" />
+          <Image
+            src="/mockups/feed.png"
+            alt="a curated date night in the after5 swipe feed"
+            width={1000}
+            height={1970}
+            priority
+            sizes="280px"
+            className="h-auto w-[280px] drop-shadow-[0_30px_60px_-22px_rgba(80,40,20,0.45)]"
+          />
         </div>
         <p className="mt-6 text-center font-body text-[13px] lowercase text-shell-ink/55">
           real nights, real places — already planned.
