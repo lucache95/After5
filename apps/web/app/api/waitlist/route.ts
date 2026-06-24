@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ensureWelcomeSent } from '@/lib/email/welcome';
+import { sendWaitlistSignupAlert } from '@/lib/email/waitlist-notify';
 import { normalizeSubscribeInput } from '@/lib/create/subscribe';
 
 // Sept-8 launch waitlist with a referral loop (see
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   let code = existing?.referral_code ?? null;
+  let isNewSignup = false;
 
   if (existing) {
     if (!code) {
@@ -105,7 +107,7 @@ export async function POST(req: Request) {
         referred_by: referredBy && referredBy !== code ? referredBy : null,
         user_agent: req.headers.get('user-agent') ?? null,
       });
-      if (!error) { inserted = true; break; }
+      if (!error) { inserted = true; isNewSignup = true; break; }
       // 23505 = unique violation; on referral_code retry, on email treat as race → reuse.
       if (error.code === '23505' && /referral_code/.test(error.message)) continue;
       if (error.code === '23505') {
@@ -124,6 +126,13 @@ export async function POST(req: Request) {
   void ensureWelcomeSent({ email: n.email, firstName: n.first_name, admin }).then((res) => {
     if (res.error) console.error('[waitlist] welcome', res.error);
   });
+
+  // Founder alert — only on a genuinely new signup (not an idempotent re-join
+  // or an email-race reuse), non-blocking. See lib/email/waitlist-notify.ts.
+  if (isNewSignup) {
+    void sendWaitlistSignupAlert({ email: n.email, city: n.city }).catch((err) =>
+      console.error('[waitlist] founder alert', err));
+  }
 
   return NextResponse.json({ code, ...(code ? await statusFor(admin, code) : {}) });
 }
