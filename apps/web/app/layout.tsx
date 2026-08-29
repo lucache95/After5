@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Inter, Fraunces, Caprasimo, Fredoka } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { PostHogProvider } from './PostHogProvider';
+import { PostHogIdentify } from './PostHogIdentify';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import './globals.css';
 
@@ -41,7 +42,7 @@ const fredoka = Fredoka({
 
 export const metadata: Metadata = {
   title: {
-    default: 'after5 — match on the night, not the guy',
+    default: 'after5 — match on the night, not the face',
     template: '%s · after5',
   },
   description:
@@ -49,7 +50,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://tryafter5.app'),
   manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'after5 — match on the night, not the guy',
+    title: 'after5 — match on the night, not the face',
     description:
       "the dating app where you match around a real night out. everyone's verified. less small talk, more showing up.",
     url: 'https://tryafter5.app',
@@ -62,7 +63,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'after5',
-    description: 'match on the night, not the guy.',
+    description: 'match on the night, not the face.',
     // images auto-wired by app/twitter-image.tsx.
   },
 };
@@ -83,7 +84,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Relative wrapper scopes absolute-positioned headers (e.g. the
               homepage hero nav). */}
           <div className="relative">
-            <PostHogProvider>{children}</PostHogProvider>
+            <PostHogProvider>
+              <PostHogIdentify />
+              {children}
+            </PostHogProvider>
           </div>
         </Suspense>
       </body>

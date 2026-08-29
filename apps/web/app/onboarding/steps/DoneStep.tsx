@@ -14,6 +14,7 @@ import { Polaroid } from '@/components/Polaroid';
 import { PendingButtonContent } from '@/components/PendingButtonContent';
 import { browserAfter5Client } from '@/lib/after5/client';
 import { datingGateMessage } from '@/lib/onboarding/dating-gate';
+import { track } from '@/app/PostHogProvider';
 
 export function DoneStep({
   userId, badge, gate = { ok: true },
@@ -38,6 +39,7 @@ export function DoneStep({
     // runs AFTER phone/ID verification (gate.ok), so the identity hash is trustworthy.
     // Best-effort: never block turning dating on if the lookup fails.
     try { await client.rpc('seed_reputation_from_ledger'); } catch { /* best-effort */ }
+    track.onboardingCompleted({ dating_enabled: true });
     setDatingOn(true);
     setPhase('idle');
   }

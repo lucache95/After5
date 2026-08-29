@@ -20,6 +20,8 @@ export interface PartyProfile {
   // E17 reliability badge inputs for the revealed ProfileCard pill.
   verification?: Database['public']['Enums']['verification_state'];
   reliability_score?: number | null;
+  // PROF-01: public IG handle — surfaced post-reveal (this lock is matched).
+  instagram_handle?: string | null;
 }
 
 // A prompt answer joined to its (active) prompt label, ready for the ProfileCard.

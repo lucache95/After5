@@ -1,33 +1,99 @@
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LandingHero } from '@/components/LandingHero';
+import Image from 'next/image';
+import { createClient } from '@/lib/supabase/server';
 import { Polaroid } from '@/components/Polaroid';
 import { UserMenu } from '@/components/UserMenu';
+import { CountdownToLaunch } from '@/components/waitlist/CountdownToLaunch';
+import { WaitlistForm } from '@/components/waitlist/WaitlistForm';
 
-// after5 dating front door. Static/presentational — no DB fetches. The
-// planner is kept as the wedge: one low-emphasis "plan a night" door → /plan.
-// Motion lives in the LandingHero client child so this stays a server
-// component. Primary CTA → /onboarding (correct cold-start door).
+// after5 PUBLIC waitlist landing (logged-out only). Signed-in users skip the
+// pitch and land on the feed (founder 2026-06-20). Pre-launch waitlist with a
+// Sept-8 countdown + referral loop funnels all owned/earned channels here. All
+// marketing/explainer content lives ONLY on this page.
+
+export const dynamic = 'force-dynamic';
 
 const STEPS = [
-  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted for the week.' },
-  { n: '02', head: 'match on the plan', body: 'you like a night, they like you back, you’re locked in.' },
-  { n: '03', head: 'show up', body: 'everyone’s verified, so the date is the date.' },
+  { n: '01', head: 'pick a night, not a face', body: 'browse real plans people posted around your city for the week.' },
+  { n: '02', head: 'match on the plan', body: 'you like a night, they like you back — and the date is already set.' },
+  { n: '03', head: 'show up', body: 'everyone’s id-verified, so the person who arrives is the person from the photos.' },
 ] as const;
 
-export default function HomePage() {
+
+export default async function HomePage() {
+  // Signed-in users never see the marketing page — straight to the feed.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect('/feed');
+
   return (
     <main className="min-h-dvh bg-shell-base">
       <header className="absolute inset-x-0 top-0 z-50">
         <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-5">
           <Link href="/" className="font-heading text-xl lowercase tracking-tight text-shell-accent">after5</Link>
-          <div className="flex items-center gap-3">
-            <UserMenu variant="on-light" />
-            <Link href="/onboarding" className="rounded-full bg-shell-accent px-5 py-2 font-body text-sm font-semibold lowercase text-white shadow-fun">let&apos;s go</Link>
-          </div>
+          <UserMenu variant="on-light" />
         </nav>
       </header>
 
-      <LandingHero />
+      {/* hero */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10 pt-24 text-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-shell-pink px-4 py-1.5 font-body text-[12px] font-semibold lowercase tracking-wide text-shell-accent">
+          invite-only at launch
+        </span>
+        <h1 className="mt-6 font-heading text-5xl lowercase leading-[1.02] text-shell-ink">
+          match on the night,<br />not the face.
+        </h1>
+      </section>
+
+      {/* product — three real device mockups (founder-made, retina): the hero visual */}
+      <section className="mx-auto w-full max-w-[640px] px-4 pt-8">
+        <div className="flex items-end justify-center">
+          <Image
+            src="/mockups/build.png"
+            alt="building a date in 30 seconds in after5"
+            width={900}
+            height={1773}
+            priority
+            sizes="180px"
+            className="w-[34%] max-w-[180px] -mr-5 translate-y-5 -rotate-[8deg] drop-shadow-[0_24px_50px_-20px_rgba(80,40,20,0.4)] sm:-mr-7"
+          />
+          <Image
+            src="/mockups/feed.png"
+            alt="the after5 swipe feed — a curated date night"
+            width={1000}
+            height={1970}
+            priority
+            sizes="240px"
+            className="relative z-10 w-[40%] max-w-[240px] drop-shadow-[0_34px_64px_-22px_rgba(80,40,20,0.5)]"
+          />
+          <Image
+            src="/mockups/night.png"
+            alt="an after5 night plan: steakhouse, brewery, and a creek walk"
+            width={900}
+            height={1773}
+            priority
+            sizes="180px"
+            className="w-[34%] max-w-[180px] -ml-5 translate-y-5 rotate-[8deg] drop-shadow-[0_24px_50px_-20px_rgba(80,40,20,0.4)] sm:-ml-7"
+          />
+        </div>
+        <p className="mt-6 text-center font-body text-[13px] lowercase text-shell-ink/55">
+          real nights, real places — already planned.
+        </p>
+      </section>
+
+      {/* cta — value prop + countdown + waitlist */}
+      <section className="mx-auto w-full max-w-[480px] px-6 pb-10 pt-4 text-center">
+        <p className="mx-auto max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
+          after5 builds your match around an actual plan for the evening. everyone&apos;s verified. less small talk, more showing up.
+        </p>
+        <div className="mt-7">
+          <CountdownToLaunch />
+        </div>
+        <div className="mt-7">
+          <WaitlistForm />
+        </div>
+      </section>
 
       {/* how it works */}
       <section className="mx-auto w-full max-w-[480px] px-6 py-10">
@@ -46,7 +112,7 @@ export default function HomePage() {
       </section>
 
       {/* scrapbook of real nights */}
-      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
+      <section className="mx-auto w-full max-w-[480px] px-6 py-8">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Polaroid tone="dating" src="/gallery/bouldering-kiss.jpg" alt="two climbers kissing at a bouldering gym" label="active" size="sm" rotation={-5} />
           <Polaroid tone="dating" src="/gallery/ramen-couple.jpg" alt="a couple sharing ramen at a counter" label="foodie" size="sm" rotation={4} />
@@ -55,20 +121,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* verified reassurance — only allowed pink wash */}
+      {/* verified reassurance */}
       <section className="mx-auto w-full max-w-[480px] px-6 py-10">
         <div className="rounded-3xl bg-shell-pink/60 p-6 text-center ring-1 ring-shell-accent/10">
           <p className="font-body text-sm leading-relaxed text-shell-ink/75">
-            everyone&apos;s id-verified. the person who shows up is the person from the photos.
+            everyone&apos;s id-verified before they can match. the person who shows up is the person from the photos.
           </p>
         </div>
       </section>
 
-      {/* planner wedge */}
-      <section className="mx-auto w-full max-w-[480px] px-6 py-10">
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-shell-ink/10 p-6 text-center">
-          <p className="font-body text-sm text-shell-ink/70">just want to plan a date? we still do that.</p>
-          <Link href="/create" className="rounded-full border-2 border-shell-ink/15 px-6 py-2.5 font-body text-sm font-semibold lowercase text-shell-ink transition hover:border-shell-ink/30 active:scale-95">make my date</Link>
+      {/* final waitlist CTA */}
+      <section className="mx-auto w-full max-w-[480px] px-6 py-10 text-center">
+        <h2 className="font-heading text-3xl lowercase text-shell-ink">be there day one.</h2>
+        <p className="mx-auto mt-3 max-w-sm font-body text-[15px] leading-relaxed text-shell-ink/70">
+          we go live september 8. join the waitlist and bring a friend to move up the line.
+        </p>
+        <div className="mt-6">
+          <WaitlistForm trackView={false} />
         </div>
       </section>
 

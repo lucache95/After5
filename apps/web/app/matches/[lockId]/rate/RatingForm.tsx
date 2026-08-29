@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { cn } from '@/lib/cn';
 import { submitRating, MatchError, messageForCode } from '@/lib/after5/match';
+import { track } from '@/app/PostHogProvider';
 
 type Tri = boolean | null;
 
@@ -35,6 +36,7 @@ export function RatingForm({ lockId, rateeId }: { lockId: string; rateeId: strin
         unsafe_or_disrespectful: answers.unsafe_or_disrespectful ?? null,
       });
       if (result === 'already_rated') { setDone(true); return; }
+      track.dateRated({ lock_id: lockId, ratee_id: rateeId });
       toast('thanks. that helps keep things safe.');
       router.push(`/matches/${lockId}`);
     } catch (e) {

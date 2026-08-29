@@ -103,6 +103,7 @@ export function RevealModal({
                 prompts={prompts}
                 verification={person.verification}
                 reliability_score={person.reliability_score ?? null}
+                instagram_handle={person.instagram_handle ?? null}
               />
             </motion.div>
           </div>

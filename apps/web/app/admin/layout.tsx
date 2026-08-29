@@ -20,10 +20,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </span>
           </div>
           <ul className="flex items-center gap-1 text-sm">
+            <NavItem href="/admin/waitlist" label="Waitlist" />
             <NavItem href="/admin/venues" label="Venues" />
             <NavItem href="/admin/places" label="Places" />
             <NavItem href="/admin/dates" label="Dates" />
             <NavItem href="/admin/feedback" label="Inbox" />
+            <NavItem href="/admin/ideas" label="Ideas" />
             <NavItem href="/admin/insiders" label="Insiders" />
             <NavItem href="/admin/eval" label="Eval" />
             <NavItem href="/admin/alerts" label="Alerts" />

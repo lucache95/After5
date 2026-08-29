@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { acceptOffer, passOffer, withdraw, MatchError, messageForCode } from '@/lib/after5/match';
+import { track } from '@/app/PostHogProvider';
 import { vibePalette } from '@after5/business';
 import { ExpiryCountdown } from './ExpiryCountdown';
 import { AccountGate, type GateReason } from './AccountGate';
@@ -311,6 +312,9 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
   // Founder rule: tapping the profile photo pops the gallery full screen.
   const [galleryOpen, setGalleryOpen] = useState(false);
   useEffect(() => {
+    // Reveal-at-pick: being chosen IS the reveal. Fire once per offer (the
+    // ceremony gate already dedupes across refreshes/return visits).
+    if (ceremony) track.photosRevealed({ offer_id: offerId });
     if (ceremony && !reduce && photos.length > 0) setOverlay(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -557,6 +561,8 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
                   // Reveal-at-pick: the ceremony already played HERE, so the redirect
                   // stays plain (no ?just=1) and /matches/<lock> opens static.
                   const newLockId = await acceptOffer(offerId);
+                  track.offerAccepted({ offer_id: offerId, lock_id: newLockId });
+                  track.matchCreated({ lock_id: newLockId });
                   router.push(`/matches/${newLockId}`);
                 }, () => {})}
                 className={cn(actionBtn, 'bg-shell-accent text-white focus-visible:ring-4 focus-visible:ring-shell-accent/40')}
@@ -568,7 +574,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
                 disabled={busy || expired}
                 onClick={() => {
                   if (interestedCount > 1) { setConfirming('pass'); return; }
-                  void run(() => passOffer(offerId), () => router.push('/feed'));
+                  void run(() => passOffer(offerId), () => { track.offerDeclined({ offer_id: offerId }); router.push('/feed'); });
                 }}
                 className={cn(actionBtn, 'text-shell-ink/70 focus-visible:ring-4 focus-visible:ring-shell-ink/30')}
               >
@@ -581,7 +587,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
                   if (interestedCount > 1) { setConfirming('withdraw'); return; }
                   void run(
                     () => (instanceId ? withdraw(instanceId) : passOffer(offerId)),
-                    () => router.push('/feed'),
+                    () => { track.offerDeclined({ offer_id: offerId, instance_id: instanceId ?? undefined }); router.push('/feed'); },
                   );
                 }}
                 className="mt-1 min-h-[44px] font-body text-sm lowercase text-shell-ink/50 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-shell-ink/20 disabled:opacity-50"
@@ -622,7 +628,7 @@ export function OfferDetail({ offerId, instanceId, expiresAt, status, host, date
                           setConfirming(null);
                           void run(
                             () => (which === 'withdraw' && instanceId ? withdraw(instanceId) : passOffer(offerId)),
-                            () => router.push('/feed'),
+                            () => { track.offerDeclined({ offer_id: offerId, instance_id: instanceId ?? undefined }); router.push('/feed'); },
                           );
                         }}
                         className={cn(actionBtn, 'text-shell-ink/60 focus-visible:ring-4 focus-visible:ring-shell-ink/30')}

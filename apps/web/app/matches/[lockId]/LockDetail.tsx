@@ -10,6 +10,7 @@ import { LocalTime } from '@/components/LocalTime';
 import { cn } from '@/lib/cn';
 import { stickerRotation } from '@/lib/sticker';
 import { cancelLock, MatchError, messageForCode } from '@/lib/after5/match';
+import { track } from '@/app/PostHogProvider';
 import { vibePalette } from '@after5/business';
 import { CancelWithReasonPicker, type CancelReason } from '@/app/dates/[slug]/interested/CancelWithReasonPicker';
 import type { LockRowWithParties, PartyProfile, RevealPrompt } from '../lock-view';
@@ -134,6 +135,7 @@ export function LockDetail({ lockId, status, counterpart, threadId, startsAt, ra
   useEffect(() => {
     if (!justLocked || ceremonyFired.current) return;
     ceremonyFired.current = true;
+    track.photosRevealed({ lock_id: lockId });
     setCeremony(true);
     setRevealOpen(true);
     toast('the face behind the night. say hi.');

@@ -13,6 +13,7 @@ import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { Polaroid } from '@/components/Polaroid';
 import { makeOffer, MatchError, messageForCode } from '@/lib/after5/match';
+import { track } from '@/app/PostHogProvider';
 import { LocalTime } from '@/components/LocalTime';
 
 export interface OfferCandidate {
@@ -51,10 +52,12 @@ export function MakeOfferModal({
       const result = await makeOffer(instanceId, candidate.candidate_id);
       // Reciprocal is a NORMAL success response, not an error: route to the chooser.
       if (result.kind === 'reciprocal') {
+        track.offerSent({ instance_id: instanceId, candidate_id: candidate.candidate_id });
         router.push(`/reciprocal/${result.pair_id}`);
         return;
       }
       // result.kind === 'offer' → optimistic offer-active.
+      track.offerSent({ instance_id: instanceId, candidate_id: candidate.candidate_id, offer_id: result.offer_id });
       toast.success(`offer's out to ${candidate.first_name.toLowerCase()}.`);
       onOffered(candidate.candidate_id);
       onClose();
