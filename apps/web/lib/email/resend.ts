@@ -19,6 +19,15 @@ interface SendArgs {
 }
 
 export async function sendEmail(args: SendArgs): Promise<{ id: string } | null> {
+  // Master off switch (Lucas, 2026-10-16: "stop the after5 emails"). Every
+  // After5 email goes through here (broadcast, drip, feedback, offers,
+  // welcome, waitlist alerts), so OFF unless AFTER5_EMAIL_ENABLED=true.
+  // Supabase auth emails (login links) don't use this and keep working.
+  if (process.env.AFTER5_EMAIL_ENABLED !== 'true') {
+    console.warn('[resend] AFTER5_EMAIL_ENABLED is not true — email paused, skip send');
+    return null;
+  }
+
   // Never send to undeliverable addresses — they hard-bounce, which dings the
   // sending domain's reputation and hurts deliverability to real users.
   // Covers seed/fixture accounts ('@after5.seed', also the seed-cleanup marker)
